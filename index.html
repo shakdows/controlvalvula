@@ -540,6 +540,89 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   .cover{grid-template-columns:1fr}
   .cover-hero{display:none}
 }
+
+/* ============================================================
+   PANEL / ANALÍTICA — gráficos con los tokens del sistema.
+   El color saturado sólo codifica estado; la magnitud usa un
+   único tono neutro con etiquetas directas.
+   ============================================================ */
+:root{ --chart:oklch(0.585 0.045 245); --chart-track:oklch(0.928 0.006 250) }
+[data-theme="dark"]{ --chart:oklch(0.680 0.050 245); --chart-track:oklch(0.318 0.012 250) }
+
+.greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.greet .wave{color:var(--ink-3);font-weight:400}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(166px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);padding:14px 16px;display:flex;flex-direction:column;gap:7px;min-height:96px}
+.kpi .kv{font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1;display:flex;align-items:center;gap:8px}
+.kpi .kv .dot{width:8px;height:8px}
+.kpi .kk{font-size:12px;color:var(--ink-3)}
+.kpi .kd{font-size:11.5px;color:var(--ink-3);margin-top:auto;display:flex;align-items:center;gap:5px}
+.kpi .kd.warn{color:var(--due)} .kpi .kd.bad{color:var(--late)} .kpi .kd.good{color:var(--ok)}
+
+.dash{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--sp-3);align-items:start}
+.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+@media(max-width:1120px){.dash{grid-template-columns:repeat(6,1fr)}.dash>[class*=span-]{grid-column:span 6}}
+@media(max-width:680px){.dash{grid-template-columns:1fr}.dash>[class*=span-]{grid-column:span 1}}
+
+/* barras horizontales (magnitud) */
+.hb{display:flex;flex-direction:column;gap:11px}
+.hb-row{display:grid;grid-template-columns:118px 1fr 44px;align-items:center;gap:11px;font-size:12.5px}
+.hb-l{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb-track{height:9px;background:var(--chart-track);border-radius:6px;overflow:hidden}
+.hb-fill{display:block;height:100%;border-radius:6px;background:var(--chart);transition:width var(--med) var(--ease)}
+.hb-v{text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+.hb-row:hover .hb-fill{filter:brightness(1.06)}
+
+/* columnas (magnitud en el tiempo) */
+.cols{display:flex;align-items:flex-end;gap:9px;padding-top:12px;min-height:168px}
+.col-i{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.col-v{font-size:11px;font-weight:600;color:var(--ink-2);font-variant-numeric:tabular-nums;height:14px}
+.col-bar{width:74%;max-width:36px;min-height:3px;border-radius:5px 5px 2px 2px;background:var(--chart);transition:height var(--med) var(--ease)}
+.col-bar.late{background:var(--late)}.col-bar.due{background:var(--due)}
+.col-i:hover .col-bar{filter:brightness(1.06)}
+.col-x{font-size:10.5px;color:var(--ink-3);font-family:'IBM Plex Mono';white-space:nowrap}
+
+/* dona + leyenda (estado) */
+.donut-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.donut{width:132px;height:132px;flex:0 0 auto}
+.legend{display:flex;flex-direction:column;gap:9px;font-size:12.5px;min-width:120px;flex:1}
+.legend .lg{display:flex;align-items:center;gap:9px}
+.legend .sw{width:10px;height:10px;border-radius:3px;flex:0 0 auto}
+.legend .lg span{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend .lg b{margin-left:auto;font-family:'IBM Plex Mono';font-size:12px;font-variant-numeric:tabular-nums}
+
+/* gauge semicircular (indicador único) */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0}
+.gauge-v{font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:-8px}
+.gauge-k{font-size:12px;color:var(--ink-3);text-align:center;max-width:26ch}
+
+/* lista "requieren atención" */
+.att{display:flex;flex-direction:column}
+.att-i{display:flex;align-items:center;gap:12px;padding:10px var(--sp-4);border-bottom:1px solid var(--line-2);cursor:pointer;transition:background var(--fast)}
+.att-i:last-child{border-bottom:0}.att-i:hover{background:var(--surface-2)}
+.att-tag{width:104px;flex:0 0 auto;min-width:0}
+.att-tag b{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-tag span{font-size:11px;color:var(--ink-3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-x{flex:1;min-width:0;font-size:12px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* feed de actividad + notificaciones */
+.feed{display:flex;flex-direction:column}
+.feed-i{display:flex;gap:12px;align-items:center;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);cursor:pointer;transition:background var(--fast)}
+.feed-i:last-child{border-bottom:0}.feed-i:hover{background:var(--surface-2)}
+.feed-ic{width:28px;height:28px;border-radius:var(--r-1);background:var(--surface-3);display:grid;place-items:center;flex:0 0 auto;font-size:13px;font-weight:700}
+.feed-m{flex:1;min-width:0}
+.feed-m b{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-m p{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feed-t{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono';flex:0 0 auto;white-space:nowrap}
+
+.notif-wrap{position:relative}
+.notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--late);border:1.5px solid var(--surface)}
+.notif-pop{position:absolute;top:42px;right:0;width:372px;max-width:92vw;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);box-shadow:var(--shadow-over);z-index:var(--z-modal);display:none;overflow:hidden}
+.notif-pop.on{display:block;animation:pop var(--med) var(--ease)}
+.notif-h{display:flex;align-items:center;justify-content:space-between;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);font-size:13px;font-weight:600}
+.notif-l{max-height:min(60vh,440px);overflow:auto}
+.chart-note{font-size:11.5px;color:var(--ink-3);padding:2px 0 0}
 </style>
 </head>
 <body>
@@ -599,11 +682,15 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
       <span class="ws-meta"><b>Adolphus S.A.</b><span id="wsSub">Control de fluidos · Lima</span></span>
     </div>
     <nav id="nav">
+      <div class="rail-sec">Resumen</div>
+      <a data-p="home" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.4"/><rect x="14" y="3" width="7" height="5" rx="1.4"/><rect x="14" y="12" width="7" height="9" rx="1.4"/><rect x="3" y="16" width="7" height="5" rx="1.4"/></svg><span class="lbl">Panel</span></a>
       <div class="rail-sec">Operación</div>
-      <a data-p="assets" class="on"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
+      <a data-p="assets"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
       <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
+      <div class="rail-sec">Análisis</div>
+      <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
       <div class="rail-sec">Maestros</div>
       <a data-p="cat"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/></svg><span class="lbl">Catálogo y despieces</span></a>
       <a data-p="imp"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg><span class="lbl">Importar levantamiento</span></a>
@@ -633,6 +720,13 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
         <option value="cli-refi">Cliente · Refinería Costa Norte</option>
         <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
       </select>
+      <div class="notif-wrap">
+        <button class="icon-btn" onclick="toggleNotif(event)" title="Notificaciones" id="notifBtn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notif-dot" id="notifDot" style="display:none"></span></button>
+        <div class="notif-pop" id="notifPop" onclick="event.stopPropagation()">
+          <div class="notif-h"><span>Notificaciones</span><button class="btn quiet xs" onclick="closeNotif();go('home')">Ver panel</button></div>
+          <div class="notif-l" id="notifList"></div>
+        </div>
+      </div>
       <button class="icon-btn" onclick="toggleTheme()" title="Tema claro / oscuro" id="themeBtn"></button>
       <button class="icon-btn" onclick="openHelp()" title="Atajos de teclado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg></button>
       <div class="avatar" id="ava">IA</div>
@@ -640,8 +734,11 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 
     <div class="view">
 
+      <!-- ═══ PANEL ═══ -->
+      <section class="page on" id="p-home"><div class="view-pad" id="homeView"></div></section>
+
       <!-- ═══ ACTIVOS ═══ -->
-      <section class="page on" id="p-assets"><div class="view-pad">
+      <section class="page" id="p-assets"><div class="view-pad">
         <div class="hd"><div><h1>Activos instalados</h1><p id="assetsSub"></p></div>
           <div style="display:flex;gap:8px">
             <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
@@ -718,6 +815,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
           <button class="btn" onclick="toast('Invitación enviada (simulada)')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Invitar</button></div>
         <div class="panel"><div id="userList"></div></div>
       </div></section>
+
+      <!-- ═══ CONFIABILIDAD ═══ -->
+      <section class="page" id="p-rep"><div class="view-pad" id="repView"></div></section>
 
     </div>
   </div>
@@ -988,7 +1088,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',req:'Solicitudes',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
+const TITULOS={home:'Panel',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
 function go(p){
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
@@ -1024,7 +1124,7 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   $$('#nav a').forEach(a=>a.style.display=(c&&['cat','imp','users'].includes(a.dataset.p))?'none':'');
-  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';closeDrawer();renderAll();go('assets');
+  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
 }
 $('#roleSel').onchange=e=>applyRole(e.target.value);
@@ -1536,9 +1636,11 @@ function closeCmd(){$('#cmd').classList.remove('on')}
 function buildCmd(q){
   q=q.toLowerCase().trim();
   const acciones=[
+   {g:'Ir a',ic:'→',t:'Panel de control',s:'Resumen, KPIs y gráficos',fn:()=>go('home')},
    {g:'Ir a',ic:'→',t:'Activos',s:'Grilla de equipos',fn:()=>go('assets')},
    {g:'Ir a',ic:'→',t:'Calibraciones',s:'Horizonte de vencimientos',fn:()=>go('cal')},
    {g:'Ir a',ic:'→',t:'Órdenes de trabajo',s:'Tablero por etapa',fn:()=>go('wo')},
+   {g:'Ir a',ic:'→',t:'Confiabilidad',s:'Reportes y analítica',fn:()=>go('rep')},
    {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
    {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
    {g:'Acción',ic:'◐',t:'Cambiar tema claro / oscuro',s:'',fn:toggleTheme},
@@ -1586,9 +1688,11 @@ function openHelp(){
     <dt><span class="kbd">↵</span></dt><dd>Abrir el activo enfocado</dd>
     <dt><span class="kbd">X</span></dt><dd>Marcar o desmarcar la fila enfocada</dd>
     <dt><span class="kbd">Esc</span></dt><dd>Cerrar panel, modal o buscador</dd>
+    <dt><span class="kbd">G</span> <span class="kbd">P</span></dt><dd>Ir al panel de control</dd>
     <dt><span class="kbd">G</span> <span class="kbd">A</span></dt><dd>Ir a activos</dd>
     <dt><span class="kbd">G</span> <span class="kbd">C</span></dt><dd>Ir a calibraciones</dd>
     <dt><span class="kbd">G</span> <span class="kbd">O</span></dt><dd>Ir a órdenes de trabajo</dd>
+    <dt><span class="kbd">G</span> <span class="kbd">R</span></dt><dd>Ir a confiabilidad</dd>
     <dt><span class="kbd">D</span></dt><dd>Alternar tema claro / oscuro</dd>
   </dl></div>`;
   $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Entendido</button>`;
@@ -1599,11 +1703,11 @@ document.addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
   const escribiendo=['input','textarea','select'].includes(tag);
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmd();return}
-  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();return}
+  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();closeNotif();return}
   if(escribiendo)return;
   if(gPend){
     gPend=false;
-    const m={a:'assets',c:'cal',o:'wo',s:'req',i:'imp',u:'users'}[e.key.toLowerCase()];
+    const m={p:'home',a:'assets',c:'cal',o:'wo',s:'req',r:'rep',i:'imp',u:'users'}[e.key.toLowerCase()];
     if(m){e.preventDefault();go(m)}return;
   }
   if(e.key.toLowerCase()==='g'){gPend=true;setTimeout(()=>gPend=false,900);return}
@@ -1619,6 +1723,166 @@ document.addEventListener('keydown',e=>{
 function scrollFocus(){const r=document.querySelector('tr.focus');if(r)r.scrollIntoView({block:'nearest'})}
 
 /* ============================================================
+   12.5 · PANEL, ANALÍTICA Y NOTIFICACIONES
+   ============================================================ */
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MESES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const fechaLarga=d=>`${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+const panel=(t,body,extra)=>`<div class="panel"><div class="panel-h"><h3>${esc(t)}</h3>${extra||''}</div><div class="panel-b">${body}</div></div>`;
+
+function hbars(rows){
+  const max=Math.max(1,...rows.map(r=>r.value));
+  return `<div class="hb">${rows.map(r=>`<div class="hb-row" title="${esc(r.label)}: ${r.value}${r.unit||''}">
+    <span class="hb-l">${esc(r.label)}</span>
+    <span class="hb-track"><span class="hb-fill" style="width:${r.value?Math.max(3,r.value/max*100):0}%${r.tone?`;background:var(--${r.tone})`:''}"></span></span>
+    <span class="hb-v">${r.value}${r.unit||''}</span></div>`).join('')}</div>`;
+}
+function columns(rows){
+  const max=Math.max(1,...rows.map(r=>r.value));
+  return `<div class="cols">${rows.map(r=>`<div class="col-i" title="${esc(r.x)}: ${r.value}">
+    <span class="col-v">${r.value||''}</span>
+    <span class="col-bar ${r.tone||''}" style="height:${Math.round((r.value/max)*128)}px"></span>
+    <span class="col-x">${esc(r.x)}</span></div>`).join('')}</div>`;
+}
+function donut(segs,center,sub){
+  const use=segs.filter(s=>s.value>0),tot=use.reduce((s,x)=>s+x.value,0)||1,R=54,C=2*Math.PI*R;let off=0;
+  const gap=use.length>1?2:0;
+  const arcs=use.map(s=>{const len=s.value/tot*C,vis=Math.max(0.6,len-gap);
+    const seg=`<circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--${s.tone})" stroke-width="15" stroke-dasharray="${vis} ${C-vis}" stroke-dashoffset="${-off}" transform="rotate(-90 66 66)"/>`;off+=len;return seg}).join('');
+  return `<div class="donut-wrap"><svg class="donut" viewBox="0 0 132 132" aria-hidden="true">
+    <circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--surface-3)" stroke-width="15"/>${arcs}
+    <text x="66" y="62" text-anchor="middle" font-size="27" font-weight="600" fill="var(--ink)" font-family="'IBM Plex Sans',sans-serif">${center}</text>
+    <text x="66" y="80" text-anchor="middle" font-size="11" fill="var(--ink-3)" font-family="'IBM Plex Sans',sans-serif">${esc(sub||'')}</text></svg>
+    <div class="legend">${segs.map(s=>`<div class="lg"><span class="sw" style="background:var(--${s.tone})"></span><span>${esc(s.label)}</span><b>${s.value}</b></div>`).join('')}</div></div>`;
+}
+function gauge(pct,label){
+  const C=Math.PI*52,val=Math.max(0,Math.min(100,pct)),tone=val>=90?'ok':val>=70?'due':'late',len=val/100*C;
+  return `<div class="gauge-wrap"><svg viewBox="0 0 140 84" width="168" height="100" aria-hidden="true">
+    <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--surface-3)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--${tone})" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/></svg>
+    <div class="gauge-v" style="color:var(--${tone})">${Math.round(val)}%</div><div class="gauge-k">${esc(label)}</div></div>`;
+}
+
+function renderHome(){
+  const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
+  const total=vs.length,atn=st('vencido')+st('porvencer')+st('taller')+st('incompleto'),venc=st('vencido');
+  const marcas=new Set(vs.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
+  const enTaller=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).length;
+  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et!=='certificada'&&(!S.cli||a?.cli===S.cli)}).length;
+  const conProg=vs.filter(a=>a.prox);
+  const cumpl=conProg.length?Math.round(conProg.filter(a=>dias(a.prox)>=0).length/conProg.length*100):100;
+  const kpis=[
+    {v:total,k:'Activos instalados',d:`${marcas} marcas · ${S.cli?'1 planta':CLIENTES.length+' clientes'}`},
+    {v:atn,k:'Requieren atención',dot:atn?'due':'ok',cls:atn?'warn':'good',d:atn?'revisar lista':'todo al día'},
+    {v:venc,k:'Calibraciones vencidas',dot:venc?'late':'ok',cls:venc?'bad':'good',d:venc?'acción inmediata':'ninguna'},
+    {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en taller`},
+    {v:cumpl+'%',k:'Cumplimiento calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',d:cumpl>=90?'en meta (≥90%)':'bajo meta'}
+  ];
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
+  const estadoSegs=[
+    {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
+    {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
+  const crit=['Crítica','Alta','Media'].map(c=>({label:c,value:vs.filter(a=>a.cr===c).length}));
+  const clase=Object.entries(CL).map(([k,l])=>({label:l,value:vs.filter(a=>a.cl===k).length}));
+  const etapa=ETAPAS.map(([k,l])=>({label:l,value:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et===k&&(!S.cli||a?.cli===S.cli)}).length}));
+  const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
+  for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
+    colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
+  const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
+  const att=vs.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k))
+    .sort((a,b)=>sev(a)-sev(b)||(dias(a.prox||'')??999)-(dias(b.prox||'')??999)).slice(0,7);
+  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="go('assets');openAsset('${a.id}')">
+    <span class="att-tag"><b>${esc(a.tag||'— sin tag —')}</b><span>${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod)}</span></span>
+    <span class="att-x">${esc(cli(a.cli).n)} · ${esc(area(a))}</span>
+    <span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:34px"><b>Sin pendientes</b>Todo el parque está operativo y al día.</div>`;
+  const ICON={Preventivo:'⟳',Correctivo:'✚',Calibración:'◎',Inspección:'◍',Overhaul:'⚙','Puesta en marcha':'▸'};
+  const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
+    ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
+  const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
+    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="go('assets');openAsset('${x.o.act}');showTab('hist')">
+      <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
+    return `<div class="feed-i" onclick="go('req')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
+  $('#homeView').innerHTML=`
+   <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1><p>${fechaLarga(HOY)}</p></div>
+     ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+   ${kpiHtml}
+   <div class="dash">
+     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="setView('atencion');go('assets')">Ver todo</button>`)}</div>
+     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'activos'))}</div>
+     <div class="span-8">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
+     <div class="span-4">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-4">${panel('Parque por criticidad',hbars(crit))}</div>
+     <div class="span-4">${panel('Parque por clase',hbars(clase))}</div>
+     <div class="span-4">${panel('Órdenes por etapa',hbars(etapa))}</div>
+   </div>`;
+}
+
+function renderRep(){
+  const vs=visibles();
+  const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
+  const conProg=vs.filter(a=>a.prox),alDia=conProg.filter(a=>dias(a.prox)>=0).length;
+  const cumpl=conProg.length?Math.round(alDia/conProg.length*100):100;
+  const cert=ordScope.filter(o=>o.et==='certificada').length;
+  const corr=ordScope.filter(o=>o.tipo==='Correctivo').length,prev=ordScope.filter(o=>o.tipo==='Preventivo').length;
+  const criticos=vs.filter(a=>a.cr==='Crítica').length;
+  const marcaCount={};vs.forEach(a=>{const m=MODELOS[a.mod]?.m;if(m)marcaCount[m]=(marcaCount[m]||0)+1});
+  const porMarca=Object.entries(marcaCount).sort((a,b)=>b[1]-a[1]).map(([l,v])=>({label:l,value:v}));
+  const tipoCount={};ordScope.forEach(o=>tipoCount[o.tipo]=(tipoCount[o.tipo]||0)+1);
+  const porTipo=Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).map(([l,v])=>({label:l,value:v}));
+  const rep={};ordScope.forEach(o=>o.partes.forEach(p=>rep[p]=(rep[p]||0)+1));
+  SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).forEach(s=>s.items.forEach(it=>rep[it.n]=(rep[it.n]||0)+(it.q||1)));
+  const porRep=Object.entries(rep).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([l,v])=>({label:l,value:v,unit:' und'}));
+  const cliCount=CLIENTES.map(c=>({label:c.n,value:ACTIVOS.filter(a=>a.cli===c.id).length}));
+  const prox=conProg.slice().sort((a,b)=>a.prox.localeCompare(b.prox)).slice(0,6);
+  const kpis=[
+    {v:cumpl+'%',k:'Cumplimiento de calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',d:'objetivo ≥ 90%'},
+    {v:cert,k:'Órdenes certificadas',d:'histórico'},
+    {v:`${prev} : ${corr}`,k:'Preventivo : correctivo',d:corr?`${(prev/corr).toFixed(1)}× preventivo`:'sin correctivos'},
+    {v:criticos,k:'Activos críticos',dot:'late',d:'requieren foco'},
+    {v:porRep.reduce((s,x)=>s+x.value,0),k:'Repuestos movidos',d:'órdenes + solicitudes'}];
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
+  const proxTable=`<table class="grid"><thead><tr><th>Tag</th><th>Modelo</th><th>Cliente</th><th>Vence</th><th>Restante</th></tr></thead>
+    <tbody>${prox.map(a=>{const d=dias(a.prox),c=d<0?'late':d<=90?'due':'ok';return `<tr onclick="go('assets');openAsset('${a.id}')"><td><b>${esc(a.tag)}</b></td><td class="mono">${esc(a.mod)}</td><td>${esc(cli(a.cli).n)}</td><td class="mono">${a.prox}</td><td><span class="tag ${c}"><span class="dot"></span>${d<0?`−${-d} d`:`${d} d`}</span></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:20px">Sin programa de calibración</td></tr>`}</tbody></table>`;
+  $('#repView').innerHTML=`
+   <div class="hd"><div><h1>Confiabilidad y reportes</h1><p>Indicadores del parque ${S.cli?`de ${esc(cli(S.cli).n)}`:'de todos los clientes'} · ${fechaLarga(HOY)}.</p></div>
+     <button class="btn sec" onclick="toast('Reporte exportado (simulado)')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar reporte</button></div>
+   ${kpiHtml}
+   <div class="dash">
+     <div class="span-4">${panel('Cumplimiento de calibración',gauge(cumpl,`${alDia} de ${conProg.length} válvulas al día`))}</div>
+     <div class="span-8">${panel('Parque por marca representada',porMarca.length?hbars(porMarca):'<div class="empty" style="padding:24px"><b>Sin datos</b></div>')}</div>
+     <div class="span-6">${panel('Órdenes por tipo de intervención',porTipo.length?hbars(porTipo):'<div class="empty" style="padding:24px"><b>Sin órdenes</b></div>')}</div>
+     <div class="span-6">${panel('Repuestos más movidos',porRep.length?hbars(porRep):'<div class="empty" style="padding:24px"><b>Sin movimientos</b>Aún no se registran repuestos.</div>')}</div>
+     ${!S.cli?`<div class="span-6">${panel('Parque por cliente',hbars(cliCount))}</div>`:''}
+     <div class="span-${S.cli?'12':'6'}">${panel('Próximas calibraciones',`<div class="grid-wrap">${proxTable}</div>`)}</div>
+   </div>`;
+}
+
+let NOTIF=[];
+function buildNotif(){
+  const vs=visibles(),items=[];
+  vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
+  vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
+  ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
+  SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&s.est==='Pendiente').forEach(s=>items.push({tone:'due',ic:'▤',t:`${s.n} pendiente de cotizar`,s:`${s.items.length} posiciones · ${cli(s.cli).n}`,req:true}));
+  return items;
+}
+function renderNotif(){
+  NOTIF=buildNotif();
+  $('#notifDot').style.display=NOTIF.length?'block':'none';
+  $('#notifList').innerHTML=NOTIF.length?NOTIF.map((n,i)=>`<div class="feed-i" onclick="notifGo(${i})">
+    <span class="feed-ic" style="color:var(--${n.tone})">${n.ic}</span><div class="feed-m"><b>${esc(n.t)}</b><p>${esc(n.s)}</p></div></div>`).join('')
+   :`<div class="empty" style="padding:28px"><b>Todo en orden</b>No hay alertas pendientes.</div>`;
+}
+function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
+function closeNotif(){$('#notifPop').classList.remove('on')}
+function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go('req');else if(n.id){go('assets');openAsset(n.id)}}
+document.addEventListener('click',closeNotif);
+
+/* ============================================================
    13 · EXPORT / INIT
    ============================================================ */
 function exportCSV(){
@@ -1630,11 +1894,11 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderAssets();renderCal();renderWO();renderReq();renderCat();renderUsers()}
+function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderUsers();renderNotif()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $('#heroStage').innerHTML=PHOTO.globo;
-paintThemeBtn();renderAll();go('assets');
+paintThemeBtn();renderAll();go('home');
 </script>
 </body>
 </html>
