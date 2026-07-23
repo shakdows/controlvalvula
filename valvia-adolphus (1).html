@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light" data-density="cozy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Valvia · Gestión de activos de válvulas — Adolphus S.A.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+/* ============================================================
+   TOKENS — color es información, nunca decoración.
+   El único color saturado de la interfaz es el estado del activo.
+   ============================================================ */
+:root{
+  --bg:          oklch(0.972 0.003 250);
+  --surface:     oklch(1 0 0);
+  --surface-2:   oklch(0.978 0.003 250);
+  --surface-3:   oklch(0.955 0.004 250);
+  --ink:         oklch(0.235 0.012 255);
+  --ink-2:       oklch(0.455 0.014 255);
+  --ink-3:       oklch(0.628 0.013 255);
+  --line:        oklch(0.905 0.005 255);
+  --line-2:      oklch(0.945 0.004 255);
+  --sel:         oklch(0.552 0.152 258);
+  --sel-bg:      oklch(0.955 0.020 258);
+  --ok:          oklch(0.560 0.115 158);
+  --ok-bg:       oklch(0.958 0.030 158);
+  --due:         oklch(0.640 0.135 72);
+  --due-bg:      oklch(0.962 0.045 82);
+  --late:        oklch(0.545 0.185 24);
+  --late-bg:     oklch(0.960 0.030 24);
+  --info-bg:     oklch(0.960 0.020 258);
+
+  --r-1:5px; --r-2:8px; --r-3:11px;
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
+  --shadow-pop: 0 6px 24px oklch(0.235 0.012 255 / .10), 0 1px 3px oklch(0.235 0.012 255 / .08);
+  --shadow-over:0 16px 48px oklch(0.235 0.012 255 / .18);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --fast:130ms; --med:220ms;
+
+  --z-sticky:20; --z-rail:30; --z-drawer:40; --z-scrim:50; --z-modal:60; --z-toast:70;
+  --row-h:38px; --font-d:13.5px;
+}
+[data-density="compact"]{ --row-h:30px; --font-d:12.5px; }
+[data-theme="dark"]{
+  --bg:          oklch(0.185 0.010 258);
+  --surface:     oklch(0.222 0.011 258);
+  --surface-2:   oklch(0.248 0.012 258);
+  --surface-3:   oklch(0.278 0.013 258);
+  --ink:         oklch(0.955 0.004 258);
+  --ink-2:       oklch(0.765 0.010 258);
+  --ink-3:       oklch(0.605 0.012 258);
+  --line:        oklch(0.315 0.013 258);
+  --line-2:      oklch(0.272 0.012 258);
+  --sel:         oklch(0.720 0.130 258);
+  --sel-bg:      oklch(0.300 0.055 258);
+  --ok:          oklch(0.740 0.120 158);
+  --ok-bg:       oklch(0.300 0.045 158);
+  --due:         oklch(0.800 0.125 82);
+  --due-bg:      oklch(0.320 0.050 72);
+  --late:        oklch(0.700 0.155 24);
+  --late-bg:     oklch(0.310 0.060 24);
+  --info-bg:     oklch(0.280 0.030 258);
+  --shadow-pop:  0 6px 24px oklch(0 0 0 / .40), 0 1px 3px oklch(0 0 0 / .30);
+  --shadow-over: 0 16px 48px oklch(0 0 0 / .55);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:14px;line-height:1.5;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  transition:background var(--med) var(--ease),color var(--med) var(--ease);
+}
+button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tabular-nums}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:.94em;letter-spacing:-.01em}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:var(--ink-3);background-clip:padding-box}
+::selection{background:var(--sel-bg);color:var(--ink)}
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ============================================================
+   SHELL
+   ============================================================ */
+.app{display:grid;grid-template-columns:auto 1fr;height:100vh;overflow:hidden}
+.rail{
+  width:222px;background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;z-index:var(--z-rail);
+  transition:width var(--med) var(--ease);
+}
+.app.rail-min .rail{width:56px}
+.app.rail-min .rail .lbl,.app.rail-min .rail .rail-sec,.app.rail-min .ws-meta,.app.rail-min .rail-foot p{display:none}
+.app.rail-min .ws{justify-content:center;padding:var(--sp-3) 0}
+.app.rail-min .rail nav a{justify-content:center;padding:9px 0}
+
+.ws{display:flex;align-items:center;gap:10px;padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--line-2);cursor:pointer;transition:background var(--fast)}
+.ws:hover{background:var(--surface-2)}
+.ws-mark{width:28px;height:28px;border-radius:var(--r-1);background:var(--ink);color:var(--surface);display:grid;place-items:center;font-weight:700;font-size:12px;flex:0 0 auto;letter-spacing:.02em}
+.ws-meta{min-width:0}
+.ws-meta b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.ws-meta span{display:block;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.rail nav{padding:var(--sp-3) var(--sp-2);flex:1;overflow-y:auto}
+.rail-sec{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-3);padding:var(--sp-4) 10px var(--sp-2)}
+.rail nav a{
+  display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-1);
+  color:var(--ink-2);font-size:13.5px;font-weight:500;cursor:pointer;
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);position:relative
+}
+.rail nav a:hover{background:var(--surface-2);color:var(--ink)}
+.rail nav a.on{background:var(--surface-3);color:var(--ink);font-weight:600}
+.rail nav a svg{width:16px;height:16px;flex:0 0 auto;stroke-width:1.6;stroke:currentColor;fill:none}
+.rail nav a .ct{margin-left:auto;font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+.rail nav a.on .ct{color:var(--ink-2)}
+.rail-foot{padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--line-2);display:flex;align-items:center;gap:8px}
+.rail-foot p{font-size:10.5px;color:var(--ink-3);line-height:1.4;flex:1}
+
+.work{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.bar{
+  height:52px;flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);z-index:var(--z-sticky)
+}
+.crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);min-width:0;flex:1}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs .sep{opacity:.45}
+.kbd{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid var(--line);
+  border-radius:4px;font-size:10.5px;font-family:'IBM Plex Mono';color:var(--ink-3);background:var(--surface-2)
+}
+.search-trigger{
+  display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;min-width:250px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-1);
+  color:var(--ink-3);font-size:13px;cursor:pointer;transition:border-color var(--fast),background var(--fast)
+}
+.search-trigger:hover{border-color:var(--ink-3);background:var(--surface)}
+.search-trigger .kbd{margin-left:auto}
+.icon-btn{
+  width:32px;height:32px;display:grid;place-items:center;background:transparent;border:1px solid transparent;
+  border-radius:var(--r-1);cursor:pointer;color:var(--ink-2);transition:background var(--fast),color var(--fast)
+}
+.icon-btn:hover{background:var(--surface-3);color:var(--ink)}
+.icon-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
+.avatar{width:28px;height:28px;border-radius:var(--r-1);background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink-2)}
+
+.view{flex:1;overflow:auto;position:relative}
+.view-pad{padding:var(--sp-5)}
+.page{display:none}.page.on{display:block}
+
+/* ============================================================
+   PRIMITIVAS
+   ============================================================ */
+h1{font-size:19px;font-weight:600;letter-spacing:-.015em}
+h2{font-size:15px;font-weight:600;letter-spacing:-.01em}
+h3{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
+.muted{color:var(--ink-3)}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-4);flex-wrap:wrap}
+.hd p{font-size:13px;color:var(--ink-3);margin-top:2px;max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2)}
+.panel-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:11px var(--sp-4);border-bottom:1px solid var(--line-2)}
+.panel-b{padding:var(--sp-4)}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--r-1);
+  background:var(--ink);color:var(--bg);border:1px solid var(--ink);font-size:13px;font-weight:600;cursor:pointer;
+  transition:opacity var(--fast) var(--ease),transform var(--fast) var(--ease)
+}
+.btn:hover{opacity:.86}
+.btn:active{transform:translateY(1px)}
+.btn.sec{background:var(--surface);color:var(--ink);border-color:var(--line)}
+.btn.sec:hover{background:var(--surface-2);border-color:var(--ink-3);opacity:1}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.quiet:hover{background:var(--surface-3);color:var(--ink);opacity:1}
+.btn.xs{height:26px;padding:0 9px;font-size:12px}
+.btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.tag{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;font-size:11.5px;font-weight:600;background:var(--surface-3);color:var(--ink-2);white-space:nowrap}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.due{background:var(--due-bg);color:var(--due)}
+.tag.late{background:var(--late-bg);color:var(--late)}
+.tag.sel{background:var(--sel-bg);color:var(--sel)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.inp,select.inp{
+  height:32px;padding:0 10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-1);
+  font-size:13px;transition:border-color var(--fast),box-shadow var(--fast);width:100%
+}
+select.inp{cursor:pointer;padding-right:26px;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-3) 50%),linear-gradient(135deg,var(--ink-3) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 14px,calc(100% - 9px) 14px;background-size:5px 5px;background-repeat:no-repeat}
+.inp:hover{border-color:var(--ink-3)}
+.inp:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-bg)}
+textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
+.fld{margin-bottom:var(--sp-3)}
+.fld label{display:block;font-size:11.5px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 var(--sp-3)}
+
+/* ---- barra de estado / segmentos filtrables ---- */
+.stats{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden;margin-bottom:var(--sp-4)}
+.stat{
+  flex:1;padding:12px var(--sp-4);border-right:1px solid var(--line-2);cursor:pointer;
+  transition:background var(--fast) var(--ease);text-align:left;background:transparent;border-top:0;border-bottom:0;border-left:0;
+  display:flex;flex-direction:column;gap:2px;min-width:0
+}
+.stat:last-child{border-right:0}
+.stat:hover{background:var(--surface-2)}
+.stat.active{background:var(--surface-3)}
+.stat .v{font-size:22px;font-weight:600;letter-spacing:-.02em;line-height:1.1;display:flex;align-items:center;gap:7px}
+.stat .k{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat .v .dot{width:7px;height:7px}
+
+/* ---- toolbar ---- */
+.tools{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3);flex-wrap:wrap}
+.views{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-1);padding:2px}
+.views button{
+  height:26px;padding:0 10px;border:0;background:transparent;border-radius:3px;font-size:12.5px;font-weight:500;
+  color:var(--ink-2);cursor:pointer;transition:background var(--fast),color var(--fast);white-space:nowrap
+}
+.views button:hover{color:var(--ink)}
+.views button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:0 1px 2px oklch(0 0 0 /.08)}
+.chip-sel{height:30px;font-size:12.5px;width:auto;min-width:118px}
+.spacer{flex:1}
+.count{font-size:12.5px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+
+/* ---- grilla de datos ---- */
+.grid-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden}
+.grid-scroll{overflow:auto;max-height:calc(100vh - 300px)}
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--font-d)}
+table.grid th{
+  position:sticky;top:0;background:var(--surface-2);z-index:2;text-align:left;font-size:11px;font-weight:600;
+  color:var(--ink-2);padding:0 12px;height:34px;border-bottom:1px solid var(--line);white-space:nowrap;user-select:none
+}
+table.grid th.sortable{cursor:pointer}
+table.grid th.sortable:hover{color:var(--ink)}
+table.grid th .ar{opacity:.35;margin-left:4px;font-size:9px}
+table.grid th.sorted .ar{opacity:1}
+table.grid td{padding:0 12px;height:var(--row-h);border-bottom:1px solid var(--line-2);white-space:nowrap;vertical-align:middle}
+table.grid tbody tr{cursor:pointer;transition:background var(--fast)}
+table.grid tbody tr:hover{background:var(--surface-2)}
+table.grid tbody tr.focus{background:var(--sel-bg)}
+table.grid tbody tr.picked{background:var(--sel-bg)}
+table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
+.cell-2{display:flex;flex-direction:column;justify-content:center;line-height:1.25}
+.cell-2 small{font-size:11px;color:var(--ink-3)}
+.ck{width:14px;height:14px;accent-color:var(--sel);cursor:pointer}
+.riesgo{display:inline-flex;gap:2px;align-items:center}
+.riesgo i{width:4px;height:12px;border-radius:1px;background:var(--line);display:block}
+.riesgo i.f{background:var(--ink-2)}
+.riesgo.alta i.f{background:var(--due)}
+.riesgo.critica i.f{background:var(--late)}
+.bulk{
+  display:none;align-items:center;gap:var(--sp-3);padding:8px var(--sp-4);background:var(--ink);color:var(--bg);
+  font-size:13px;border-radius:var(--r-1);margin-bottom:var(--sp-2)
+}
+.bulk.on{display:flex}
+.bulk .btn{background:transparent;border-color:oklch(1 0 0 /.25);color:var(--bg);height:26px;font-size:12px}
+.bulk .btn:hover{background:oklch(1 0 0 /.12);opacity:1}
+.empty{padding:var(--sp-7) var(--sp-5);text-align:center;color:var(--ink-3)}
+.empty b{display:block;color:var(--ink-2);font-size:14px;margin-bottom:3px;font-weight:600}
+.empty svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.4;margin-bottom:10px;opacity:.5}
+
+/* ---- drawer de detalle ---- */
+.scrim{position:fixed;inset:0;background:oklch(0.235 0.012 255 /.35);opacity:0;pointer-events:none;transition:opacity var(--med) var(--ease);z-index:var(--z-scrim)}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(660px,94vw);background:var(--surface);
+  border-left:1px solid var(--line);z-index:var(--z-drawer);display:flex;flex-direction:column;
+  transform:translateX(102%);transition:transform var(--med) var(--ease),width var(--med) var(--ease);box-shadow:var(--shadow-over)
+}
+.drawer.on{transform:none}
+.drawer.wide{width:min(1180px,98vw)}
+.dr-h{padding:var(--sp-4) var(--sp-5) var(--sp-3);border-bottom:1px solid var(--line-2);flex:0 0 auto}
+.dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
+.dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
+.dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.dr-tags{display:flex;gap:6px;flex-wrap:wrap}
+.dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
+.dr-tab{padding:9px 0 8px;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
+.dr-tab:hover{color:var(--ink)}
+.dr-tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
+.dr-b{flex:1;overflow:auto;padding:var(--sp-5)}
+.dr-f{flex:0 0 auto;padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;gap:var(--sp-2);justify-content:flex-end;background:var(--surface-2)}
+.pane{display:none}.pane.on{display:block}
+
+.dl{display:grid;grid-template-columns:132px 1fr;gap:0}
+.dl dt{padding:7px 0;font-size:12.5px;color:var(--ink-3);border-bottom:1px solid var(--line-2)}
+.dl dd{padding:7px 0;font-size:13px;font-weight:500;border-bottom:1px solid var(--line-2)}
+.dl dd.na{color:var(--due);font-weight:400}
+
+.callout{display:flex;gap:10px;padding:11px 13px;border-radius:var(--r-1);font-size:12.5px;line-height:1.5;margin-bottom:var(--sp-4);background:var(--info-bg);color:var(--ink-2)}
+.callout.warn{background:var(--due-bg);color:var(--due)}
+.callout.bad{background:var(--late-bg);color:var(--late)}
+.callout svg{width:15px;height:15px;flex:0 0 auto;margin-top:2px;stroke:currentColor;fill:none;stroke-width:1.8}
+.callout b{color:inherit}
+
+/* ---- despiece ---- */
+.bom{display:grid;grid-template-columns:290px 1fr;gap:var(--sp-4);align-items:start}
+.drawer.wide .bom{grid-template-columns:380px 1fr}
+.schema{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);padding:var(--sp-2);position:sticky;top:0}
+.schema svg{width:100%;height:auto;display:block}
+.schema figcaption{text-align:center;font-size:11px;color:var(--ink-3);padding:6px 4px 2px}
+.dpart{cursor:pointer}
+.dpart .fill{fill:var(--surface);stroke:var(--ink-3);transition:fill var(--fast),stroke var(--fast)}
+.dpart .cb{fill:var(--surface-3);stroke:var(--line);transition:fill var(--fast)}
+.dpart .cn{fill:var(--ink-2);font-size:9px;font-weight:600;font-family:'IBM Plex Mono';transition:fill var(--fast)}
+.dpart:hover .fill,.dpart.hot .fill{fill:var(--sel-bg);stroke:var(--sel)}
+.dpart:hover .cb,.dpart.hot .cb{fill:var(--sel);stroke:var(--sel)}
+.dpart:hover .cn,.dpart.hot .cn{fill:var(--surface)}
+.lead{stroke:var(--line);stroke-width:1.1}
+tr.bom-row.hot{background:var(--sel-bg)}
+.pos{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:4px;background:var(--surface-3);font-size:11px;font-weight:600;font-family:'IBM Plex Mono';color:var(--ink-2)}
+tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
+.stk{font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:5px}
+.stk.y{color:var(--ok)}.stk.n{color:var(--due)}
+.stk small{display:block;font-weight:400;color:var(--ink-3);font-size:11px}
+
+/* ---- timeline ---- */
+.tl{position:relative;padding-left:22px}
+.tl::before{content:'';position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--line)}
+.tl-i{position:relative;padding-bottom:var(--sp-4)}
+.tl-i::before{content:'';position:absolute;left:-21px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--ink-3)}
+.tl-i.pv::before{border-color:var(--ok)}
+.tl-i.cor::before{border-color:var(--due)}
+.tl-i.cal::before{border-color:var(--sel)}
+.tl-m{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+.tl-t{font-weight:600;font-size:13.5px;margin:2px 0 3px}
+.tl-x{font-size:12.5px;color:var(--ink-2);max-width:70ch}
+.parts-inline{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+
+/* ---- documentos ---- */
+.doc{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--line-2);border-radius:var(--r-1);margin-bottom:6px;transition:border-color var(--fast),background var(--fast)}
+.doc:hover{border-color:var(--line);background:var(--surface-2)}
+.doc .fx{width:30px;height:30px;border-radius:var(--r-1);background:var(--surface-3);display:grid;place-items:center;flex:0 0 auto;color:var(--ink-2);font-size:9.5px;font-weight:700;font-family:'IBM Plex Mono'}
+.doc .fm{flex:1;min-width:0}
+.doc .fm b{display:block;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doc .fm span{font-size:11.5px;color:var(--ink-3)}
+
+/* ---- kanban ---- */
+.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start}
+.kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
+.kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
+.kb-h{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:600;color:var(--ink-2)}
+.kb-h .n{margin-left:auto;font-family:'IBM Plex Mono';color:var(--ink-3);font-weight:500}
+.kb-b{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:60px}
+.wo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-1);padding:10px;cursor:grab;transition:box-shadow var(--fast),transform var(--fast)}
+.wo:hover{box-shadow:var(--shadow-pop)}
+.wo:active{cursor:grabbing}
+.wo.drag{opacity:.4}
+.wo-t{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.wo-t b{font-size:12px;font-family:'IBM Plex Mono';color:var(--ink-3);font-weight:500}
+.wo-n{font-size:13px;font-weight:600;letter-spacing:-.01em}
+.wo-m{font-size:11.5px;color:var(--ink-3);margin-top:3px;display:flex;justify-content:space-between;gap:8px}
+
+/* ---- calibraciones (barra de horizonte) ---- */
+.hz{display:flex;align-items:center;gap:var(--sp-3);padding:9px 12px;border-bottom:1px solid var(--line-2)}
+.hz:last-child{border-bottom:0}
+.hz-t{width:150px;flex:0 0 auto;min-width:0}
+.hz-t b{font-size:13px;font-weight:600;display:block}
+.hz-t span{font-size:11.5px;color:var(--ink-3);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hz-track{flex:1;height:22px;position:relative;background:var(--surface-2);border-radius:3px;overflow:hidden;min-width:120px}
+.hz-now{position:absolute;top:0;bottom:0;width:1px;background:var(--ink-3);z-index:2}
+.hz-fill{position:absolute;top:4px;bottom:4px;border-radius:2px}
+.hz-d{width:96px;text-align:right;flex:0 0 auto;font-size:12px;font-family:'IBM Plex Mono'}
+
+/* ---- import ---- */
+.drop{border:1.5px dashed var(--line);border-radius:var(--r-3);padding:var(--sp-7) var(--sp-5);text-align:center;cursor:pointer;transition:border-color var(--fast),background var(--fast);background:var(--surface)}
+.drop:hover,.drop.over{border-color:var(--sel);background:var(--sel-bg)}
+.drop svg{width:26px;height:26px;stroke:var(--ink-2);fill:none;stroke-width:1.5;margin-bottom:10px}
+.drop b{display:block;font-size:14.5px;font-weight:600;margin-bottom:3px}
+.drop span{font-size:12.5px;color:var(--ink-3)}
+.steps{display:flex;gap:var(--sp-5);margin-bottom:var(--sp-5);border-bottom:1px solid var(--line);padding-bottom:0}
+.stp{display:flex;align-items:center;gap:7px;padding-bottom:10px;font-size:12.5px;color:var(--ink-3);border-bottom:2px solid transparent;font-weight:500}
+.stp.on{color:var(--ink);border-bottom-color:var(--ink);font-weight:600}
+.stp.done{color:var(--ok);border-bottom-color:var(--ok)}
+.stp i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3);font-style:normal;font-size:10.5px;font-weight:600;font-family:'IBM Plex Mono'}
+.stp.on i{background:var(--ink);color:var(--bg)}
+.stp.done i{background:var(--ok-bg);color:var(--ok)}
+.maprow{display:grid;grid-template-columns:1fr 20px 1.15fr;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line-2)}
+.maprow:last-child{border:0}
+.maprow .lb{font-size:13px;font-weight:500}
+tr.bad{background:var(--due-bg)}
+tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
+
+/* ---- command palette ---- */
+.cmd{position:fixed;inset:0;z-index:var(--z-modal);display:none;padding-top:12vh;justify-content:center;background:oklch(0.235 0.012 255 /.35)}
+.cmd.on{display:flex}
+.cmd-c{width:min(620px,94vw);max-height:64vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--med) var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
+.cmd-i{display:flex;align-items:center;gap:10px;padding:0 var(--sp-4);border-bottom:1px solid var(--line-2);flex:0 0 auto}
+.cmd-i svg{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.8}
+.cmd-i input{flex:1;height:48px;border:0;background:transparent;font-size:15px;outline:none}
+.cmd-i input::placeholder{color:var(--ink-3)}
+.cmd-l{overflow:auto;padding:6px}
+.cmd-g{font-size:10.5px;font-weight:600;color:var(--ink-3);letter-spacing:.05em;padding:9px 10px 4px}
+.cmd-r{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-1);cursor:pointer;font-size:13.5px}
+.cmd-r.cur{background:var(--surface-3)}
+.cmd-r .ic{width:22px;height:22px;border-radius:4px;background:var(--surface-3);display:grid;place-items:center;font-size:10px;font-weight:700;font-family:'IBM Plex Mono';color:var(--ink-2);flex:0 0 auto}
+.cmd-r.cur .ic{background:var(--ink);color:var(--bg)}
+.cmd-r .tx{flex:1;min-width:0}
+.cmd-r .tx b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmd-r .tx span{font-size:11.5px;color:var(--ink-3)}
+.cmd-f{border-top:1px solid var(--line-2);padding:7px var(--sp-4);display:flex;gap:var(--sp-4);font-size:11px;color:var(--ink-3);flex:0 0 auto}
+
+/* ---- modal ---- */
+.modal{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:oklch(0.235 0.012 255 /.35);padding:var(--sp-5)}
+.modal.on{display:flex}
+.modal-c{width:min(660px,100%);max-height:86vh;background:var(--surface);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--med) var(--ease)}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--line-2)}
+.modal-b{padding:var(--sp-5);overflow:auto}
+.modal-f{padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;justify-content:flex-end;gap:var(--sp-2);background:var(--surface-2)}
+
+/* ---- toasts ---- */
+.toasts{position:fixed;bottom:var(--sp-5);left:50%;transform:translateX(-50%);z-index:var(--z-toast);display:flex;flex-direction:column;gap:8px;align-items:center}
+.toast{display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:var(--r-1);font-size:13px;box-shadow:var(--shadow-over);animation:up var(--med) var(--ease)}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.toast .dot{background:var(--ok)}
+
+.help dl{display:grid;grid-template-columns:auto 1fr;gap:8px var(--sp-4);align-items:center}
+.help dt{text-align:right}
+.help dd{font-size:13px;color:var(--ink-2)}
+
+@media(max-width:980px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform var(--med) var(--ease)}
+  .app.rail-open .rail{transform:none}
+  .bom{grid-template-columns:1fr}.schema{position:static}
+  .stats{flex-wrap:wrap}.stat{min-width:50%;border-bottom:1px solid var(--line-2)}
+  .kb{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ══ RAIL ══ -->
+  <aside class="rail">
+    <div class="ws" onclick="toast('Selector de espacio de trabajo: Adolphus / por cliente')">
+      <span class="ws-mark">AD</span>
+      <span class="ws-meta"><b>Adolphus S.A.</b><span id="wsSub">Control de fluidos · Lima</span></span>
+    </div>
+    <nav id="nav">
+      <div class="rail-sec">Operación</div>
+      <a data-p="assets" class="on"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
+      <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
+      <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
+      <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
+      <div class="rail-sec">Maestros</div>
+      <a data-p="cat"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/></svg><span class="lbl">Catálogo y despieces</span></a>
+      <a data-p="imp"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg><span class="lbl">Importar levantamiento</span></a>
+      <a data-p="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg><span class="lbl">Usuarios y accesos</span></a>
+    </nav>
+    <div class="rail-foot">
+      <p>Valvia v0.3<br>Prototipo · datos de demo</p>
+      <button class="icon-btn" onclick="toggleRail()" title="Contraer barra"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- ══ WORK AREA ══ -->
+  <div class="work">
+    <header class="bar">
+      <button class="icon-btn" onclick="toggleRail()" title="Barra lateral"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="crumbs" id="crumbs"></div>
+      <button class="search-trigger" onclick="openCmd()">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        Buscar tag, serie o n.º de parte
+        <span class="kbd">⌘K</span>
+      </button>
+      <select class="inp chip-sel" id="roleSel" style="height:32px" title="Perfil activo">
+        <option value="admin">Ingeniería · Adolphus</option>
+        <option value="tec">Servicio técnico</option>
+        <option value="com">Comercial repuestos</option>
+        <option value="cli-minera">Cliente · Minera Los Andes</option>
+        <option value="cli-refi">Cliente · Refinería Costa Norte</option>
+        <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
+      </select>
+      <button class="icon-btn" onclick="toggleTheme()" title="Tema claro / oscuro" id="themeBtn"></button>
+      <button class="icon-btn" onclick="openHelp()" title="Atajos de teclado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg></button>
+      <div class="avatar" id="ava">IA</div>
+    </header>
+
+    <div class="view">
+
+      <!-- ═══ ACTIVOS ═══ -->
+      <section class="page on" id="p-assets"><div class="view-pad">
+        <div class="hd"><div><h1>Activos instalados</h1><p id="assetsSub"></p></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
+            <button class="btn" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Cargar equipos</button>
+          </div></div>
+        <div class="stats" id="stats"></div>
+        <div class="tools">
+          <div class="views" id="savedViews"></div>
+          <select class="inp chip-sel" id="fCli"></select>
+          <select class="inp chip-sel" id="fMarca"></select>
+          <span class="spacer"></span>
+          <span class="count" id="gCount"></span>
+          <button class="icon-btn" onclick="toggleDensity()" title="Densidad de filas"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        </div>
+        <div class="bulk" id="bulk">
+          <b id="bulkN"></b>
+          <span class="spacer"></span>
+          <button class="btn xs" onclick="bulkAction('Órdenes de trabajo creadas')">Crear órdenes</button>
+          <button class="btn xs" onclick="bulkAction('Equipos exportados')">Exportar selección</button>
+          <button class="btn xs" onclick="clearPick()">Limpiar</button>
+        </div>
+        <div class="grid-wrap"><div class="grid-scroll" id="gridScroll"></div></div>
+      </div></section>
+
+      <!-- ═══ CALIBRACIONES ═══ -->
+      <section class="page" id="p-cal"><div class="view-pad">
+        <div class="hd"><div><h1>Horizonte de calibración</h1><p>Válvulas de seguridad y alivio con vencimiento programado. La franja muestra los 18 meses alrededor de hoy.</p></div></div>
+        <div class="stats" id="calStats"></div>
+        <div class="panel"><div class="panel-h"><h3>Programa por vencimiento</h3><span class="count" id="calCount"></span></div>
+          <div id="calList"></div></div>
+      </div></section>
+
+      <!-- ═══ ÓRDENES ═══ -->
+      <section class="page" id="p-wo"><div class="view-pad">
+        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Arrastra una tarjeta para cambiarla de etapa. Al certificar, la fecha de próxima calibración del equipo se actualiza sola.</p></div>
+          <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div>
+        <div class="kb" id="kanban"></div>
+      </div></section>
+
+      <!-- ═══ SOLICITUDES ═══ -->
+      <section class="page" id="p-req"><div class="view-pad">
+        <div class="hd"><div><h1>Solicitudes de repuestos</h1><p>Lo que los clientes piden desde su portal, con el equipo y el historial ya adjuntos.</p></div></div>
+        <div class="panel"><div id="reqList"></div></div>
+      </div></section>
+
+      <!-- ═══ CATÁLOGO ═══ -->
+      <section class="page" id="p-cat"><div class="view-pad">
+        <div class="hd"><div><h1>Catálogo y despieces</h1><p>El despiece se carga una vez por modelo. Todos los equipos de ese modelo lo heredan, en todos los clientes.</p></div></div>
+        <div class="panel"><div id="catList"></div></div>
+      </div></section>
+
+      <!-- ═══ IMPORTAR ═══ -->
+      <section class="page" id="p-imp"><div class="view-pad">
+        <div class="hd"><div><h1>Importar levantamiento de campo</h1><p>Acepta el Excel tal como sale de campo: con logo arriba, celdas combinadas y filas a medio llenar.</p></div></div>
+        <div class="steps" id="steps">
+          <div class="stp on" data-s="1"><i>1</i>Archivo</div><div class="stp" data-s="2"><i>2</i>Mapeo</div>
+          <div class="stp" data-s="3"><i>3</i>Validación</div><div class="stp" data-s="4"><i>4</i>Consolidación</div></div>
+        <div id="imp1">
+          <div class="drop" id="drop" onclick="document.getElementById('file').click()">
+            <svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+            <b>Suelta el archivo .xls / .xlsx</b><span>o haz clic para elegirlo — también acepta .csv</span>
+          </div>
+          <input type="file" id="file" accept=".xls,.xlsx,.csv" style="display:none">
+          <div class="callout" style="margin-top:16px">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+            <div>¿Sin archivo a la mano? <a href="#" onclick="demoImport();return false" style="color:var(--sel);font-weight:600">Carga un levantamiento de ejemplo</a> para recorrer el flujo completo.</div></div>
+        </div>
+        <div id="imp2" style="display:none"></div><div id="imp3" style="display:none"></div>
+      </div></section>
+
+      <!-- ═══ USUARIOS ═══ -->
+      <section class="page" id="p-users"><div class="view-pad">
+        <div class="hd"><div><h1>Usuarios y accesos</h1><p>Cada usuario cliente ve solo los activos de su propia organización. El aislamiento se aplica en base de datos, no en pantalla.</p></div>
+          <button class="btn" onclick="toast('Invitación enviada (simulada)')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Invitar</button></div>
+        <div class="panel"><div id="userList"></div></div>
+      </div></section>
+
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dr-h">
+    <div class="dr-top">
+      <div style="flex:1;min-width:0"><h2 id="drTitle"></h2><div class="sub" id="drSub"></div></div>
+      <button class="icon-btn" onclick="toggleWide()" title="Ampliar" id="wideBtn"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5"/></svg></button>
+      <button class="icon-btn" onclick="closeDrawer()" title="Cerrar (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="dr-tags" id="drTags"></div>
+  </div>
+  <div class="dr-tabs" id="drTabs">
+    <div class="dr-tab on" data-t="ficha">Ficha</div>
+    <div class="dr-tab" data-t="bom">Despiece</div>
+    <div class="dr-tab" data-t="hist">Historial</div>
+    <div class="dr-tab" data-t="docs">Expediente</div>
+  </div>
+  <div class="dr-b">
+    <div class="pane on" id="pn-ficha"></div><div class="pane" id="pn-bom"></div>
+    <div class="pane" id="pn-hist"></div><div class="pane" id="pn-docs"></div>
+  </div>
+  <div class="dr-f" id="drFoot"></div>
+</aside>
+
+<div class="cmd" id="cmd" onclick="if(event.target.id==='cmd')closeCmd()">
+  <div class="cmd-c">
+    <div class="cmd-i">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="cmdIn" placeholder="Tag, número de serie, n.º de parte, cliente o acción…" autocomplete="off">
+    </div>
+    <div class="cmd-l" id="cmdList"></div>
+    <div class="cmd-f"><span><span class="kbd">↑↓</span> navegar</span><span><span class="kbd">↵</span> abrir</span><span><span class="kbd">esc</span> cerrar</span></div>
+  </div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target.id==='modal')closeModal()">
+  <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
+    <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="modal-b" id="mBody"></div><div class="modal-f" id="mFoot"></div></div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   1 · DATOS (demo — reemplazables por API)
+   ============================================================ */
+const MARCAS={
+ 'Masoneilan':'Válvulas de control y posicionadores','Consolidated':'Seguridad y alivio',
+ 'Anderson Greenwood':'Alivio piloto-operadas','Crosby':'Válvulas de seguridad',
+ 'Becker':'Reguladores de gas','Mooney':'Reguladores de presión','Cashco':'Reguladoras y control modulante',
+ 'Orbinox':'Válvulas cuchilla','RF Valves':'Válvulas pinch','Delval':'Mariposa y actuación',
+ 'Bernard Controls':'Actuadores eléctricos','Klinger':'Empaquetaduras y globo','Ampo Poyam':'Esféricas servicio severo'
+};
+const CLIENTES=[
+ {id:'minera',n:'Minera Los Andes S.A.A.',ind:'Minería',fac:'Concentradora C-1',areas:{mol:'Molienda',flo:'Flotación',rel:'Relaves'}},
+ {id:'refi',n:'Refinería Costa Norte',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'}},
+ {id:'agro',n:'Agroindustrias del Valle',ind:'Industria general',fac:'Planta Sur',areas:{cal:'Calderas',evp:'Evaporación',env:'Envasado'}}
+];
+const MODELOS={
+ '21000':{m:'Masoneilan',c:'control',t:'Globo reciprocante',d:'Globo bridado con actuador de diafragma multi-resorte',b:'globo'},
+ '41005':{m:'Masoneilan',c:'control',t:'Globo alta presión',d:'Jaula balanceada para alta caída de presión',b:'globo'},
+ '35002':{m:'Masoneilan',c:'control',t:'Rotativa excéntrica',d:'Camflex de obturador excéntrico',b:'globo'},
+ '1000HP':{m:'Cashco',c:'control',t:'Reguladora modulante',d:'Reguladora con piloto, servicio industrial',b:'globo'},
+ 'VRP-SB':{m:'Becker',c:'control',t:'Regulador de gas',d:'Regulador balanceado para gas natural',b:'globo'},
+ '1900':{m:'Consolidated',c:'seguridad',t:'PSV de resorte',d:'Seguridad y alivio, bonete abierto',b:'psv'},
+ '19096':{m:'Consolidated',c:'seguridad',t:'PSV de resorte',d:'Alivio bonete cerrado, servicio vapor',b:'psv'},
+ 'JOS-E':{m:'Crosby',c:'seguridad',t:'PSV de resorte',d:'Seguridad convencional vapor y gas',b:'psv'},
+ '81P':{m:'Anderson Greenwood',c:'seguridad',t:'PSV piloto-operada',d:'Alivio piloto, alto porcentaje de operación',b:'psv'},
+ 'EB-KG':{m:'Orbinox',c:'onoff',t:'Válvula cuchilla',d:'Cuchilla unidireccional para pulpa y relaves',b:'cuchilla'},
+ 'PINCH-A':{m:'RF Valves',c:'onoff',t:'Válvula pinch',d:'Manga elastomérica para fluidos abrasivos',b:'cuchilla'},
+ 'DV-55':{m:'Delval',c:'onoff',t:'Mariposa wafer',d:'Concéntrica con asiento elastomérico',b:'cuchilla'},
+ 'AQ-25':{m:'Bernard Controls',c:'actuador',t:'Actuador eléctrico',d:'Multivuelta con control integrado',b:'act'}
+};
+const BOM={
+ globo:[
+  {p:1,n:'AD-CUE-150-20',d:'Cuerpo bridado ASTM A216 WCC',q:1,g:'Cuerpo',k:0,s:0,l:'Importación 10-12 sem'},
+  {p:2,n:'AD-BON-STD-20',d:'Bonete estándar con brida',q:1,g:'Bonete',k:0,s:1,l:'Almacén Lima'},
+  {p:3,n:'AD-TRM-316-A',d:'Trim completo: obturador, jaula y asiento SS316',q:1,g:'Trim',k:1,s:2,l:'Almacén Lima'},
+  {p:4,n:'AD-ASI-316-20',d:'Anillo de asiento SS316 endurecido',q:1,g:'Trim',k:1,s:4,l:'Almacén Lima'},
+  {p:5,n:'AD-VAS-316-38',d:'Vástago SS316 Ø3/8"',q:1,g:'Trim',k:1,s:3,l:'Almacén Lima'},
+  {p:6,n:'AD-EMP-PTFE-V',d:'Empaquetadura PTFE tipo V (juego)',q:1,g:'Sellos',k:1,s:12,l:'Almacén Lima'},
+  {p:7,n:'AD-KIT-JUN-20',d:'Kit de juntas espirometálicas',q:1,g:'Sellos',k:1,s:8,l:'Almacén Lima'},
+  {p:8,n:'AD-DIA-88-NEO',d:'Diafragma de actuador, neopreno reforzado',q:1,g:'Actuador',k:1,s:2,l:'Almacén Lima'},
+  {p:9,n:'AD-RES-715',d:'Resorte de rango 7–15 psi',q:1,g:'Actuador',k:0,s:0,l:'Importación 8 sem'},
+  {p:10,n:'AD-POS-SVI-HART',d:'Posicionador digital 4–20 mA HART',q:1,g:'Instrumento',k:0,s:1,l:'Almacén Lima'}],
+ psv:[
+  {p:1,n:'AD-SV-CUE-300',d:'Cuerpo entrada 2" x salida 3" WCB',q:1,g:'Cuerpo',k:0,s:0,l:'Importación 12 sem'},
+  {p:2,n:'AD-SV-TOB-D',d:'Tobera orificio "D" SS316',q:1,g:'Trim',k:1,s:1,l:'Almacén Lima'},
+  {p:3,n:'AD-SV-DIS-316',d:'Disco SS316 con inserto blando',q:1,g:'Trim',k:1,s:3,l:'Almacén Lima'},
+  {p:4,n:'AD-SV-GUI-316',d:'Guía de disco SS316',q:1,g:'Trim',k:0,s:2,l:'Almacén Lima'},
+  {p:5,n:'AD-SV-RES-150',d:'Resorte calibrado 150 psig',q:1,g:'Resorte',k:1,s:0,l:'Importación 8 sem'},
+  {p:6,n:'AD-SV-HUS-316',d:'Husillo (spindle) SS316',q:1,g:'Trim',k:0,s:2,l:'Almacén Lima'},
+  {p:7,n:'AD-SV-BON-CER',d:'Bonete cerrado con tapa roscada',q:1,g:'Bonete',k:0,s:1,l:'Almacén Lima'},
+  {p:8,n:'AD-SV-KIT-SEL',d:'Kit completo de juntas y sellos',q:1,g:'Sellos',k:1,s:14,l:'Almacén Lima'},
+  {p:9,n:'AD-SV-PAL-LEV',d:'Palanca de levante manual',q:1,g:'Accesorio',k:0,s:5,l:'Almacén Lima'}],
+ cuchilla:[
+  {p:1,n:'AD-KG-CUE-10',d:'Cuerpo de válvula cuchilla, fundición',q:1,g:'Cuerpo',k:0,s:0,l:'Importación 10 sem'},
+  {p:2,n:'AD-KG-COM-316',d:'Compuerta SS316 rectificada',q:1,g:'Obturador',k:1,s:2,l:'Almacén Lima'},
+  {p:3,n:'AD-KG-ASI-EPDM',d:'Asiento perimetral EPDM',q:1,g:'Sellos',k:1,s:9,l:'Almacén Lima'},
+  {p:4,n:'AD-KG-EMP-TRA',d:'Empaquetadura transversal (juego)',q:1,g:'Sellos',k:1,s:11,l:'Almacén Lima'},
+  {p:5,n:'AD-KG-VAS-YUG',d:'Vástago y yugo de accionamiento',q:1,g:'Accionamiento',k:0,s:1,l:'Almacén Lima'},
+  {p:6,n:'AD-KG-ACT-NEU',d:'Actuador neumático de doble efecto',q:1,g:'Actuador',k:0,s:1,l:'Almacén Lima'},
+  {p:7,n:'AD-KG-SEN-POS',d:'Caja de finales de carrera',q:1,g:'Instrumento',k:0,s:4,l:'Almacén Lima'},
+  {p:8,n:'AD-KG-KIT-PER',d:'Kit de pernería y tuercas',q:1,g:'Ferretería',k:1,s:20,l:'Almacén Lima'}],
+ act:[
+  {p:1,n:'AD-AC-MOT-3F',d:'Motor trifásico 380 V',q:1,g:'Motor',k:1,s:1,l:'Almacén Lima'},
+  {p:2,n:'AD-AC-RED-25',d:'Reductor multivuelta 25:1',q:1,g:'Transmisión',k:0,s:0,l:'Importación 8 sem'},
+  {p:3,n:'AD-AC-LIM-TOR',d:'Bloque de limitadores de par y carrera',q:1,g:'Control',k:1,s:2,l:'Almacén Lima'},
+  {p:4,n:'AD-AC-TAR-LOG',d:'Tarjeta lógica de control integrado',q:1,g:'Control',k:1,s:1,l:'Almacén Lima'},
+  {p:5,n:'AD-AC-VOL-MAN',d:'Volante de operación manual',q:1,g:'Accionamiento',k:0,s:3,l:'Almacén Lima'},
+  {p:6,n:'AD-AC-KIT-ORI',d:'Kit de o-rings y sellos IP68',q:1,g:'Sellos',k:1,s:7,l:'Almacén Lima'}]
+};
+let ACTIVOS=[
+ {id:'a1',cli:'refi',ar:'crd',cl:'control',tag:'TV-561B',ser:'N-11-267173',mod:'21000',sz:'2"',rt:'600',cv:'39',air:'OPEN',rng:'7-15 psi',cr:'Alta',ult:'2026-02-18',prox:''},
+ {id:'a2',cli:'refi',ar:'crd',cl:'control',tag:'TV-561A',ser:'N-11-267181',mod:'21000',sz:'2"',rt:'600',cv:'39',air:'OPEN',rng:'7-15 psi',cr:'Alta',ult:'2026-02-18',prox:''},
+ {id:'a3',cli:'refi',ar:'vac',cl:'control',tag:'PCV-1124A',ser:'N-12-830A-003-01',mod:'41005',sz:'3"',rt:'900',cv:'56',air:'CLOSE',rng:'3-15 psi',cr:'Crítica',ult:'2026-03-08',prox:''},
+ {id:'a4',cli:'refi',ar:'vac',cl:'seguridad',tag:'PSV-1210',ser:'C-88-4471',mod:'1900',sz:'2"x3"',rt:'300',cv:'',air:'',rng:'150 psig',cr:'Crítica',ult:'2025-09-02',prox:'2026-09-02'},
+ {id:'a5',cli:'refi',ar:'alm',cl:'seguridad',tag:'PSV-2001',ser:'AG-77-1120',mod:'81P',sz:'3"x4"',rt:'300',cv:'',air:'',rng:'85 psig',cr:'Crítica',ult:'2025-06-15',prox:'2026-06-15'},
+ {id:'a6',cli:'refi',ar:'alm',cl:'seguridad',tag:'PSV-2004',ser:'C-89-0912',mod:'19096',sz:'1"x2"',rt:'300',cv:'',air:'',rng:'60 psig',cr:'Alta',ult:'2026-01-30',prox:'2027-01-30'},
+ {id:'a7',cli:'minera',ar:'mol',cl:'onoff',tag:'KGV-3301',ser:'ORB-24-8891',mod:'EB-KG',sz:'10"',rt:'150',cv:'',air:'',rng:'',cr:'Alta',ult:'2026-04-02',prox:''},
+ {id:'a8',cli:'minera',ar:'flo',cl:'onoff',tag:'PV-4102',ser:'RF-23-0455',mod:'PINCH-A',sz:'6"',rt:'150',cv:'',air:'',rng:'',cr:'Alta',ult:'2025-11-20',prox:''},
+ {id:'a9',cli:'minera',ar:'rel',cl:'onoff',tag:'BV-5210',ser:'DV-22-7734',mod:'DV-55',sz:'12"',rt:'150',cv:'',air:'',rng:'',cr:'Media',ult:'2026-05-08',prox:''},
+ {id:'a10',cli:'minera',ar:'rel',cl:'actuador',tag:'ACT-5210',ser:'BC-21-3390',mod:'AQ-25',sz:'—',rt:'',cv:'',air:'',rng:'380 V',cr:'Media',ult:'2026-05-08',prox:''},
+ {id:'a11',cli:'minera',ar:'mol',cl:'control',tag:'FCV-3120',ser:'MN-23-7781',mod:'35002',sz:'4"',rt:'300',cv:'110',air:'OPEN',rng:'7-15 psi',cr:'Alta',ult:'2026-06-19',prox:''},
+ {id:'a12',cli:'agro',ar:'cal',cl:'seguridad',tag:'PSV-C-01',ser:'CR-91-2205',mod:'JOS-E',sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica',ult:'2025-08-20',prox:'2026-08-20'},
+ {id:'a13',cli:'agro',ar:'cal',cl:'seguridad',tag:'PSV-C-02',ser:'CR-91-2206',mod:'19096',sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica',ult:'2025-01-11',prox:'2026-01-11'},
+ {id:'a14',cli:'agro',ar:'evp',cl:'control',tag:'FCV-101',ser:'D-25-001645',mod:'35002',sz:'1.5"',rt:'150',cv:'39',air:'OPEN',rng:'7-15 psi',cr:'Media',ult:'2026-01-15',prox:''},
+ {id:'a15',cli:'agro',ar:'evp',cl:'control',tag:'PCV-220',ser:'CA-24-5512',mod:'1000HP',sz:'2"',rt:'150',cv:'25',air:'OPEN',rng:'30 psig',cr:'Media',ult:'2026-06-10',prox:''},
+ {id:'a16',cli:'agro',ar:'env',cl:'control',tag:'',ser:'',mod:'21000',sz:'',rt:'',cv:'',air:'',rng:'',cr:'—',ult:'',prox:''},
+ {id:'a17',cli:'agro',ar:'env',cl:'control',tag:'',ser:'',mod:'21000',sz:'',rt:'',cv:'',air:'',rng:'',cr:'—',ult:'',prox:''}
+];
+let ORDENES=[
+ {id:'o1',act:'a3',n:'AD-26-0430',et:'certificada',tipo:'Correctivo',f:'2026-03-08',tec:'O. Julio de la Rosa',hall:'Fuga por empaquetadura y desgaste en anillo de asiento. Trim completo y empaquetadura reemplazados. Prueba hidrostática conforme.',partes:['AD-TRM-316-A','AD-EMP-PTFE-V','AD-KIT-JUN-20']},
+ {id:'o2',act:'a1',n:'AD-26-0312',et:'certificada',tipo:'Preventivo',f:'2026-02-18',tec:'K. Ortiz',hall:'Calibración de posicionador y prueba de carrera. Sin hallazgos.',partes:[]},
+ {id:'o3',act:'a12',n:'AD-25-1188',et:'certificada',tipo:'Calibración',f:'2025-08-20',tec:'K. Ortiz',hall:'Prueba de banco a 120 psig. Set point conforme, precintada y certificada.',partes:['AD-SV-KIT-SEL']},
+ {id:'o4',act:'a7',n:'AD-26-0511',et:'certificada',tipo:'Preventivo',f:'2026-04-02',tec:'O. Julio de la Rosa',hall:'Cambio de asiento perimetral por desgaste abrasivo. Se recomienda frecuencia de 6 meses en relaves.',partes:['AD-KG-ASI-EPDM','AD-KG-EMP-TRA']},
+ {id:'o5',act:'a13',n:'AD-26-0688',et:'taller',tipo:'Calibración',f:'2026-07-14',tec:'K. Ortiz',hall:'Ingresa a banco de pruebas. Calibración vencida desde enero.',partes:[]},
+ {id:'o6',act:'a8',n:'AD-26-0701',et:'programada',tipo:'Correctivo',f:'2026-07-29',tec:'Por asignar',hall:'Reemplazo de manga por adelgazamiento detectado en inspección.',partes:['AD-KG-ASI-EPDM']},
+ {id:'o7',act:'a5',n:'AD-26-0712',et:'solicitada',tipo:'Calibración',f:'2026-08-05',tec:'Por asignar',hall:'Recalibración anual programada antes del vencimiento.',partes:[]}
+];
+const ETAPAS=[['solicitada','Solicitada'],['programada','Programada'],['taller','En taller'],['certificada','Cerrada / certificada']];
+const DOCS=[
+ {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
+ {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
+ {a:'a3',t:'DS',n:'Datasheet Masoneilan 41005 · PCV-1124A.pdf',f:'2019-11-04',w:'820 KB'},
+ {a:'a1',t:'INF',n:'Informe de mantenimiento AD-26-0312.pdf',f:'2026-02-18',w:'980 KB'},
+ {a:'a1',t:'DS',n:'Datasheet Masoneilan 21000 · TV-561B.pdf',f:'2018-06-12',w:'760 KB'},
+ {a:'a12',t:'CERT',n:'Certificado de calibración PSV-C-01.pdf',f:'2025-08-20',w:'420 KB'},
+ {a:'a12',t:'OC',n:'OC-2025-0312 · Kit de juntas.pdf',f:'2025-07-28',w:'290 KB'},
+ {a:'a7',t:'INF',n:'Informe de mantenimiento AD-26-0511.pdf',f:'2026-04-02',w:'1.4 MB'},
+ {a:'a7',t:'DS',n:'Datasheet Orbinox EB 10 pulg.pdf',f:'2021-03-19',w:'610 KB'}
+];
+let SOLICITUDES=[
+ {id:'s1',n:'SOL-2026-0188',cli:'agro',f:'2026-07-18',est:'Cotizada',items:[{n:'AD-SV-KIT-SEL',q:2,a:'a12'},{n:'AD-SV-RES-150',q:1,a:'a13'}]},
+ {id:'s2',n:'SOL-2026-0201',cli:'minera',f:'2026-07-21',est:'Pendiente',items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}]}
+];
+const USUARIOS=[
+ {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
+ {n:'Servicio Técnico',m:'servicio@adolphus.pe',r:'Técnico',c:'—',x:'Órdenes de trabajo, informes y certificados'},
+ {n:'Comercial Repuestos',m:'ventas@adolphus.pe',r:'Comercial',c:'—',x:'Solicitudes, cotizaciones y stock local'},
+ {n:'Mantenimiento Planta',m:'mantenimiento@losandes.pe',r:'Cliente',c:'Minera Los Andes S.A.A.',x:'Lectura de sus activos y solicitud de repuestos'},
+ {n:'Confiabilidad',m:'confiabilidad@costanorte.pe',r:'Cliente',c:'Refinería Costa Norte',x:'Lectura de sus activos y solicitud de repuestos'},
+ {n:'Jefatura de Planta',m:'planta@agrovalle.pe',r:'Cliente',c:'Agroindustrias del Valle',x:'Lectura de sus activos y solicitud de repuestos'}
+];
+
+/* ============================================================
+   2 · ESTADO Y UTILIDADES
+   ============================================================ */
+const HOY=new Date('2026-07-23T00:00:00');
+const S={page:'assets',rol:'admin',cli:null,view:'todos',fCli:'',fMarca:'',sort:{k:'tag',dir:1},
+         focus:0,picked:new Set(),cur:null,tab:'ficha',wide:false,cart:[]};
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const cli=id=>CLIENTES.find(c=>c.id===id)||{};
+const area=a=>{const c=CLIENTES.find(x=>x.areas[a.ar]);return c?c.areas[a.ar]:'—'};
+const dias=f=>f?Math.round((new Date(f+'T00:00:00')-HOY)/864e5):null;
+const CL={control:'Control',seguridad:'Seguridad',onoff:'On-Off',actuador:'Actuador'};
+function estado(a){
+  if(!a.ser||!a.tag) return {k:'incompleto',t:'Ficha incompleta',c:'due'};
+  const o=ORDENES.find(o=>o.act===a.id&&o.et!=='certificada');
+  if(o) return {k:'taller',t:o.et==='taller'?'En taller':'Trabajo abierto',c:'sel'};
+  const d=a.prox?dias(a.prox):null;
+  if(d!==null&&d<0) return {k:'vencido',t:'Calibración vencida',c:'late'};
+  if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
+  return {k:'ok',t:'Operativo',c:'ok'};
+}
+function toast(msg){
+  const el=document.createElement('div');el.className='toast';
+  el.innerHTML='<span class="dot"></span>'+esc(msg);
+  $('#toasts').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},2600);
+}
+const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
+
+/* ============================================================
+   3 · NAVEGACIÓN / SHELL
+   ============================================================ */
+const TITULOS={assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',req:'Solicitudes',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
+function go(p){
+  S.page=p;
+  $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
+  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));
+  $('#crumbs').innerHTML=`<span>${S.cli?esc(cli(S.cli).n):'Adolphus'}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  $('.view').scrollTop=0;
+  if(window.innerWidth<980)$('#app').classList.remove('rail-open');
+}
+$$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+function toggleRail(){
+  if(window.innerWidth<980)$('#app').classList.toggle('rail-open');
+  else $('#app').classList.toggle('rail-min');
+}
+function toggleTheme(){
+  const d=document.documentElement.dataset.theme==='dark';
+  document.documentElement.dataset.theme=d?'light':'dark';paintThemeBtn();
+}
+function paintThemeBtn(){
+  const d=document.documentElement.dataset.theme==='dark';
+  $('#themeBtn').innerHTML=d
+   ?'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>'
+   :'<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>';
+}
+function toggleDensity(){
+  const c=document.documentElement.dataset.density==='compact';
+  document.documentElement.dataset.density=c?'cozy':'compact';
+  toast(c?'Densidad cómoda':'Densidad compacta');
+}
+$('#roleSel').onchange=e=>{
+  const v=e.target.value;
+  S.rol=v.startsWith('cli')?'cliente':v;
+  S.cli=v.startsWith('cli')?v.slice(4):null;
+  $('#ava').textContent={admin:'IA',tec:'ST',com:'CR','cli-minera':'ML','cli-refi':'RC','cli-agro':'AV'}[v];
+  $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
+  const c=S.rol==='cliente';
+  $$('#nav a').forEach(a=>a.style.display=(c&&['cat','imp','users'].includes(a.dataset.p))?'none':'');
+  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';closeDrawer();renderAll();go('assets');
+};
+
+/* ============================================================
+   4 · ACTIVOS — vistas guardadas, filtros, grilla
+   ============================================================ */
+const VISTAS=[
+ {id:'todos',n:'Todos',f:()=>true},
+ {id:'criticos',n:'Críticos',f:a=>a.cr==='Crítica'},
+ {id:'atencion',n:'Requieren atención',f:a=>['vencido','porvencer','taller','incompleto'].includes(estado(a).k)},
+ {id:'seguridad',n:'Seguridad',f:a=>a.cl==='seguridad'},
+ {id:'incompletos',n:'Sin serie',f:a=>!a.ser}
+];
+function filtrados(){
+  const v=VISTAS.find(x=>x.id===S.view)||VISTAS[0];
+  let r=visibles().filter(v.f);
+  if(S.fCli)r=r.filter(a=>a.cli===S.fCli);
+  if(S.fMarca)r=r.filter(a=>MODELOS[a.mod]?.m===S.fMarca);
+  const k=S.sort.k,d=S.sort.dir;
+  const val=a=>({tag:a.tag||'zzz',ser:a.ser||'zzz',mod:MODELOS[a.mod]?.m+' '+a.mod,cli:cli(a.cli).n,est:estado(a).t,ult:a.ult||''})[k]||'';
+  return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
+}
+function renderStats(){
+  const vs=visibles();
+  const n=k=>vs.filter(a=>estado(a).k===k).length;
+  const defs=[
+   {v:'todos',lbl:'Activos totales',val:vs.length,c:''},
+   {v:'atencion',lbl:'Requieren atención',val:n('vencido')+n('porvencer')+n('taller')+n('incompleto'),c:'due'},
+   {v:'seguridad',lbl:'Calibración vencida',val:n('vencido'),c:'late'},
+   {v:'todos',lbl:'Operativos',val:n('ok'),c:'ok'}
+  ];
+  $('#stats').innerHTML=defs.map((d,i)=>`<button class="stat ${S.view===d.v&&i>0?'active':''}" onclick="setView('${d.v}')">
+    <span class="v">${d.c?`<span class="dot" style="color:var(--${d.c})"></span>`:''}${d.val}</span>
+    <span class="k">${d.lbl}</span></button>`).join('');
+  $('#assetsSub').textContent=S.cli
+    ? `${cli(S.cli).ind} · ${cli(S.cli).fac}`
+    : `${CLIENTES.length} clientes · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas representadas en campo`;
+}
+function setView(v){S.view=v;S.focus=0;renderAssets()}
+function renderFilters(){
+  $('#savedViews').innerHTML=VISTAS.map(v=>`<button class="${S.view===v.id?'on':''}" onclick="setView('${v.id}')">${v.n}</button>`).join('');
+  if(!$('#fCli').dataset.built){
+    $('#fCli').innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('');
+    $('#fMarca').innerHTML='<option value="">Todas las marcas</option>'+Object.keys(MARCAS).map(m=>`<option>${m}</option>`).join('');
+    $('#fCli').dataset.built='1';
+    $('#fCli').onchange=e=>{S.fCli=e.target.value;renderAssets()};
+    $('#fMarca').onchange=e=>{S.fMarca=e.target.value;renderAssets()};
+  }
+  $('#fCli').style.display=S.cli?'none':'';
+  $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
+}
+const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cl','Clase'],['cli','Ubicación'],['cr','Criticidad'],['est','Estado'],['ult','Últ. servicio']];
+function renderGrid(){
+  const rows=filtrados();
+  $('#gCount').textContent=`${rows.length} de ${visibles().length}`;
+  $('#ctAssets').textContent=visibles().length;
+  if(!rows.length){$('#gridScroll').innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><b>Nada que mostrar</b>Cambia de vista o limpia los filtros.</div>`;return}
+  const th=COLS.map(([k,l])=>`<th class="sortable ${S.sort.k===k?'sorted':''}" onclick="sortBy('${k}')">${l}<span class="ar">${S.sort.k===k?(S.sort.dir>0?'▲':'▼'):'▲'}</span></th>`).join('');
+  $('#gridScroll').innerHTML=`<table class="grid"><thead><tr>
+    <th style="width:34px"><input type="checkbox" class="ck" onclick="pickAll(this.checked)" ${S.picked.size&&S.picked.size===rows.length?'checked':''}></th>${th}</tr></thead>
+   <tbody>${rows.map((a,i)=>{
+     const m=MODELOS[a.mod]||{},e=estado(a),full=a.cr==='Crítica'?3:a.cr==='Alta'?2:a.cr==='Media'?1:0;
+     return `<tr data-id="${a.id}" class="${i===S.focus?'focus':''} ${S.picked.has(a.id)?'picked':''} ${S.cur&&S.cur.id===a.id?'open':''}" onclick="rowClick(event,'${a.id}',${i})">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="ck" ${S.picked.has(a.id)?'checked':''} onclick="pick('${a.id}',this.checked)"></td>
+      <td>${a.tag?`<b>${esc(a.tag)}</b>`:'<span style="color:var(--due)">— sin tag —</span>'}</td>
+      <td class="mono" style="color:var(--ink-2)">${a.ser?esc(a.ser):'<span style="color:var(--due)">— sin serie —</span>'}</td>
+      <td><div class="cell-2"><span>${esc(m.m||'—')}</span><small class="mono">${esc(a.mod)}</small></div></td>
+      <td><span class="tag">${CL[a.cl]}</span></td>
+      <td><div class="cell-2"><span>${esc(cli(a.cli).n)}</span><small>${esc(area(a))}</small></div></td>
+      <td><span class="riesgo ${a.cr==='Crítica'?'critica':a.cr==='Alta'?'alta':''}" title="${a.cr}">${[0,1,2].map(x=>`<i class="${x<full?'f':''}"></i>`).join('')}</span></td>
+      <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
+      <td class="mono" style="color:var(--ink-3)">${a.ult||'—'}</td></tr>`}).join('')}</tbody></table>`;
+}
+function sortBy(k){S.sort.dir=S.sort.k===k?-S.sort.dir:1;S.sort.k=k;renderGrid()}
+function rowClick(ev,id,i){S.focus=i;openAsset(id)}
+function pick(id,on){on?S.picked.add(id):S.picked.delete(id);paintBulk();renderGrid()}
+function pickAll(on){on?filtrados().forEach(a=>S.picked.add(a.id)):S.picked.clear();paintBulk();renderGrid()}
+function clearPick(){S.picked.clear();paintBulk();renderGrid()}
+function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
+function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
+function renderAssets(){renderStats();renderFilters();renderGrid();paintBulk()}
+
+/* ============================================================
+   5 · DRAWER DE DETALLE
+   ============================================================ */
+function openAsset(id){
+  S.cur=ACTIVOS.find(a=>a.id===id);if(!S.cur)return;
+  const a=S.cur,m=MODELOS[a.mod]||{},e=estado(a),d=a.prox?dias(a.prox):null;
+  $('#drTitle').textContent=a.tag||'Activo sin tag';
+  $('#drSub').textContent=`${cli(a.cli).n} · ${cli(a.cli).fac} · ${area(a)}`;
+  $('#drTags').innerHTML=`<span class="tag ${e.c}"><span class="dot"></span>${e.t}</span>
+    <span class="tag">${CL[a.cl]}</span><span class="tag">${esc(m.m||'')}</span>
+    <span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}
+    ${d!==null&&d>=0?`<span class="tag ${d<=90?'due':'ok'}">Calibración en ${d} d</span>`:''}`;
+  $('#drFoot').innerHTML=S.rol==='cliente'
+   ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
+   : `<button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn" onclick="openWO('${a.id}')">Crear orden de trabajo</button>`;
+  showTab(S.tab||'ficha');
+  $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
+  renderGrid();
+}
+function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true');S.cur=null;renderGrid()}
+function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
+function showTab(t){
+  S.tab=t;
+  $$('.dr-tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pn-'+t));
+  ({ficha:paneFicha,bom:paneBOM,hist:paneHist,docs:paneDocs})[t]();
+}
+$$('.dr-tab').forEach(x=>x.onclick=()=>showTab(x.dataset.t));
+
+function paneFicha(){
+  const a=S.cur,m=MODELOS[a.mod]||{};
+  const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
+  const abiertas=ORDENES.filter(o=>o.act===a.id&&o.et!=='certificada');
+  $('#pn-ficha').innerHTML=`
+   ${(!a.ser||!a.tag)?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Llegó incompleto desde el levantamiento: falta ${!a.tag?'<b>tag</b>':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'<b>número de serie</b>':''}. Sin serie no hay trazabilidad de repuestos ni de servicio.</div></div>`:''}
+   ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
+   <dl class="dl">
+     ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
+     ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
+     ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
+   </dl>
+   <div style="margin-top:24px"><h3 style="margin-bottom:8px">Sobre el modelo</h3>
+     <p style="font-size:13px;color:var(--ink-2);max-width:68ch">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>`;
+}
+
+/* --- esquemas de despiece --- */
+const cal_=(n,x,y,tx,ty)=>`<circle class="cb" cx="${x}" cy="${y}" r="9"/><text class="cn" x="${x}" y="${y+3.4}" text-anchor="middle">${n}</text>`+
+ (tx!==undefined?`<line class="lead" x1="${x<150?x+9:x-9}" y1="${y}" x2="${tx}" y2="${ty}"/>`:'');
+const SCHEMA={
+ globo:`<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <g class="dpart" data-p="10"><rect class="fill" x="196" y="34" width="50" height="28" rx="3" stroke-width="1.3"/>${cal_(10,262,48,246,48)}</g><line class="lead" x1="196" y1="48" x2="152" y2="58"/>
+  <g class="dpart" data-p="8"><path class="fill" d="M78 62h144a10 10 0 0 1 10 10v26a82 40 0 0 1-164 0V72a10 10 0 0 1 10-10z" stroke-width="1.5"/>${cal_(8,38,88,78,88)}</g>
+  <g class="dpart" data-p="9"><path class="fill" fill="none" d="M126 100h48l-48 14 48 14-48 14 48 14h-48" stroke-width="2.2"/>${cal_(9,262,128,176,128)}</g>
+  <g class="dpart" data-p="5"><rect class="fill" x="145" y="88" width="10" height="150" stroke-width="1.5"/>${cal_(5,38,200,145,200)}</g>
+  <g class="dpart" data-p="6"><rect class="fill" x="131" y="180" width="38" height="26" rx="2" stroke-width="1.5"/>${cal_(6,262,193,169,193)}</g>
+  <g class="dpart" data-p="2"><path class="fill" d="M118 206h64v34h-64z" stroke-width="1.5"/>${cal_(2,38,223,118,223)}</g>
+  <g class="dpart" data-p="7"><rect class="fill" x="112" y="240" width="76" height="9" stroke-width="1.5"/>${cal_(7,262,244,188,244)}</g>
+  <g class="dpart" data-p="1"><path class="fill" d="M58 258h184v70a20 20 0 0 1-20 20H78a20 20 0 0 1-20-20z" stroke-width="1.7"/><rect class="fill" x="34" y="276" width="24" height="38" stroke-width="1.5"/><rect class="fill" x="242" y="276" width="24" height="38" stroke-width="1.5"/>${cal_(1,38,352,80,332)}</g>
+  <g class="dpart" data-p="3"><path class="fill" d="M132 258h36v40l-18 14-18-14z" stroke-width="1.5"/>${cal_(3,262,288,168,288)}</g>
+  <g class="dpart" data-p="4"><path class="fill" d="M124 312h52v12h-52z" stroke-width="1.5"/>${cal_(4,262,322,176,320)}</g></svg>`,
+ psv:`<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <g class="dpart" data-p="9"><path class="fill" d="M148 26h58v14h-58z" stroke-width="1.5"/>${cal_(9,262,33,206,33)}</g>
+  <g class="dpart" data-p="7"><path class="fill" d="M104 48h92v130h-92z" stroke-width="1.7"/>${cal_(7,38,70,104,70)}</g>
+  <g class="dpart" data-p="5"><path class="fill" fill="none" d="M120 74h60M120 90h60M120 106h60M120 122h60M120 138h60M120 154h60" stroke-width="2.8"/>${cal_(5,262,114,196,114)}</g>
+  <g class="dpart" data-p="6"><rect class="fill" x="145" y="70" width="10" height="150" stroke-width="1.5"/>${cal_(6,38,200,145,200)}</g>
+  <g class="dpart" data-p="4"><path class="fill" d="M128 220h44v16h-44z" stroke-width="1.5"/>${cal_(4,262,228,172,228)}</g>
+  <g class="dpart" data-p="3"><path class="fill" d="M124 240h52v14h-52z" stroke-width="1.5"/>${cal_(3,38,247,124,247)}</g>
+  <g class="dpart" data-p="2"><path class="fill" d="M132 256h36l-8 34h-20z" stroke-width="1.5"/>${cal_(2,262,272,168,272)}</g>
+  <g class="dpart" data-p="1"><path class="fill" d="M112 290h76v40h-46v34h-30z" stroke-width="1.7"/><rect class="fill" x="188" y="296" width="26" height="30" stroke-width="1.5"/><rect class="fill" x="100" y="364" width="54" height="18" stroke-width="1.5"/>${cal_(1,38,330,112,320)}</g></svg>`,
+ cuchilla:`<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <g class="dpart" data-p="6"><rect class="fill" x="108" y="30" width="84" height="46" rx="6" stroke-width="1.5"/>${cal_(6,38,53,108,53)}</g>
+  <g class="dpart" data-p="7"><rect class="fill" x="196" y="38" width="34" height="26" rx="3" stroke-width="1.3"/>${cal_(7,262,51,230,51)}</g>
+  <g class="dpart" data-p="5"><rect class="fill" x="144" y="76" width="12" height="56" stroke-width="1.5"/><path class="fill" d="M116 132h68v14h-68z" stroke-width="1.5"/>${cal_(5,38,110,144,110)}</g>
+  <g class="dpart" data-p="4"><rect class="fill" x="120" y="146" width="60" height="16" stroke-width="1.5"/>${cal_(4,262,154,180,154)}</g>
+  <g class="dpart" data-p="2"><path class="fill" d="M132 162h36v104l-18 16-18-16z" stroke-width="1.5"/>${cal_(2,262,215,168,215)}</g>
+  <g class="dpart" data-p="1"><path class="fill" d="M74 250h152v72H74z" stroke-width="1.7"/><rect class="fill" x="50" y="258" width="24" height="56" stroke-width="1.5"/><rect class="fill" x="226" y="258" width="24" height="56" stroke-width="1.5"/>${cal_(1,38,340,80,322)}</g>
+  <g class="dpart" data-p="3"><path class="fill" d="M96 262h108v10H96z" stroke-width="1.3"/>${cal_(3,262,267,204,267)}</g>
+  <g class="dpart" data-p="8"><circle class="fill" cx="88" cy="336" r="7" stroke-width="1.3"/><circle class="fill" cx="212" cy="336" r="7" stroke-width="1.3"/>${cal_(8,262,336,219,336)}</g></svg>`,
+ act:`<svg viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <g class="dpart" data-p="4"><rect class="fill" x="96" y="40" width="108" height="52" rx="5" stroke-width="1.5"/>${cal_(4,262,66,204,66)}</g>
+  <g class="dpart" data-p="1"><rect class="fill" x="44" y="110" width="70" height="70" rx="6" stroke-width="1.7"/>${cal_(1,38,196,60,180)}</g>
+  <g class="dpart" data-p="3"><rect class="fill" x="196" y="110" width="60" height="52" rx="5" stroke-width="1.5"/>${cal_(3,262,180,236,162)}</g>
+  <g class="dpart" data-p="2"><rect class="fill" x="118" y="104" width="76" height="86" rx="5" stroke-width="1.7"/><circle class="fill" cx="156" cy="147" r="22" stroke-width="1.5"/><circle class="fill" cx="156" cy="147" r="9" stroke-width="1.3"/>${cal_(2,38,86,118,110)}</g>
+  <g class="dpart" data-p="5"><circle class="fill" fill="none" cx="156" cy="238" r="40" stroke-width="2.8"/><path class="fill" fill="none" d="M156 206v64M124 238h64" stroke-width="1.9"/>${cal_(5,262,238,200,238)}</g>
+  <g class="dpart" data-p="6"><rect class="fill" x="126" y="190" width="60" height="10" stroke-width="1.3"/><rect class="fill" x="126" y="288" width="60" height="10" stroke-width="1.3"/>${cal_(6,38,293,126,293)}</g></svg>`
+};
+function paneBOM(){
+  const a=S.cur,m=MODELOS[a.mod]||{},lista=BOM[m.b||'globo']||[];
+  const usadas={};ORDENES.filter(o=>o.act===a.id).forEach(o=>o.partes.forEach(p=>usadas[p]=o.f));
+  const kit=lista.filter(p=>p.k),enStock=kit.filter(p=>p.s>0).length;
+  $('#pn-bom').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>
+     <div><b>Kit de overhaul</b> del modelo ${esc(a.mod)}: ${kit.length} posiciones, ${enStock} disponibles en el almacén de Lima.
+     <a href="#" onclick="addKit();return false" style="color:inherit;text-decoration:underline;font-weight:600">Agregar el kit completo a la solicitud</a>.</div></div>
+   <div class="bom">
+     <figure class="schema">${SCHEMA[m.b||'globo']}<figcaption>Esquema referencial · ${esc(m.t||'')}</figcaption></figure>
+     <div>
+      <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
+       <thead><tr><th style="width:38px">Pos</th><th>N.º de parte</th><th>Disponibilidad</th><th style="width:70px"></th></tr></thead>
+       <tbody>${lista.map(p=>`<tr class="bom-row" data-p="${p.p}" onmouseenter="hot(${p.p},1)" onmouseleave="hot(${p.p},0)" style="cursor:default">
+         <td><span class="pos">${p.p}</span></td>
+         <td><div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''}</small></div></td>
+         <td><span class="stk ${p.s>0?'y':'n'}"><span class="dot"></span>${p.s>0?p.s+' und':'sin stock'}</span><small>${p.l}</small></td>
+         <td style="text-align:right"><button class="btn sec xs" onclick="addPart('${p.n}',${p.s})">Pedir</button></td></tr>`).join('')}</tbody></table>
+     </div></div>`;
+  $$('.dpart').forEach(g=>{
+    g.onmouseenter=()=>hot(+g.dataset.p,1);g.onmouseleave=()=>hot(+g.dataset.p,0);
+    g.onclick=()=>{const r=document.querySelector('.bom-row[data-p="'+g.dataset.p+'"]');if(r)r.scrollIntoView({block:'center',behavior:'smooth'})};
+  });
+}
+function hot(p,on){
+  const g=document.querySelector('.dpart[data-p="'+p+'"]'),r=document.querySelector('.bom-row[data-p="'+p+'"]');
+  if(g)g.classList.toggle('hot',!!on);if(r)r.classList.toggle('hot',!!on);
+}
+function paneHist(){
+  const os=ORDENES.filter(o=>o.act===S.cur.id).sort((a,b)=>b.f.localeCompare(a.f));
+  $('#pn-hist').innerHTML=os.length?`<div class="tl">${os.map(o=>`
+    <div class="tl-i ${o.tipo==='Preventivo'?'pv':o.tipo==='Correctivo'?'cor':'cal'}">
+      <div class="tl-m"><span>${o.f}</span><span>·</span><span>${o.n}</span><span class="tag">${o.tipo}</span>
+        ${o.et!=='certificada'?`<span class="tag sel">${ETAPAS.find(e=>e[0]===o.et)[1]}</span>`:''}</div>
+      <div class="tl-t">${esc(o.tec)}</div><div class="tl-x">${esc(o.hall)}</div>
+      ${o.partes.length?`<div class="parts-inline">${o.partes.map(p=>`<span class="tag mono">${p}</span>`).join('')}</div>`:''}
+    </div>`).join('')}</div>`
+   :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><b>Sin intervenciones</b>Este activo no tiene historial registrado.</div>`;
+}
+function paneDocs(){
+  const ds=DOCS.filter(d=>d.a===S.cur.id);
+  $('#pn-docs').innerHTML=ds.length?ds.map(d=>`<div class="doc"><span class="fx">${d.t}</span>
+    <span class="fm"><b>${esc(d.n)}</b><span>${d.f} · ${d.w}</span></span>
+    <button class="btn sec xs" onclick="toast('Descarga simulada')">Abrir</button></div>`).join('')
+   :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><b>Expediente vacío</b>Aún no se adjunta ningún documento.</div>`;
+}
+
+/* ============================================================
+   6 · SOLICITUD DE REPUESTOS
+   ============================================================ */
+function addPart(n,s){
+  const ex=S.cart.find(c=>c.n===n&&c.a===S.cur.id);
+  if(ex)ex.q++;else S.cart.push({n,q:1,a:S.cur.id,s});
+  toast(`${n} agregado a la solicitud`);
+}
+function addKit(){
+  const m=MODELOS[S.cur.mod],lista=(BOM[m.b]||[]).filter(p=>p.k);
+  lista.forEach(p=>{if(!S.cart.find(c=>c.n===p.n&&c.a===S.cur.id))S.cart.push({n:p.n,q:1,a:S.cur.id,s:p.s})});
+  toast(`Kit de overhaul agregado · ${lista.length} posiciones`);
+  go('req');renderReq();
+}
+function renderReq(){
+  const mias=S.cli?SOLICITUDES.filter(s=>s.cli===S.cli):SOLICITUDES;
+  const carrito=S.cart.length?`
+    <div style="padding:var(--sp-4);border-bottom:1px solid var(--line-2);background:var(--surface-2)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <h3 style="flex:1">Borrador en curso · ${S.cart.length} posiciones</h3>
+        <button class="btn sec xs" onclick="S.cart=[];renderReq()">Vaciar</button>
+        <button class="btn xs" onclick="enviarSol()">Enviar a Adolphus</button></div>
+      <table class="grid"><tbody>${S.cart.map((c,i)=>{const a=ACTIVOS.find(x=>x.id===c.a);return `<tr style="cursor:default">
+        <td class="mono"><b>${c.n}</b></td><td>${esc(a?.tag||'')}</td>
+        <td><span class="stk ${c.s>0?'y':'n'}"><span class="dot"></span>${c.s>0?'en stock':'importación'}</span></td>
+        <td style="width:60px">${c.q} und</td>
+        <td style="width:40px;text-align:right"><button class="btn quiet xs" onclick="S.cart.splice(${i},1);renderReq()">✕</button></td></tr>`}).join('')}</tbody></table></div>`:'';
+  $('#reqList').innerHTML=carrito+(mias.length?`<table class="grid">
+    <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${mias.map(s=>`<tr style="cursor:default"><td class="mono"><b>${s.n}</b></td><td>${esc(cli(s.cli).n)}</td><td class="mono">${s.f}</td>
+      <td>${s.items.length}</td><td><span class="tag ${s.est==='Cotizada'?'ok':'due'}"><span class="dot"></span>${s.est}</span></td>
+      <td style="text-align:right"><button class="btn sec xs" onclick="verSol('${s.id}')">Ver detalle</button></td></tr>`).join('')}</tbody></table>`
+    :(carrito?'':`<div class="empty"><b>Sin solicitudes</b>Las peticiones de repuestos aparecerán aquí.</div>`));
+  $('#ctReq').textContent=mias.length;
+}
+function enviarSol(){
+  const n='SOL-2026-'+String(1000+Math.floor(Math.random()*8999)).slice(0,4);
+  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||S.cart.length&&ACTIVOS.find(a=>a.id===S.cart[0].a).cli,f:'2026-07-23',est:'Pendiente',
+    items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
+  S.cart=[];renderReq();toast(`Solicitud ${n} enviada`);
+}
+function verSol(id){
+  const s=SOLICITUDES.find(x=>x.id===id);
+  $('#mTitle').textContent=s.n;
+  $('#mBody').innerHTML=`<table class="grid"><thead><tr><th>N.º de parte</th><th>Equipo</th><th>Cant.</th></tr></thead>
+   <tbody>${s.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a);return `<tr style="cursor:default"><td class="mono"><b>${i.n}</b></td>
+     <td>${esc(a?.tag||'')} <small class="muted">${esc(cli(a?.cli).n||'')}</small></td><td>${i.q}</td></tr>`}).join('')}</tbody></table>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button><button class="btn" onclick="closeModal();toast('Cotización generada (simulada)')">Generar cotización</button>`;
+  $('#modal').classList.add('on');
+}
+
+/* ============================================================
+   7 · CALIBRACIONES
+   ============================================================ */
+function renderCal(){
+  const vs=visibles().filter(a=>a.prox);
+  const venc=vs.filter(a=>dias(a.prox)<0),p90=vs.filter(a=>dias(a.prox)>=0&&dias(a.prox)<=90),ok=vs.filter(a=>dias(a.prox)>90);
+  $('#ctCal').textContent=venc.length+p90.length||'';
+  $('#calStats').innerHTML=[
+   {v:venc.length,k:'Vencidas',c:'late'},{v:p90.length,k:'Vencen en 90 días',c:'due'},{v:ok.length,k:'Vigentes',c:'ok'}
+  ].map(d=>`<div class="stat" style="cursor:default"><span class="v"><span class="dot" style="color:var(--${d.c})"></span>${d.v}</span><span class="k">${d.k}</span></div>`).join('');
+  const orden=vs.slice().sort((a,b)=>a.prox.localeCompare(b.prox));
+  $('#calCount').textContent=`${vs.length} equipos con programa`;
+  const RANGO=548, OFF=274; // ±9 meses alrededor de hoy
+  $('#calList').innerHTML=orden.length?orden.map(a=>{
+    const d=dias(a.prox),pct=Math.max(2,Math.min(98,((d+OFF)/RANGO)*100));
+    const c=d<0?'late':d<=90?'due':'ok';
+    return `<div class="hz">
+      <div class="hz-t"><b>${esc(a.tag)}</b><span>${esc(cli(a.cli).n)} · ${esc(area(a))}</span></div>
+      <div class="tag mono" style="width:78px;justify-content:center">${esc(a.mod)}</div>
+      <div class="hz-track">
+        <span class="hz-now" style="left:50%"></span>
+        <span class="hz-fill" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)}%;background:var(--${c});opacity:.55"></span>
+      </div>
+      <div class="hz-d" style="color:var(--${c})">${d<0?`−${-d} d`:`${d} d`}</div>
+      <div style="width:88px;text-align:right">${S.rol!=='cliente'?`<button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
+    </div>`}).join('')
+   :`<div class="empty"><b>Sin programa de calibración</b>Aplica a válvulas de seguridad y alivio.</div>`;
+}
+
+/* ============================================================
+   8 · ÓRDENES DE TRABAJO (kanban)
+   ============================================================ */
+function renderWO(){
+  const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
+  $('#ctWo').textContent=mias.filter(o=>o.et!=='certificada').length||'';
+  $('#kanban').innerHTML=ETAPAS.map(([k,l])=>{
+    const cs=mias.filter(o=>o.et===k);
+    return `<div class="kb-col" data-et="${k}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropWO(event,'${k}')">
+      <div class="kb-h"><span class="dot" style="color:var(--${k==='certificada'?'ok':k==='taller'?'sel':k==='programada'?'due':'ink-3'})"></span>${l}<span class="n">${cs.length}</span></div>
+      <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return `
+        <article class="wo" draggable="true" ondragstart="dragWO(event,'${o.id}')" ondragend="this.classList.remove('drag')" onclick="openAsset('${o.act}');showTab('hist')">
+          <div class="wo-t"><b class="mono">${o.n}</b><span class="tag">${o.tipo}</span></div>
+          <div class="wo-n">${esc(a?.tag||'—')}</div>
+          <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
+        </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
+  }).join('');
+}
+let dragId=null;
+function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataTransfer.effectAllowed='move'}
+function dropWO(ev,et){
+  ev.preventDefault();ev.currentTarget.classList.remove('over');
+  const o=ORDENES.find(x=>x.id===dragId);if(!o)return;
+  const prev=o.et;o.et=et;
+  if(et==='certificada'&&prev!=='certificada'){
+    const a=ACTIVOS.find(x=>x.id===o.act);
+    if(a){a.ult='2026-07-23';if(a.prox){const d=new Date('2026-07-23T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
+    toast(`${o.n} certificada · vigencia del equipo actualizada`);
+  } else toast(`${o.n} → ${ETAPAS.find(e=>e[0]===et)[1]}`);
+  renderAll();
+}
+function openWO(actId,tipo){
+  const opts=visibles().filter(a=>a.ser);
+  $('#mTitle').textContent='Nueva orden de trabajo';
+  $('#mBody').innerHTML=`<div class="two">
+     <div class="fld"><label>Activo</label><select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(a.tag)} · ${esc(a.ser)}</option>`).join('')}</select></div>
+     <div class="fld"><label>N.º de orden</label><input class="inp" id="woNum" value="AD-26-0${Math.floor(700+Math.random()*299)}"></div>
+     <div class="fld"><label>Tipo</label><select class="inp" id="woTipo">${['Preventivo','Correctivo','Calibración','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option ${t===tipo?'selected':''}>${t}</option>`).join('')}</select></div>
+     <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
+   <div class="fld"><label>Técnico responsable</label><input class="inp" id="woTec" value="Por asignar"></div>
+   <div class="fld"><label>Alcance / hallazgos</label><textarea class="inp" id="woHall" rows="3" placeholder="Qué se va a hacer, qué se encontró…"></textarea></div>
+   <div class="fld"><label>Partes previstas (separadas por coma)</label><input class="inp" id="woPart" placeholder="AD-TRM-316-A, AD-EMP-PTFE-V"></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveWO()">Crear orden</button>`;
+  $('#modal').classList.add('on');
+}
+function saveWO(){
+  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'solicitada',tipo:$('#woTipo').value,
+    f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
+    partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
+  closeModal();renderAll();go('wo');toast('Orden creada en etapa Solicitada');
+}
+function closeModal(){$('#modal').classList.remove('on')}
+
+/* ============================================================
+   9 · CATÁLOGO Y USUARIOS
+   ============================================================ */
+function renderCat(){
+  const porMarca={};Object.entries(MODELOS).forEach(([k,m])=>{(porMarca[m.m]=porMarca[m.m]||[]).push([k,m])});
+  $('#catList').innerHTML=Object.entries(porMarca).map(([marca,mods])=>`
+    <div style="padding:12px var(--sp-4);border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:12px;background:var(--surface-2)">
+      <b style="font-size:13.5px">${marca}</b><span class="muted" style="font-size:12.5px">${MARCAS[marca]||''}</span>
+      <span class="spacer" style="flex:1"></span><span class="count">${mods.length} modelos</span></div>
+    <table class="grid"><tbody>${mods.map(([k,m])=>`<tr style="cursor:default">
+      <td class="mono" style="width:110px"><b>${k}</b></td>
+      <td><div class="cell-2"><span>${m.t}</span><small>${m.d}</small></div></td>
+      <td style="width:100px"><span class="tag">${CL[m.c]}</span></td>
+      <td style="width:120px" class="muted">${(BOM[m.b]||[]).length} posiciones</td>
+      <td style="width:110px"><b>${ACTIVOS.filter(a=>a.mod===k).length}</b> <span class="muted">instalados</span></td></tr>`).join('')}</tbody></table>`).join('');
+}
+function renderUsers(){
+  $('#userList').innerHTML=`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Organización</th><th>Alcance</th></tr></thead>
+   <tbody>${USUARIOS.map(u=>`<tr style="cursor:default"><td><b>${u.n}</b></td><td class="mono muted">${u.m}</td>
+    <td><span class="tag ${u.r==='Cliente'?'sel':''}">${u.r}</span></td><td>${u.c}</td>
+    <td class="muted" style="white-space:normal;max-width:36ch">${u.x}</td></tr>`).join('')}</tbody></table>`;
+}
+
+/* ============================================================
+   10 · IMPORTACIÓN DE EXCEL
+   ============================================================ */
+const CAMPOS=[['tag','Tag'],['ser','N.º de serie'],['marca','Marca'],['mod','Modelo'],['cl','Tipo / clase'],['sz','Tamaño'],['rt','Rating'],['cv','Cv'],['rng','Rango / set'],['air','Falla a'],['ar','Área']];
+let rawRows=[],headers=[],mapping={},pend=[];
+$('#file').onchange=e=>{const f=e.target.files[0];if(f)leerArchivo(f)};
+const dz=$('#drop');
+['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
+dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)leerArchivo(f)});
+function leerArchivo(file){
+  const r=new FileReader();
+  r.onload=ev=>{try{
+    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+    let best=[],hoja='';
+    wb.SheetNames.forEach(n=>{const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});if(a.length>best.length){best=a;hoja=n}});
+    detectar(best,hoja);
+  }catch(err){toast('No se pudo leer el archivo: '+err.message)}};
+  r.readAsArrayBuffer(file);
+}
+function detectar(arr,hoja){
+  let hi=0,best=0;
+  arr.slice(0,20).forEach((row,i)=>{const n=row.filter(c=>String(c).trim()).length;if(n>best){best=n;hi=i}});
+  headers=arr[hi].map((h,i)=>String(h).trim()||('Columna '+(i+1)));
+  rawRows=arr.slice(hi+1).filter(r=>r.some(c=>String(c).trim()));
+  mapping={};
+  const g={tag:/tag/i,ser:/serial|serie/i,marca:/marca|fabricante/i,mod:/modelo de v|modelo v|^modelo$/i,cl:/tipo de v|clase/i,sz:/tama[nñ]o|size/i,rt:/rating|clase de presi/i,cv:/^cv$/i,rng:/range|rango|set/i,air:/air to|falla/i,ar:/planta|estaci|[aá]rea/i};
+  CAMPOS.forEach(([k])=>{const i=headers.findIndex(h=>g[k]&&g[k].test(h));if(i>=0)mapping[k]=i});
+  paso(2,hoja);
+}
+function paso(n,hoja){
+  $$('.stp').forEach(s=>{const i=+s.dataset.s;s.classList.toggle('on',i===n);s.classList.toggle('done',i<n)});
+  $('#imp1').style.display=n>1?'none':'';
+  $('#imp2').style.display=n===2?'':'none';
+  $('#imp3').style.display=n>=3?'':'none';
+  if(n===2)renderMap(hoja);
+}
+function renderMap(hoja){
+  $('#imp2').innerHTML=`<div class="panel"><div class="panel-h"><h3>Mapeo de columnas</h3><span class="count">Hoja "${esc(hoja||'')}" · ${rawRows.length} filas</span></div>
+   <div class="panel-b"><p style="font-size:13px;color:var(--ink-2);margin-bottom:14px;max-width:70ch">Detección automática. Corrige lo que haga falta: el mapeo se guarda por cliente, así el siguiente levantamiento entra sin tocar nada.</p>
+   ${CAMPOS.map(([k,l])=>`<div class="maprow"><span class="lb">${l}</span><span class="muted" style="text-align:center">←</span>
+     <select class="inp" onchange="mapping['${k}']=this.value===''?undefined:+this.value"><option value="">— sin asignar —</option>
+     ${headers.map((h,i)=>`<option value="${i}" ${mapping[k]===i?'selected':''}>${esc(h)}</option>`).join('')}</select></div>`).join('')}
+   <div class="two" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line-2)">
+     <div class="fld"><label>Asignar a cliente</label><select class="inp" id="impCli">${CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('')}</select></div>
+     <div class="fld"><label>Área por defecto</label><select class="inp" id="impAr"></select></div></div>
+   <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn sec" onclick="paso(1)">Cancelar</button><button class="btn" onclick="validar()">Validar filas</button></div>
+   </div></div>`;
+  const pintarAreas=()=>{const c=cli($('#impCli').value);$('#impAr').innerHTML=Object.entries(c.areas).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')};
+  $('#impCli').onchange=pintarAreas;pintarAreas();
+}
+function validar(){
+  const g=(r,k)=>mapping[k]!==undefined?String(r[mapping[k]]??'').trim():'';
+  pend=rawRows.map(r=>{
+    const t=g(r,'cl');
+    const cl=/segur|alivio|psv|relief/i.test(t)?'seguridad':/cuchilla|mariposa|pinch|knife|esf[eé]|on.?off|compuerta/i.test(t)?'onoff':/actuador|actuator/i.test(t)?'actuador':'control';
+    const o={tag:g(r,'tag'),ser:g(r,'ser'),marca:g(r,'marca'),mod:g(r,'mod'),cl,sz:g(r,'sz'),rt:g(r,'rt'),cv:g(r,'cv'),rng:g(r,'rng'),air:g(r,'air'),arRaw:g(r,'ar')};
+    o.falta=[];if(!o.tag||/^n\/?[ra]$/i.test(o.tag))o.falta.push('tag');if(!o.ser)o.falta.push('serie');if(!o.mod)o.falta.push('modelo');
+    return o});
+  const ok=pend.filter(p=>!p.falta.length).length;
+  const sinCat=Array.from(new Set(pend.map(p=>p.mod).filter(Boolean))).filter(m=>!MODELOS[m]);
+  const c=$('#impCli').value,ar=$('#impAr').value;
+  $('#imp3').innerHTML=`<div class="stats">
+     <div class="stat" style="cursor:default"><span class="v"><span class="dot" style="color:var(--ok)"></span>${ok}</span><span class="k">Filas completas</span></div>
+     <div class="stat" style="cursor:default"><span class="v"><span class="dot" style="color:var(--due)"></span>${pend.length-ok}</span><span class="k">Con datos faltantes</span></div>
+     <div class="stat" style="cursor:default"><span class="v">${sinCat.length}</span><span class="k">Modelos sin despiece en catálogo</span></div></div>
+   <div class="panel"><div class="panel-h"><h3>Vista previa</h3><span class="count">las filas ámbar entran marcadas para completar en campo</span></div>
+    <div class="grid-scroll" style="max-height:360px"><table class="grid"><thead><tr><th>#</th><th>Tag</th><th>Serie</th><th>Modelo</th><th>Clase</th><th>Tamaño</th><th>Faltantes</th></tr></thead>
+     <tbody>${pend.map((p,i)=>`<tr class="${p.falta.length?'bad':''}" style="cursor:default"><td class="mono">${i+1}</td><td>${esc(p.tag)||'—'}</td>
+      <td class="mono">${esc(p.ser)||'—'}</td><td class="mono"><b>${esc(p.mod)||'—'}</b></td><td><span class="tag">${CL[p.cl]}</span></td>
+      <td>${esc(p.sz)||'—'}</td><td>${p.falta.length?`<span class="tag due">${p.falta.join(', ')}</span>`:`<span class="tag ok"><span class="dot"></span>completa</span>`}</td></tr>`).join('')}</tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--line-2)">
+      <button class="btn sec" onclick="paso(2)">Volver al mapeo</button>
+      <button class="btn" onclick="consolidar('${c}','${ar}')">Consolidar ${pend.length} equipos</button></div></div>`;
+  paso(3);
+}
+function consolidar(c,arDef){
+  const cl_=cli(c);
+  pend.forEach((p,i)=>{
+    let ar=arDef;
+    Object.entries(cl_.areas).forEach(([k,v])=>{if(p.arRaw&&v.toLowerCase().includes(p.arRaw.toLowerCase()))ar=k});
+    ACTIVOS.push({id:'imp'+Date.now()+i,cli:c,ar,cl:p.cl,tag:p.falta.includes('tag')?'':p.tag,ser:p.ser,
+      mod:MODELOS[p.mod]?p.mod:'21000',sz:p.sz,rt:p.rt,cv:p.cv,air:p.air,rng:p.rng,
+      cr:p.falta.length?'—':'Media',ult:'',prox:''});
+  });
+  paso(4);
+  $('#imp3').innerHTML=`<div class="panel"><div class="empty">
+    <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+    <b>${pend.length} equipos consolidados en ${cl_.n}</b>Ya heredan el despiece de su modelo y aparecen en la grilla.
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+      <button class="btn" onclick="go('assets')">Ver en activos</button>
+      <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Importar otro archivo</button></div></div></div>`;
+  renderAll();toast(`${pend.length} equipos consolidados`);
+}
+function demoImport(){
+  headers=['ITEM','TIPO DE VÁLVULA','TAG','SERIAL','MARCA','MODELO DE VÁLVULA','TAMAÑO DEL CUERPO','RANGE','CV','AIR TO','RATING','ÁREA'];
+  rawRows=[
+   [1,'GLOBO RECIPROCANTE','FCV-330','MN-26-4401','Masoneilan','21000','2"','7-15 psi','39','OPEN','600','Evaporación'],
+   [2,'GLOBO RECIPROCANTE','FCV-331','MN-26-4402','Masoneilan','21000','2"','7-15 psi','39','OPEN','600','Evaporación'],
+   [3,'RECIPROCANTE','N/R','','Masoneilan','21000','','','','','','Envasado'],
+   [4,'RECIPROCANTE','N/R','','Masoneilan','21000','','','','','','Envasado'],
+   [5,'VÁLVULA DE SEGURIDAD','PSV-C-05','CR-26-8890','Crosby','JOS-E','2"x3"','120 psig','','','300','Calderas'],
+   [6,'VÁLVULA CUCHILLA','KGV-118','ORB-26-1102','Orbinox','EB-KG','8"','','','','150','Envasado'],
+   [7,'REGULADORA','PCV-225','CA-26-3312','Cashco','1000HP','2"','30 psig','25','OPEN','150','Evaporación']];
+  mapping={tag:2,ser:3,marca:4,mod:5,cl:1,sz:6,rng:7,cv:8,air:9,rt:10,ar:11};
+  paso(2,'LEVANTAMIENTO (demo)');
+}
+
+/* ============================================================
+   11 · PALETA DE COMANDOS
+   ============================================================ */
+let cmdItems=[],cmdCur=0;
+function openCmd(){$('#cmd').classList.add('on');$('#cmdIn').value='';$('#cmdIn').focus();buildCmd('')}
+function closeCmd(){$('#cmd').classList.remove('on')}
+function buildCmd(q){
+  q=q.toLowerCase().trim();
+  const acciones=[
+   {g:'Ir a',ic:'→',t:'Activos',s:'Grilla de equipos',fn:()=>go('assets')},
+   {g:'Ir a',ic:'→',t:'Calibraciones',s:'Horizonte de vencimientos',fn:()=>go('cal')},
+   {g:'Ir a',ic:'→',t:'Órdenes de trabajo',s:'Tablero por etapa',fn:()=>go('wo')},
+   {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
+   {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
+   {g:'Acción',ic:'◐',t:'Cambiar tema claro / oscuro',s:'',fn:toggleTheme},
+   {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
+  ];
+  const act=visibles().filter(a=>!q||[a.tag,a.ser,a.mod,MODELOS[a.mod]?.m,cli(a.cli).n].join(' ').toLowerCase().includes(q))
+    .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>{go('assets');openAsset(a.id)}}));
+  const partes=[];
+  if(q.length>1){
+    const vistos=new Set();
+    Object.values(BOM).flat().forEach(p=>{
+      if(vistos.has(p.n))return;
+      if((p.n+' '+p.d).toLowerCase().includes(q)){vistos.add(p.n);
+        partes.push({g:'Números de parte',ic:'#',t:p.n,s:`${p.d} · ${p.s>0?p.s+' en stock':'sin stock'}`,fn:()=>toast(`${p.n} — ${p.s>0?p.s+' und en Lima':'requiere importación'}`)})}
+    });
+  }
+  cmdItems=[...act,...partes.slice(0,5),...acciones.filter(a=>!q||a.t.toLowerCase().includes(q))].slice(0,14);
+  cmdCur=0;paintCmd();
+}
+function paintCmd(){
+  let html='',last='';
+  cmdItems.forEach((it,i)=>{
+    if(it.g!==last){html+=`<div class="cmd-g">${it.g}</div>`;last=it.g}
+    html+=`<div class="cmd-r ${i===cmdCur?'cur':''}" onclick="runCmd(${i})" onmousemove="cmdCur=${i};paintCmd()">
+      <span class="ic">${it.ic}</span><span class="tx"><b>${esc(it.t)}</b>${it.s?`<span>${esc(it.s)}</span>`:''}</span></div>`;
+  });
+  $('#cmdList').innerHTML=html||'<div class="empty" style="padding:32px"><b>Sin coincidencias</b>Prueba con un tag, una serie o un n.º de parte.</div>';
+}
+function runCmd(i){const it=cmdItems[i];if(!it)return;closeCmd();it.fn()}
+$('#cmdIn').oninput=e=>buildCmd(e.target.value);
+$('#cmdIn').onkeydown=e=>{
+  if(e.key==='ArrowDown'){e.preventDefault();cmdCur=Math.min(cmdCur+1,cmdItems.length-1);paintCmd()}
+  if(e.key==='ArrowUp'){e.preventDefault();cmdCur=Math.max(cmdCur-1,0);paintCmd()}
+  if(e.key==='Enter'){e.preventDefault();runCmd(cmdCur)}
+};
+
+/* ============================================================
+   12 · TECLADO
+   ============================================================ */
+function openHelp(){
+  $('#mTitle').textContent='Atajos de teclado';
+  $('#mBody').innerHTML=`<div class="help"><dl>
+    <dt><span class="kbd">⌘K</span></dt><dd>Buscar en todo: tags, series, números de parte, acciones</dd>
+    <dt><span class="kbd">J</span> <span class="kbd">K</span></dt><dd>Bajar / subir en la grilla</dd>
+    <dt><span class="kbd">↵</span></dt><dd>Abrir el activo enfocado</dd>
+    <dt><span class="kbd">X</span></dt><dd>Marcar o desmarcar la fila enfocada</dd>
+    <dt><span class="kbd">Esc</span></dt><dd>Cerrar panel, modal o buscador</dd>
+    <dt><span class="kbd">G</span> <span class="kbd">A</span></dt><dd>Ir a activos</dd>
+    <dt><span class="kbd">G</span> <span class="kbd">C</span></dt><dd>Ir a calibraciones</dd>
+    <dt><span class="kbd">G</span> <span class="kbd">O</span></dt><dd>Ir a órdenes de trabajo</dd>
+    <dt><span class="kbd">D</span></dt><dd>Alternar tema claro / oscuro</dd>
+  </dl></div>`;
+  $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Entendido</button>`;
+  $('#modal').classList.add('on');
+}
+let gPend=false;
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase();
+  const escribiendo=['input','textarea','select'].includes(tag);
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmd();return}
+  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();return}
+  if(escribiendo)return;
+  if(gPend){
+    gPend=false;
+    const m={a:'assets',c:'cal',o:'wo',s:'req',i:'imp',u:'users'}[e.key.toLowerCase()];
+    if(m){e.preventDefault();go(m)}return;
+  }
+  if(e.key.toLowerCase()==='g'){gPend=true;setTimeout(()=>gPend=false,900);return}
+  if(e.key.toLowerCase()==='d'){toggleTheme();return}
+  if(e.key==='?'){openHelp();return}
+  if(S.page!=='assets')return;
+  const rows=filtrados();if(!rows.length)return;
+  if(e.key==='j'||e.key==='ArrowDown'){e.preventDefault();S.focus=Math.min(S.focus+1,rows.length-1);renderGrid();scrollFocus()}
+  if(e.key==='k'||e.key==='ArrowUp'){e.preventDefault();S.focus=Math.max(S.focus-1,0);renderGrid();scrollFocus()}
+  if(e.key==='Enter'){e.preventDefault();openAsset(rows[S.focus].id)}
+  if(e.key.toLowerCase()==='x'){e.preventDefault();const id=rows[S.focus].id;pick(id,!S.picked.has(id))}
+});
+function scrollFocus(){const r=document.querySelector('tr.focus');if(r)r.scrollIntoView({block:'nearest'})}
+
+/* ============================================================
+   13 · EXPORT / INIT
+   ============================================================ */
+function exportCSV(){
+  const rows=filtrados();
+  const head='Tag,Serie,Marca,Modelo,Clase,Cliente,Area,Tamano,Rating,Criticidad,Estado,UltimoServicio,ProximaCalibracion';
+  const body=rows.map(a=>[a.tag,a.ser,MODELOS[a.mod]?.m||'',a.mod,CL[a.cl],cli(a.cli).n,area(a),a.sz,a.rt,a.cr,estado(a).t,a.ult,a.prox]
+    .map(x=>'"'+String(x??'')+'"').join(','));
+  const url=URL.createObjectURL(new Blob(['\ufeff'+head+'\n'+body.join('\n')],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
+  toast(`${rows.length} equipos exportados`);
+}
+function renderAll(){renderAssets();renderCal();renderWO();renderReq();renderCat();renderUsers()}
+paintThemeBtn();renderAll();go('assets');
+</script>
+</body>
+</html>
