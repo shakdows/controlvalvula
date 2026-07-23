@@ -742,7 +742,8 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
         <div class="hd"><div><h1>Activos instalados</h1><p id="assetsSub"></p></div>
           <div style="display:flex;gap:8px">
             <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
-            <button class="btn" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Cargar equipos</button>
+            <button class="btn sec" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Cargar Excel</button>
+            <button class="btn" onclick="openNewAsset()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva válvula</button>
           </div></div>
         <div class="stats" id="stats"></div>
         <div class="tools">
@@ -1231,7 +1232,7 @@ function openAsset(id){
     ${d!==null&&d>=0?`<span class="tag ${d<=90?'due':'ok'}">Calibración en ${d} d</span>`:''}`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
-   : `<button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn" onclick="openWO('${a.id}')">Crear orden de trabajo</button>`;
+   : `<button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn sec" onclick="openCalib('${a.id}')">Registrar calibración</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -1351,6 +1352,7 @@ function paneHist(){
         ${o.et!=='certificada'?`<span class="tag sel">${ETAPAS.find(e=>e[0]===o.et)[1]}</span>`:''}</div>
       <div class="tl-t">${esc(o.tec)}</div><div class="tl-x">${esc(o.hall)}</div>
       ${o.partes.length?`<div class="parts-inline">${o.partes.map(p=>`<span class="tag mono">${p}</span>`).join('')}</div>`:''}
+      ${o.calib?`<div style="margin-top:7px"><button class="btn sec xs" onclick="showCalibReport(CALIBS.find(c=>c.id==='${o.calib}'))">Ver certificado</button></div>`:''}
     </div>`).join('')}</div>`
    :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><b>Sin intervenciones</b>Este activo no tiene historial registrado.</div>`;
 }
@@ -1358,7 +1360,7 @@ function paneDocs(){
   const ds=DOCS.filter(d=>d.a===S.cur.id);
   $('#pn-docs').innerHTML=ds.length?ds.map(d=>`<div class="doc"><span class="fx">${d.t}</span>
     <span class="fm"><b>${esc(d.n)}</b><span>${d.f} · ${d.w}</span></span>
-    <button class="btn sec xs" onclick="toast('Descarga simulada')">Abrir</button></div>`).join('')
+    <button class="btn sec xs" onclick="${d.calib?`showCalibReport(CALIBS.find(c=>c.id==='${d.calib}'))`:`toast('Descarga simulada')`}">${d.calib?'Ver':'Abrir'}</button></div>`).join('')
    :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><b>Expediente vacío</b>Aún no se adjunta ningún documento.</div>`;
 }
 
@@ -1437,7 +1439,7 @@ function renderCal(){
         <span class="hz-fill" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)}%;background:var(--${c});opacity:.55"></span>
       </div>
       <div class="hz-d" style="color:var(--${c})">${d<0?`−${-d} d`:`${d} d`}</div>
-      <div style="width:88px;text-align:right">${S.rol!=='cliente'?`<button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
+      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openCalib('${a.id}')">Calibrar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
     </div>`}).join('')
    :`<div class="empty"><b>Sin programa de calibración</b>Aplica a válvulas de seguridad y alivio.</div>`;
 }
@@ -1642,6 +1644,7 @@ function buildCmd(q){
    {g:'Ir a',ic:'→',t:'Órdenes de trabajo',s:'Tablero por etapa',fn:()=>go('wo')},
    {g:'Ir a',ic:'→',t:'Confiabilidad',s:'Reportes y analítica',fn:()=>go('rep')},
    {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
+   {g:'Acción',ic:'+',t:'Nueva válvula',s:'Dar de alta un activo',fn:()=>openNewAsset()},
    {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
    {g:'Acción',ic:'◐',t:'Cambiar tema claro / oscuro',s:'',fn:toggleTheme},
    {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
@@ -1881,6 +1884,162 @@ function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on'
 function closeNotif(){$('#notifPop').classList.remove('on')}
 function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go('req');else if(n.id){go('assets');openAsset(n.id)}}
 document.addEventListener('click',closeNotif);
+
+/* ============================================================
+   12.6 · ALTA DE VÁLVULA
+   ============================================================ */
+function openNewAsset(){
+  if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede dar de alta equipos');return}
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
+  const mOpts=Object.entries(MODELOS).map(([k,m])=>`<option value="${k}">${esc(m.m)} · ${k} — ${esc(m.t)}</option>`).join('');
+  const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
+  $('#mTitle').textContent='Nueva válvula';
+  $('#mBody').innerHTML=`
+   <div class="two">
+     <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
+     <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
+     <div class="fld"><label>Tag</label><input class="inp" id="naTag" placeholder="p. ej. PSV-1300"></div>
+     <div class="fld"><label>N.º de serie</label><input class="inp" id="naSer" placeholder="p. ej. C-90-1123"></div>
+     <div class="fld"><label>Modelo</label><select class="inp" id="naMod">${mOpts}</select></div>
+     <div class="fld"><label>Clase</label><select class="inp" id="naCl">${clOpts}</select></div>
+     <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
+     <div class="fld"><label>Rating / clase</label><input class="inp" id="naRt" placeholder="300"></div>
+     <div class="fld"><label>Cv</label><input class="inp" id="naCv" placeholder="—"></div>
+     <div class="fld"><label>Rango / set</label><input class="inp" id="naRng" placeholder="150 psig"></div>
+     <div class="fld"><label>Falla a (aire)</label><select class="inp" id="naAir"><option value="">—</option><option>OPEN</option><option>CLOSE</option></select></div>
+     <div class="fld"><label>Criticidad</label><select class="inp" id="naCr"><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
+     <div class="fld"><label>Último servicio</label><input class="inp" id="naUlt" type="date"></div>
+     <div class="fld"><label>Próxima calibración</label><input class="inp" id="naProx" type="date"></div>
+   </div>
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>La clase se ajusta al modelo elegido; puedes cambiarla. En válvulas de seguridad, fija la <b>próxima calibración</b> para que entren al horizonte y a las alertas.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewAsset()">Crear válvula</button>`;
+  const fillAr=()=>{const c=cli($('#naCli').value);$('#naAr').innerHTML=Object.entries(c.areas).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')};
+  $('#naCli').onchange=fillAr;fillAr();
+  $('#naMod').onchange=()=>{const m=MODELOS[$('#naMod').value];if(m)$('#naCl').value=m.c};$('#naMod').onchange();
+  $('#modal').classList.add('on');
+}
+function saveNewAsset(){
+  const tag=$('#naTag').value.trim(),ser=$('#naSer').value.trim();
+  if(!tag&&!ser){toast('Indica al menos el tag o el número de serie');return}
+  const id='new'+Date.now();
+  ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:$('#naCl').value,tag,ser,mod:$('#naMod').value,
+    sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:$('#naCv').value.trim(),air:$('#naAir').value,
+    rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
+  closeModal();renderAll();go('assets');openAsset(id);toast(`Válvula ${tag||ser} creada`);
+}
+
+/* ============================================================
+   12.7 · CALIBRACIÓN — inicio, fin, as-found/as-left e informe
+   ============================================================ */
+let CALIBS=[];
+const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.split('-');return `${D}/${M}/${Y}${t?' · '+t:''}`};
+function openCalib(assetId){
+  const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
+  if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
+  const nom=parseFloat((a.rng||'').replace(',','.'));
+  const uni=/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig';
+  const hoyStr=HOY.toISOString().slice(0,10);
+  const proxDef=new Date(HOY);proxDef.setFullYear(proxDef.getFullYear()+1);
+  $('#mTitle').textContent=`Calibración · ${a.tag||a.ser||'activo'}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
+     <div>Registra el <b>inicio</b> y el <b>fin</b> de la prueba de banco. Al generar el informe se certifica la orden, se actualiza la vigencia del equipo y se emite el certificado con su lectura para el informe final.</div></div>
+   <h3 style="margin:4px 0 10px">1 · Inicio de la prueba</h3>
+   <div class="two">
+     <div class="fld"><label>Fecha y hora de inicio</label><input class="inp" id="cbIni" type="datetime-local" value="${hoyStr}T08:00"></div>
+     <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="K. Ortiz"></div>
+     <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="Banco neumático · patrón Fluke 700G"></div>
+     <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
+     <div class="fld"><label>Set point nominal</label><input class="inp" id="cbNom" value="${isNaN(nom)?'':nom}"></div>
+     <div class="fld"><label>Unidad</label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
+     <div class="fld"><label>Tolerancia admisible (±%)</label><input class="inp" id="cbTol" value="3"></div>
+     <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="22"></div>
+   </div>
+   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found</h3>
+   <div class="two">
+     <div class="fld"><label>Presión de apertura encontrada</label><input class="inp" id="cbAf" placeholder="${isNaN(nom)?'—':nom}"></div>
+     <div class="fld"><label>Hermeticidad de asiento</label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+   </div>
+   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left</h3>
+   <div class="two">
+     <div class="fld"><label>Presión de apertura ajustada</label><input class="inp" id="cbAl" placeholder="${isNaN(nom)?'—':nom}"></div>
+     <div class="fld"><label>Hermeticidad final</label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Contrapresión de cierre (blowdown)</label><input class="inp" id="cbBd" placeholder="7%"></div>
+     <div class="fld"><label>Válvula precintada</label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
+   </div>
+   <h3 style="margin:16px 0 10px">4 · Cierre</h3>
+   <div class="two">
+     <div class="fld"><label>Fecha y hora de fin</label><input class="inp" id="cbFin" type="datetime-local" value="${hoyStr}T10:30"></div>
+     <div class="fld"><label>Próxima calibración</label><input class="inp" id="cbProx" type="date" value="${proxDef.toISOString().slice(0,10)}"></div>
+   </div>
+   <div class="fld"><label>Observaciones para el informe</label><textarea class="inp" id="cbObs" rows="2" placeholder="Estado general, repuestos usados, recomendaciones…"></textarea></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}')">Generar informe y certificar</button>`;
+  $('#modal').classList.add('on');
+}
+function generateCalib(assetId){
+  const a=ACTIVOS.find(x=>x.id===assetId);if(!a)return;
+  const num=id=>{const v=parseFloat(($('#'+id).value||'').toString().replace(',','.'));return isNaN(v)?null:v};
+  const nom=num('cbNom'),uni=$('#cbUni').value,tol=num('cbTol')??3,af=num('cbAf'),al=num('cbAl');
+  if(nom===null||af===null||al===null){toast('Completa el set nominal y las presiones as-found y as-left');return}
+  const afH=$('#cbAfH').value,alH=$('#cbAlH').value,ini=$('#cbIni').value,fin=$('#cbFin').value,tec=$('#cbTec').value,
+    banco=$('#cbBanco').value,fluido=$('#cbFluido').value,temp=$('#cbTemp').value,bd=$('#cbBd').value.trim(),pre=$('#cbPre').value,
+    obs=$('#cbObs').value.trim(),prox=$('#cbProx').value;
+  const devAf=nom?((af-nom)/nom*100):0,devAl=nom?((al-nom)/nom*100):0;
+  const inTolAf=Math.abs(devAf)<=tol,inTolAl=Math.abs(devAl)<=tol,hermOk=alH==='Conforme';
+  const ajuste=!inTolAf,conforme=inTolAl&&hermOk;
+  const verdict=!conforme?'No conforme':ajuste?'Conforme con ajuste':'Conforme';
+  const vtone=!conforme?'late':ajuste?'due':'ok';
+  const cert='CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
+  const sg=x=>x>=0?'+':'';
+  const msgs=[
+    `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — ingresó a banco de pruebas el ${fmtDT(ini)}, con ${fluido.toLowerCase()} como fluido de prueba y patrón ${banco}.`,
+    `Presión de tarado nominal: ${nom} ${uni}, con tolerancia admisible de ±${tol}%.`,
+    `As-found (cómo llegó): apertura a ${af} ${uni} → desviación ${sg(devAf)}${devAf.toFixed(1)}%, ${inTolAf?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad de entrada: ${afH.toLowerCase()}.`,
+    `As-left (cómo quedó): apertura a ${al} ${uni} → desviación ${sg(devAl)}${devAl.toFixed(1)}%, ${inTolAl?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad final: ${alH.toLowerCase()}${bd?`; contrapresión de cierre ${bd}`:''}.`,
+    ajuste?`La válvula llegó fuera de tolerancia; se reajustó el set point durante la intervención hasta dejarla conforme.`:`No fue necesario reajustar el set point: la válvula operaba dentro de tolerancia.`,
+    `Resultado: ${verdict.toUpperCase()}. ${pre==='Sí'?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
+    obs?`Observaciones del técnico: ${obs}`:''
+  ].filter(Boolean);
+  const rec={id:'cb'+Date.now(),act:a.id,cert,ini,fin,tec,banco,fluido,temp,nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs};
+  CALIBS.unshift(rec);
+  a.ult=(fin||ini).slice(0,10);a.prox=prox;
+  const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
+  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,
+    hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`,partes:[],calib:rec.id});
+  DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
+  renderAll();
+  if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
+  showCalibReport(rec);
+  toast(`${verdict} · certificado ${cert} emitido`);
+}
+function showCalibReport(rec){
+  if(!rec)return;
+  const a=ACTIVOS.find(x=>x.id===rec.act)||{},sg=x=>x>=0?'+':'';
+  const cot=x=>Math.abs(x)<=rec.tol?'ok':'late';
+  $('#mTitle').textContent=`Certificado ${rec.cert}`;
+  $('#mBody').innerHTML=`
+   <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+     <span class="tag ${rec.vtone}" style="height:26px;font-size:13px;padding:0 12px"><span class="dot"></span>${rec.verdict}</span>
+     <div class="muted" style="font-size:12.5px">${esc(a.tag||a.ser||'')} · ${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n||'')}</div></div>
+   <dl class="dl">
+     <dt>Certificado</dt><dd>${rec.cert}</dd><dt>Técnico responsable</dt><dd>${esc(rec.tec)}</dd>
+     <dt>Patrón / banco</dt><dd>${esc(rec.banco)}</dd><dt>Fluido · temperatura</dt><dd>${esc(rec.fluido)} · ${esc(rec.temp)} °C</dd>
+     <dt>Inicio de prueba</dt><dd>${fmtDT(rec.ini)}</dd><dt>Fin de prueba</dt><dd>${fmtDT(rec.fin)}</dd></dl>
+   <div class="grid-wrap" style="margin:14px 0"><table class="grid"><thead><tr><th>Medición</th><th>Nominal</th><th>As-found</th><th>As-left</th></tr></thead>
+     <tbody>
+       <tr style="cursor:default"><td>Presión de apertura (${rec.uni})</td><td class="mono">${rec.nom}</td><td class="mono">${rec.af}</td><td class="mono">${rec.al}</td></tr>
+       <tr style="cursor:default"><td>Desviación</td><td class="mono">±${rec.tol}%</td><td class="mono" style="color:var(--${cot(rec.devAf)})">${sg(rec.devAf)}${rec.devAf.toFixed(1)}%</td><td class="mono" style="color:var(--${cot(rec.devAl)})">${sg(rec.devAl)}${rec.devAl.toFixed(1)}%</td></tr>
+       <tr style="cursor:default"><td>Hermeticidad</td><td>—</td><td>${rec.afH}</td><td>${rec.alH}</td></tr>
+     </tbody></table></div>
+   <h3 style="margin:6px 0 8px">Lectura para el informe final</h3>
+   <div style="font-size:13px;color:var(--ink-2);line-height:1.6">${rec.msgs.map(m=>`<p style="margin-bottom:7px">${esc(m)}</p>`).join('')}</div>
+   <div class="callout ${rec.vtone==='ok'?'':rec.vtone==='due'?'warn':'bad'}" style="margin-top:12px">
+     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg>
+     <div><b>${rec.verdict}.</b> Próxima calibración programada para ${rec.prox}.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
 
 /* ============================================================
    13 · EXPORT / INIT
