@@ -664,6 +664,92 @@ table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:n
   .quote-bar{display:none!important}
   .quote-paper{box-shadow:none;border-radius:0;padding:0}
 }
+
+/* ============================================================
+   REPUESTOS — storefront de despieces (estilo búsqueda de partes)
+   ============================================================ */
+.ps-hero{border:1px solid var(--line);border-radius:var(--r-3);background:
+  radial-gradient(120% 140% at 82% -20%, var(--sel-bg), transparent 55%),
+  linear-gradient(180deg,var(--surface),var(--surface-2));
+  padding:var(--sp-6) var(--sp-6) var(--sp-5);margin-bottom:var(--sp-5)}
+.ps-hero h2{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px}
+.ps-hero p{color:var(--ink-2);font-size:13.5px;max-width:62ch;margin-bottom:var(--sp-4)}
+.ps-search{position:relative;max-width:640px}
+.ps-search svg{position:absolute;left:15px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--ink-3);fill:none;stroke-width:1.9}
+.ps-search input{width:100%;height:52px;padding:0 16px 0 46px;border:1px solid var(--line);border-radius:var(--r-2);
+  background:var(--surface);font-size:15px;box-shadow:var(--shadow-pop);transition:border var(--fast),box-shadow var(--fast)}
+.ps-search input:focus{outline:none;border-color:var(--sel);box-shadow:0 0 0 3px var(--sel-bg)}
+.ps-quick{display:flex;flex-wrap:wrap;gap:7px;margin-top:var(--sp-4);align-items:center}
+.ps-quick .lab{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-right:2px}
+.ps-chip{padding:5px 11px;border:1px solid var(--line);border-radius:100px;background:var(--surface);font-size:12px;
+  font-weight:500;cursor:pointer;transition:all var(--fast)}
+.ps-chip:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.ps-chip.on{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.ps-sech{display:flex;align-items:center;gap:10px;margin:var(--sp-5) 0 var(--sp-3)}
+.ps-sech h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2)}
+.ps-sech .count{margin-left:auto}
+.ps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(224px,1fr));gap:var(--sp-3)}
+.ps-card{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);overflow:hidden;cursor:pointer;
+  display:flex;flex-direction:column;transition:border var(--fast),box-shadow var(--fast),transform var(--fast)}
+.ps-card:hover{border-color:var(--sel);box-shadow:var(--shadow-pop);transform:translateY(-2px)}
+.ps-card .ph{height:104px;display:grid;place-items:center;padding:12px;border-bottom:1px solid var(--line-2);
+  background:radial-gradient(circle at 50% 32%, var(--surface), var(--surface-3))}
+[data-theme="dark"] .ps-card .ph{background:radial-gradient(circle at 50% 32%, oklch(0.31 0.012 250), oklch(0.23 0.011 252))}
+.ps-card .ph .vphoto{width:88%;max-height:80px}
+.ps-card .bd{padding:11px 13px 13px;display:flex;flex-direction:column;gap:3px;flex:1}
+.ps-card .bd .mk{font-size:11px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.ps-card .bd .cd{font-family:'IBM Plex Mono';font-weight:600;font-size:14px}
+.ps-card .bd .ty{font-size:12px;color:var(--ink-2);line-height:1.35}
+.ps-card .ft{display:flex;gap:8px;margin-top:auto;padding-top:8px;font-size:11px;color:var(--ink-3)}
+.ps-card .ft b{color:var(--ink-2)}
+.ps-asset{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);padding:12px 14px;cursor:pointer;
+  display:flex;align-items:center;gap:13px;transition:border var(--fast),box-shadow var(--fast)}
+.ps-asset:hover{border-color:var(--sel);box-shadow:var(--shadow-pop)}
+.ps-asset .th{width:52px;height:40px;flex:0 0 auto;border-radius:var(--r-1);border:1px solid var(--line-2);display:grid;place-items:center;padding:3px;
+  background:radial-gradient(circle at 50% 34%, var(--surface), var(--surface-3))}
+.ps-asset .th .vphoto{width:100%}
+.ps-asset .id{flex:1;min-width:0}
+.ps-asset .id b{font-size:13.5px}
+.ps-asset .id small{display:block;color:var(--ink-3);font-size:11.5px;font-family:'IBM Plex Mono'}
+.ps-asset .go{color:var(--ink-3);flex:0 0 auto}
+.ps-empty{padding:var(--sp-6);text-align:center;color:var(--ink-3);border:1px dashed var(--line);border-radius:var(--r-2)}
+
+/* --- detalle de despiece (vista completa) --- */
+.pd-back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);cursor:pointer;
+  padding:6px 0;margin-bottom:var(--sp-3);font-weight:500}
+.pd-back:hover{color:var(--sel)}
+.pd-back svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+.pd-head{display:flex;gap:var(--sp-5);align-items:flex-start;border:1px solid var(--line);border-radius:var(--r-3);
+  background:var(--surface);padding:var(--sp-5);margin-bottom:var(--sp-4)}
+.pd-head .ph{width:150px;flex:0 0 auto;border-radius:var(--r-2);border:1px solid var(--line-2);padding:14px;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 30%, var(--surface), var(--surface-3))}
+[data-theme="dark"] .pd-head .ph{background:radial-gradient(circle at 50% 30%, oklch(0.31 0.012 250), oklch(0.23 0.011 252))}
+.pd-head .ph .vphoto{width:100%}
+.pd-head .meta{flex:1;min-width:0}
+.pd-head .mk{font-size:12px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.pd-head h1{font-size:24px;font-weight:700;letter-spacing:-.02em;margin:2px 0 4px;font-family:'IBM Plex Mono'}
+.pd-head .ty{color:var(--ink-2);font-size:14px;margin-bottom:12px}
+.pd-tags{display:flex;flex-wrap:wrap;gap:6px}
+.pd-kit{margin-left:auto;flex:0 0 auto;text-align:right;border-left:1px solid var(--line-2);padding-left:var(--sp-5);min-width:180px}
+.pd-kit .k{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.pd-kit .v{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:2px 0 3px}
+.pd-kit .s{font-size:11.5px;color:var(--ink-3)}
+@media(max-width:820px){.pd-head{flex-wrap:wrap}.pd-kit{margin-left:0;border-left:none;padding-left:0;border-top:1px solid var(--line-2);padding-top:12px;width:100%;text-align:left}}
+.pd-body{display:grid;grid-template-columns:340px 1fr;gap:var(--sp-4);align-items:start}
+@media(max-width:900px){.pd-body{grid-template-columns:1fr}.pd-body .schema{position:static}}
+.pd-price{font-family:'IBM Plex Mono';font-weight:600;white-space:nowrap}
+.pd-price small{display:block;font-weight:400;color:var(--ink-3);font-size:10.5px;letter-spacing:.02em}
+tr.bom-row.sel{background:var(--sel-bg)}
+tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
+.ps-qty{display:inline-flex;align-items:center;gap:2px}
+.ps-qty b{min-width:22px;text-align:center;display:inline-block}
+.ps-act{height:26px;border:1px solid var(--line);border-radius:var(--r-1);background:var(--surface);font-size:11.5px;padding:0 4px;max-width:118px}
+.pd-tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-2)}
+.pd-tbl table{border:none}
+.pd-sum{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:var(--sp-3);padding:13px 15px;border:1px solid var(--line);
+  border-radius:var(--r-2);background:var(--surface-2);position:sticky;bottom:8px;box-shadow:var(--shadow-pop)}
+.pd-sumL{font-size:13.5px}.pd-sumL b{font-weight:700}.pd-sumL span{color:var(--ink-3);font-size:11.5px}
+.pd-sumB{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -729,6 +815,7 @@ table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:n
       <a data-p="assets"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
       <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
+      <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
       <div class="rail-sec">Análisis</div>
       <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
@@ -826,6 +913,9 @@ table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:n
         <div class="hd"><div><h1>Solicitudes de repuestos</h1><p>Lo que los clientes piden desde su portal, con el equipo y el historial ya adjuntos.</p></div></div>
         <div class="panel"><div id="reqList"></div></div>
       </div></section>
+
+      <!-- ═══ REPUESTOS (storefront) ═══ -->
+      <section class="page" id="p-parts"><div class="view-pad" id="partsView"></div></section>
 
       <!-- ═══ CATÁLOGO ═══ -->
       <section class="page" id="p-cat"><div class="view-pad">
@@ -1142,7 +1232,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
+const TITULOS={home:'Panel',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
 function go(p){
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
@@ -1178,7 +1268,7 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   $$('#nav a').forEach(a=>a.style.display=(c&&['cat','imp','users'].includes(a.dataset.p))?'none':'');
-  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';closeDrawer();renderAll();go('home');
+  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
 }
 $('#roleSel').onchange=e=>applyRole(e.target.value);
@@ -1465,7 +1555,8 @@ function renderReq(){
 }
 function enviarSol(){
   const n='SOL-2026-'+String(1000+Math.floor(Math.random()*8999)).slice(0,4);
-  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||S.cart.length&&ACTIVOS.find(a=>a.id===S.cart[0].a).cli,f:'2026-07-23',est:'Pendiente',
+  const conAct=S.cart.find(c=>c.a);
+  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'Pendiente',
     items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
   S.cart=[];renderReq();toast(`Solicitud ${n} enviada`);
 }
@@ -1577,6 +1668,152 @@ function renderCat(){
       <td style="width:100px"><span class="tag">${CL[m.c]}</span></td>
       <td style="width:120px" class="muted">${(BOM[m.b]||[]).length} posiciones</td>
       <td style="width:110px"><b>${ACTIVOS.filter(a=>a.mod===k).length}</b> <span class="muted">instalados</span></td></tr>`).join('')}</tbody></table>`).join('');
+}
+/* ============================================================
+   9b · REPUESTOS — storefront de despieces
+   Búsqueda por serie/modelo · despiece explosionado interactivo ·
+   precios y disponibilidad. Reutiliza SCHEMA, precio() y stock.
+   ============================================================ */
+let PS={q:'',cls:'',mod:null,asset:null,sel:{}};
+function renderParts(){
+  if(PS.mod){partsDetail();return;}
+  $('#partsView').innerHTML=`
+   <div class="ps-hero">
+     <h2>Catálogo de repuestos</h2>
+     <p>Identifica tu válvula por número de serie, tag o modelo y obtén el despiece con la posición exacta, el precio y la disponibilidad de cada pieza.</p>
+     <div class="ps-search">
+       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+       <input id="psIn" placeholder="N.º de serie, tag o modelo — p. ej. N-11-267173, TV-561B, 21000" value="${esc(PS.q)}" autocomplete="off">
+     </div>
+     <div class="ps-quick"><span class="lab">Familia</span>
+       ${[['','Todas']].concat(Object.entries(CL)).map(([k,l])=>`<span class="ps-chip ${PS.cls===k?'on':''}" onclick="PS.cls='${k}';renderParts()">${l}</span>`).join('')}
+     </div>
+   </div>
+   <div id="psResults"></div>`;
+  const inp=$('#psIn');
+  inp.oninput=()=>{PS.q=inp.value;psFilter()};
+  psFilter();
+}
+function psFilter(){
+  const q=PS.q.trim().toLowerCase();
+  const acts=visibles().filter(a=>a.ser&&a.tag&&(!PS.cls||a.cl===PS.cls));
+  const mAsset=q?acts.filter(a=>[a.ser,a.tag,a.mod,(MODELOS[a.mod]||{}).m,(MODELOS[a.mod]||{}).t].join(' ').toLowerCase().includes(q)).slice(0,10):[];
+  let mods=Object.entries(MODELOS).filter(([k,m])=>!PS.cls||m.c===PS.cls);
+  if(S.cli)mods=mods.filter(([k])=>ACTIVOS.some(a=>a.cli===S.cli&&a.mod===k));
+  const mMod=q?mods.filter(([k,m])=>[k,m.t,m.d,m.m,CL[m.c]].join(' ').toLowerCase().includes(q)):mods;
+  const go=`<svg class="go" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>`;
+  const assetBlock=mAsset.length?`
+    <div class="ps-sech"><h3>Equipos que coinciden</h3><span class="count">${mAsset.length}</span></div>
+    <div class="ps-grid" style="grid-template-columns:1fr">${mAsset.map(a=>`
+      <div class="ps-asset" onclick="openParts('${a.mod}','${a.id}')">
+        <span class="th">${photoFor(a.mod)}</span>
+        <div class="id"><b>${esc(a.tag)} · ${CL[a.cl]||'—'}</b><small>Serie ${esc(a.ser)} · Modelo ${esc(a.mod)} · ${esc(cli(a.cli).n)}</small></div>
+        ${go}</div>`).join('')}</div>`:'';
+  const modBlock=mMod.length?`
+    <div class="ps-sech"><h3>${q?'Modelos que coinciden':'Modelos en catálogo'}</h3><span class="count">${mMod.length}</span></div>
+    <div class="ps-grid">${mMod.map(([k,m])=>`
+      <div class="ps-card" onclick="openParts('${k}',null)">
+        <div class="ph">${photoFor(k)}</div>
+        <div class="bd">
+          <span class="mk">${esc(m.m)}</span>
+          <span class="cd">${esc(k)}</span>
+          <span class="ty">${esc(m.t)}</span>
+          <div class="ft"><span><b>${(BOM[m.b]||[]).length}</b> posiciones</span><span><b>${ACTIVOS.filter(a=>a.mod===k).length}</b> instalados</span></div>
+        </div></div>`).join('')}</div>`:'';
+  $('#psResults').innerHTML=(assetBlock+modBlock)||`<div class="ps-empty">Sin coincidencias para "<b>${esc(PS.q)}</b>". Prueba con el número de serie, el tag o el código de modelo.</div>`;
+}
+function openParts(mod,assetId){
+  PS.mod=mod;PS.asset=assetId||null;PS.sel={};renderParts();$('.view').scrollTop=0;
+}
+const REP_FAC=0.35; // reparación ≈ 35% del valor de la pieza nueva (supuesto de demo)
+function psUnit(n){const s=PS.sel[n]||{act:'Reemplazar'};const base=precio(n);return s.act==='Reparar'?Math.round(base*REP_FAC):base;}
+function partsDetail(){
+  const k=PS.mod,m=MODELOS[k]||{},lista=BOM[m.b||'globo']||[];
+  const a=PS.asset?ACTIVOS.find(x=>x.id===PS.asset):null;
+  const usadas={};if(a)ORDENES.filter(o=>o.act===a.id).forEach(o=>o.partes.forEach(p=>usadas[p]=o.f));
+  const kit=lista.filter(p=>p.k),enStock=lista.filter(p=>p.s>0).length;
+  const kitTotal=kit.reduce((s,p)=>s+precio(p.n),0);
+  const tags=[`<span class="tag">${CL[m.c]||''}</span>`,`<span class="tag">${lista.length} posiciones</span>`];
+  if(a){tags.unshift(`<span class="tag sel"><span class="dot"></span>${esc(a.tag)}</span>`);
+    if(a.sz)tags.push(`<span class="tag mono">${esc(a.sz)}</span>`);
+    if(a.rt)tags.push(`<span class="tag mono">Clase ${esc(a.rt)}</span>`);}
+  else tags.push(`<span class="tag">${ACTIVOS.filter(x=>x.mod===k).length} instalados</span>`);
+  const eng=S.rol!=='cliente';
+  $('#partsView').innerHTML=`
+   <div class="pd-back" onclick="PS.mod=null;PS.asset=null;renderParts()">
+     <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Buscar otra válvula</div>
+   <div class="pd-head">
+     <div class="ph">${photoFor(k)}</div>
+     <div class="meta">
+       <div class="mk">${esc(m.m)}</div>
+       <h1>${esc(k)}</h1>
+       <div class="ty">${esc(m.t)} — ${esc(m.d)}</div>
+       <div class="pd-tags">${tags.join('')}</div>
+       ${a?`<div style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">Serie <b class="mono">${esc(a.ser)}</b> · ${esc(cli(a.cli).n)} · ${esc(area(a))}</div>`:''}
+     </div>
+     <div class="pd-kit">
+       <div class="k">Kit de overhaul</div>
+       <div class="v">${usd(kitTotal)}</div>
+       <div class="s">${kit.length} posiciones · ${enStock} en stock Lima</div>
+       <button class="btn sec xs" style="margin-top:10px" onclick="psKit()">Marcar kit completo</button>
+     </div>
+   </div>
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>${eng?'<b>Ingeniería:</b> marca cada pieza a <b>reemplazar</b> o <b>reparar</b> con su cantidad. El total se arma solo y puedes emitir la cotización o la orden de compra en PDF.':'<b>Detalle de repuestos:</b> revisa las piezas que el ingeniero recomienda para tu válvula, con precio y disponibilidad. Marca las que necesitas y descarga tu cotización en PDF.'}</div></div>
+   <div class="pd-body">
+     <figure class="schema">${SCHEMA[m.b||'globo']}<figcaption>Despiece referencial · pasa el cursor o toca una pieza</figcaption></figure>
+     <div>
+     <div class="pd-tbl"><table class="grid">
+       <thead><tr><th style="width:36px">Pos</th><th>N.º de parte</th><th style="width:112px" class="num">Precio</th><th style="width:132px">Disponibilidad</th><th style="width:120px">Acción</th><th style="width:96px">Cant.</th></tr></thead>
+       <tbody>${lista.map(p=>{const sel=PS.sel[p.n]||{q:0,act:'Reemplazar'};return `<tr class="bom-row ${sel.q>0?'sel':''}" data-p="${p.p}" onmouseenter="pHot(${p.p},1)" onmouseleave="pHot(${p.p},0)" style="cursor:default">
+         <td><span class="pos">${p.p}</span></td>
+         <td><div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''}</small></div></td>
+         <td class="num"><span class="pd-price" id="pp-${p.p}">${usd(psUnit(p.n))}<small>${sel.act==='Reparar'?'reparación':'por unidad'}</small></span></td>
+         <td><span class="stk ${p.s>0?'y':'n'}"><span class="dot"></span>${p.s>0?p.s+' und · stock':'sin stock'}</span><small>${esc(p.l)}</small></td>
+         <td><select class="ps-act" onchange="psAct(${p.p},'${p.n}',this.value)"><option${sel.act==='Reemplazar'?' selected':''}>Reemplazar</option><option${sel.act==='Reparar'?' selected':''}>Reparar</option></select></td>
+         <td><span class="ps-qty"><button class="btn quiet xs" style="padding:0 7px" onclick="psAdj(${p.p},'${p.n}',-1)">−</button><b id="qd-${p.p}">${sel.q}</b><button class="btn quiet xs" style="padding:0 7px" onclick="psAdj(${p.p},'${p.n}',1)">+</button></span></td></tr>`}).join('')}</tbody></table></div>
+     <div class="pd-sum" id="psSum"></div>
+     </div>
+   </div>`;
+  const root=$('#partsView');
+  root.querySelectorAll('.dpart').forEach(g=>{
+    g.onmouseenter=()=>pHot(+g.dataset.p,1);g.onmouseleave=()=>pHot(+g.dataset.p,0);
+    g.onclick=()=>{const r=root.querySelector('.bom-row[data-p="'+g.dataset.p+'"]');if(r)r.scrollIntoView({block:'center',behavior:'smooth'})};
+  });
+  psSum();
+}
+function pHot(p,on){
+  const root=$('#partsView');if(!root)return;
+  const g=root.querySelector('.dpart[data-p="'+p+'"]'),r=root.querySelector('.bom-row[data-p="'+p+'"]');
+  if(g)g.classList.toggle('hot',!!on);if(r)r.classList.toggle('hot',!!on);
+}
+function psPaint(pos,n){
+  const s=PS.sel[n]||{q:0,act:'Reemplazar'};
+  const qd=document.getElementById('qd-'+pos);if(qd)qd.textContent=s.q;
+  const pp=document.getElementById('pp-'+pos);if(pp)pp.innerHTML=usd(psUnit(n))+'<small>'+(s.act==='Reparar'?'reparación':'por unidad')+'</small>';
+  const row=$('#partsView').querySelector('.bom-row[data-p="'+pos+'"]');if(row)row.classList.toggle('sel',s.q>0);
+  psSum();
+}
+function psAdj(pos,n,d){const s=PS.sel[n]||(PS.sel[n]={q:0,act:'Reemplazar'});s.q=Math.max(0,s.q+d);psPaint(pos,n);}
+function psAct(pos,n,v){const s=PS.sel[n]||(PS.sel[n]={q:0,act:'Reemplazar'});s.act=v;if(s.q===0)s.q=1;psPaint(pos,n);}
+function psKit(){
+  const m=MODELOS[PS.mod]||{};(BOM[m.b||'globo']||[]).filter(p=>p.k).forEach(p=>{PS.sel[p.n]={q:1,act:'Reemplazar'}});
+  partsDetail();toast('Kit de overhaul marcado para cotizar');
+}
+function psSum(){
+  const el=document.getElementById('psSum');if(!el)return;
+  const items=Object.entries(PS.sel).filter(([,v])=>v.q>0);
+  const tot=items.reduce((a,[n,v])=>a+psUnit(n)*v.q,0);
+  el.innerHTML=items.length
+    ?`<div class="pd-sumL"><b>${items.length}</b> ${items.length===1?'pieza seleccionada':'piezas seleccionadas'} · Total <b>${usd(tot)}</b> <span>sin IGV</span></div>
+      <div class="pd-sumB"><button class="btn sec" onclick="quoteParts('cot')"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Cotización (PDF)</button>${S.rol!=='cliente'?`<button class="btn" onclick="quoteParts('oc')"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Orden de compra (PDF)</button>`:''}</div>`
+    :`<div class="pd-sumL muted">Marca las piezas a reemplazar o reparar con su cantidad para armar la cotización.</div>`;
+}
+function quoteParts(kind){
+  const items=Object.entries(PS.sel).filter(([,v])=>v.q>0).map(([n,v])=>({n,q:v.q,a:PS.asset,act:v.act,pu:psUnit(n)}));
+  if(!items.length){toast('Selecciona al menos una pieza');return}
+  const cId=PS.asset?(ACTIVOS.find(x=>x.id===PS.asset)||{}).cli:(S.cli||null);
+  openQuote(items,cId,kind);
 }
 function renderUsers(){
   $('#userList').innerHTML=`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Organización</th><th>Alcance</th></tr></thead>
@@ -2267,8 +2504,9 @@ function openQuote(items,cliId,kind){
   const c=cli(cId||'');
   const rows=items.map(it=>{
     const meta=partMeta(it.n),a=it.a?ACTIVOS.find(x=>x.id===it.a):null,m=a?MODELOS[a.mod]:null;
-    const pu=precio(it.n),q=it.q||1;
-    return {pn:it.n,desc:meta.d||'Repuesto',mm:m?`${m.m} ${a.mod}`:'—',tag:a?a.tag:'',q,pu,tot:pu*q};
+    const pu=(it.pu!=null?it.pu:precio(it.n)),q=it.q||1;
+    const desc=(meta.d||'Repuesto')+(it.act?` — ${it.act}`:'');
+    return {pn:it.n,desc,mm:m?`${m.m} ${a.mod}`:'—',tag:a?a.tag:'',q,pu,tot:pu*q};
   });
   const sub=rows.reduce((s,r)=>s+r.tot,0),igv=sub*0.18,tot=sub+igv;
   const seq=1000+SOLICITUDES.length+CALIBS.length+SERVS.length+1;
@@ -2312,7 +2550,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderUsers();renderNotif()}
+function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $('#heroStage').innerHTML=PHOTO.globo;
