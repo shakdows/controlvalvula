@@ -623,6 +623,47 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .notif-h{display:flex;align-items:center;justify-content:space-between;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);font-size:13px;font-weight:600}
 .notif-l{max-height:min(60vh,440px);overflow:auto}
 .chart-note{font-size:11.5px;color:var(--ink-3);padding:2px 0 0}
+
+/* ============================================================
+   COTIZACIÓN / ORDEN DE COMPRA — documento imprimible a PDF
+   ============================================================ */
+.quote{position:fixed;inset:0;z-index:var(--z-modal);display:none;overflow:auto;background:oklch(0.235 0.012 255/.45);padding:24px}
+.quote.on{display:block}
+.quote-wrap{max-width:840px;margin:0 auto}
+.quote-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:#fff}
+.quote-bar>span:first-child{font-size:13px;font-weight:600}
+.quote-bar .btn{background:#fff;color:#1b2126;border-color:transparent}
+.quote-bar .btn:hover{opacity:.9}
+.quote-paper{background:#fff;color:#1b2126;border-radius:8px;box-shadow:var(--shadow-over);padding:44px 46px}
+.qp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-bottom:2px solid #1b2126;padding-bottom:18px;margin-bottom:20px}
+.qp-brand{display:flex;gap:12px;align-items:center}
+.qp-brand .logo-mark{width:42px;height:42px;color:#1b2126;border:1.5px solid #1b2126;border-radius:9px}
+.qp-brand b{font-size:19px;letter-spacing:.12em;font-weight:800;display:block;line-height:1}
+.qp-brand span{font-size:10px;letter-spacing:.2em;color:#6b7680}
+.qp-doc{text-align:right}
+.qp-doc h2{font-size:22px;letter-spacing:.05em;margin:0 0 5px;color:#1b2126}
+.qp-doc div{font-size:11.5px;color:#4a5560;line-height:1.6}
+.qp-to{display:flex;justify-content:space-between;gap:24px;margin-bottom:18px;font-size:12.5px;line-height:1.5}
+.qp-to .lbl{font-size:9.5px;letter-spacing:.08em;color:#6b7680;text-transform:uppercase;margin-bottom:3px}
+.qp-to b{font-size:13.5px}
+table.qp{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+table.qp th{text-align:left;background:#f1f4f6;color:#3a444d;font-weight:600;padding:8px 10px;border-bottom:1px solid #d7dee3;font-size:10.5px;letter-spacing:.02em}
+table.qp td{padding:8px 10px;border-bottom:1px solid #eef1f4;vertical-align:top}
+table.qp td.num,table.qp th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap}
+.qp-tot{margin-left:auto;width:290px;font-size:12.5px}
+.qp-tot .r{display:flex;justify-content:space-between;padding:5px 0}
+.qp-tot .r.grand{border-top:2px solid #1b2126;margin-top:4px;padding-top:9px;font-size:15px;font-weight:800}
+.qp-note{margin-top:22px;font-size:11px;color:#5a656e;line-height:1.6;border-top:1px solid #e6eaed;padding-top:14px}
+@media print{
+  @page{margin:14mm}
+  body *{visibility:hidden!important}
+  .quote,.quote *{visibility:visible!important}
+  .quote{position:absolute;inset:0;background:#fff;padding:0;display:block!important;overflow:visible}
+  .quote-wrap{max-width:none;margin:0}
+  .quote-bar{display:none!important}
+  .quote-paper{box-shadow:none;border-radius:0;padding:0}
+}
 </style>
 </head>
 <body>
@@ -862,6 +903,17 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
     <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="modal-b" id="mBody"></div><div class="modal-f" id="mFoot"></div></div>
+</div>
+
+<div class="quote" id="quote" onclick="if(event.target.id==='quote')closeQuote()">
+  <div class="quote-wrap">
+    <div class="quote-bar">
+      <span id="quoteKind">Cotización</span><span style="flex:1"></span>
+      <button class="btn" onclick="closeQuote()">Cerrar</button>
+      <button class="btn" onclick="printQuote()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Imprimir / Guardar PDF</button>
+    </div>
+    <div class="quote-paper" id="quotePaper"></div>
+  </div>
 </div>
 
 <div class="toasts" id="toasts"></div>
@@ -1323,7 +1375,7 @@ function paneBOM(){
   $('#pn-bom').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>
      <div><b>Kit de overhaul</b> del modelo ${esc(a.mod)}: ${kit.length} posiciones, ${enStock} disponibles en el almacén de Lima.
-     <a href="#" onclick="addKit();return false" style="color:inherit;text-decoration:underline;font-weight:600">Agregar el kit completo a la solicitud</a>.</div></div>
+     <a href="#" onclick="addKit();return false" style="color:inherit;text-decoration:underline;font-weight:600">Agregar el kit a la solicitud</a> · <a href="#" onclick="quoteKit(S.cur.id);return false" style="color:inherit;text-decoration:underline;font-weight:600">Cotizar el kit (PDF)</a>.</div></div>
    <div class="bom">
      <figure class="schema">${SCHEMA[m.b||'globo']}<figcaption>Esquema referencial · ${esc(m.t||'')}</figcaption></figure>
      <div>
@@ -1331,7 +1383,7 @@ function paneBOM(){
        <thead><tr><th style="width:38px">Pos</th><th>N.º de parte</th><th>Disponibilidad</th><th style="width:70px"></th></tr></thead>
        <tbody>${lista.map(p=>`<tr class="bom-row" data-p="${p.p}" onmouseenter="hot(${p.p},1)" onmouseleave="hot(${p.p},0)" style="cursor:default">
          <td><span class="pos">${p.p}</span></td>
-         <td><div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''}</small></div></td>
+         <td><div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''} · <b style="color:var(--ink-2)">${usd(precio(p.n))}</b></small></div></td>
          <td><span class="stk ${p.s>0?'y':'n'}"><span class="dot"></span>${p.s>0?p.s+' und':'sin stock'}</span><small>${p.l}</small></td>
          <td style="text-align:right"><button class="btn sec xs" onclick="addPart('${p.n}',${p.s})">Pedir</button></td></tr>`).join('')}</tbody></table>
      </div></div>`;
@@ -1384,17 +1436,24 @@ function addKit(){
 }
 function renderReq(){
   const mias=S.cli?SOLICITUDES.filter(s=>s.cli===S.cli):SOLICITUDES;
+  const cartSub=S.cart.reduce((s,c)=>s+precio(c.n)*(c.q||1),0);
   const carrito=S.cart.length?`
     <div style="padding:var(--sp-4);border-bottom:1px solid var(--line-2);background:var(--surface-2)">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <h3 style="flex:1">Borrador en curso · ${S.cart.length} posiciones</h3>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <h3 style="flex:1">Borrador de repuestos · ${S.cart.length} posiciones</h3>
         <button class="btn sec xs" onclick="S.cart=[];renderReq()">Vaciar</button>
+        <button class="btn sec xs" onclick="openQuote(S.cart,S.cli,'cot')">Generar cotización (PDF)</button>
+        ${S.rol!=='cliente'?`<button class="btn sec xs" onclick="openQuote(S.cart,S.cli,'oc')">Orden de compra</button>`:''}
         <button class="btn xs" onclick="enviarSol()">Enviar a Adolphus</button></div>
-      <table class="grid"><tbody>${S.cart.map((c,i)=>{const a=ACTIVOS.find(x=>x.id===c.a);return `<tr style="cursor:default">
+      <table class="grid"><thead><tr><th>N.º de parte</th><th>Equipo</th><th>Disponibilidad</th><th style="width:104px">Cant.</th><th class="num" style="text-align:right">P. unit</th><th class="num" style="text-align:right">Total</th><th style="width:34px"></th></tr></thead>
+       <tbody>${S.cart.map((c,i)=>{const a=ACTIVOS.find(x=>x.id===c.a),pu=precio(c.n);return `<tr style="cursor:default">
         <td class="mono"><b>${c.n}</b></td><td>${esc(a?.tag||'')}</td>
         <td><span class="stk ${c.s>0?'y':'n'}"><span class="dot"></span>${c.s>0?'en stock':'importación'}</span></td>
-        <td style="width:60px">${c.q} und</td>
-        <td style="width:40px;text-align:right"><button class="btn quiet xs" onclick="S.cart.splice(${i},1);renderReq()">✕</button></td></tr>`}).join('')}</tbody></table></div>`:'';
+        <td><span style="display:inline-flex;align-items:center;gap:6px"><button class="btn quiet xs" style="padding:0 7px" onclick="cartQty(${i},-1)">−</button><b style="min-width:30px;text-align:center;display:inline-block">${c.q||1}</b><button class="btn quiet xs" style="padding:0 7px" onclick="cartQty(${i},1)">+</button></span></td>
+        <td class="num" style="text-align:right" class="mono">${usd(pu)}</td>
+        <td class="num" style="text-align:right"><b>${usd(pu*(c.q||1))}</b></td>
+        <td style="text-align:right"><button class="btn quiet xs" onclick="S.cart.splice(${i},1);renderReq()">✕</button></td></tr>`}).join('')}
+        <tr style="cursor:default"><td colspan="5" style="text-align:right;font-weight:600;border-top:1px solid var(--line)">Subtotal (sin IGV)</td><td class="num" style="text-align:right;border-top:1px solid var(--line)"><b>${usd(cartSub)}</b></td><td style="border-top:1px solid var(--line)"></td></tr></tbody></table></div>`:'';
   $('#reqList').innerHTML=carrito+(mias.length?`<table class="grid">
     <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th></th></tr></thead>
     <tbody>${mias.map(s=>`<tr style="cursor:default"><td class="mono"><b>${s.n}</b></td><td>${esc(cli(s.cli).n)}</td><td class="mono">${s.f}</td>
@@ -1415,7 +1474,7 @@ function verSol(id){
   $('#mBody').innerHTML=`<table class="grid"><thead><tr><th>N.º de parte</th><th>Equipo</th><th>Cant.</th></tr></thead>
    <tbody>${s.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a);return `<tr style="cursor:default"><td class="mono"><b>${i.n}</b></td>
      <td>${esc(a?.tag||'')} <small class="muted">${esc(cli(a?.cli).n||'')}</small></td><td>${i.q}</td></tr>`}).join('')}</tbody></table>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button><button class="btn" onclick="closeModal();toast('Cotización generada (simulada)')">Generar cotización</button>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button><button class="btn" onclick="closeModal();openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,SOLICITUDES.find(x=>x.id==='${id}').cli,'cot')">Generar cotización (PDF)</button>`;
   $('#modal').classList.add('on');
 }
 
@@ -1711,7 +1770,7 @@ document.addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
   const escribiendo=['input','textarea','select'].includes(tag);
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmd();return}
-  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();closeNotif();return}
+  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();closeNotif();closeQuote();return}
   if(escribiendo)return;
   if(gPend){
     gPend=false;
@@ -2154,6 +2213,62 @@ function showServiceReport(rec){
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Informe exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
   $('#modal').classList.add('on');
 }
+
+/* ============================================================
+   12.10 · PRECIOS Y COTIZACIÓN / ORDEN DE COMPRA (PDF)
+   ============================================================ */
+const PRECIOS={
+ 'AD-CUE-150-20':1850,'AD-BON-STD-20':620,'AD-TRM-316-A':1240,'AD-ASI-316-20':480,'AD-VAS-316-38':210,
+ 'AD-EMP-PTFE-V':85,'AD-KIT-JUN-20':140,'AD-DIA-88-NEO':190,'AD-RES-715':260,'AD-POS-SVI-HART':1450,
+ 'AD-SV-CUE-300':1680,'AD-SV-TOB-D':540,'AD-SV-DIS-316':320,'AD-SV-GUI-316':260,'AD-SV-RES-150':380,
+ 'AD-SV-HUS-316':230,'AD-SV-BON-CER':610,'AD-SV-KIT-SEL':165,'AD-SV-PAL-LEV':145,
+ 'AD-KG-CUE-10':1420,'AD-KG-COM-316':560,'AD-KG-ASI-EPDM':190,'AD-KG-EMP-TRA':120,'AD-KG-VAS-YUG':340,
+ 'AD-KG-ACT-NEU':980,'AD-KG-SEN-POS':220,'AD-KG-KIT-PER':95,
+ 'AD-AC-MOT-3F':720,'AD-AC-RED-25':1180,'AD-AC-LIM-TOR':430,'AD-AC-TAR-LOG':560,'AD-AC-VOL-MAN':130,'AD-AC-KIT-ORI':90
+};
+const precio=n=>PRECIOS[n]??120;
+const usd=x=>'$'+(x||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+let _PM=null;
+function partMeta(n){if(!_PM){_PM={};Object.values(BOM).flat().forEach(p=>{if(!_PM[p.n])_PM[p.n]=p})}return _PM[n]||{d:'Repuesto',s:0,l:''}}
+function openQuote(items,cliId,kind){
+  items=(items||[]).filter(it=>it&&it.n);
+  if(!items.length){toast('Agrega repuestos antes de cotizar');return}
+  const cId=cliId||(items[0].a?(ACTIVOS.find(x=>x.id===items[0].a)||{}).cli:null);
+  const c=cli(cId||'');
+  const rows=items.map(it=>{
+    const meta=partMeta(it.n),a=it.a?ACTIVOS.find(x=>x.id===it.a):null,m=a?MODELOS[a.mod]:null;
+    const pu=precio(it.n),q=it.q||1;
+    return {pn:it.n,desc:meta.d||'Repuesto',mm:m?`${m.m} ${a.mod}`:'—',tag:a?a.tag:'',q,pu,tot:pu*q};
+  });
+  const sub=rows.reduce((s,r)=>s+r.tot,0),igv=sub*0.18,tot=sub+igv;
+  const seq=1000+SOLICITUDES.length+CALIBS.length+SERVS.length+1;
+  const num=(kind==='oc'?'OC':'COT')+'-'+HOY.getFullYear()+'-'+String(seq).slice(1);
+  const val=new Date(HOY);val.setDate(val.getDate()+15);
+  $('#quoteKind').textContent=kind==='oc'?'Orden de compra':'Cotización';
+  $('#quotePaper').innerHTML=`
+    <div class="qp-head">
+      <div class="qp-brand"><span class="logo-mark">${LOGO}</span><div><b>ADOLPHUS</b><span>CONTROL DE FLUIDOS · LIMA</span></div></div>
+      <div class="qp-doc"><h2>${kind==='oc'?'ORDEN DE COMPRA':'COTIZACIÓN'}</h2>
+        <div><b>${num}</b><br>Fecha: ${HOY.toISOString().slice(0,10)}<br>Válida hasta: ${val.toISOString().slice(0,10)}<br>Moneda: USD</div></div>
+    </div>
+    <div class="qp-to">
+      <div><div class="lbl">${kind==='oc'?'Proveedor':'Cliente'}</div><b>${esc(c.n||'—')}</b><br>${esc(c.ind||'')}${c.fac?' · '+esc(c.fac):''}</div>
+      <div style="text-align:right"><div class="lbl">Emitido por</div><b>Adolphus S.A.</b><br>Control de fluidos · Lima, Perú<br>ventas@adolphus.pe</div>
+    </div>
+    <table class="qp"><thead><tr><th class="num" style="width:24px">#</th><th>N.º de parte</th><th>Descripción</th><th>Marca / modelo</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Total</th></tr></thead>
+     <tbody>${rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td class="pn">${esc(r.pn)}</td><td>${esc(r.desc)}${r.tag?`<br><span style="color:#8a939b;font-size:10px">Equipo ${esc(r.tag)}</span>`:''}</td><td>${esc(r.mm)}</td><td class="num">${r.q}</td><td class="num">${usd(r.pu)}</td><td class="num">${usd(r.tot)}</td></tr>`).join('')}</tbody></table>
+    <div class="qp-tot">
+      <div class="r"><span>Subtotal</span><span>${usd(sub)}</span></div>
+      <div class="r"><span>IGV (18%)</span><span>${usd(igv)}</span></div>
+      <div class="r grand"><span>Total USD</span><span>${usd(tot)}</span></div>
+    </div>
+    <div class="qp-note"><b>Condiciones:</b> Precios referenciales en USD; no incluyen flete ni instalación salvo indicación expresa. Repuestos en stock: entrega 3–5 días hábiles (Lima); de importación: 8–12 semanas. Validez de la oferta: 15 días.${kind==='oc'?'':' Para confirmar, responda esta cotización o solicite la conversión a orden de compra.'}<br><br>Documento generado por Valvia · Adolphus S.A.</div>`;
+  $('#quote').classList.add('on');
+}
+function closeQuote(){$('#quote').classList.remove('on')}
+function printQuote(){window.print()}
+function quoteKit(id){const a=ACTIVOS.find(x=>x.id===id)||S.cur;if(!a)return;const m=MODELOS[a.mod]||{};const items=(BOM[m.b||'globo']||[]).filter(p=>p.k).map(p=>({n:p.n,q:1,a:a.id}));openQuote(items,a.cli,'cot')}
+function cartQty(i,d){const c=S.cart[i];if(!c)return;c.q=Math.max(1,(c.q||1)+d);renderReq()}
 
 /* ============================================================
    13 · EXPORT / INIT
