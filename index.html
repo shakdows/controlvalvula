@@ -1018,64 +1018,142 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    ============================================================ */
 const LOGO=`<svg viewBox="0 0 24 24"><path d="M5 9.5h14M12 9.5v4M7.5 13.5h9L12 19z"/><circle cx="12" cy="5.4" r="2.5"/><path d="M7.6 5.4H5.6M18.4 5.4h-2"/></svg>`;
 const VDEFS=`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-<linearGradient id="gv_stl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f9fc"/><stop offset=".22" stop-color="#dbe3ea"/><stop offset=".55" stop-color="#a7b2be"/><stop offset=".78" stop-color="#c3ccd6"/><stop offset="1" stop-color="#8f9ba8"/></linearGradient>
-<linearGradient id="gv_pipe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf0f5"/><stop offset=".5" stop-color="#aab5c0"/><stop offset="1" stop-color="#798592"/></linearGradient>
-<radialGradient id="gv_body" cx=".38" cy=".3" r=".9"><stop offset="0" stop-color="#eff4f8"/><stop offset=".5" stop-color="#b5bfca"/><stop offset="1" stop-color="#788593"/></radialGradient>
-<linearGradient id="gv_act" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#889ba7"/><stop offset=".5" stop-color="#4d5e69"/><stop offset="1" stop-color="#313f49"/></linearGradient>
+<!-- cilindro metálico, eje horizontal (sombreado vertical) -->
+<linearGradient id="gv_cylH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#828d99"/><stop offset=".13" stop-color="#c6cfd8"/><stop offset=".32" stop-color="#f7fafc"/><stop offset=".5" stop-color="#d0d9e1"/><stop offset=".72" stop-color="#96a1ad"/><stop offset="1" stop-color="#59646f"/></linearGradient>
+<!-- cilindro metálico, eje vertical (sombreado horizontal) -->
+<linearGradient id="gv_cylV" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#616b76"/><stop offset=".15" stop-color="#b1bbc5"/><stop offset=".32" stop-color="#f5f8fb"/><stop offset=".45" stop-color="#ccd5dd"/><stop offset=".64" stop-color="#96a1ad"/><stop offset=".83" stop-color="#69747f"/><stop offset="1" stop-color="#464f59"/></linearGradient>
+<!-- cuerpo fundido, acabado claro -->
+<radialGradient id="gv_body" cx=".37" cy=".27" r=".92"><stop offset="0" stop-color="#f4f8fb"/><stop offset=".4" stop-color="#c9d2db"/><stop offset=".73" stop-color="#96a1ad"/><stop offset="1" stop-color="#616b76"/></radialGradient>
+<!-- cuerpo fundido, acabado grafito -->
+<radialGradient id="gv_bodyD" cx=".36" cy=".26" r=".95"><stop offset="0" stop-color="#8f97a3"/><stop offset=".45" stop-color="#586470"/><stop offset=".8" stop-color="#39434d"/><stop offset="1" stop-color="#262f38"/></radialGradient>
+<!-- actuador pintado grafito (domo) -->
+<radialGradient id="gv_paint" cx=".38" cy=".22" r=".98"><stop offset="0" stop-color="#67767f"/><stop offset=".42" stop-color="#3b4951"/><stop offset=".82" stop-color="#222e35"/><stop offset="1" stop-color="#141d23"/></radialGradient>
+<!-- actuador neumático pintado rojo -->
+<linearGradient id="gv_red" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e57365"/><stop offset=".3" stop-color="#c8443a"/><stop offset=".6" stop-color="#9f2820"/><stop offset="1" stop-color="#6d150f"/></linearGradient>
+<!-- actuador eléctrico pintado azul -->
+<linearGradient id="gv_blue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#37628a"/><stop offset=".26" stop-color="#5c90ba"/><stop offset=".5" stop-color="#84b4d9"/><stop offset=".72" stop-color="#47769e"/><stop offset="1" stop-color="#294f72"/></linearGradient>
+<!-- brida cara realzada -->
+<radialGradient id="gv_flange" cx=".4" cy=".33" r=".95"><stop offset="0" stop-color="#eff3f7"/><stop offset=".55" stop-color="#bcc6cf"/><stop offset="1" stop-color="#727d88"/></radialGradient>
+<!-- cabeza de perno -->
+<radialGradient id="gv_bolt" cx=".34" cy=".28" r=".9"><stop offset="0" stop-color="#f0f3f7"/><stop offset=".5" stop-color="#aeb8c2"/><stop offset="1" stop-color="#525c67"/></radialGradient>
+<!-- bronce / latón -->
+<linearGradient id="gv_brass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e1b1"/><stop offset=".45" stop-color="#cba85f"/><stop offset="1" stop-color="#876729"/></linearGradient>
+<filter id="gv_sh" x="-35%" y="-25%" width="170%" height="165%"><feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#0b1620" flood-opacity=".30"/></filter>
 </defs></svg>`;
 const PHOTO={
  globo:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Válvula de control globo con actuador de diafragma">
-  <ellipse cx="220" cy="314" rx="148" ry="13" fill="#16232e" opacity=".14"/>
-  <rect x="74" y="232" width="120" height="34" rx="4" fill="url(#gv_pipe)"/><rect x="246" y="232" width="120" height="34" rx="4" fill="url(#gv_pipe)"/>
-  <rect x="58" y="218" width="20" height="62" rx="4" fill="url(#gv_stl)" stroke="#85909c" stroke-width="1"/><rect x="362" y="218" width="20" height="62" rx="4" fill="url(#gv_stl)" stroke="#85909c" stroke-width="1"/>
-  <g fill="#5b6670"><circle cx="68" cy="230" r="2.3"/><circle cx="68" cy="249" r="2.3"/><circle cx="68" cy="268" r="2.3"/><circle cx="372" cy="230" r="2.3"/><circle cx="372" cy="249" r="2.3"/><circle cx="372" cy="268" r="2.3"/></g>
-  <ellipse cx="220" cy="249" rx="78" ry="53" fill="url(#gv_body)" stroke="#77828f" stroke-width="1.3"/>
-  <path d="M172 226 q34-24 92-6" fill="none" stroke="#ffffff" stroke-width="5" opacity=".35" stroke-linecap="round"/>
-  <rect x="203" y="176" width="34" height="78" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/><rect x="194" y="192" width="52" height="12" rx="2" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <path d="M210 180 L188 150 M230 180 L252 150" stroke="#b4bec9" stroke-width="10" fill="none" stroke-linecap="round"/>
-  <rect x="216" y="146" width="8" height="36" fill="#d2dbe2"/>
-  <ellipse cx="220" cy="118" rx="90" ry="47" fill="url(#gv_act)" stroke="#2b383f" stroke-width="1.4"/>
-  <rect x="128" y="112" width="184" height="13" rx="3" fill="#3b4952" stroke="#2a363e" stroke-width="1"/>
-  <g fill="#657079"><circle cx="146" cy="118" r="2.6"/><circle cx="176" cy="118" r="2.6"/><circle cx="206" cy="118" r="2.6"/><circle cx="236" cy="118" r="2.6"/><circle cx="266" cy="118" r="2.6"/><circle cx="296" cy="118" r="2.6"/></g>
-  <path d="M160 98 q54-34 122-6" fill="none" stroke="#e0eaf0" stroke-width="5" opacity=".28" stroke-linecap="round"/>
-  <rect x="205" y="64" width="30" height="24" rx="3" fill="url(#gv_act)" stroke="#2b383f" stroke-width="1"/><rect x="214" y="52" width="12" height="14" rx="2" fill="#5a6b74"/>
-  <rect x="250" y="150" width="36" height="32" rx="4" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1"/><circle cx="268" cy="166" r="7" fill="#e9eef3" stroke="#87919d" stroke-width="1"/>
-  <path d="M250 168 q-14 4-22 -8" fill="none" stroke="#9aa5b1" stroke-width="2.4"/></svg>`,
+  <ellipse cx="222" cy="322" rx="140" ry="12" fill="#0d1922" opacity=".22"/>
+  <g filter="url(#gv_sh)">
+   <!-- tubería y bridas -->
+   <rect x="70" y="236" width="104" height="42" rx="6" fill="url(#gv_cylH)"/><rect x="266" y="236" width="104" height="42" rx="6" fill="url(#gv_cylH)"/>
+   <ellipse cx="176" cy="257" rx="13" ry="40" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.2"/>
+   <ellipse cx="264" cy="257" rx="13" ry="40" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.2"/>
+   <ellipse cx="68" cy="257" rx="11" ry="34" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.1"/>
+   <ellipse cx="372" cy="257" rx="11" ry="34" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.1"/>
+   <g fill="url(#gv_bolt)"><circle cx="176" cy="226" r="3.4"/><circle cx="176" cy="242" r="3.4"/><circle cx="176" cy="258" r="3.4"/><circle cx="176" cy="274" r="3.4"/><circle cx="176" cy="289" r="3.4"/>
+    <circle cx="264" cy="226" r="3.4"/><circle cx="264" cy="242" r="3.4"/><circle cx="264" cy="258" r="3.4"/><circle cx="264" cy="274" r="3.4"/><circle cx="264" cy="289" r="3.4"/></g>
+   <!-- cuerpo globo -->
+   <path d="M162 258 q-6-56 58-58 q64 2 58 58 q6 54 -58 56 q-64-2 -58-56z" fill="url(#gv_body)" stroke="#6f7a85" stroke-width="1.4"/>
+   <ellipse cx="220" cy="234" rx="40" ry="12" fill="#ffffff" opacity=".28"/>
+   <path d="M168 260 h104" stroke="#7c8792" stroke-width="1" opacity=".5"/>
+   <!-- bonete + prensaestopa -->
+   <rect x="203" y="176" width="34" height="70" rx="4" fill="url(#gv_cylV)" stroke="#727d88" stroke-width="1"/>
+   <rect x="197" y="196" width="46" height="12" rx="2" fill="url(#gv_cylV)" stroke="#727d88" stroke-width="1"/>
+   <rect x="208" y="164" width="24" height="16" rx="3" fill="url(#gv_cylV)" stroke="#727d88" stroke-width="1"/>
+   <!-- yugo -->
+   <path d="M212 176 L190 132 M228 176 L250 132" stroke="#aab4bf" stroke-width="11" fill="none" stroke-linecap="round"/>
+   <path d="M212 176 L190 132 M228 176 L250 132" stroke="#e6edf2" stroke-width="3" opacity=".4" fill="none" stroke-linecap="round"/>
+   <!-- actuador de diafragma (casco pintado) -->
+   <path d="M132 120 q88-58 176 0z" fill="url(#gv_paint)" stroke="#141d23" stroke-width="1.4"/>
+   <path d="M132 120 q88 44 176 0z" fill="url(#gv_paint)" stroke="#141d23" stroke-width="1.4"/>
+   <rect x="126" y="114" width="188" height="14" rx="4" fill="#2c3941" stroke="#161f25" stroke-width="1"/>
+   <g fill="url(#gv_bolt)"><circle cx="142" cy="121" r="3"/><circle cx="170" cy="121" r="3"/><circle cx="198" cy="121" r="3"/><circle cx="226" cy="121" r="3"/><circle cx="254" cy="121" r="3"/><circle cx="282" cy="121" r="3"/></g>
+   <path d="M150 92 q70-40 140 0" fill="none" stroke="#cfdae2" stroke-width="6" opacity=".22" stroke-linecap="round"/>
+   <!-- barril de resorte + indicador -->
+   <rect x="206" y="58" width="28" height="30" rx="4" fill="url(#gv_cylV)" stroke="#3a444e" stroke-width="1"/>
+   <rect x="214" y="46" width="12" height="16" rx="2" fill="#59646f"/><circle cx="220" cy="44" r="5" fill="url(#gv_bolt)"/>
+   <!-- posicionador + gauge + tubing -->
+   <rect x="250" y="150" width="42" height="36" rx="5" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1"/>
+   <rect x="257" y="157" width="28" height="14" rx="2" fill="#2f3b43"/>
+   <circle cx="286" cy="140" r="9" fill="url(#gv_flange)" stroke="#7c8792" stroke-width="1"/><path d="M286 140 l4-5" stroke="#3a444e" stroke-width="1.4"/>
+   <path d="M250 176 q-22 8-30 -14" fill="none" stroke="#8b96a2" stroke-width="3"/></g></svg>`,
  psv:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Válvula de seguridad y alivio de resorte">
-  <ellipse cx="212" cy="316" rx="120" ry="12" fill="#16232e" opacity=".14"/>
-  <rect x="182" y="250" width="52" height="52" rx="3" fill="url(#gv_pipe)"/><rect x="166" y="298" width="84" height="16" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <g fill="#5b6670"><circle cx="178" cy="306" r="2.3"/><circle cx="208" cy="306" r="2.3"/><circle cx="238" cy="306" r="2.3"/></g>
-  <rect x="170" y="206" width="92" height="58" rx="16" fill="url(#gv_body)" stroke="#77828f" stroke-width="1.3"/>
-  <rect x="256" y="216" width="66" height="40" rx="3" fill="url(#gv_pipe)"/><rect x="316" y="204" width="18" height="64" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <g fill="#5b6670"><circle cx="325" cy="216" r="2.3"/><circle cx="325" cy="236" r="2.3"/><circle cx="325" cy="256" r="2.3"/></g>
-  <rect x="188" y="120" width="52" height="96" rx="5" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/><rect x="180" y="200" width="68" height="12" rx="2" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <path d="M198 138 v70" stroke="#ffffff" stroke-width="4" opacity=".33" stroke-linecap="round"/>
-  <rect x="194" y="92" width="40" height="30" rx="5" fill="url(#gv_act)" stroke="#2b383f" stroke-width="1.2"/>
-  <path d="M232 100 l44 -16" stroke="#9aa5b1" stroke-width="7" fill="none" stroke-linecap="round"/><circle cx="280" cy="82" r="8" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1"/>
-  <rect x="206" y="76" width="16" height="18" rx="2" fill="#5a6b74"/><circle cx="214" cy="74" r="5" fill="#6f8089"/></svg>`,
- cuchilla:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Válvula cuchilla tipo compuerta">
-  <ellipse cx="212" cy="314" rx="130" ry="12" fill="#16232e" opacity=".14"/>
-  <rect x="132" y="214" width="160" height="80" rx="8" fill="url(#gv_body)" stroke="#77828f" stroke-width="1.3"/>
-  <rect x="116" y="228" width="18" height="52" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/><rect x="290" y="228" width="18" height="52" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <g fill="#5b6670"><circle cx="150" cy="228" r="2.6"/><circle cx="150" cy="280" r="2.6"/><circle cx="274" cy="228" r="2.6"/><circle cx="274" cy="280" r="2.6"/></g>
-  <path d="M150 236 q62-20 124 0" fill="none" stroke="#ffffff" stroke-width="4" opacity=".3" stroke-linecap="round"/>
-  <rect x="196" y="120" width="16" height="104" fill="url(#gv_pipe)"/><rect x="176" y="150" width="52" height="70" rx="2" fill="#dfe6ec" stroke="#9aa5b1" stroke-width="1"/>
-  <path d="M156 214 v-96 M256 214 v-96" stroke="#b4bec9" stroke-width="9" fill="none" stroke-linecap="round"/>
-  <rect x="140" y="104" width="132" height="16" rx="4" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <circle cx="206" cy="74" r="44" fill="none" stroke="#9aa5b1" stroke-width="10"/><circle cx="206" cy="74" r="44" fill="none" stroke="#c4cdd7" stroke-width="4"/>
-  <circle cx="206" cy="74" r="10" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1"/>
-  <path d="M206 74 L206 34 M206 74 L241 94 M206 74 L171 94" stroke="#aab4bf" stroke-width="5" stroke-linecap="round"/></svg>`,
- act:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Actuador eléctrico multivuelta">
-  <ellipse cx="212" cy="314" rx="128" ry="12" fill="#16232e" opacity=".14"/>
-  <rect x="196" y="262" width="18" height="34" fill="url(#gv_pipe)"/><rect x="180" y="292" width="50" height="14" rx="3" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1"/>
-  <rect x="150" y="196" width="110" height="72" rx="10" fill="url(#gv_stl)" stroke="#818c99" stroke-width="1.2"/><path d="M164 210 h82" stroke="#ffffff" stroke-width="3" opacity=".3" stroke-linecap="round"/>
-  <rect x="92" y="148" width="92" height="50" rx="12" fill="url(#gv_act)" stroke="#2b383f" stroke-width="1.3"/>
-  <g stroke="#33424c" stroke-width="1.4" opacity=".55"><path d="M104 150v46M116 150v46M128 150v46M140 150v46M152 150v46M164 150v46"/></g>
-  <circle cx="96" cy="173" r="12" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1"/>
-  <rect x="234" y="150" width="64" height="58" rx="7" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1.2"/><rect x="244" y="160" width="44" height="22" rx="3" fill="#2f3b43"/>
-  <g fill="#6f8089"><circle cx="252" cy="196" r="4"/><circle cx="266" cy="196" r="4"/><circle cx="280" cy="196" r="4"/></g>
-  <circle cx="205" cy="150" r="34" fill="none" stroke="#9aa5b1" stroke-width="9"/><circle cx="205" cy="150" r="9" fill="url(#gv_stl)" stroke="#7f8b98" stroke-width="1"/>
-  <path d="M205 150 L205 118 M205 150 L233 168 M205 150 L177 168" stroke="#aab4bf" stroke-width="4.5" stroke-linecap="round"/></svg>`
+  <ellipse cx="214" cy="322" rx="108" ry="11" fill="#0d1922" opacity=".22"/>
+  <g filter="url(#gv_sh)">
+   <!-- brida de entrada (inferior) -->
+   <ellipse cx="206" cy="302" rx="52" ry="14" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.3"/>
+   <g fill="url(#gv_bolt)"><circle cx="166" cy="302" r="3.6"/><circle cx="186" cy="298" r="3.6"/><circle cx="226" cy="298" r="3.6"/><circle cx="246" cy="302" r="3.6"/></g>
+   <path d="M172 296 q34-12 68 0 v-42 h-68z" fill="url(#gv_cylH)" stroke="#6f7a85" stroke-width="1.2"/>
+   <!-- cuerpo (ángulo) -->
+   <path d="M168 262 q-8-52 40-56 q46 2 44 40 l0 20 q-2 26 -42 28 q-38-2 -42-32z" fill="url(#gv_body)" stroke="#6f7a85" stroke-width="1.4"/>
+   <ellipse cx="196" cy="222" rx="26" ry="9" fill="#ffffff" opacity=".26"/>
+   <!-- salida lateral + brida -->
+   <rect x="248" y="224" width="58" height="42" rx="6" fill="url(#gv_cylH)" stroke="#6f7a85" stroke-width="1.1"/>
+   <ellipse cx="312" cy="245" rx="12" ry="34" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.2"/>
+   <g fill="url(#gv_bolt)"><circle cx="312" cy="218" r="3.2"/><circle cx="312" cy="234" r="3.2"/><circle cx="312" cy="250" r="3.2"/><circle cx="312" cy="266" r="3.2"/></g>
+   <!-- bonete / caja de resorte -->
+   <rect x="182" y="118" width="52" height="108" rx="7" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1.2"/>
+   <rect x="174" y="210" width="68" height="14" rx="3" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1"/>
+   <path d="M194 132 v82" stroke="#ffffff" stroke-width="4" opacity=".38" stroke-linecap="round"/>
+   <!-- casquete + palanca de levante -->
+   <path d="M180 118 q28-26 56 0z" fill="url(#gv_paint)" stroke="#141d23" stroke-width="1.3"/>
+   <rect x="200" y="86" width="16" height="34" rx="3" fill="url(#gv_cylV)" stroke="#3a444e" stroke-width="1"/>
+   <path d="M216 96 l70 -22" stroke="#8b96a2" stroke-width="8" fill="none" stroke-linecap="round"/>
+   <path d="M216 96 l70 -22" stroke="#e6edf2" stroke-width="2.4" opacity=".4" fill="none" stroke-linecap="round"/>
+   <circle cx="290" cy="72" r="9" fill="url(#gv_flange)" stroke="#7c8792" stroke-width="1"/>
+   <circle cx="208" cy="84" r="7" fill="url(#gv_bolt)"/></g></svg>`,
+ cuchilla:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Válvula on-off con actuador neumático">
+  <ellipse cx="216" cy="322" rx="126" ry="12" fill="#0d1922" opacity=".22"/>
+  <g filter="url(#gv_sh)">
+   <!-- tubería y bridas -->
+   <rect x="86" y="238" width="80" height="40" rx="6" fill="url(#gv_cylH)"/><rect x="274" y="238" width="80" height="40" rx="6" fill="url(#gv_cylH)"/>
+   <ellipse cx="168" cy="258" rx="12" ry="40" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.2"/>
+   <ellipse cx="272" cy="258" rx="12" ry="40" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.2"/>
+   <g fill="url(#gv_bolt)"><circle cx="168" cy="228" r="3.2"/><circle cx="168" cy="244" r="3.2"/><circle cx="168" cy="260" r="3.2"/><circle cx="168" cy="276" r="3.2"/><circle cx="168" cy="290" r="3.2"/>
+    <circle cx="272" cy="228" r="3.2"/><circle cx="272" cy="244" r="3.2"/><circle cx="272" cy="260" r="3.2"/><circle cx="272" cy="276" r="3.2"/><circle cx="272" cy="290" r="3.2"/></g>
+   <!-- cuerpo tipo wafer con disco -->
+   <ellipse cx="220" cy="258" rx="40" ry="52" fill="url(#gv_body)" stroke="#6f7a85" stroke-width="1.5"/>
+   <ellipse cx="220" cy="258" rx="18" ry="46" fill="#8f9aa6" opacity=".55"/>
+   <ellipse cx="220" cy="258" rx="7" ry="46" fill="#5f6a75"/>
+   <path d="M198 224 q22-10 44 4" fill="none" stroke="#ffffff" stroke-width="4" opacity=".3" stroke-linecap="round"/>
+   <!-- eje y soporte al actuador -->
+   <rect x="212" y="150" width="16" height="66" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1"/>
+   <rect x="180" y="138" width="80" height="20" rx="4" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1"/>
+   <!-- actuador neumático rack&pinion (rojo) -->
+   <rect x="126" y="86" width="188" height="56" rx="18" fill="url(#gv_red)" stroke="#5a110c" stroke-width="1.4"/>
+   <ellipse cx="126" cy="114" rx="10" ry="28" fill="#7e1a13"/><ellipse cx="314" cy="114" rx="10" ry="28" fill="#b83a30"/>
+   <path d="M150 96 q70-16 150 0" fill="none" stroke="#ffd9d1" stroke-width="5" opacity=".33" stroke-linecap="round"/>
+   <!-- indicador de posición + solenoide -->
+   <circle cx="220" cy="86" r="12" fill="url(#gv_cylV)" stroke="#4a545e" stroke-width="1.2"/><path d="M220 86 l0-8 M220 86 l7 5" stroke="#e8b93a" stroke-width="3" stroke-linecap="round"/>
+   <rect x="300" y="70" width="34" height="30" rx="4" fill="#2f3b43" stroke="#1c252b" stroke-width="1"/><circle cx="317" cy="66" r="3.5" fill="#6f8089"/></g></svg>`,
+ act:`<svg class="vphoto" viewBox="0 0 440 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Actuador eléctrico multivuelta sobre válvula">
+  <ellipse cx="214" cy="322" rx="124" ry="12" fill="#0d1922" opacity=".22"/>
+  <g filter="url(#gv_sh)">
+   <!-- válvula base + bridas -->
+   <rect x="150" y="258" width="128" height="40" rx="6" fill="url(#gv_cylH)"/>
+   <ellipse cx="150" cy="278" rx="11" ry="30" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.1"/>
+   <ellipse cx="278" cy="278" rx="11" ry="30" fill="url(#gv_flange)" stroke="#6b7681" stroke-width="1.1"/>
+   <path d="M186 258 q28-12 56 0 v-14 h-56z" fill="url(#gv_body)" stroke="#6f7a85" stroke-width="1.3"/>
+   <!-- yugo + husillo -->
+   <path d="M198 244 L198 176 M230 244 L230 176" stroke="#aab4bf" stroke-width="9" fill="none" stroke-linecap="round"/>
+   <rect x="210" y="150" width="8" height="96" fill="#d2dbe2"/>
+   <rect x="198" y="168" width="32" height="14" rx="3" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1"/>
+   <!-- carcasa del actuador eléctrico (azul) -->
+   <rect x="150" y="112" width="128" height="60" rx="14" fill="url(#gv_blue)" stroke="#274a6a" stroke-width="1.4"/>
+   <path d="M164 122 h100" stroke="#dcebf5" stroke-width="4" opacity=".35" stroke-linecap="round"/>
+   <!-- motor con aletas -->
+   <rect x="96" y="120" width="66" height="46" rx="12" fill="url(#gv_paint)" stroke="#141d23" stroke-width="1.3"/>
+   <g stroke="#1d272d" stroke-width="1.5" opacity=".5"><path d="M108 122v42M120 122v42M132 122v42M144 122v42M156 122v42"/></g>
+   <circle cx="99" cy="143" r="12" fill="url(#gv_bolt)"/>
+   <!-- caja de control con display -->
+   <rect x="266" y="118" width="56" height="52" rx="7" fill="url(#gv_cylV)" stroke="#6f7a85" stroke-width="1.2"/>
+   <rect x="275" y="126" width="38" height="20" rx="3" fill="#243b34"/><path d="M279 136 h8 M291 130 v10" stroke="#57c98a" stroke-width="2"/>
+   <g fill="url(#gv_bolt)"><circle cx="282" cy="158" r="4"/><circle cx="296" cy="158" r="4"/><circle cx="310" cy="158" r="4"/></g>
+   <!-- volante manual lateral -->
+   <ellipse cx="214" cy="104" rx="52" ry="15" fill="none" stroke="#8b96a2" stroke-width="9"/>
+   <ellipse cx="214" cy="104" rx="52" ry="15" fill="none" stroke="#c4cdd7" stroke-width="3"/>
+   <circle cx="214" cy="104" r="9" fill="url(#gv_bolt)" stroke="#6f7a85" stroke-width="1"/>
+   <path d="M214 104 L170 100 M214 104 L258 100 M214 104 L214 90" stroke="#9aa5b1" stroke-width="4" stroke-linecap="round"/></g></svg>`
 };
 const photoFor=mod=>PHOTO[(MODELOS[mod]&&MODELOS[mod].b)||'globo']||PHOTO.globo;
 
