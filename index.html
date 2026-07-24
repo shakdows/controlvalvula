@@ -813,7 +813,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
       <!-- ═══ USUARIOS ═══ -->
       <section class="page" id="p-users"><div class="view-pad">
         <div class="hd"><div><h1>Usuarios y accesos</h1><p>Cada usuario cliente ve solo los activos de su propia organización. El aislamiento se aplica en base de datos, no en pantalla.</p></div>
-          <button class="btn" onclick="toast('Invitación enviada (simulada)')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Invitar</button></div>
+          <button class="btn" onclick="openNewUser()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Crear usuario</button></div>
         <div class="panel"><div id="userList"></div></div>
       </div></section>
 
@@ -1346,21 +1346,25 @@ function hot(p,on){
 }
 function paneHist(){
   const os=ORDENES.filter(o=>o.act===S.cur.id).sort((a,b)=>b.f.localeCompare(a.f));
-  $('#pn-hist').innerHTML=os.length?`<div class="tl">${os.map(o=>`
+  const bar=S.rol!=='cliente'?`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+     <button class="btn sec xs" onclick="openService('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Parte de servicio</button>
+     <button class="btn sec xs" onclick="openCalib('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Calibración</button></div>`:'';
+  $('#pn-hist').innerHTML=bar+(os.length?`<div class="tl">${os.map(o=>`
     <div class="tl-i ${o.tipo==='Preventivo'?'pv':o.tipo==='Correctivo'?'cor':'cal'}">
       <div class="tl-m"><span>${o.f}</span><span>·</span><span>${o.n}</span><span class="tag">${o.tipo}</span>
         ${o.et!=='certificada'?`<span class="tag sel">${ETAPAS.find(e=>e[0]===o.et)[1]}</span>`:''}</div>
       <div class="tl-t">${esc(o.tec)}</div><div class="tl-x">${esc(o.hall)}</div>
       ${o.partes.length?`<div class="parts-inline">${o.partes.map(p=>`<span class="tag mono">${p}</span>`).join('')}</div>`:''}
       ${o.calib?`<div style="margin-top:7px"><button class="btn sec xs" onclick="showCalibReport(CALIBS.find(c=>c.id==='${o.calib}'))">Ver certificado</button></div>`:''}
+      ${o.serv?`<div style="margin-top:7px"><button class="btn sec xs" onclick="showServiceReport(SERVS.find(s=>s.id==='${o.serv}'))">Ver informe</button></div>`:''}
     </div>`).join('')}</div>`
-   :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><b>Sin intervenciones</b>Este activo no tiene historial registrado.</div>`;
+   :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><b>Sin intervenciones</b>Este activo no registra historial todavía.</div>`);
 }
 function paneDocs(){
   const ds=DOCS.filter(d=>d.a===S.cur.id);
   $('#pn-docs').innerHTML=ds.length?ds.map(d=>`<div class="doc"><span class="fx">${d.t}</span>
     <span class="fm"><b>${esc(d.n)}</b><span>${d.f} · ${d.w}</span></span>
-    <button class="btn sec xs" onclick="${d.calib?`showCalibReport(CALIBS.find(c=>c.id==='${d.calib}'))`:`toast('Descarga simulada')`}">${d.calib?'Ver':'Abrir'}</button></div>`).join('')
+    <button class="btn sec xs" onclick="${d.calib?`showCalibReport(CALIBS.find(c=>c.id==='${d.calib}'))`:d.serv?`showServiceReport(SERVS.find(s=>s.id==='${d.serv}'))`:`toast('Descarga simulada')`}">${d.calib||d.serv?'Ver':'Abrir'}</button></div>`).join('')
    :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><b>Expediente vacío</b>Aún no se adjunta ningún documento.</div>`;
 }
 
@@ -1646,6 +1650,7 @@ function buildCmd(q){
    {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
    {g:'Acción',ic:'+',t:'Nueva válvula',s:'Dar de alta un activo',fn:()=>openNewAsset()},
    {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
+   {g:'Acción',ic:'+',t:'Nuevo usuario',s:'Dar acceso a un cliente',fn:()=>openNewUser()},
    {g:'Acción',ic:'◐',t:'Cambiar tema claro / oscuro',s:'',fn:toggleTheme},
    {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
   ];
@@ -2047,6 +2052,106 @@ function showCalibReport(rec){
      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg>
      <div><b>${rec.verdict}.</b> Próxima calibración programada para ${rec.prox}.</div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
+
+/* ============================================================
+   12.8 · CREAR USUARIO (dar acceso a clientes)
+   ============================================================ */
+const SCOPE_ROL={Administrador:'Maestros, catálogo, despieces, usuarios y reportes',Técnico:'Órdenes de trabajo, informes y certificados',Comercial:'Solicitudes, cotizaciones y stock local',Cliente:'Lectura de sus activos y solicitud de repuestos'};
+function openNewUser(){
+  $('#mTitle').textContent='Nuevo usuario';
+  $('#mBody').innerHTML=`
+   <div class="two">
+     <div class="fld"><label>Nombre / área</label><input class="inp" id="nuN" placeholder="p. ej. Mantenimiento Planta"></div>
+     <div class="fld"><label>Correo</label><input class="inp" id="nuM" type="email" placeholder="correo@empresa.com"></div>
+     <div class="fld"><label>Rol</label><select class="inp" id="nuR">${Object.keys(SCOPE_ROL).map(r=>`<option>${r}</option>`).join('')}</select></div>
+     <div class="fld"><label>Organización</label><select class="inp" id="nuC"><option value="">Adolphus (interno)</option>${CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('')}</select></div>
+   </div>
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Un usuario <b>Cliente</b> entra a la app y ve <b>solo las válvulas de su empresa</b> y qué números de parte necesita. Elige la organización a la que le das acceso.</div></div>
+   <div class="fld" id="nuScope" style="margin-top:8px"></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewUser()">Crear usuario</button>`;
+  const sync=()=>{const isCli=$('#nuR').value==='Cliente';$('#nuC').disabled=!isCli;if(!isCli)$('#nuC').value='';else if(!$('#nuC').value)$('#nuC').value=CLIENTES[0].id;
+    $('#nuScope').innerHTML=`<label>Alcance de acceso</label><div class="callout" style="margin:0">${esc(SCOPE_ROL[$('#nuR').value])}</div>`};
+  $('#nuR').onchange=sync;sync();
+  $('#modal').classList.add('on');
+}
+function saveNewUser(){
+  const n=$('#nuN').value.trim(),m=$('#nuM').value.trim(),r=$('#nuR').value,cId=$('#nuC').value;
+  if(!n||!m){toast('Indica nombre y correo');return}
+  if(r==='Cliente'&&!cId){toast('Elige la organización del cliente');return}
+  USUARIOS.unshift({n,m,r,c:cId?cli(cId).n:'—',x:SCOPE_ROL[r]});
+  closeModal();renderUsers();go('users');toast(`Usuario ${n} creado · acceso ${r.toLowerCase()}`);
+}
+
+/* ============================================================
+   12.9 · PARTE DE SERVICIO (reporte de mantenimiento)
+   ============================================================ */
+let SERVS=[];
+function openService(assetId){
+  const a=ACTIVOS.find(x=>x.id===assetId)||S.cur;if(!a)return;
+  if(S.rol==='cliente'){toast('El parte de servicio lo emite el servicio técnico');return}
+  const m=MODELOS[a.mod]||{},kit=(BOM[m.b||'globo']||[]).filter(p=>p.k).map(p=>p.n);
+  const hoyStr=HOY.toISOString().slice(0,10);
+  $('#mTitle').textContent=`Parte de servicio · ${a.tag||a.ser||'activo'}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg>
+     <div>Documenta el mantenimiento hecho a esta válvula. Al generar, se emite un <b>informe de mantenimiento</b> con el texto listo para el reporte y queda adjunto al expediente del equipo.</div></div>
+   <div class="two">
+     <div class="fld"><label>Tipo de servicio</label><select class="inp" id="svTipo">${['Preventivo','Correctivo','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+     <div class="fld"><label>Fecha</label><input class="inp" id="svFec" type="date" value="${hoyStr}"></div>
+     <div class="fld"><label>Técnico responsable</label><input class="inp" id="svTec" value="O. Julio de la Rosa"></div>
+     <div class="fld"><label>Estado final del equipo</label><select class="inp" id="svEst"><option>Operativo</option><option>Requiere seguimiento</option><option>Fuera de servicio</option></select></div>
+   </div>
+   <div class="fld"><label>Estado encontrado / hallazgos</label><textarea class="inp" id="svHall" rows="2" placeholder="Cómo se encontró la válvula…"></textarea></div>
+   <div class="fld"><label>Trabajos realizados</label><textarea class="inp" id="svTrab" rows="2" placeholder="Qué se hizo: desmontaje, cambio de trim, prueba hidrostática…"></textarea></div>
+   <div class="fld"><label>Repuestos utilizados (n.º de parte, separados por coma)</label><input class="inp" id="svPart" placeholder="${esc(kit.slice(0,2).join(', ')||'AD-...')}">
+     ${kit.length?`<div class="chart-note">Kit del modelo: ${kit.map(p=>`<a href="#" onclick="addServPart('${p}');return false" style="color:var(--sel);text-decoration:underline">${p}</a>`).join(' · ')}</div>`:''}</div>
+   <div class="fld"><label>Recomendaciones / próxima acción</label><textarea class="inp" id="svRec" rows="2" placeholder="Frecuencia sugerida, observaciones…"></textarea></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateService('${a.id}')">Generar informe</button>`;
+  $('#modal').classList.add('on');
+}
+function addServPart(p){const i=$('#svPart');i.value=i.value?i.value.replace(/,\s*$/,'')+', '+p:p}
+function generateService(assetId){
+  const a=ACTIVOS.find(x=>x.id===assetId);if(!a)return;
+  const tipo=$('#svTipo').value,fec=$('#svFec').value,tec=$('#svTec').value,est=$('#svEst').value,
+    hall=$('#svHall').value.trim(),trab=$('#svTrab').value.trim(),rec=$('#svRec').value.trim();
+  const partes=($('#svPart').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(!trab&&!hall){toast('Describe al menos los hallazgos o los trabajos realizados');return}
+  const msgs=[
+    `Intervención de ${tipo.toLowerCase()} sobre ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — realizada el ${fec} por ${tec}.`,
+    hall?`Estado encontrado: ${hall}`:'',
+    trab?`Trabajos realizados: ${trab}`:'',
+    partes.length?`Repuestos utilizados: ${partes.join(', ')}.`:'No se utilizaron repuestos.',
+    `Estado final del equipo: ${est.toLowerCase()}.`,
+    rec?`Recomendaciones: ${rec}`:''
+  ].filter(Boolean);
+  const num='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(800+SERVS.length);
+  const srec={id:'sv'+Date.now(),act:a.id,num,tipo,fec,tec,est,hall,trab,partes,rec,msgs};
+  SERVS.unshift(srec);
+  a.ult=fec;
+  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:num,et:'certificada',tipo,f:fec,tec,
+    hall:`${hall?hall+' ':''}${trab?'Trabajos: '+trab+'. ':''}Estado final: ${est}.`,partes,serv:srec.id});
+  DOCS.unshift({a:a.id,t:'INF',n:`Informe de mantenimiento ${num} · ${a.tag||a.ser}.pdf`,f:fec,w:'1.1 MB',serv:srec.id});
+  renderAll();
+  if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
+  showServiceReport(srec);
+  toast(`Informe ${num} emitido`);
+}
+function showServiceReport(rec){
+  if(!rec)return;
+  const a=ACTIVOS.find(x=>x.id===rec.act)||{},et={Operativo:'ok','Requiere seguimiento':'due','Fuera de servicio':'late'}[rec.est]||'';
+  $('#mTitle').textContent=`Informe de mantenimiento ${rec.num}`;
+  $('#mBody').innerHTML=`
+   <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+     <span class="tag">${esc(rec.tipo)}</span><span class="tag ${et}"><span class="dot"></span>${esc(rec.est)}</span>
+     <div class="muted" style="font-size:12.5px">${esc(a.tag||a.ser||'')} · ${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n||'')}</div></div>
+   <dl class="dl"><dt>Orden</dt><dd>${rec.num}</dd><dt>Técnico</dt><dd>${esc(rec.tec)}</dd><dt>Fecha</dt><dd>${rec.fec}</dd>
+     <dt>Repuestos</dt><dd>${rec.partes.length?rec.partes.map(esc).join(', '):'—'}</dd></dl>
+   <h3 style="margin:14px 0 8px">Informe</h3>
+   <div style="font-size:13px;color:var(--ink-2);line-height:1.6">${rec.msgs.map(m=>`<p style="margin-bottom:7px">${esc(m)}</p>`).join('')}</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Informe exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
   $('#modal').classList.add('on');
 }
 
