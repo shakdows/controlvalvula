@@ -40,7 +40,7 @@
   --ease:cubic-bezier(.22,.61,.36,1);
   --fast:130ms; --med:220ms;
 
-  --z-sticky:20; --z-rail:30; --z-drawer:40; --z-scrim:50; --z-modal:60; --z-toast:70;
+  --z-sticky:20; --z-rail:30; --z-scrim:40; --z-drawer:50; --z-modal:60; --z-toast:70;
   --row-h:38px; --font-d:13.5px;
 }
 [data-density="compact"]{ --row-h:30px; --font-d:12.5px; }
@@ -417,9 +417,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .modal-b{padding:var(--sp-5);overflow:auto}
 .modal-f{padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;justify-content:flex-end;gap:var(--sp-2);background:var(--surface-2)}
 
-/* ---- toasts ---- */
-.toasts{position:fixed;bottom:var(--sp-5);left:50%;transform:translateX(-50%);z-index:var(--z-toast);display:flex;flex-direction:column;gap:8px;align-items:center}
-.toast{display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:var(--r-1);font-size:13px;box-shadow:var(--shadow-over);animation:up var(--med) var(--ease)}
+/* ---- toasts (nunca deben interceptar clics) ---- */
+.toasts{position:fixed;bottom:var(--sp-5);left:50%;transform:translateX(-50%);z-index:var(--z-toast);display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:var(--r-1);font-size:13px;box-shadow:var(--shadow-over);animation:up var(--med) var(--ease);pointer-events:none}
 @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .toast .dot{background:var(--ok)}
 
@@ -1944,27 +1944,28 @@ function openCalib(assetId){
   $('#mTitle').textContent=`Calibración · ${a.tag||a.ser||'activo'}`;
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
-     <div>Registra el <b>inicio</b> y el <b>fin</b> de la prueba de banco. Al generar el informe se certifica la orden, se actualiza la vigencia del equipo y se emite el certificado con su lectura para el informe final.</div></div>
+     <div>Anota a qué presión <b>debía abrir</b> la válvula y a qué presión <b>abrió realmente</b> en el banco (antes y después de ajustarla). Lo demás ya viene prellenado. Al terminar se emite el certificado con el texto listo para tu informe.
+     <a href="#" onclick="fillCalibExample();return false" style="color:var(--sel);font-weight:600;text-decoration:underline">Rellenar con un ejemplo</a>.</div></div>
    <h3 style="margin:4px 0 10px">1 · Inicio de la prueba</h3>
    <div class="two">
      <div class="fld"><label>Fecha y hora de inicio</label><input class="inp" id="cbIni" type="datetime-local" value="${hoyStr}T08:00"></div>
      <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="K. Ortiz"></div>
      <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="Banco neumático · patrón Fluke 700G"></div>
      <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
-     <div class="fld"><label>Set point nominal</label><input class="inp" id="cbNom" value="${isNaN(nom)?'':nom}"></div>
+     <div class="fld"><label>Presión a la que debía abrir (set)</label><input class="inp" id="cbNom" value="${isNaN(nom)?'':nom}"></div>
      <div class="fld"><label>Unidad</label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
      <div class="fld"><label>Tolerancia admisible (±%)</label><input class="inp" id="cbTol" value="3"></div>
      <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="22"></div>
    </div>
    <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found</h3>
    <div class="two">
-     <div class="fld"><label>Presión de apertura encontrada</label><input class="inp" id="cbAf" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>Hermeticidad de asiento</label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Presión a la que abrió al llegar</label><input class="inp" id="cbAf" placeholder="${isNaN(nom)?'—':nom}"></div>
+     <div class="fld"><label>¿Cerraba bien? (hermeticidad)</label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left</h3>
    <div class="two">
-     <div class="fld"><label>Presión de apertura ajustada</label><input class="inp" id="cbAl" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>Hermeticidad final</label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Presión a la que abrió ya ajustada</label><input class="inp" id="cbAl" placeholder="${isNaN(nom)?'—':nom}"></div>
+     <div class="fld"><label>¿Cerraba bien al final?</label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
      <div class="fld"><label>Contrapresión de cierre (blowdown)</label><input class="inp" id="cbBd" placeholder="7%"></div>
      <div class="fld"><label>Válvula precintada</label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
    </div>
@@ -1976,6 +1977,14 @@ function openCalib(assetId){
    <div class="fld"><label>Observaciones para el informe</label><textarea class="inp" id="cbObs" rows="2" placeholder="Estado general, repuestos usados, recomendaciones…"></textarea></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}')">Generar informe y certificar</button>`;
   $('#modal').classList.add('on');
+}
+function fillCalibExample(){
+  const nom=parseFloat(($('#cbNom').value||'').replace(',','.'))||150;
+  if(!$('#cbNom').value)$('#cbNom').value=nom;
+  $('#cbAf').value=Math.round(nom*1.05);
+  $('#cbAl').value=nom;
+  $('#cbBd').value='7%';
+  toast('Ejemplo cargado — cambia los valores por los reales');
 }
 function generateCalib(assetId){
   const a=ACTIVOS.find(x=>x.id===assetId);if(!a)return;
