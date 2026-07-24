@@ -1,0 +1,4 @@
+node_modules/
+_*.jpg
+_*.png
+*.b64
