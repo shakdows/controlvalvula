@@ -459,8 +459,10 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   background:
     radial-gradient(120% 90% at 78% 8%, oklch(0.40 0.070 224 / .55), transparent 60%),
     linear-gradient(158deg, oklch(0.30 0.055 238) 0%, oklch(0.235 0.045 242) 46%, oklch(0.185 0.035 244) 100%);
-  display:flex;flex-direction:column;justify-content:space-between;padding:40px 46px 44px
+  display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:44px 48px 50px
 }
+.cover-hero .hero-brand,.cover-hero .hero-copy{width:min(94%,560px)}
+.cover-hero .hero-stage{align-self:stretch}
 .cover-hero::before{
   content:'';position:absolute;inset:0;pointer-events:none;opacity:.34;
   background-image:linear-gradient(oklch(0.72 0.06 224 /.10) 1px,transparent 1px),linear-gradient(90deg,oklch(0.72 0.06 224 /.10) 1px,transparent 1px);
@@ -483,8 +485,14 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .hero-brand span{display:block;font-size:10px;letter-spacing:.34em;color:oklch(1 0 0 /.6);margin-top:2px;font-weight:500}
 .hero-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;min-height:0}
 .hero-stage .vphoto{width:min(430px,84%);filter:drop-shadow(0 34px 44px oklch(0 0 0 /.5))}
+.hero-video-wrap{position:relative;display:inline-block;line-height:0}
 .hero-video{width:min(560px,96%);height:auto;max-height:60vh;border-radius:16px;display:block;
   box-shadow:0 34px 70px oklch(0 0 0 /.55);border:1px solid oklch(1 0 0 /.16);background:#0b141c;object-fit:cover}
+.hero-sound{position:absolute;right:13px;bottom:13px;width:40px;height:40px;border-radius:50%;
+  background:oklch(0 0 0 /.5);border:1px solid oklch(1 0 0 /.28);color:#fff;display:grid;place-items:center;
+  cursor:pointer;backdrop-filter:blur(4px);transition:background var(--fast),transform var(--fast)}
+.hero-sound:hover{background:oklch(0 0 0 /.72);transform:scale(1.06)}
+.hero-sound svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .cover-card .logo-full{width:170px;margin:2px auto 18px}
 .logo-full svg{width:100%;height:auto;display:block}
 .hero-copy h2{font-size:30px;line-height:1.14;font-weight:700;letter-spacing:-.02em;max-width:15ch;color:#fff}
@@ -2659,9 +2667,17 @@ function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderRe
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
+const ICON_MUTED=`<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9.5l4 5M21 9.5l-4 5"/></svg>`;
+const ICON_SOUND=`<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.7a5 5 0 0 1 0 6.6M19.2 6a8.5 8.5 0 0 1 0 12"/></svg>`;
 $('#heroStage').innerHTML=VIDEO_PROMO
-  ? `<video class="hero-video" autoplay muted loop playsinline preload="auto" poster=""><source src="${VIDEO_PROMO}" type="video/mp4"></video>`
+  ? `<div class="hero-video-wrap"><video id="promoVid" class="hero-video" autoplay muted loop playsinline preload="auto"><source src="${VIDEO_PROMO}" type="video/mp4"></video><button class="hero-sound" onclick="toggleSound()" aria-label="Activar sonido">${ICON_MUTED}</button></div>`
   : PHOTO.globo;
+function toggleSound(){
+  const v=document.getElementById('promoVid'),btn=document.querySelector('.hero-sound');if(!v)return;
+  v.muted=!v.muted;
+  if(!v.muted){v.volume=1;v.play().catch(()=>{})}
+  if(btn){btn.innerHTML=v.muted?ICON_MUTED:ICON_SOUND;btn.setAttribute('aria-label',v.muted?'Activar sonido':'Silenciar')}
+}
 paintThemeBtn();renderAll();go('home');
 </script>
 </body>
