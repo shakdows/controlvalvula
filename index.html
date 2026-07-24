@@ -781,9 +781,10 @@ table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:n
       <!-- ═══ ACTIVOS ═══ -->
       <section class="page" id="p-assets"><div class="view-pad">
         <div class="hd"><div><h1>Activos instalados</h1><p id="assetsSub"></p></div>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
             <button class="btn sec" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Cargar Excel</button>
+            <button class="btn sec" onclick="openNewClient()"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg>Nuevo cliente</button>
             <button class="btn" onclick="openNewAsset()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva válvula</button>
           </div></div>
         <div class="stats" id="stats"></div>
@@ -1707,6 +1708,7 @@ function buildCmd(q){
    {g:'Ir a',ic:'→',t:'Órdenes de trabajo',s:'Tablero por etapa',fn:()=>go('wo')},
    {g:'Ir a',ic:'→',t:'Confiabilidad',s:'Reportes y analítica',fn:()=>go('rep')},
    {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
+   {g:'Acción',ic:'+',t:'Nuevo cliente',s:'Dar de alta una empresa',fn:()=>openNewClient()},
    {g:'Acción',ic:'+',t:'Nueva válvula',s:'Dar de alta un activo',fn:()=>openNewAsset()},
    {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
    {g:'Acción',ic:'+',t:'Nuevo usuario',s:'Dar acceso a un cliente',fn:()=>openNewUser()},
@@ -2142,6 +2144,34 @@ function saveNewUser(){
   if(r==='Cliente'&&!cId){toast('Elige la organización del cliente');return}
   USUARIOS.unshift({n,m,r,c:cId?cli(cId).n:'—',x:SCOPE_ROL[r]});
   closeModal();renderUsers();go('users');toast(`Usuario ${n} creado · acceso ${r.toLowerCase()}`);
+}
+
+/* ============================================================
+   12.85 · CREAR CLIENTE
+   ============================================================ */
+function openNewClient(){
+  $('#mTitle').textContent='Nuevo cliente';
+  $('#mBody').innerHTML=`
+   <div class="two">
+     <div class="fld"><label>Nombre / razón social</label><input class="inp" id="ncN" placeholder="p. ej. Cervecería del Sur S.A."></div>
+     <div class="fld"><label>Industria</label><select class="inp" id="ncI">${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+     <div class="fld"><label>Instalación / planta</label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
+     <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
+   </div>
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>El cliente aparecerá en los filtros, en la carga de válvulas y al crear usuarios. Luego podrás asignarle válvulas y darle acceso a su portal.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewClient()">Crear cliente</button>`;
+  $('#modal').classList.add('on');
+}
+function saveNewClient(){
+  const n=$('#ncN').value.trim();
+  if(!n){toast('Indica el nombre del cliente');return}
+  const id='cli'+Date.now();
+  const areasArr=($('#ncA').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
+  CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
+  $('#fCli').dataset.built='';
+  closeModal();renderAll();go('assets');toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
