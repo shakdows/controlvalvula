@@ -446,6 +446,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 }
 .logo-mark{display:inline-grid;place-items:center;flex:0 0 auto}
 .logo-mark svg{display:block;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.logo-mark svg[aria-label="Adolphus"],.ws-mark svg[aria-label="Adolphus"]{stroke:none;width:74%;height:74%}
 
 .cover{
   position:fixed;inset:0;z-index:100;display:grid;grid-template-columns:1.08fr .92fr;
@@ -482,6 +483,10 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .hero-brand span{display:block;font-size:10px;letter-spacing:.34em;color:oklch(1 0 0 /.6);margin-top:2px;font-weight:500}
 .hero-stage{flex:1;display:flex;align-items:center;justify-content:center;padding:12px 0;min-height:0}
 .hero-stage .vphoto{width:min(430px,84%);filter:drop-shadow(0 34px 44px oklch(0 0 0 /.5))}
+.hero-video{width:min(560px,96%);height:auto;max-height:60vh;border-radius:16px;display:block;
+  box-shadow:0 34px 70px oklch(0 0 0 /.55);border:1px solid oklch(1 0 0 /.16);background:#0b141c;object-fit:cover}
+.cover-card .logo-full{width:170px;margin:2px auto 18px}
+.logo-full svg{width:100%;height:auto;display:block}
 .hero-copy h2{font-size:30px;line-height:1.14;font-weight:700;letter-spacing:-.02em;max-width:15ch;color:#fff}
 .hero-copy p{font-size:14px;line-height:1.6;color:oklch(1 0 0 /.68);margin-top:14px;max-width:46ch}
 .hero-meta{display:flex;gap:26px;margin-top:26px}
@@ -762,7 +767,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   <div class="cover-hero">
     <div class="hero-brand">
       <span class="logo-mark" data-logo></span>
-      <div><b>ADOLPHUS</b><span>CONTROL DE FLUIDOS</span></div>
+      <div><b>ADOLPHUS</b><span>TECNOLOGÍA Y EXPERIENCIA</span></div>
     </div>
     <div class="hero-stage" id="heroStage"></div>
     <div class="hero-copy">
@@ -777,7 +782,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   </div>
   <div class="cover-panel">
     <div class="cover-card">
-      <span class="logo-mark" data-logo></span>
+      <div class="logo-full" data-logo-full></div>
       <h1>Valvia</h1>
       <p class="lede">Panel de gestión de activos de válvulas · Adolphus S.A.</p>
       <label for="coverRole">Perfil de acceso</label>
@@ -1019,7 +1024,10 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    Renders metálicos 100% autocontenidos (SVG). Sin dependencias
    externas: se ven igual con o sin red, y nunca aparecen rotos.
    ============================================================ */
-const LOGO=`<svg viewBox="0 0 24 24"><path d="M5 9.5h14M12 9.5v4M7.5 13.5h9L12 19z"/><circle cx="12" cy="5.4" r="2.5"/><path d="M7.6 5.4H5.6M18.4 5.4h-2"/></svg>`;
+const LOGO=`<svg viewBox="0 0 120 122" xmlns="http://www.w3.org/2000/svg" aria-label="Adolphus"><path fill="#e11a22" stroke="none" d="M60 7 L107 113 L13 113 Z"/><path fill="#ffffff" stroke="none" d="M19 112 L51 95 L53 100 L24 112 Z"/><path fill="#ffffff" stroke="none" d="M101 112 L69 95 L67 100 L96 112 Z"/></svg>`;
+/* Logo completo (triángulo + wordmark) para portada y PDF */
+const LOGO_FULL=(ink='#16306b')=>`<svg viewBox="0 0 300 168" xmlns="http://www.w3.org/2000/svg" aria-label="Adolphus · Tecnología y Experiencia"><path fill="#e11a22" stroke="none" d="M150 6 L196 104 L104 104 Z"/><path fill="#ffffff" stroke="none" d="M110 103 L142 88 L144 92 L115 103 Z"/><path fill="#ffffff" stroke="none" d="M190 103 L158 88 L156 92 L185 103 Z"/><text x="150" y="146" font-family="'IBM Plex Sans',system-ui,sans-serif" font-weight="700" font-size="46" letter-spacing="-1.5" text-anchor="middle" fill="${ink}">adolphus</text><text x="150" y="164" font-family="'IBM Plex Sans',system-ui,sans-serif" font-weight="600" font-size="15" letter-spacing="0.5" text-anchor="middle" fill="${ink}">Tecnología y Experiencia</text></svg>`;
+let VIDEO_PROMO="video/presentacion.mp4"; /* video de presentación (Adolphus) */
 const VDEFS=`<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
 <!-- cilindro metálico, eje horizontal (sombreado vertical) -->
 <linearGradient id="gv_cylH" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#828d99"/><stop offset=".13" stop-color="#c6cfd8"/><stop offset=".32" stop-color="#f7fafc"/><stop offset=".5" stop-color="#d0d9e1"/><stop offset=".72" stop-color="#96a1ad"/><stop offset="1" stop-color="#59646f"/></linearGradient>
@@ -2650,7 +2658,10 @@ function exportCSV(){
 function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
-$('#heroStage').innerHTML=PHOTO.globo;
+$$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
+$('#heroStage').innerHTML=VIDEO_PROMO
+  ? `<video class="hero-video" autoplay muted loop playsinline preload="auto" poster=""><source src="${VIDEO_PROMO}" type="video/mp4"></video>`
+  : PHOTO.globo;
 paintThemeBtn();renderAll();go('home');
 </script>
 </body>
