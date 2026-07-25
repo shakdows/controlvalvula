@@ -874,6 +874,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       </div>
       <button class="icon-btn" onclick="toggleTheme()" title="Tema claro / oscuro" id="themeBtn"></button>
       <button class="icon-btn" onclick="openHelp()" title="Atajos de teclado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg></button>
+      <button class="icon-btn" onclick="logout()" title="Salir · cambiar de perfil"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg></button>
       <div class="avatar" id="ava">IA</div>
     </header>
 
@@ -1388,8 +1389,18 @@ function applyRole(v){
 $('#roleSel').onchange=e=>applyRole(e.target.value);
 function enterApp(){
   applyRole($('#coverRole').value);
+  const v=document.getElementById('promoVid');
+  if(v){v.pause();v.muted=true;setSoundIcon(true)}
   const c=$('#cover');c.classList.add('gone');
   setTimeout(()=>{c.style.display='none'},600);
+}
+function logout(){
+  closeDrawer&&closeDrawer();
+  const c=$('#cover');c.style.display='';
+  requestAnimationFrame(()=>c.classList.remove('gone'));
+  const v=document.getElementById('promoVid');
+  if(v){v.muted=true;try{v.currentTime=0}catch(e){}v.play().catch(()=>{});setSoundIcon(true)}
+  armAutoSound();
 }
 document.addEventListener('keydown',e=>{
   const c=$('#cover');
@@ -2682,14 +2693,18 @@ function toggleSound(){
 }
 /* Sonido "automático": el navegador bloquea el audio en autoplay; lo activamos
    en cuanto el usuario hace el primer gesto (clic/toque/tecla) en la página. */
-(function armAutoSound(){
+function armAutoSound(){
   const enable=()=>{
-    const v=document.getElementById('promoVid');
-    if(v&&v.muted){v.muted=false;v.volume=1;v.play().catch(()=>{});setSoundIcon(false)}
+    const cover=document.getElementById('cover');
+    if(cover && !cover.classList.contains('gone')){
+      const v=document.getElementById('promoVid');
+      if(v&&v.muted){v.muted=false;v.volume=1;v.play().catch(()=>{});setSoundIcon(false)}
+    }
     ['pointerdown','touchstart','keydown'].forEach(ev=>window.removeEventListener(ev,enable,true));
   };
   ['pointerdown','touchstart','keydown'].forEach(ev=>window.addEventListener(ev,enable,true));
-})();
+}
+armAutoSound();
 paintThemeBtn();renderAll();go('home');
 </script>
 </body>
