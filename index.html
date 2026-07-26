@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adolphus · Gestión de válvulas y repuestos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16306b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Adolphus">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -573,6 +580,27 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-model{margin-top:20px}
 .fx-model h3{margin-bottom:6px;font-size:13.5px}
 .fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
+/* --- estado de conexión y sincronización --- */
+.net-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:100px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;
+  transition:border var(--fast),background var(--fast)}
+.net-chip:hover{border-color:var(--sel)}
+.net-chip .nd{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:0 0 auto}
+.net-chip.off{border-color:var(--due);background:var(--due-bg);color:var(--due)}
+.net-chip.off .nd{background:var(--due);animation:netPulse 1.6s ease-in-out infinite}
+.net-chip.sync{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
+.net-chip.sync .nd{background:var(--sel);animation:netPulse .8s linear infinite}
+.net-chip .qn{background:var(--due);color:#fff;border-radius:20px;padding:1px 6px;font-size:10.5px;line-height:1.5}
+@keyframes netPulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media(max-width:900px){.net-chip .nl{display:none}}
+.sq-list{border:1px solid var(--line-2);border-radius:var(--r-2);max-height:230px;overflow:auto;margin-top:10px}
+.sq-i{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line-2);font-size:12.5px}
+.sq-i:last-child{border-bottom:none}
+.sq-i .sq-t{flex:1;min-width:0}
+.sq-i .sq-t b{display:block;font-weight:600}
+.sq-i .sq-t span{color:var(--ink-3);font-size:11.5px}
+.sq-i .sq-d{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-3);flex:0 0 auto}
+.sq-ok{color:var(--ok)}
 /* --- ayuda en formularios y campos pendientes --- */
 .hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
   color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
@@ -780,6 +808,36 @@ table.qp .pn{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:n
 .qp-tot .r{display:flex;justify-content:space-between;padding:5px 0}
 .qp-tot .r.grand{border-top:2px solid #1b2126;margin-top:4px;padding-top:9px;font-size:15px;font-weight:800}
 .qp-note{margin-top:22px;font-size:11px;color:#5a656e;line-height:1.6;border-top:1px solid #e6eaed;padding-top:14px}
+/* --- hoja de campo imprimible --- */
+.fs-idh{font-size:10.5px;font-weight:800;letter-spacing:.08em;background:#eef1f4;color:#1b2126;padding:6px 10px;margin:16px 0 10px;border-left:3px solid #1b2126}
+.fs-id{border:1px solid #cfd6dc;border-radius:6px;padding:0 0 10px;margin-bottom:4px}
+.fs-id .fs-idh{margin-top:0;border-radius:5px 5px 0 0;border-left:none;border-bottom:1px solid #cfd6dc}
+.fs-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 24px;padding:0 12px}
+.fs-d{display:flex;align-items:baseline;gap:8px;font-size:11.5px;border-bottom:1px dotted #b9c2ca;padding-bottom:4px}
+.fs-d>span{color:#5a656e;flex:0 0 44%}
+.fs-d>b{font-weight:700}
+.fs-box{display:inline-block;border-bottom:1px solid #1b2126;height:14px}
+.fs-cod{margin:12px 12px 0;padding:7px 10px;border:1.5px dashed #1b2126;border-radius:5px;font-size:11px;letter-spacing:.06em;text-align:center}
+.fs-cod b{font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:.04em}
+.fs-t{width:100%;border-collapse:collapse;margin-top:6px;font-size:11.5px}
+.fs-t th{background:#1b2126;color:#fff;padding:7px 9px;text-align:left;font-size:10px;letter-spacing:.06em}
+.fs-t td{border:1px solid #cfd6dc;padding:9px;vertical-align:top}
+.fs-t td small{color:#7a848c;font-size:9.5px}
+.fs-c{height:44px}
+.fs-opt{font-size:11px;letter-spacing:.02em}
+.fs-obs{margin-top:16px;font-size:11.5px}
+.fs-obs>span{color:#5a656e}
+.fs-lines{margin-top:6px;height:56px;background:repeating-linear-gradient(to bottom,transparent 0 26px,#cfd6dc 26px 27px);border-bottom:1px solid #cfd6dc}
+.fs-firmas{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px;font-size:10.5px;color:#5a656e;text-align:center}
+.fs-line{border-bottom:1px solid #1b2126;margin-bottom:5px}
+/* --- carga de hoja de campo --- */
+.hc-drop{border:1.5px dashed var(--line);border-radius:var(--r-2);min-height:150px;display:grid;place-items:center;cursor:pointer;
+  background:var(--surface-2);color:var(--ink-3);text-align:center;padding:14px;overflow:hidden;transition:border var(--fast),background var(--fast)}
+.hc-drop:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.hc-drop.has{border-style:solid;padding:6px;background:var(--surface)}
+.hc-drop img{max-width:100%;max-height:230px;border-radius:var(--r-1);display:block}
+.hc-drop b{display:block;font-size:13px;font-weight:600;margin-top:6px}
+.hc-drop span{font-size:11.5px}
 @media print{
   @page{margin:14mm}
   body *{visibility:hidden!important}
@@ -971,6 +1029,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
         <option value="cli-refi">Cliente · Refinería Costa Norte</option>
         <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
       </select>
+      <button class="net-chip" id="netChip" onclick="openSync()" title="Estado de conexión y sincronización"></button>
       <div class="notif-wrap">
         <button class="icon-btn" onclick="toggleNotif(event)" title="Notificaciones" id="notifBtn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notif-dot" id="notifDot" style="display:none"></span></button>
         <div class="notif-pop" id="notifPop" onclick="event.stopPropagation()">
@@ -1041,7 +1100,11 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <!-- ═══ CALIBRACIONES ═══ -->
       <section class="page" id="p-cal"><div class="view-pad">
         <div class="hd"><div><h1>Horizonte de calibración</h1><p>Válvulas de seguridad y alivio con vencimiento programado. La franja muestra los 18 meses alrededor de hoy.</p></div>
-          <select class="inp chip-sel" id="calCli" style="height:34px"></select></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="inp chip-sel" id="calCli" style="height:34px"></select>
+            <button class="btn sec" id="calSheetBtn" onclick="printFieldSheet()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Hoja de campo</button>
+            <button class="btn" id="calUpBtn" onclick="openUploadSheet()"><svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Cargar hoja llena</button>
+          </div></div>
         <div class="stats" id="calStats"></div>
         <div class="panel"><div class="panel-h"><h3>Programa por vencimiento</h3><span class="count" id="calCount"></span></div>
           <div id="calList"></div></div>
@@ -1768,6 +1831,7 @@ function confirmDeleteAsset(id){
   S.picked.delete(id);
   ACTIVOS.splice(i,1);
   closeModal();closeDrawer();renderAll();
+  registrar('Baja',`Válvula ${a.tag||a.ser||''} · ${motivo.toLowerCase()}`);
   toast(`${a.tag||a.ser||'Equipo'} eliminado · ${motivo.toLowerCase()}`);
 }
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
@@ -1904,11 +1968,20 @@ function paneHist(){
     </div>`).join('')}</div>`
    :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><b>Sin intervenciones</b>Este activo no registra historial todavía.</div>`);
 }
+function verHoja(actId,nombre){
+  const d=DOCS.find(x=>x.a===actId&&x.n===nombre&&x.foto);if(!d)return;
+  $('#mTitle').textContent='Hoja de campo escaneada';
+  $('#mBody').innerHTML=`<div style="text-align:center"><img src="${d.foto}" alt="Hoja de campo" style="max-width:100%;border-radius:var(--r-2);border:1px solid var(--line)"></div>
+    <div class="callout" style="margin-top:12px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Respaldo del ensayo realizado en planta el ${d.f}. Los valores transcritos están en el certificado de calibración.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
 function paneDocs(){
   const ds=DOCS.filter(d=>d.a===S.cur.id);
   $('#pn-docs').innerHTML=ds.length?ds.map(d=>`<div class="doc"><span class="fx">${d.t}</span>
     <span class="fm"><b>${esc(d.n)}</b><span>${d.f} · ${d.w}</span></span>
-    <button class="btn sec xs" onclick="${d.calib?`showCalibReport(CALIBS.find(c=>c.id==='${d.calib}'))`:d.serv?`showServiceReport(SERVS.find(s=>s.id==='${d.serv}'))`:`toast('Descarga simulada')`}">${d.calib||d.serv?'Ver':'Abrir'}</button></div>`).join('')
+    <button class="btn sec xs" onclick="${d.calib?`showCalibReport(CALIBS.find(c=>c.id==='${d.calib}'))`:d.serv?`showServiceReport(SERVS.find(s=>s.id==='${d.serv}'))`:d.foto?`verHoja('${d.a}','${esc(d.n)}')`:`toast('Descarga simulada')`}">${d.calib||d.serv||d.foto?'Ver':'Abrir'}</button></div>`).join('')
    :`<div class="empty"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg><b>Expediente vacío</b>Aún no se adjunta ningún documento.</div>`;
 }
 
@@ -1959,7 +2032,7 @@ function enviarSol(){
   const conAct=S.cart.find(c=>c.a);
   SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'Pendiente',
     items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
-  S.cart=[];renderReq();toast(`Solicitud ${n} enviada`);
+  S.cart=[];renderReq();registrar('Solicitud',`${n} enviada`);toast(`Solicitud ${n} enviada`);
 }
 function verSol(id){
   const s=SOLICITUDES.find(x=>x.id===id);
@@ -2001,7 +2074,7 @@ function renderCal(){
         <span class="hz-fill" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)}%;background:var(--${c});opacity:.55"></span>
       </div>
       <div class="hz-d" style="color:var(--${c})">${d<0?`−${-d} d`:`${d} d`}</div>
-      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openCalib('${a.id}')">Calibrar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
+      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="printFieldSheet('${a.id}')" title="Imprimir hoja para llenar en planta"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button><button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openCalib('${a.id}')">Calibrar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
     </div>`}).join('')
    :`<div class="empty"><b>Sin programa de calibración</b>Aplica a válvulas de seguridad y alivio.</div>`;
 }
@@ -2042,6 +2115,7 @@ function advanceWO(id){
   o.et=nx[0];
   if(nx[0]==='taller')toast(`${o.n} ingresó a taller`);
   else toast(`${o.n} programada para ${o.f}`);
+  registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   renderAll();
 }
 function openCloseWO(id){
@@ -2075,6 +2149,7 @@ function saveCloseWO(id){
   if(a){a.ult=o.f;
     if(a.prox){const d=new Date(o.f+'T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
   closeModal();renderAll();go('wo');
+  registrar('Orden',`${o.n} cerrada · ${a?a.tag||a.ser:''}`);
   toast(`${o.n} cerrada${a&&a.prox?` · próxima calibración ${a.prox}`:''}`);
 }
 let dragId=null;
@@ -2108,7 +2183,7 @@ function saveWO(){
   ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'solicitada',tipo:$('#woTipo').value,
     f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
     partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
-  closeModal();renderAll();go('wo');toast('Orden creada en etapa Solicitada');
+  closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
 }
 function closeModal(){$('#modal').classList.remove('on')}
 
@@ -2365,6 +2440,7 @@ function saveNewPart(){
   if(npFoto)PART_PHOTO[n]=npFoto;
   closeModal();
   PS.mod=mod;PS.sel={};renderParts();go('parts');
+  registrar('Repuesto',`${n} agregado a ${mod}`);
   toast(`${n} agregado al despiece de ${mod}`);
 }
 function renderUsers(){
@@ -2828,7 +2904,7 @@ function saveNewAsset(){
   ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
     sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
-  closeModal();renderAll();gotoAsset(id);toast(`Válvula ${tag||ser} creada`);
+  closeModal();renderAll();gotoAsset(id);registrar('Alta',`Válvula ${tag||ser} · ${cli($('#naCli').value).n||''}`);toast(`Válvula ${tag||ser} creada`);
 }
 
 /* ============================================================
@@ -2945,6 +3021,7 @@ function generateCalib(assetId,editId){
   renderAll();
   if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
   showCalibReport(rec);
+  registrar('Calibración',`${prev?'Edición del certificado':'Certificado'} ${cert} · ${a.tag||a.ser||''} (${verdict})`);
   toast(prev?`Certificado ${cert} actualizado · ${verdict}`:`${verdict} · certificado ${cert} emitido`);
 }
 /* Gráfica de la prueba: banda de tolerancia + recorrido nominal → as-found → as-left */
@@ -3041,6 +3118,7 @@ function confirmDeleteCalib(id){
   for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].calib===id)DOCS.splice(k,1);
   closeModal();renderAll();
   if(S.cur&&S.cur.id===rec.act)openAsset(rec.act);
+  registrar('Baja',`Certificado ${rec.cert} eliminado`);
   toast(`Certificado ${rec.cert} eliminado`);
 }
 
@@ -3099,7 +3177,7 @@ function saveNewClient(){
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
   CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
   $('#fCli').dataset.built='';
-  closeModal();renderAll();go('clients');toast(`Cliente ${n} creado`);
+  closeModal();renderAll();go('clients');registrar('Cliente',`${n} dado de alta`);toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
@@ -3226,6 +3304,73 @@ function openQuote(items,cliId,kind){
 }
 function closeQuote(){$('#quote').classList.remove('on')}
 function printQuote(){window.print()}
+/* ============================================================
+   14 · HOJA DE CAMPO — imprimir, llenar a mano y volver a cargar
+   ============================================================ */
+function printFieldSheet(assetId){
+  const a=assetId?ACTIVOS.find(x=>x.id===assetId):null;
+  const m=a?MODELOS[a.mod]||{}:{};
+  const nom=a?parseFloat((a.rng||'').replace(',','.')):NaN;
+  const uni=a&&/bar/i.test(a.rng||'')?'bar':a&&/kpa/i.test(a.rng||'')?'kPa':'psig';
+  const cod=a?(a.ser||a.tag||a.id):'';
+  const box=(w)=>`<span class="fs-box" style="min-width:${w}"></span>`;
+  const dato=(k,v)=>`<div class="fs-d"><span>${k}</span><b>${v||'—'}</b></div>`;
+  $('#quoteKind').textContent='Hoja de campo';
+  $('#quotePaper').innerHTML=`
+   <div class="qp-head">
+     <div class="qp-brand"><span class="logo-mark">${LOGO}</span><div><b>ADOLPHUS</b><span>CONTROL DE FLUIDOS · LIMA</span></div></div>
+     <div class="qp-doc"><h2>HOJA DE CAMPO</h2>
+       <div>Calibración de válvula de seguridad<br>Fecha: ____ / ____ / 20____<br>Hoja N.º ________</div></div>
+   </div>
+   <div class="fs-id">
+     <div class="fs-idh">1 · EQUIPO ${a?'(ya identificado por el sistema)':'(escribe los datos del equipo)'}</div>
+     <div class="fs-grid">
+       ${a?`${dato('Cliente',esc(cli(a.cli).n))}${dato('Área / unidad',esc(area(a)))}
+            ${dato('Tag',esc(a.tag))}${dato('N.º de serie',esc(a.ser))}
+            ${dato('Marca / modelo',esc((m.m||'')+' '+a.mod))}${dato('Tamaño · clase',esc((a.sz||'—')+' · '+(a.rt||'—')))}`
+         :`<div class="fs-d"><span>Cliente</span>${box('180px')}</div><div class="fs-d"><span>Área / unidad</span>${box('180px')}</div>
+           <div class="fs-d"><span>Tag</span>${box('180px')}</div><div class="fs-d"><span>N.º de serie</span>${box('180px')}</div>
+           <div class="fs-d"><span>Marca / modelo</span>${box('180px')}</div><div class="fs-d"><span>Tamaño · clase</span>${box('180px')}</div>`}
+     </div>
+     ${cod?`<div class="fs-cod">CÓDIGO PARA SUBIR AL SISTEMA · <b>${esc(cod)}</b></div>`:''}
+   </div>
+
+   <div class="fs-idh">2 · CONDICIONES DE LA PRUEBA</div>
+   <div class="fs-grid">
+     <div class="fs-d"><span>Presión de tarado (set)</span><b>${!isNaN(nom)?nom+' '+uni:''}</b>${isNaN(nom)?box('120px'):''}</div>
+     <div class="fs-d"><span>Tolerancia admisible</span><b>± 3 %</b></div>
+     <div class="fs-d"><span>Banco / patrón</span>${box('180px')}</div>
+     <div class="fs-d"><span>Fluido de prueba</span>${box('180px')}</div>
+     <div class="fs-d"><span>Temperatura ambiente</span>${box('120px')} °C</div>
+     <div class="fs-d"><span>Hora de inicio</span>${box('120px')}</div>
+   </div>
+
+   <table class="fs-t">
+     <thead><tr><th style="width:44%">MEDICIÓN EN EL BANCO</th><th>AS-FOUND · cómo llegó</th><th>AS-LEFT · cómo quedó</th></tr></thead>
+     <tbody>
+       <tr><td><b>Presión de apertura</b> (${uni})<br><small>anota el valor exacto en que abrió</small></td><td class="fs-c"></td><td class="fs-c"></td></tr>
+       <tr><td><b>¿Cerró hermético?</b><br><small>marca una opción</small></td>
+         <td class="fs-c fs-opt">☐ Conforme &nbsp; ☐ Fuga leve &nbsp; ☐ Fuga</td>
+         <td class="fs-c fs-opt">☐ Conforme &nbsp; ☐ Fuga leve &nbsp; ☐ Fuga</td></tr>
+       <tr><td><b>Contrapresión de cierre</b> (blowdown, %)<br><small>opcional</small></td><td class="fs-c"></td><td class="fs-c"></td></tr>
+     </tbody>
+   </table>
+
+   <div class="fs-idh">3 · CIERRE</div>
+   <div class="fs-grid">
+     <div class="fs-d"><span>¿Se reajustó el set?</span><b class="fs-opt">☐ Sí &nbsp; ☐ No</b></div>
+     <div class="fs-d"><span>¿Quedó precintada?</span><b class="fs-opt">☐ Sí &nbsp; ☐ No</b></div>
+     <div class="fs-d"><span>Hora de fin</span>${box('120px')}</div>
+     <div class="fs-d"><span>Resultado</span><b class="fs-opt">☐ Conforme &nbsp; ☐ Con ajuste &nbsp; ☐ No conforme</b></div>
+   </div>
+   <div class="fs-obs"><span>Observaciones / repuestos utilizados</span><div class="fs-lines"></div></div>
+   <div class="fs-firmas">
+     <div><div class="fs-line"></div>Técnico responsable</div>
+     <div><div class="fs-line"></div>Supervisor / cliente</div>
+   </div>
+   <div class="qp-note"><b>Cómo subirla al sistema:</b> al salir de planta, entra a <b>${a?'la válvula ':''}Calibraciones → Cargar hoja de campo</b>, toma una foto o escanea esta hoja y transcribe los valores medidos. La foto queda adjunta en el expediente del equipo como respaldo del ensayo.<br><br>Adolphus S.A. · Control de fluidos · Lima</div>`;
+  $('#quote').classList.add('on');
+}
 function quoteKit(id){const a=ACTIVOS.find(x=>x.id===id)||S.cur;if(!a)return;const m=MODELOS[a.mod]||{};const items=(BOM[m.b||'globo']||[]).filter(p=>p.k).map(p=>({n:p.n,q:1,a:a.id}));openQuote(items,a.cli,'cot')}
 function cartQty(i,d){const c=S.cart[i];if(!c)return;c.q=Math.max(1,(c.q||1)+d);renderReq()}
 
@@ -3271,7 +3416,203 @@ function armAutoSound(){
   ['pointerdown','touchstart','keydown'].forEach(ev=>window.addEventListener(ev,enable,true));
 }
 armAutoSound();
-paintThemeBtn();renderAll();go('home');
+/* Cargar la hoja llena: adjunta la foto y transcribe los valores medidos. */
+let hcFoto='';
+function openUploadSheet(assetId){
+  if(S.rol==='cliente'){toast('La carga de hojas de campo la realiza el servicio técnico');return}
+  hcFoto='';
+  const psv=ACTIVOS.filter(a=>(!S.inCli||a.cli===S.inCli)&&(!S.cli||a.cli===S.cli));
+  $('#mTitle').textContent='Cargar hoja de campo';
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
+     <div>Toma una foto de la hoja que llenaste en planta o escanéala. Escribe el <b>código del equipo</b> que aparece en la hoja para que el sistema la asocie sola, y transcribe los valores medidos. La foto queda adjunta en el expediente como respaldo.</div></div>
+   <div class="np-wrap">
+     <div>
+       <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">Foto o escaneo de la hoja</label>
+       <div class="hc-drop" id="hcDrop" onclick="document.getElementById('hcFile').click()">
+         <div id="hcPrev"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+           <b>Subir foto o escaneo</b><span>o tomar con la cámara</span></div>
+       </div>
+       <input type="file" id="hcFile" accept="image/*,.pdf" capture="environment" style="display:none">
+     </div>
+     <div>
+       <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" title="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
+         <input class="inp" id="hcCod" placeholder="p. ej. C-88-4471" autocomplete="off"><span class="pend-msg" id="hcOk" style="display:none"></span></div>
+       <div class="fld"><label>Válvula</label><select class="inp" id="hcAct">${psv.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag||'(sin tag)')} · ${esc(a.ser||'')} — ${esc(cli(a.cli).n)}</option>`).join('')}</select></div>
+       <div class="two">
+         <div class="fld"><label>Fecha del ensayo</label><input class="inp" id="hcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+         <div class="fld"><label>Técnico</label><input class="inp" id="hcTec" value="K. Ortiz"></div>
+       </div>
+       <div class="two">
+         <div class="fld is-pend"><label>Abrió al llegar (as-found) <span class="req-dot">*</span></label><input class="inp pend req-hc" id="hcAf" placeholder="valor de la hoja"><span class="pend-msg">▲ Falta completar</span></div>
+         <div class="fld is-pend"><label>Abrió ya ajustada (as-left) <span class="req-dot">*</span></label><input class="inp pend req-hc" id="hcAl" placeholder="valor de la hoja"><span class="pend-msg">▲ Falta completar</span></div>
+       </div>
+     </div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveUploadSheet()">Registrar calibración</button>`;
+  $('#hcFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+    if(f.type==='application/pdf'){hcFoto='pdf';$('#hcPrev').innerHTML=`<b>${esc(f.name)}</b><span>PDF adjunto</span>`;$('#hcDrop').classList.add('has');return}
+    const r=new FileReader();r.onload=ev=>{hcFoto=ev.target.result;$('#hcPrev').innerHTML=`<img src="${hcFoto}" alt="Hoja de campo">`;$('#hcDrop').classList.add('has')};
+    r.readAsDataURL(f)};
+  // el código escrito identifica la válvula automáticamente
+  $('#hcCod').oninput=e=>{
+    const q=e.target.value.trim().toLowerCase(),ok=$('#hcOk');
+    if(!q){ok.style.display='none';return}
+    const hit=psv.find(a=>(a.ser||'').toLowerCase()===q||(a.tag||'').toLowerCase()===q)
+             ||psv.find(a=>(a.ser||'').toLowerCase().includes(q)&&q.length>3);
+    if(hit){$('#hcAct').value=hit.id;ok.style.display='flex';ok.className='pend-msg sq-ok';ok.style.color='var(--ok)';
+      ok.textContent=`✓ Detectada: ${hit.tag||''} · ${MODELOS[hit.mod]?.m||''} ${hit.mod}`;}
+    else{ok.style.display='flex';ok.className='pend-msg';ok.style.color='';ok.textContent='▲ No coincide con ninguna válvula de este cliente';}
+  };
+  $$('.req-hc').forEach(el=>{const s=()=>{const v=!!el.value.trim();el.classList.toggle('pend',!v);el.closest('.fld').classList.toggle('is-pend',!v)};el.oninput=s;s()});
+  $('#modal').classList.add('on');
+}
+function saveUploadSheet(){
+  const id=$('#hcAct').value,a=ACTIVOS.find(x=>x.id===id);
+  if(!a){toast('Elige la válvula de la hoja');return}
+  const af=$('#hcAf').value.trim(),al=$('#hcAl').value.trim();
+  if(!af||!al){toast('Transcribe los valores as-found y as-left de la hoja');return}
+  const fec=$('#hcFec').value||HOY.toISOString().slice(0,10),tec=$('#hcTec').value||'—';
+  if(hcFoto&&hcFoto!=='pdf'){
+    DOCS.unshift({a:a.id,t:'HOJA',n:`Hoja de campo ${a.tag||a.ser} · ${fec}.jpg`,f:fec,w:'—',foto:hcFoto});
+  }else if(hcFoto==='pdf'){
+    DOCS.unshift({a:a.id,t:'HOJA',n:`Hoja de campo ${a.tag||a.ser} · ${fec}.pdf`,f:fec,w:'—'});
+  }
+  closeModal();
+  // abre la calibración con los datos de la hoja ya cargados
+  openCalib(a.id);
+  setTimeout(()=>{
+    const set=(i,v)=>{const el=$(i);if(el){el.value=v;el.dispatchEvent(new Event('input'))}};
+    set('#cbAf',af);set('#cbAl',al);set('#cbTec',tec);
+    set('#cbIni',fec+'T08:00');set('#cbFin',fec+'T10:30');
+    const o=$('#cbObs');if(o&&hcFoto)o.value='Ensayo registrado en hoja de campo; la hoja escaneada queda adjunta en el expediente.';
+    toast('Hoja cargada — revisa los valores y certifica');
+  },60);
+}
+
+/* ============================================================
+   13 · TRABAJO SIN CONEXIÓN
+   Todo se guarda en el equipo apenas se registra. Los cambios hechos
+   sin señal quedan en una cola y suben solos al recuperar conexión.
+   ============================================================ */
+const LS_KEY='adolphus.datos.v1';
+let SYNCQ=[];              /* cola de cambios pendientes de subir */
+let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
+let SYNCING=false;
+const online=()=>!OFF_SIM&&navigator.onLine;
+
+function guardarLocal(){
+  try{
+    localStorage.setItem(LS_KEY,JSON.stringify({
+      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,CALIBS,SERVS,DOCS,
+      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
+    }));
+    return true;
+  }catch(e){ // p. ej. almacenamiento lleno por fotos
+    toast('No se pudo guardar en el equipo: almacenamiento lleno');return false;
+  }
+}
+function restaurarLocal(){
+  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+  if(!d||d.v!==1)return false;
+  const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
+  const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
+  arr(ACTIVOS,d.ACTIVOS);arr(ORDENES,d.ORDENES);arr(SOLICITUDES,d.SOLICITUDES);
+  arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
+  obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
+  obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
+  SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
+  return true;
+}
+/* Registra un cambio: se guarda ya en el equipo y se encola para subir. */
+function registrar(tipo,desc){
+  SYNCQ.push({id:'q'+Date.now()+Math.floor(Math.random()*999),ts:new Date().toISOString(),tipo,desc,off:!online()});
+  guardarLocal();pintarNet();
+  if(online())setTimeout(sincronizar,600);   // con señal, sube casi al instante
+}
+function pintarNet(){
+  const c=$('#netChip');if(!c)return;
+  const n=SYNCQ.length;
+  c.classList.toggle('off',!online());
+  c.classList.toggle('sync',SYNCING);
+  c.innerHTML=SYNCING
+    ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
+    : !online()
+      ? `<span class="nd"></span><span class="nl">Sin conexión</span>${n?`<span class="qn">${n}</span>`:''}`
+      : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
+         :`<span class="nd"></span><span class="nl">Al día</span>`;
+  c.title=!online()
+    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirán solos al recuperar señal.`
+    : n?`${n} cambio${n===1?'':'s'} pendiente${n===1?'':'s'} de subir`:'Todo sincronizado';
+}
+function sincronizar(manual){
+  if(SYNCING)return;
+  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
+  if(!online()){if(manual)toast('Sin conexión — los cambios ya están guardados en este equipo');return}
+  SYNCING=true;pintarNet();
+  const n=SYNCQ.length;
+  setTimeout(()=>{                       // subida al servidor (simulada en el prototipo)
+    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();
+    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
+    toast(`${n} cambio${n===1?'':'s'} sincronizado${n===1?'':'s'} con el servidor`);
+  },1200);
+}
+function toggleOffline(){
+  OFF_SIM=!OFF_SIM;pintarNet();openSync();
+  toast(OFF_SIM?'Modo sin conexión activado — sigue trabajando normal':'Conexión restablecida');
+  if(!OFF_SIM&&SYNCQ.length)setTimeout(()=>sincronizar(),500);
+}
+function openSync(){
+  const n=SYNCQ.length;
+  $('#mTitle').textContent='Conexión y sincronización';
+  $('#mBody').innerHTML=`
+   <div class="callout ${online()?'':'warn'}">
+     <svg viewBox="0 0 24 24">${online()
+       ?'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2"/>'
+       :'<path d="M3 3l18 18M5 12.5a10 10 0 0 1 5-2.6M14.5 10.2a10 10 0 0 1 4.5 2.3M8.5 16a5.5 5.5 0 0 1 3-1.4"/><circle cx="12" cy="19.5" r="1.2"/>'}</svg>
+     <div>${online()
+       ? `<b>Con conexión.</b> Lo que registres se guarda en el equipo y sube al servidor enseguida.`
+       : `<b>Sin conexión.</b> Puedes seguir trabajando igual: calibraciones, órdenes y altas se guardan en este equipo y <b>subirán solas</b> en cuanto haya señal. No se pierde nada aunque cierres la página.`}</div></div>
+   <div class="two" style="margin-bottom:4px">
+     <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
+     <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
+   </div>
+   ${n?`<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
+      <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
+        <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
+        <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
+    :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
+   <div class="callout ${SW_LISTA?'':'warn'}" style="margin-top:14px">
+     <svg viewBox="0 0 24 24">${SW_LISTA?'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
+     <div>${SW_LISTA
+       ? `<b>App guardada en este equipo.</b> Puedes cerrarla y volver a abrirla en planta <b>sin internet</b>: arranca desde la copia local. Para tenerla como app propia, usa el menú del navegador → <b>Instalar aplicación</b> / <b>Añadir a pantalla de inicio</b>.`
+       : `<b>Recomendación:</b> abre el sistema <b>antes</b> de entrar a la zona sin señal. Instalado desde el servidor (https) queda guardado en el equipo y abre sin internet; abierto como archivo suelto, mantenlo en una pestaña abierta.`}</div></div>`;
+  $('#mFoot').innerHTML=`
+    <button class="btn quiet" onclick="toggleOffline()">${OFF_SIM?'Simular con señal':'Simular sin señal'}</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn" onclick="sincronizar(true)" ${!online()||!n?'disabled style="opacity:.5;cursor:not-allowed"':''}>Sincronizar ahora</button>`;
+  $('#modal').classList.add('on');
+}
+window.addEventListener('online',()=>{pintarNet();toast('Señal recuperada — subiendo cambios');sincronizar()});
+window.addEventListener('offline',()=>{pintarNet();toast('Sin conexión — se seguirá guardando en este equipo')});
+
+/* Guarda la app en el equipo (PWA): al abrirla una vez con señal, queda
+   disponible aunque después entres a planta sin internet. Requiere que
+   la página se sirva por https (no funciona abriendo el archivo suelto). */
+let SW_LISTA=false;
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(r=>{SW_LISTA=true;pintarNet();
+        r.addEventListener('updatefound',()=>{const w=r.installing;
+          w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)toast('Hay una versión nueva — se aplicará al reabrir')})});
+      })
+      .catch(()=>{});
+  });
+}
+restaurarLocal();
+paintThemeBtn();renderAll();go('home');pintarNet();
 </script>
 </body>
 </html>
