@@ -1537,7 +1537,7 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req'];
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
@@ -1667,7 +1667,7 @@ function renderClients(){
      </div>`}).join('')}</div>`;
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['req','Solicitudes']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes']];
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
@@ -1696,6 +1696,7 @@ function renderCliBar(){
   $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;$('#cbSub').textContent=`${c.ind} · ${c.fac}`;
   const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
   const n={assets:eq.length,
+    parts:0, /* el catálogo no necesita contador */
     cal:eq.filter(a=>a.prox).length,
     wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='certificada'}).length,
     req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
@@ -1717,12 +1718,58 @@ function openAsset(id){
     ${d!==null&&d>=0?`<span class="tag ${d<=90?'due':'ok'}">Calibración en ${d} d</span>`:''}`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
-   : `<button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn sec" onclick="openCalib('${a.id}')">Registrar calibración</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;
+   : `<button class="btn quiet" style="color:var(--late)" onclick="deleteAsset('${a.id}')" title="Eliminar esta válvula"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>
+      <span style="flex:1"></span>
+      <button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn sec" onclick="openCalib('${a.id}')">Registrar calibración</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
 }
 function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true');S.cur=null;renderGrid()}
+/* Baja de un equipo mal registrado. Pide clave para evitar borrados accidentales.
+   Nota: la validación real debe hacerse en el servidor cuando exista backend. */
+const CLAVE_BAJA='adolphus2026';
+function deleteAsset(id){
+  if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede eliminar equipos');return}
+  const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
+  const ords=ORDENES.filter(o=>o.act===id).length,cals=CALIBS.filter(c=>c.act===id).length,docs=DOCS.filter(d=>d.a===id).length;
+  $('#mTitle').textContent='Eliminar válvula';
+  $('#mBody').innerHTML=`
+   <div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Vas a dar de baja <b>${esc(a.tag||a.ser||'este equipo')}</b> — ${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')}${a.ser?`, serie <b class="mono">${esc(a.ser)}</b>`:''} de ${esc(cli(a.cli).n||'')}.
+     ${(ords||cals||docs)?`Se eliminarán también <b>${ords} órdenes</b>, <b>${cals} certificados</b> y <b>${docs} documentos</b> asociados.`:''}
+     Esta acción no se puede deshacer.</div></div>
+   <div class="fld"><label>Motivo de la baja <span class="hlp" title="Queda como referencia de por qué se retiró el equipo del sistema.">?</span></label>
+     <select class="inp" id="daMotivo"><option>Registrado por error</option><option>Duplicado</option><option>Equipo retirado de planta</option><option>Dado de baja por falla</option><option>Otro</option></select></div>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" title="Clave interna de Adolphus para confirmar bajas. Evita eliminaciones accidentales.">?</span></label>
+     <input class="inp pend" id="daPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
+     <span class="pend-msg" id="daErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmDeleteAsset('${id}')">Eliminar válvula</button>`;
+  $('#modal').classList.add('on');
+  const p=$('#daPass');p.oninput=()=>{$('#daErr').style.display='none';p.classList.toggle('pend',!p.value)};
+  p.onkeydown=e=>{if(e.key==='Enter')confirmDeleteAsset(id)};
+  setTimeout(()=>p.focus(),80);
+}
+function confirmDeleteAsset(id){
+  const p=$('#daPass');
+  if(!p||p.value!==CLAVE_BAJA){
+    if(p){p.classList.add('pend');p.value='';p.focus()}
+    const err=$('#daErr');if(err)err.style.display='flex';
+    toast('Contraseña incorrecta — la válvula no se eliminó');return;
+  }
+  const i=ACTIVOS.findIndex(x=>x.id===id);if(i<0)return;
+  const a=ACTIVOS[i],motivo=$('#daMotivo').value;
+  for(let k=ORDENES.length-1;k>=0;k--)if(ORDENES[k].act===id)ORDENES.splice(k,1);
+  for(let k=CALIBS.length-1;k>=0;k--)if(CALIBS[k].act===id)CALIBS.splice(k,1);
+  for(let k=SERVS.length-1;k>=0;k--)if(SERVS[k].act===id)SERVS.splice(k,1);
+  for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].a===id)DOCS.splice(k,1);
+  S.cart=S.cart.filter(c=>c.a!==id);
+  S.picked.delete(id);
+  ACTIVOS.splice(i,1);
+  closeModal();closeDrawer();renderAll();
+  toast(`${a.tag||a.ser||'Equipo'} eliminado · ${motivo.toLowerCase()}`);
+}
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
 function showTab(t){
   S.tab=t;
@@ -2090,13 +2137,16 @@ function renderCat(){
 let PS={q:'',cls:'',mod:null,asset:null,sel:{}};
 function renderParts(){
   if(PS.mod){partsDetail();return;}
+  const foco=S.inCli||S.cli||null;
   $('#partsView').innerHTML=`
    <div class="ps-hero">
-     <h2>Catálogo de repuestos</h2>
-     <p>Identifica tu válvula por número de serie, tag o modelo y obtén el despiece con la posición exacta, el precio y la disponibilidad de cada pieza.</p>
+     <h2>${foco?'Repuestos de '+esc(cli(foco).n):'Catálogo de repuestos'}</h2>
+     <p>${foco
+       ? 'Estas son las válvulas instaladas en planta. Entra a una para ver su despiece con la pieza exacta, el precio y la disponibilidad, y armar tu pedido.'
+       : 'Identifica tu válvula por número de serie, tag o modelo y obtén el despiece con la posición exacta, el precio y la disponibilidad de cada pieza.'}</p>
      <div class="ps-search">
        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-       <input id="psIn" placeholder="N.º de serie, tag o modelo — p. ej. N-11-267173, TV-561B, 21000" value="${esc(PS.q)}" autocomplete="off">
+       <input id="psIn" placeholder="${foco?'Busca por tag o n.º de serie — p. ej. PSV-1210':'N.º de serie, tag o modelo — p. ej. N-11-267173, TV-561B, 21000'}" value="${esc(PS.q)}" autocomplete="off">
      </div>
      <div class="ps-quick"><span class="lab">Familia</span>
        ${[['','Todas']].concat(Object.entries(CL)).map(([k,l])=>`<span class="ps-chip ${PS.cls===k?'on':''}" onclick="PS.cls='${k}';renderParts()">${l}</span>`).join('')}
@@ -2110,12 +2160,35 @@ function renderParts(){
 }
 function psFilter(){
   const q=PS.q.trim().toLowerCase();
-  const acts=visibles().filter(a=>a.ser&&a.tag&&(!PS.cls||a.cl===PS.cls));
-  const mAsset=q?acts.filter(a=>[a.ser,a.tag,a.mod,(MODELOS[a.mod]||{}).m,(MODELOS[a.mod]||{}).t].join(' ').toLowerCase().includes(q)).slice(0,10):[];
-  let mods=Object.entries(MODELOS).filter(([k,m])=>!PS.cls||m.c===PS.cls);
-  if(S.cli)mods=mods.filter(([k])=>ACTIVOS.some(a=>a.cli===S.cli&&a.mod===k));
-  const mMod=q?mods.filter(([k,m])=>[k,m.t,m.d,m.m,CL[m.c]].join(' ').toLowerCase().includes(q)):mods;
+  const foco=S.inCli||S.cli||null;
   const go=`<svg class="go" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>`;
+  // Dentro de un cliente: solo sus válvulas instaladas, una tarjeta por equipo.
+  if(foco){
+    let eq=ACTIVOS.filter(a=>a.cli===foco&&(!PS.cls||a.cl===PS.cls));
+    if(q)eq=eq.filter(a=>[a.tag,a.ser,a.mod,(MODELOS[a.mod]||{}).m,(MODELOS[a.mod]||{}).t].join(' ').toLowerCase().includes(q));
+    $('#psResults').innerHTML=eq.length?`
+      <div class="ps-sech"><h3>Válvulas instaladas</h3><span class="count">${eq.length}</span></div>
+      <div class="ps-grid">${eq.map(a=>{const m=MODELOS[a.mod]||{},lista=BOM[m.b||'globo']||[];
+        const kit=lista.filter(p=>p.k),kitTot=kit.reduce((s,p)=>s+precio(p.n),0);
+        const st=lista.filter(p=>p.s>0).length;
+        return `<div class="ps-card" onclick="openParts('${a.mod}','${a.id}')">
+        <div class="ph">${photoFor(a.mod)}</div>
+        <div class="bd">
+          <span class="mk">${esc(m.m||'')} ${esc(a.mod)}</span>
+          <span class="cd">${esc(a.tag||'— sin tag —')}</span>
+          <span class="ty">${esc(m.t||'')}${a.ser?` · serie ${esc(a.ser)}`:''}</span>
+          <span class="ty" style="color:var(--ink-3);font-size:11.5px">${esc(area(a))}</span>
+          <div class="ft"><span><b>${lista.length}</b> repuestos</span><span><b>${st}</b> en stock</span></div>
+          <div class="ft" style="padding-top:4px"><span>Kit overhaul desde <b>${usd(kitTot)}</b></span></div>
+        </div></div>`}).join('')}</div>`
+      :`<div class="ps-empty">${q?`Sin coincidencias para "<b>${esc(PS.q)}</b>" entre las válvulas de este cliente.`:'Este cliente todavía no tiene válvulas registradas.'}</div>`;
+    return;
+  }
+  // Fuera de un cliente (catálogo general de modelos)
+  const acts=ACTIVOS.filter(a=>a.ser&&a.tag&&(!PS.cls||a.cl===PS.cls));
+  const mAsset=q?acts.filter(a=>[a.ser,a.tag,a.mod,(MODELOS[a.mod]||{}).m,(MODELOS[a.mod]||{}).t].join(' ').toLowerCase().includes(q)).slice(0,10):[];
+  const mods=Object.entries(MODELOS).filter(([k,m])=>!PS.cls||m.c===PS.cls);
+  const mMod=q?mods.filter(([k,m])=>[k,m.t,m.d,m.m,CL[m.c]].join(' ').toLowerCase().includes(q)):mods;
   const assetBlock=mAsset.length?`
     <div class="ps-sech"><h3>Equipos que coinciden</h3><span class="count">${mAsset.length}</span></div>
     <div class="ps-grid" style="grid-template-columns:1fr">${mAsset.map(a=>`
@@ -2671,19 +2744,24 @@ let naSel='';
 function openNewAsset(preCli){
   if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede dar de alta equipos');return}
   naSel='';
-  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${preCli===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
+  // Si ya estás dentro de un cliente, la válvula se crea ahí: no se pregunta.
+  const fijo=S.inCli||S.cli||preCli||null;
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${(fijo||preCli)===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
   const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
   const gallery=Object.entries(MODELOS).map(([k,m])=>`
     <div class="nm-card" data-m="${k}" onclick="selNaMod('${k}')">
       <div class="nm-ph">${photoFor(k)}</div>
       <div class="nm-bd"><span class="nm-mk">${esc(m.m)}</span><span class="nm-cd">${esc(k)}</span><span class="nm-ty">${esc(m.t)}</span></div>
     </div>`).join('');
-  $('#mTitle').textContent='Nueva válvula';
+  $('#mTitle').textContent=fijo?`Nueva válvula · ${cli(fijo).n}`:'Nueva válvula';
   $('#mBody').innerHTML=`
-   <div class="two">
-     <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
-     <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
-   </div>
+   ${fijo
+     ? `<input type="hidden" id="naCli" value="${fijo}">
+        <div class="fld"><label>Área / unidad <span class="hlp" title="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
+     : `<div class="two">
+          <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
+          <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
+        </div>`}
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;display:block">1 · Elige el modelo <span style="color:var(--ink-3);font-weight:400">— se autocompletan marca, tipo, clase y despiece</span>
      <button class="btn quiet xs" id="naClear" style="display:none;float:right" onclick="clearNaMod()">✕ Quitar selección</button></label>
    <div class="nm-grid">${gallery}</div>
