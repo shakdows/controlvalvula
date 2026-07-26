@@ -573,6 +573,26 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-model{margin-top:20px}
 .fx-model h3{margin-bottom:6px;font-size:13.5px}
 .fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
+/* --- barra de contexto del cliente --- */
+.cbar{display:flex;align-items:center;gap:14px;padding:0 var(--sp-5);height:56px;flex:0 0 auto;
+  background:var(--surface);border-bottom:1px solid var(--line);z-index:var(--z-sticky);overflow-x:auto}
+.cbar-back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2);
+  background:none;border:none;cursor:pointer;padding:6px 8px 6px 4px;border-radius:var(--r-1);flex:0 0 auto}
+.cbar-back:hover{color:var(--sel);background:var(--sel-bg)}
+.cbar-back svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
+.cbar-mark{width:34px;height:34px;flex:0 0 auto;border-radius:9px;display:grid;place-items:center;
+  font-weight:700;font-size:13px;background:var(--sel-bg);color:var(--sel)}
+.cbar-id{flex:0 0 auto;min-width:0;margin-right:6px}
+.cbar-id b{display:block;font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap}
+.cbar-id span{font-size:11.5px;color:var(--ink-3)}
+.cbar-tabs{display:flex;gap:2px;margin-left:auto;flex:0 0 auto}
+.cbar-tabs a{padding:8px 13px;border-radius:var(--r-1);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background var(--fast),color var(--fast)}
+.cbar-tabs a:hover{background:var(--surface-2);color:var(--ink)}
+.cbar-tabs a.on{background:var(--sel-bg);color:var(--sel);font-weight:600}
+.cbar-tabs a .n{font-size:11px;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 6px;font-weight:600}
+.cbar-tabs a.on .n{background:var(--sel);color:var(--surface)}
+@media(max-width:760px){.cbar{gap:10px;padding:0 var(--sp-3)}.cbar-id{display:none}}
 /* --- alta de repuesto con foto --- */
 .np-wrap{display:grid;grid-template-columns:190px 1fr;gap:var(--sp-4);align-items:start}
 @media(max-width:640px){.np-wrap{grid-template-columns:1fr}}
@@ -947,6 +967,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <button class="icon-btn" onclick="logout()" title="Salir · cambiar de perfil"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg></button>
       <div class="avatar" id="ava">IA</div>
     </header>
+
+    <div class="cbar" id="cliBar" style="display:none">
+      <button class="cbar-back" onclick="exitClient()"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Clientes</button>
+      <span class="cbar-mark" id="cbMark"></span>
+      <div class="cbar-id"><b id="cbName"></b><span id="cbSub"></span></div>
+      <nav class="cbar-tabs" id="cbTabs"></nav>
+    </div>
 
     <div class="view">
 
@@ -1425,7 +1452,7 @@ const USUARIOS=[
    2 · ESTADO Y UTILIDADES
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
-const S={page:'assets',rol:'admin',cli:null,view:'todos',fCli:'',fMarca:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
+const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
          focus:0,picked:new Set(),cur:null,tab:'ficha',wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -1454,10 +1481,16 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
    ============================================================ */
 const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
 function go(p){
+  // las páginas de un cliente solo se abren desde su espacio de trabajo
+  if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
-  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));
-  $('#crumbs').innerHTML=`<span>${S.cli?esc(cli(S.cli).n):'Adolphus'}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
+  const base=S.cli?esc(cli(S.cli).n):'Adolphus';
+  $('#crumbs').innerHTML=S.inCli&&CLI_TABS.some(([x])=>x===p)
+    ? `<span>${base}</span><span class="sep">/</span><span>${esc(cli(S.inCli).n)}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`
+    : `<span>${base}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  renderCliBar();
   $('.view').scrollTop=0;
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
 }
@@ -1487,8 +1520,11 @@ function applyRole(v){
   $('#ava').textContent={admin:'IA',tec:'ST',com:'CR','cli-minera':'ML','cli-refi':'RC','cli-agro':'AV'}[v];
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
-  $$('#nav a').forEach(a=>a.style.display=(c&&['clients','cat','imp','users'].includes(a.dataset.p))?'none':'');
-  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
+  // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req'];
+  $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
+  S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.calCli='';S.woCli='';
+  PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
 }
 $('#roleSel').onchange=e=>applyRole(e.target.value);
@@ -1532,7 +1568,7 @@ function filtrados(){
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
 }
 function renderStats(){
-  const vs=visibles();
+  const vs=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
   const n=k=>vs.filter(a=>estado(a).k===k).length;
   const defs=[
    {v:'todos',lbl:'Activos totales',val:vs.length,c:''},
@@ -1543,8 +1579,9 @@ function renderStats(){
   $('#stats').innerHTML=defs.map((d,i)=>`<button class="stat ${S.view===d.v&&i>0?'active':''}" onclick="setView('${d.v}')">
     <span class="v">${d.c?`<span class="dot" style="color:var(--${d.c})"></span>`:''}${d.val}</span>
     <span class="k">${d.lbl}</span></button>`).join('');
-  $('#assetsSub').textContent=S.cli
-    ? `${cli(S.cli).ind} · ${cli(S.cli).fac}`
+  const foco=S.cli||S.inCli;
+  $('#assetsSub').textContent=foco
+    ? `${cli(foco).ind} · ${cli(foco).fac} · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas`
     : `${CLIENTES.length} clientes · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas representadas en campo`;
 }
 function setView(v){S.view=v;S.focus=0;renderAssets()}
@@ -1557,14 +1594,15 @@ function renderFilters(){
     $('#fCli').onchange=e=>{S.fCli=e.target.value;renderAssets()};
     $('#fMarca').onchange=e=>{S.fMarca=e.target.value;renderAssets()};
   }
-  $('#fCli').style.display=S.cli?'none':'';
+  $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
   $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
 }
 const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cl','Clase'],['cli','Ubicación'],['cr','Criticidad'],['est','Estado'],['ult','Últ. servicio']];
 function renderGrid(){
   const rows=filtrados();
-  $('#gCount').textContent=`${rows.length} de ${visibles().length}`;
-  $('#ctAssets').textContent=visibles().length;
+  const univ=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
+  $('#gCount').textContent=`${rows.length} de ${univ.length}`;
+  $('#ctAssets').textContent=univ.length;
   if(!rows.length){$('#gridScroll').innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><b>Nada que mostrar</b>Cambia de vista o limpia los filtros.</div>`;return}
   const th=COLS.map(([k,l])=>`<th class="sortable ${S.sort.k===k?'sorted':''}" onclick="sortBy('${k}')">${l}<span class="ar">${S.sort.k===k?(S.sort.dir>0?'▲':'▼'):'▲'}</span></th>`).join('');
   $('#gridScroll').innerHTML=`<table class="grid"><thead><tr>
@@ -1612,7 +1650,42 @@ function renderClients(){
        <div class="cl-foot">Ver válvulas <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
      </div>`}).join('')}</div>`;
 }
-function openClientAssets(id){S.fCli=id;S.view='todos';renderAssets();go('assets');$('.view').scrollTop=0;}
+/* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['req','Solicitudes']];
+function openClientAssets(id){enterClient(id,'assets')}
+function enterClient(id,page){
+  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
+  renderAll();go(page||'assets');$('.view').scrollTop=0;
+}
+function exitClient(){
+  S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.picked.clear();
+  closeDrawer();renderAll();go('clients');
+}
+/* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
+function gotoAsset(id,tab){
+  const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
+  if(!S.cli&&S.inCli!==a.cli)enterClient(a.cli,'assets');else go('assets');
+  openAsset(id);if(tab)showTab(tab);
+}
+function gotoClientPage(page,cliId){
+  if(!S.cli&&cliId&&S.inCli!==cliId)enterClient(cliId,page);else go(page);
+}
+function renderCliBar(){
+  const bar=$('#cliBar');
+  const inside=!!S.inCli&&CLI_TABS.some(([p])=>p===S.page);
+  bar.style.display=inside?'':'none';
+  if(!inside)return;
+  const c=cli(S.inCli);
+  const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;$('#cbSub').textContent=`${c.ind} · ${c.fac}`;
+  const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
+  const n={assets:eq.length,
+    cal:eq.filter(a=>a.prox).length,
+    wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='certificada'}).length,
+    req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
+  $('#cbTabs').innerHTML=CLI_TABS.map(([p,l])=>
+    `<a class="${S.page===p?'on':''}" onclick="go('${p}')">${l}${n[p]?`<span class="n">${n[p]}</span>`:''}</a>`).join('');
+}
 
 /* ============================================================
    5 · DRAWER DE DETALLE
@@ -1788,7 +1861,7 @@ function addKit(){
   const m=MODELOS[S.cur.mod],lista=(BOM[m.b]||[]).filter(p=>p.k);
   lista.forEach(p=>{if(!S.cart.find(c=>c.n===p.n&&c.a===S.cur.id))S.cart.push({n:p.n,q:1,a:S.cur.id,s:p.s})});
   toast(`Kit de overhaul agregado · ${lista.length} posiciones`);
-  go('req');renderReq();
+  gotoClientPage('req',S.cur&&S.cur.cli);renderReq();
 }
 function renderReq(){
   const mias=S.cli?SOLICITUDES.filter(s=>s.cli===S.cli):SOLICITUDES;
@@ -1844,7 +1917,7 @@ function renderCal(){
     sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
     sel.dataset.built='1';sel.onchange=e=>{S.calCli=e.target.value;renderCal()};
   }
-  if(sel){sel.style.display=S.cli?'none':'';sel.value=S.calCli||''}
+  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.calCli||''}
   const vs=visibles().filter(a=>a.prox&&(!S.calCli||a.cli===S.calCli));
   const venc=vs.filter(a=>dias(a.prox)<0),p90=vs.filter(a=>dias(a.prox)>=0&&dias(a.prox)<=90),ok=vs.filter(a=>dias(a.prox)>90);
   $('#ctCal').textContent=venc.length+p90.length||'';
@@ -1880,7 +1953,7 @@ function renderWO(){
     sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
     sel.dataset.built='1';sel.onchange=e=>{S.woCli=e.target.value;renderWO()};
   }
-  if(sel){sel.style.display=S.cli?'none':'';sel.value=S.woCli||''}
+  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.woCli||''}
   const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
     return (!S.cli||a?.cli===S.cli)&&(!S.woCli||a?.cli===S.woCli)});
   $('#ctWo').textContent=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return (!S.cli||a?.cli===S.cli)&&o.et!=='certificada'}).length||'';
@@ -2302,7 +2375,7 @@ function consolidar(c,arDef){
     <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
     <b>${pend.length} equipos consolidados en ${cl_.n}</b>Ya heredan el despiece de su modelo y aparecen en la grilla.
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
-      <button class="btn" onclick="go('assets')">Ver en activos</button>
+      <button class="btn" onclick="go(S.cli?'assets':'clients')">Ver en activos</button>
       <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Importar otro archivo</button></div></div></div>`;
   renderAll();toast(`${pend.length} equipos consolidados`);
 }
@@ -2343,7 +2416,7 @@ function buildCmd(q){
    {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
   ];
   const act=visibles().filter(a=>!q||[a.tag,a.ser,a.mod,MODELOS[a.mod]?.m,cli(a.cli).n].join(' ').toLowerCase().includes(q))
-    .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>{go('assets');openAsset(a.id)}}));
+    .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>gotoAsset(a.id)}));
   const partes=[];
   if(q.length>1){
     const vistos=new Set();
@@ -2489,7 +2562,7 @@ function renderHome(){
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
   const att=vs.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k))
     .sort((a,b)=>sev(a)-sev(b)||(dias(a.prox||'')??999)-(dias(b.prox||'')??999)).slice(0,7);
-  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="go('assets');openAsset('${a.id}')">
+  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="gotoAsset('${a.id}')">
     <span class="att-tag"><b>${esc(a.tag||'— sin tag —')}</b><span>${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod)}</span></span>
     <span class="att-x">${esc(cli(a.cli).n)} · ${esc(area(a))}</span>
     <span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></div>`}).join('')}</div>`
@@ -2498,16 +2571,16 @@ function renderHome(){
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
   const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
-    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="go('assets');openAsset('${x.o.act}');showTab('hist')">
+    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="gotoAsset('${x.o.act}','hist')">
       <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
-    return `<div class="feed-i" onclick="go('req')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
+    return `<div class="feed-i" onclick="gotoClientPage('req','${x.s.cli}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   $('#homeView').innerHTML=`
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1><p>${fechaLarga(HOY)}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
    ${kpiHtml}
    <div class="dash">
-     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="setView('atencion');go('assets')">Ver todo</button>`)}</div>
+     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver todo</button>`)}</div>
      <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'activos'))}</div>
      <div class="span-8">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
      <div class="span-4">${panel('Actividad reciente',feedHtml)}</div>
@@ -2539,7 +2612,7 @@ function renderRep(){
     {v:porRep.reduce((s,x)=>s+x.value,0),k:'Repuestos movidos',d:'órdenes + solicitudes'}];
   const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
   const proxTable=`<table class="grid"><thead><tr><th>Tag</th><th>Modelo</th><th>Cliente</th><th>Vence</th><th>Restante</th></tr></thead>
-    <tbody>${prox.map(a=>{const d=dias(a.prox),c=d<0?'late':d<=90?'due':'ok';return `<tr onclick="go('assets');openAsset('${a.id}')"><td><b>${esc(a.tag)}</b></td><td class="mono">${esc(a.mod)}</td><td>${esc(cli(a.cli).n)}</td><td class="mono">${a.prox}</td><td><span class="tag ${c}"><span class="dot"></span>${d<0?`−${-d} d`:`${d} d`}</span></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:20px">Sin programa de calibración</td></tr>`}</tbody></table>`;
+    <tbody>${prox.map(a=>{const d=dias(a.prox),c=d<0?'late':d<=90?'due':'ok';return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag)}</b></td><td class="mono">${esc(a.mod)}</td><td>${esc(cli(a.cli).n)}</td><td class="mono">${a.prox}</td><td><span class="tag ${c}"><span class="dot"></span>${d<0?`−${-d} d`:`${d} d`}</span></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:20px">Sin programa de calibración</td></tr>`}</tbody></table>`;
   $('#repView').innerHTML=`
    <div class="hd"><div><h1>Confiabilidad y reportes</h1><p>Indicadores del parque ${S.cli?`de ${esc(cli(S.cli).n)}`:'de todos los clientes'} · ${fechaLarga(HOY)}.</p></div>
      <button class="btn sec" onclick="toast('Reporte exportado (simulado)')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar reporte</button></div>
@@ -2572,7 +2645,7 @@ function renderNotif(){
 }
 function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
 function closeNotif(){$('#notifPop').classList.remove('on')}
-function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go('req');else if(n.id){go('assets');openAsset(n.id)}}
+function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go(S.cli?'req':'clients');else if(n.id){gotoAsset(n.id)}}
 document.addEventListener('click',closeNotif);
 
 /* ============================================================
@@ -2661,7 +2734,7 @@ function saveNewAsset(){
   ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
     sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
-  closeModal();renderAll();go('assets');openAsset(id);toast(`Válvula ${tag||ser} creada`);
+  closeModal();renderAll();gotoAsset(id);toast(`Válvula ${tag||ser} creada`);
 }
 
 /* ============================================================
@@ -2840,7 +2913,7 @@ function saveNewClient(){
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
   CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
   $('#fCli').dataset.built='';
-  closeModal();renderAll();go('assets');toast(`Cliente ${n} creado`);
+  closeModal();renderAll();go('clients');toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
@@ -2982,7 +3055,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
