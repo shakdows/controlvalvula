@@ -2474,7 +2474,7 @@ function leerArchivo(file){
   const esPdf=file.type==='application/pdf'||/\.pdf$/.test(nom);
   if(esImg||esPdf){                       // hoja de campo llena
     const pintar=dataUri=>{
-      openUploadSheet();
+      openUploadSheet(null,file.name);
       setTimeout(()=>{
         hcFoto=dataUri||'pdf';
         const prev=$('#hcPrev'),drop=$('#hcDrop');
@@ -3360,6 +3360,9 @@ function printFieldSheet(assetId){
   const box=(w)=>`<span class="fs-box" style="min-width:${w}"></span>`;
   const dato=(k,v)=>`<div class="fs-d"><span>${k}</span><b>${v||'—'}</b></div>`;
   $('#quoteKind').textContent='Hoja de campo';
+  // el nombre del documento lleva el código: al guardar como PDF, el archivo
+  // queda como "Hoja de campo C-88-4471 PSV-1210.pdf" y al subirlo se detecta solo
+  document.title=a?`Hoja de campo ${cod} ${a.tag||''}`.trim():'Hoja de campo · Adolphus';
   $('#quotePaper').innerHTML=`
    <div class="qp-head">
      <div class="qp-brand"><span class="logo-mark">${LOGO}</span><div><b>ADOLPHUS</b><span>CONTROL DE FLUIDOS · LIMA</span></div></div>
@@ -3462,14 +3465,29 @@ function armAutoSound(){
 armAutoSound();
 /* Cargar la hoja llena: adjunta la foto y transcribe los valores medidos. */
 let hcFoto='';
-function openUploadSheet(assetId){
+/* Busca el equipo dentro de un texto (nombre de archivo, código escrito…) */
+function matchAsset(txt,lista){
+  const t=(txt||'').toLowerCase().replace(/[_\.]/g,' ');
+  if(!t)return null;
+  let hit=lista.find(a=>a.ser&&t.includes(a.ser.toLowerCase()));
+  if(!hit)hit=lista.find(a=>a.tag&&t.includes(a.tag.toLowerCase()));
+  return hit||null;
+}
+function openUploadSheet(assetId,fileName){
   if(S.rol==='cliente'){toast('La carga de hojas de campo la realiza el servicio técnico');return}
   hcFoto='';
   const psv=ACTIVOS.filter(a=>(!S.inCli||a.cli===S.inCli)&&(!S.cli||a.cli===S.cli));
+  if(!psv.length){toast('Este cliente todavía no tiene válvulas registradas');return}
+  const auto=fileName?matchAsset(fileName,psv):null;
+  if(auto)assetId=auto.id;
   $('#mTitle').textContent='Cargar hoja de campo';
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
-     <div>Toma una foto de la hoja que llenaste en planta o escanéala. Escribe el <b>código del equipo</b> que aparece en la hoja para que el sistema la asocie sola, y transcribe los valores medidos. La foto queda adjunta en el expediente como respaldo.</div></div>
+     <div><b>El equipo se detecta solo</b> por el nombre del archivo o por el código de la hoja. <b>Los dos valores medidos sí hay que escribirlos</b>: leer la letra a mano requiere OCR en el servidor y aún no está conectado, y en un certificado un número mal leído es grave. La foto queda adjunta como respaldo.</div></div>
+   <div class="callout warn" style="margin-top:-6px">
+     <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18.5h2"/></svg>
+     <div>¿Prefieres no usar papel? El sistema <b>funciona sin señal en el celular</b>: puedes llenar la calibración directo en planta y se sube sola al salir.
+       <a href="#" onclick="closeModal();setTimeout(()=>openCalib(document.getElementById('hcAct')?'':''),0);return false" style="display:none"></a></div></div>
    <div class="np-wrap">
      <div>
        <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">Foto o escaneo de la hoja</label>
@@ -3495,6 +3513,10 @@ function openUploadSheet(assetId){
    </div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveUploadSheet()">Registrar calibración</button>`;
   $('#hcFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
+    const m=matchAsset(f.name,psv);
+    if(m){$('#hcAct').value=m.id;$('#hcCod').value=m.ser||m.tag||'';
+      const ok=$('#hcOk');ok.style.display='flex';ok.className='pend-msg sq-ok';ok.style.color='var(--ok)';
+      ok.textContent=`✓ Detectada del archivo: ${m.tag||''} · ${MODELOS[m.mod]?.m||''} ${m.mod}`;}
     if(f.type==='application/pdf'){hcFoto='pdf';$('#hcPrev').innerHTML=`<b>${esc(f.name)}</b><span>PDF adjunto</span>`;$('#hcDrop').classList.add('has');return}
     const r=new FileReader();r.onload=ev=>{hcFoto=ev.target.result;$('#hcPrev').innerHTML=`<img src="${hcFoto}" alt="Hoja de campo">`;$('#hcDrop').classList.add('has')};
     r.readAsDataURL(f)};
@@ -3509,6 +3531,12 @@ function openUploadSheet(assetId){
     else{ok.style.display='flex';ok.className='pend-msg';ok.style.color='';ok.textContent='▲ No coincide con ninguna válvula de este cliente';}
   };
   $$('.req-hc').forEach(el=>{const s=()=>{const v=!!el.value.trim();el.classList.toggle('pend',!v);el.closest('.fld').classList.toggle('is-pend',!v)};el.oninput=s;s()});
+  if(auto){
+    $('#hcCod').value=auto.ser||auto.tag||'';
+    const ok=$('#hcOk');ok.style.display='flex';ok.className='pend-msg sq-ok';ok.style.color='var(--ok)';
+    ok.textContent=`✓ Detectada del archivo: ${auto.tag||''} · ${MODELOS[auto.mod]?.m||''} ${auto.mod}`;
+    setTimeout(()=>toast(`Equipo detectado: ${auto.tag||auto.ser}`),300);
+  }
   $('#modal').classList.add('on');
 }
 function saveUploadSheet(){
