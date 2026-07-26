@@ -552,6 +552,27 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .ficha-cap .kv b{font-weight:600}
 .ficha-badges{display:flex;flex-wrap:wrap;gap:6px}
 @media(max-width:560px){.ficha-hero{flex-direction:column}.ficha-hero .photo-frame{width:100%;height:200px}}
+/* --- ficha simplificada --- */
+.fx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:10px;width:100%}
+.fx-tile{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2);padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.fx-tile .fx-k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600}
+.fx-tile .fx-v{font-size:16px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.fx-tile .fx-v .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.fx-tile .fx-sub{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;margin:18px 0 4px}
+@media(max-width:520px){.fx-keyspecs{grid-template-columns:1fr}}
+.fx-keyspecs .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line-2);padding-bottom:7px}
+.fx-keyspecs .kv span{color:var(--ink-3)}
+.fx-keyspecs .kv b{font-weight:600;text-align:right}
+.fx-more{margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px}
+.fx-more summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--sel);list-style:none;display:inline-flex;align-items:center;gap:6px;user-select:none}
+.fx-more summary::-webkit-details-marker{display:none}
+.fx-more summary::before{content:'▸';display:inline-block;transition:transform var(--fast)}
+.fx-more[open] summary::before{transform:rotate(90deg)}
+.fx-more .dl{margin-top:12px}
+.fx-model{margin-top:20px}
+.fx-model h3{margin-bottom:6px;font-size:13.5px}
+.fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
 .cat-thumb{width:58px;height:44px;border-radius:var(--r-1);border:1px solid var(--line-2);overflow:hidden;display:grid;place-items:center;padding:3px;
   background:radial-gradient(circle at 50% 34%, oklch(1 0 0), oklch(0.945 0.004 250))}
 [data-theme="dark"] .cat-thumb{background:radial-gradient(circle at 50% 34%, oklch(0.31 0.012 250), oklch(0.24 0.011 252))}
@@ -1519,28 +1540,40 @@ function paneFicha(){
   const a=S.cur,m=MODELOS[a.mod]||{};
   const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
   const abiertas=ORDENES.filter(o=>o.act===a.id&&o.et!=='certificada');
+  const st=estado(a);
+  const d=a.prox?dias(a.prox):null;
+  const calV=a.prox?(d<0?`Vencida`:`En ${d} d`):'No aplica';
+  const calC=a.prox?(d<0?'late':d<=90?'due':'ok'):'';
+  const calSub=a.prox?a.prox:'Sin programa';
+  const crC=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  const tile=(k,v,c,sub)=>`<div class="fx-tile"><span class="fx-k">${k}</span><span class="fx-v" style="${c?`color:var(--${c})`:''}">${c?'<span class="dot"></span>':''}${esc(v)}</span>${sub?`<span class="fx-sub">${esc(sub)}</span>`:''}</div>`;
+  // datos clave (solo los que están llenos)
+  const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
   $('#pn-ficha').innerHTML=`
    <div class="ficha-hero">
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
-       <div class="ficha-badges"><span class="tag">${esc(m.m||'—')}</span><span class="tag mono">${esc(a.mod)}</span><span class="tag">${esc(CL[a.cl])}</span></div>
-       <div class="kv"><span>Tipo</span><b>${esc(m.t||'—')}</b></div>
-       <div class="kv"><span>Tamaño</span><b>${esc(a.sz||'—')}</b></div>
-       <div class="kv"><span>Rating / clase</span><b>${esc(a.rt||'—')}</b></div>
-       ${a.rng?`<div class="kv"><span>Rango / set</span><b>${esc(a.rng)}</b></div>`:''}
+       <div class="fx-tiles">
+         ${tile('Estado',st.t,st.c)}
+         ${tile('Criticidad',a.cr||'—',crC)}
+         ${tile('Calibración',calV,calC,calSub)}
+       </div>
      </div>
    </div>
    ${(!a.ser||!a.tag)?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
      <div>Llegó incompleto desde el levantamiento: falta ${!a.tag?'<b>tag</b>':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'<b>número de serie</b>':''}. Sin serie no hay trazabilidad de repuestos ni de servicio.</div></div>`:''}
    ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
-   <dl class="dl">
-     ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
-     ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
-     ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
-   </dl>
-   <div style="margin-top:24px"><h3 style="margin-bottom:8px">Sobre el modelo</h3>
-     <p style="font-size:13px;color:var(--ink-2);max-width:68ch">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>`;
+   ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+   <details class="fx-more"><summary>Ver ficha técnica completa</summary>
+     <dl class="dl">
+       ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
+       ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
+       ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
+     </dl>
+   </details>
+   <div class="fx-model"><h3>Sobre el modelo</h3>
+     <p>${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>`;
 }
 
 /* --- esquemas de despiece --- */
@@ -2246,9 +2279,6 @@ function renderHome(){
      <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'activos'))}</div>
      <div class="span-8">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
      <div class="span-4">${panel('Actividad reciente',feedHtml)}</div>
-     <div class="span-4">${panel('Parque por criticidad',hbars(crit))}</div>
-     <div class="span-4">${panel('Parque por clase',hbars(clase))}</div>
-     <div class="span-4">${panel('Órdenes por etapa',hbars(etapa))}</div>
    </div>`;
 }
 
