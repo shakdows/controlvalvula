@@ -573,6 +573,22 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-model{margin-top:20px}
 .fx-model h3{margin-bottom:6px;font-size:13.5px}
 .fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
+/* --- ayuda en formularios y campos pendientes --- */
+.hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
+  color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
+.hlp:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.fld label{display:flex;align-items:center}
+.fld .req-dot{color:var(--due);margin-left:4px;font-weight:700}
+.inp.pend{border-color:var(--due);border-style:dashed;background:var(--due-bg)}
+.inp.pend::placeholder{color:var(--due);opacity:.85;font-style:italic}
+.pend-msg{display:none;font-size:11px;color:var(--due);font-weight:600;margin-top:4px;align-items:center;gap:4px}
+.fld.is-pend .pend-msg{display:flex}
+/* --- gráfica de calibración --- */
+.cc-chart{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2);padding:12px 14px 6px;margin:14px 0}
+.cc-chart h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.cc-chart svg{width:100%;height:auto;display:block;overflow:visible}
+.cc-lg{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--ink-2);padding:8px 0 4px}
+.cc-lg i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 /* --- barra de contexto del cliente --- */
 .cbar{display:flex;align-items:center;gap:14px;padding:0 var(--sp-5);height:56px;flex:0 0 auto;
   background:var(--surface);border-bottom:1px solid var(--line);z-index:var(--z-sticky);overflow-x:auto}
@@ -2742,10 +2758,10 @@ function saveNewAsset(){
    ============================================================ */
 let CALIBS=[];
 const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.split('-');return `${D}/${M}/${Y}${t?' · '+t:''}`};
-function openCalib(assetId){
+function openCalib(assetId,edit){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
   if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
-  const nom=parseFloat((a.rng||'').replace(',','.'));
+  const nom=edit?edit.nom:parseFloat((a.rng||'').replace(',','.'));
   const uni=/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig';
   const hoyStr=HOY.toISOString().slice(0,10);
   const proxDef=new Date(HOY);proxDef.setFullYear(proxDef.getFullYear()+1);
@@ -2760,22 +2776,25 @@ function openCalib(assetId){
      <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="K. Ortiz"></div>
      <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="Banco neumático · patrón Fluke 700G"></div>
      <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
-     <div class="fld"><label>Presión a la que debía abrir (set)</label><input class="inp" id="cbNom" value="${isNaN(nom)?'':nom}"></div>
-     <div class="fld"><label>Unidad</label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
-     <div class="fld"><label>Tolerancia admisible (±%)</label><input class="inp" id="cbTol" value="3"></div>
+     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" title="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
+       <input class="inp ${isNaN(nom)?'pend req-cb':''}" id="cbNom" value="${isNaN(nom)?'':nom}" placeholder="presión de placa"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>Unidad <span class="hlp" title="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
+     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="3"></div>
      <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="22"></div>
    </div>
-   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found</h3>
+   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" title="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
    <div class="two">
-     <div class="fld"><label>Presión a la que abrió al llegar</label><input class="inp" id="cbAf" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>¿Cerraba bien? (hermeticidad)</label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" title="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
+       <input class="inp pend req-cb" id="cbAf" placeholder="escribe el valor medido"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" title="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
-   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left</h3>
+   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" title="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
    <div class="two">
-     <div class="fld"><label>Presión a la que abrió ya ajustada</label><input class="inp" id="cbAl" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>¿Cerraba bien al final?</label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
-     <div class="fld"><label>Contrapresión de cierre (blowdown)</label><input class="inp" id="cbBd" placeholder="7%"></div>
-     <div class="fld"><label>Válvula precintada</label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
+     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" title="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
+       <input class="inp pend req-cb" id="cbAl" placeholder="escribe el valor final"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" title="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" title="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
+     <div class="fld"><label>Válvula precintada <span class="hlp" title="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">4 · Cierre</h3>
    <div class="two">
@@ -2783,7 +2802,21 @@ function openCalib(assetId){
      <div class="fld"><label>Próxima calibración</label><input class="inp" id="cbProx" type="date" value="${proxDef.toISOString().slice(0,10)}"></div>
    </div>
    <div class="fld"><label>Observaciones para el informe</label><textarea class="inp" id="cbObs" rows="2" placeholder="Estado general, repuestos usados, recomendaciones…"></textarea></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}')">Generar informe y certificar</button>`;
+  $('#mTitle').textContent=edit?`Editar calibración · ${edit.cert}`:`Calibración · ${a.tag||a.ser||'activo'}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}'${edit?`,'${edit.id}'`:''})">${edit?'Guardar cambios':'Generar informe y certificar'}</button>`;
+  if(edit){ // modo edición: recupera los valores del certificado
+    const set=(id,v)=>{const el=$(id);if(el&&v!==undefined&&v!==null)el.value=v};
+    set('#cbIni',edit.ini);set('#cbFin',edit.fin);set('#cbTec',edit.tec);set('#cbBanco',edit.banco);
+    set('#cbFluido',edit.fluido);set('#cbTemp',edit.temp);set('#cbNom',edit.nom);set('#cbUni',edit.uni);
+    set('#cbTol',edit.tol);set('#cbAf',edit.af);set('#cbAfH',edit.afH);set('#cbAl',edit.al);set('#cbAlH',edit.alH);
+    set('#cbBd',edit.bd);set('#cbPre',edit.pre);set('#cbProx',edit.prox);set('#cbObs',edit.obs);
+  }
+  // marca visual de "falta completar" que desaparece al escribir
+  $$('.req-cb').forEach(el=>{
+    const sync=()=>{const lleno=!!el.value.trim();
+      el.classList.toggle('pend',!lleno);el.closest('.fld').classList.toggle('is-pend',!lleno)};
+    el.oninput=sync;sync();
+  });
   $('#modal').classList.add('on');
 }
 function fillCalibExample(){
@@ -2794,8 +2827,9 @@ function fillCalibExample(){
   $('#cbBd').value='7%';
   toast('Ejemplo cargado — cambia los valores por los reales');
 }
-function generateCalib(assetId){
+function generateCalib(assetId,editId){
   const a=ACTIVOS.find(x=>x.id===assetId);if(!a)return;
+  const prev=editId?CALIBS.find(c=>c.id===editId):null;
   const num=id=>{const v=parseFloat(($('#'+id).value||'').toString().replace(',','.'));return isNaN(v)?null:v};
   const nom=num('cbNom'),uni=$('#cbUni').value,tol=num('cbTol')??3,af=num('cbAf'),al=num('cbAl');
   if(nom===null||af===null||al===null){toast('Completa el set nominal y las presiones as-found y as-left');return}
@@ -2807,7 +2841,7 @@ function generateCalib(assetId){
   const ajuste=!inTolAf,conforme=inTolAl&&hermOk;
   const verdict=!conforme?'No conforme':ajuste?'Conforme con ajuste':'Conforme';
   const vtone=!conforme?'late':ajuste?'due':'ok';
-  const cert='CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
+  const cert=prev?prev.cert:'CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
   const sg=x=>x>=0?'+':'';
   const msgs=[
     `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — ingresó a banco de pruebas el ${fmtDT(ini)}, con ${fluido.toLowerCase()} como fluido de prueba y patrón ${banco}.`,
@@ -2818,17 +2852,62 @@ function generateCalib(assetId){
     `Resultado: ${verdict.toUpperCase()}. ${pre==='Sí'?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
     obs?`Observaciones del técnico: ${obs}`:''
   ].filter(Boolean);
-  const rec={id:'cb'+Date.now(),act:a.id,cert,ini,fin,tec,banco,fluido,temp,nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs};
-  CALIBS.unshift(rec);
+  const rec={id:prev?prev.id:'cb'+Date.now(),act:a.id,cert,ini,fin,tec,banco,fluido,temp,nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs,
+    prevUlt:prev?prev.prevUlt:a.ult,prevProx:prev?prev.prevProx:a.prox};
+  if(prev)CALIBS[CALIBS.indexOf(prev)]=rec;else CALIBS.unshift(rec);
   a.ult=(fin||ini).slice(0,10);a.prox=prox;
-  const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
-  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,
-    hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`,partes:[],calib:rec.id});
-  DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
+  const hall=`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`;
+  const oExist=ORDENES.find(o=>o.calib===rec.id);
+  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;}
+  else{const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
+    ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
+  const dExist=DOCS.find(d=>d.calib===rec.id);
+  if(dExist)dExist.f=(fin||ini).slice(0,10);
+  else DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
   renderAll();
   if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
   showCalibReport(rec);
-  toast(`${verdict} · certificado ${cert} emitido`);
+  toast(prev?`Certificado ${cert} actualizado · ${verdict}`:`${verdict} · certificado ${cert} emitido`);
+}
+/* Gráfica de la prueba: banda de tolerancia + recorrido nominal → as-found → as-left */
+function calibChart(rec){
+  const W=460,H=210,L=52,R=18,T=16,B=34;
+  const nom=rec.nom,tol=rec.tol||3;
+  const hi=nom*(1+tol/100),lo=nom*(1-tol/100);
+  const vals=[nom,hi,lo,rec.af,rec.al].filter(v=>typeof v==='number'&&!isNaN(v));
+  let mn=Math.min(...vals),mx=Math.max(...vals);
+  const pad=(mx-mn)*0.25||Math.max(nom*0.15,1);
+  mn-=pad;mx+=pad;
+  const y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn));
+  const xs=[L+30,L+(W-L-R-30)*0.5+15,W-R-20];
+  const pts=[{x:xs[0],v:nom,l:'Nominal',ok:true},
+             {x:xs[1],v:rec.af,l:'As-found',ok:Math.abs(rec.devAf)<=tol},
+             {x:xs[2],v:rec.al,l:'As-left',ok:Math.abs(rec.devAl)<=tol}];
+  const ticks=[mn,(mn+mx)/2,mx].map(v=>`
+    <line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="var(--line-2)" stroke-width="1"/>
+    <text x="${L-8}" y="${y(v)+3.5}" text-anchor="end" font-size="10" fill="var(--ink-3)">${v.toFixed(1)}</text>`).join('');
+  const line=pts.map((p,i)=>`${i?'L':'M'}${p.x} ${y(p.v)}`).join(' ');
+  return `<div class="cc-chart"><h4>Comportamiento en el banco de pruebas</h4>
+   <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfica de presiones de apertura">
+     <rect x="${L}" y="${y(hi)}" width="${W-L-R}" height="${Math.max(2,y(lo)-y(hi))}" fill="var(--ok)" opacity=".13"/>
+     <line x1="${L}" y1="${y(hi)}" x2="${W-R}" y2="${y(hi)}" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+     <line x1="${L}" y1="${y(lo)}" x2="${W-R}" y2="${y(lo)}" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+     ${ticks}
+     <line x1="${L}" y1="${y(nom)}" x2="${W-R}" y2="${y(nom)}" stroke="var(--sel)" stroke-width="1.5"/>
+     <text x="${L+6}" y="${y(nom)-6}" text-anchor="start" font-size="10" font-weight="600" fill="var(--sel)">set ${nom} ${esc(rec.uni)}</text>
+     <line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="var(--line)" stroke-width="1"/>
+     <path d="${line}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round"/>
+     ${pts.map(p=>`
+       <circle cx="${p.x}" cy="${y(p.v)}" r="6" fill="var(--surface)" stroke="var(--${p.ok?'ok':'late'})" stroke-width="3"/>
+       <text x="${p.x}" y="${y(p.v)-13}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--${p.ok?'ok':'late'})">${p.v}</text>
+       <text x="${p.x}" y="${H-B+17}" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">${p.l}</text>`).join('')}
+     <text x="${L-8}" y="${T-4}" text-anchor="end" font-size="9.5" fill="var(--ink-3)">${esc(rec.uni)}</text>
+   </svg>
+   <div class="cc-lg">
+     <span><i style="background:var(--sel)"></i>Presión de tarado (set)</span>
+     <span><i style="background:var(--ok);opacity:.5;height:8px"></i>Banda tolerada ±${tol}% (${lo.toFixed(1)}–${hi.toFixed(1)})</span>
+     <span><i style="background:var(--ink-2)"></i>Medición</span>
+   </div></div>`;
 }
 function showCalibReport(rec){
   if(!rec)return;
@@ -2849,13 +2928,42 @@ function showCalibReport(rec){
        <tr style="cursor:default"><td>Desviación</td><td class="mono">±${rec.tol}%</td><td class="mono" style="color:var(--${cot(rec.devAf)})">${sg(rec.devAf)}${rec.devAf.toFixed(1)}%</td><td class="mono" style="color:var(--${cot(rec.devAl)})">${sg(rec.devAl)}${rec.devAl.toFixed(1)}%</td></tr>
        <tr style="cursor:default"><td>Hermeticidad</td><td>—</td><td>${rec.afH}</td><td>${rec.alH}</td></tr>
      </tbody></table></div>
+   ${calibChart(rec)}
    <h3 style="margin:6px 0 8px">Lectura para el informe final</h3>
    <div style="font-size:13px;color:var(--ink-2);line-height:1.6">${rec.msgs.map(m=>`<p style="margin-bottom:7px">${esc(m)}</p>`).join('')}</div>
    <div class="callout ${rec.vtone==='ok'?'':rec.vtone==='due'?'warn':'bad'}" style="margin-top:12px">
      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg>
      <div><b>${rec.verdict}.</b> Próxima calibración programada para ${rec.prox}.</div></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
+  const staff=S.rol!=='cliente';
+  $('#mFoot').innerHTML=`
+    ${staff?`<button class="btn quiet" style="color:var(--late)" onclick="deleteCalib('${rec.id}')"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>
+    <button class="btn sec" onclick="editCalib('${rec.id}')"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a2.4 2.4 0 0 1 3.4 3.4L8 20l-4 1 1-4z"/></svg>Editar</button>`:''}
+    <button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
   $('#modal').classList.add('on');
+}
+function editCalib(id){
+  const rec=CALIBS.find(c=>c.id===id);if(!rec)return;
+  closeModal();openCalib(rec.act,rec);
+}
+function deleteCalib(id){
+  const rec=CALIBS.find(c=>c.id===id);if(!rec)return;
+  $('#mTitle').textContent='Eliminar certificado';
+  $('#mBody').innerHTML=`<div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <div>Se eliminará el certificado <b>${rec.cert}</b>, su orden de trabajo y el documento del expediente. Las fechas del equipo volverán a como estaban antes de esta calibración. Esta acción no se puede deshacer.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmDeleteCalib('${id}')">Sí, eliminar</button>`;
+  $('#modal').classList.add('on');
+}
+function confirmDeleteCalib(id){
+  const i=CALIBS.findIndex(c=>c.id===id);if(i<0)return;
+  const rec=CALIBS[i],a=ACTIVOS.find(x=>x.id===rec.act);
+  if(a){if(rec.prevUlt!==undefined)a.ult=rec.prevUlt;if(rec.prevProx!==undefined)a.prox=rec.prevProx;}
+  CALIBS.splice(i,1);
+  for(let k=ORDENES.length-1;k>=0;k--)if(ORDENES[k].calib===id)ORDENES.splice(k,1);
+  for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].calib===id)DOCS.splice(k,1);
+  closeModal();renderAll();
+  if(S.cur&&S.cur.id===rec.act)openAsset(rec.act);
+  toast(`Certificado ${rec.cert} eliminado`);
 }
 
 /* ============================================================
