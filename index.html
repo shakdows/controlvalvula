@@ -1279,6 +1279,23 @@ const MODELOS={
  'DV-55':{m:'Delval',c:'onoff',t:'Mariposa wafer',d:'Concéntrica con asiento elastomérico',b:'cuchilla'},
  'AQ-25':{m:'Bernard Controls',c:'actuador',t:'Actuador eléctrico',d:'Multivuelta con control integrado',b:'act'}
 };
+/* Configuración típica de cada modelo: se autocompleta al elegirlo en el alta.
+   Es una sugerencia editable — solo el tag y la serie son propios del equipo. */
+const MODELO_DEF={
+ '21000':{sz:'2"',rt:'600',cv:'39',air:'OPEN',rng:'7-15 psi',cr:'Alta'},
+ '41005':{sz:'3"',rt:'900',cv:'56',air:'CLOSE',rng:'3-15 psi',cr:'Crítica'},
+ '35002':{sz:'4"',rt:'300',cv:'110',air:'OPEN',rng:'7-15 psi',cr:'Alta'},
+ '1000HP':{sz:'2"',rt:'150',cv:'25',air:'OPEN',rng:'30 psig',cr:'Media'},
+ 'VRP-SB':{sz:'2"',rt:'150',cv:'',air:'',rng:'30 psig',cr:'Media'},
+ '1900':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'150 psig',cr:'Crítica'},
+ '19096':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica'},
+ 'JOS-E':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica'},
+ '81P':{sz:'3"x4"',rt:'300',cv:'',air:'',rng:'85 psig',cr:'Crítica'},
+ 'EB-KG':{sz:'10"',rt:'150',cv:'',air:'',rng:'',cr:'Alta'},
+ 'PINCH-A':{sz:'6"',rt:'150',cv:'',air:'',rng:'',cr:'Alta'},
+ 'DV-55':{sz:'12"',rt:'150',cv:'',air:'',rng:'',cr:'Media'},
+ 'AQ-25':{sz:'—',rt:'',cv:'',air:'',rng:'380 V',cr:'Media'}
+};
 const BOM={
  globo:[
   {p:1,n:'AD-CUE-150-20',d:'Cuerpo bridado ASTM A216 WCC',q:1,g:'Cuerpo',k:0,s:0,l:'Importación 10-12 sem'},
@@ -2423,19 +2440,19 @@ function openNewAsset(preCli){
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;display:block">1 · Elige el modelo <span style="color:var(--ink-3);font-weight:400">— se autocompletan marca, tipo, clase y despiece</span></label>
    <div class="nm-grid">${gallery}</div>
    <div id="naHint" class="callout" style="display:none;margin-bottom:14px"></div>
-   <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Completa los datos del equipo</label>
+   <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— lo único propio de esta válvula</span></label>
    <div class="two">
      <div class="fld"><label>Tag</label><input class="inp" id="naTag" placeholder="p. ej. PSV-1300"></div>
      <div class="fld"><label>N.º de serie</label><input class="inp" id="naSer" placeholder="p. ej. C-90-1123"></div>
-     <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
-     <div class="fld"><label>Rating / clase</label><input class="inp" id="naRt" placeholder="300"></div>
-     <div class="fld"><label>Rango / set</label><input class="inp" id="naRng" placeholder="150 psig"></div>
-     <div class="fld"><label>Criticidad</label><select class="inp" id="naCr"><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
-     <div class="fld"><label>Próxima calibración</label><input class="inp" id="naProx" type="date"></div>
-     <div class="fld"><label>Último servicio</label><input class="inp" id="naUlt" type="date"></div>
    </div>
-   <details class="fx-more"><summary>Más datos (Cv, falla a, clase)</summary>
+   <details class="fx-more" id="naSpecs"><summary>Ficha técnica — <span id="naSpecsLbl">se completa al elegir el modelo</span></summary>
      <div class="two" style="margin-top:10px">
+       <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
+       <div class="fld"><label>Rating / clase</label><input class="inp" id="naRt" placeholder="300"></div>
+       <div class="fld"><label>Rango / set</label><input class="inp" id="naRng" placeholder="150 psig"></div>
+       <div class="fld"><label>Criticidad</label><select class="inp" id="naCr"><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
+       <div class="fld"><label>Próxima calibración</label><input class="inp" id="naProx" type="date"></div>
+       <div class="fld"><label>Último servicio</label><input class="inp" id="naUlt" type="date"></div>
        <div class="fld"><label>Cv</label><input class="inp" id="naCv" placeholder="—"></div>
        <div class="fld"><label>Falla a (aire)</label><select class="inp" id="naAir"><option value="">—</option><option>OPEN</option><option>CLOSE</option></select></div>
        <div class="fld"><label>Clase</label><select class="inp" id="naCl">${clOpts}</select></div>
@@ -2447,18 +2464,23 @@ function openNewAsset(preCli){
   $('#modal').classList.add('on');
 }
 function selNaMod(k){
-  naSel=k;const m=MODELOS[k]||{};
+  naSel=k;const m=MODELOS[k]||{},d=MODELO_DEF[k]||{};
   document.querySelectorAll('.nm-card').forEach(c=>c.classList.toggle('on',c.dataset.m===k));
-  const cl=$('#naCl');if(cl)cl.value=m.c;
+  // autocompleta toda la ficha técnica típica del modelo
+  const set=(id,v)=>{const el=$(id);if(el)el.value=v??''};
+  set('#naCl',m.c);set('#naSz',d.sz);set('#naRt',d.rt);set('#naRng',d.rng);
+  set('#naCv',d.cv);set('#naAir',d.air);set('#naCr',d.cr||'Media');
   const nBom=(BOM[m.b||'globo']||[]).length,hint=$('#naHint');
   const ic='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
+  const resumen=[d.sz&&d.sz!=='—'?d.sz:'',d.rt?'clase '+d.rt:'',d.rng].filter(Boolean).join(' · ');
+  const lbl=$('#naSpecsLbl');if(lbl)lbl.innerHTML=`<b style="color:var(--ok)">completada del modelo</b>${resumen?` · ${esc(resumen)}`:''} · ajústala si tu equipo difiere`;
   if(m.c==='seguridad'){
     const p=new Date(HOY);p.setFullYear(p.getFullYear()+1);const ps=p.toISOString().slice(0,10);
-    if($('#naProx'))$('#naProx').value=ps;
-    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — es válvula de seguridad, así que <b>requiere calibración</b>. Programé la próxima para <b>${ps}</b>. Hereda el despiece del modelo (${nBom} posiciones).</div>`;
+    set('#naProx',ps);
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). Es válvula de seguridad: <b>requiere calibración</b>, programé la próxima para <b>${ps}</b>.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
   }else{
-    if($('#naProx'))$('#naProx').value='';
-    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — clase ${CL[m.c]}. Hereda el despiece del modelo (${nBom} posiciones). No requiere calibración periódica.</div>`;
+    set('#naProx','');
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). No requiere calibración periódica.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
   }
 }
 function saveNewAsset(){
