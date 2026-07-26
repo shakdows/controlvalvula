@@ -573,6 +573,27 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-model{margin-top:20px}
 .fx-model h3{margin-bottom:6px;font-size:13.5px}
 .fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
+/* --- estado de conexión y sincronización --- */
+.net-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:100px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface);font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap;
+  transition:border var(--fast),background var(--fast)}
+.net-chip:hover{border-color:var(--sel)}
+.net-chip .nd{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:0 0 auto}
+.net-chip.off{border-color:var(--due);background:var(--due-bg);color:var(--due)}
+.net-chip.off .nd{background:var(--due);animation:netPulse 1.6s ease-in-out infinite}
+.net-chip.sync{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
+.net-chip.sync .nd{background:var(--sel);animation:netPulse .8s linear infinite}
+.net-chip .qn{background:var(--due);color:#fff;border-radius:20px;padding:1px 6px;font-size:10.5px;line-height:1.5}
+@keyframes netPulse{0%,100%{opacity:1}50%{opacity:.25}}
+@media(max-width:900px){.net-chip .nl{display:none}}
+.sq-list{border:1px solid var(--line-2);border-radius:var(--r-2);max-height:230px;overflow:auto;margin-top:10px}
+.sq-i{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line-2);font-size:12.5px}
+.sq-i:last-child{border-bottom:none}
+.sq-i .sq-t{flex:1;min-width:0}
+.sq-i .sq-t b{display:block;font-weight:600}
+.sq-i .sq-t span{color:var(--ink-3);font-size:11.5px}
+.sq-i .sq-d{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-3);flex:0 0 auto}
+.sq-ok{color:var(--ok)}
 /* --- ayuda en formularios y campos pendientes --- */
 .hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
   color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
@@ -971,6 +992,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
         <option value="cli-refi">Cliente · Refinería Costa Norte</option>
         <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
       </select>
+      <button class="net-chip" id="netChip" onclick="openSync()" title="Estado de conexión y sincronización"></button>
       <div class="notif-wrap">
         <button class="icon-btn" onclick="toggleNotif(event)" title="Notificaciones" id="notifBtn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notif-dot" id="notifDot" style="display:none"></span></button>
         <div class="notif-pop" id="notifPop" onclick="event.stopPropagation()">
@@ -1768,6 +1790,7 @@ function confirmDeleteAsset(id){
   S.picked.delete(id);
   ACTIVOS.splice(i,1);
   closeModal();closeDrawer();renderAll();
+  registrar('Baja',`Válvula ${a.tag||a.ser||''} · ${motivo.toLowerCase()}`);
   toast(`${a.tag||a.ser||'Equipo'} eliminado · ${motivo.toLowerCase()}`);
 }
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
@@ -1959,7 +1982,7 @@ function enviarSol(){
   const conAct=S.cart.find(c=>c.a);
   SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'Pendiente',
     items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
-  S.cart=[];renderReq();toast(`Solicitud ${n} enviada`);
+  S.cart=[];renderReq();registrar('Solicitud',`${n} enviada`);toast(`Solicitud ${n} enviada`);
 }
 function verSol(id){
   const s=SOLICITUDES.find(x=>x.id===id);
@@ -2042,6 +2065,7 @@ function advanceWO(id){
   o.et=nx[0];
   if(nx[0]==='taller')toast(`${o.n} ingresó a taller`);
   else toast(`${o.n} programada para ${o.f}`);
+  registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   renderAll();
 }
 function openCloseWO(id){
@@ -2075,6 +2099,7 @@ function saveCloseWO(id){
   if(a){a.ult=o.f;
     if(a.prox){const d=new Date(o.f+'T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
   closeModal();renderAll();go('wo');
+  registrar('Orden',`${o.n} cerrada · ${a?a.tag||a.ser:''}`);
   toast(`${o.n} cerrada${a&&a.prox?` · próxima calibración ${a.prox}`:''}`);
 }
 let dragId=null;
@@ -2108,7 +2133,7 @@ function saveWO(){
   ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'solicitada',tipo:$('#woTipo').value,
     f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
     partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
-  closeModal();renderAll();go('wo');toast('Orden creada en etapa Solicitada');
+  closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
 }
 function closeModal(){$('#modal').classList.remove('on')}
 
@@ -2365,6 +2390,7 @@ function saveNewPart(){
   if(npFoto)PART_PHOTO[n]=npFoto;
   closeModal();
   PS.mod=mod;PS.sel={};renderParts();go('parts');
+  registrar('Repuesto',`${n} agregado a ${mod}`);
   toast(`${n} agregado al despiece de ${mod}`);
 }
 function renderUsers(){
@@ -2828,7 +2854,7 @@ function saveNewAsset(){
   ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
     sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
-  closeModal();renderAll();gotoAsset(id);toast(`Válvula ${tag||ser} creada`);
+  closeModal();renderAll();gotoAsset(id);registrar('Alta',`Válvula ${tag||ser} · ${cli($('#naCli').value).n||''}`);toast(`Válvula ${tag||ser} creada`);
 }
 
 /* ============================================================
@@ -2945,6 +2971,7 @@ function generateCalib(assetId,editId){
   renderAll();
   if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
   showCalibReport(rec);
+  registrar('Calibración',`${prev?'Edición del certificado':'Certificado'} ${cert} · ${a.tag||a.ser||''} (${verdict})`);
   toast(prev?`Certificado ${cert} actualizado · ${verdict}`:`${verdict} · certificado ${cert} emitido`);
 }
 /* Gráfica de la prueba: banda de tolerancia + recorrido nominal → as-found → as-left */
@@ -3041,6 +3068,7 @@ function confirmDeleteCalib(id){
   for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].calib===id)DOCS.splice(k,1);
   closeModal();renderAll();
   if(S.cur&&S.cur.id===rec.act)openAsset(rec.act);
+  registrar('Baja',`Certificado ${rec.cert} eliminado`);
   toast(`Certificado ${rec.cert} eliminado`);
 }
 
@@ -3099,7 +3127,7 @@ function saveNewClient(){
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
   CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
   $('#fCli').dataset.built='';
-  closeModal();renderAll();go('clients');toast(`Cliente ${n} creado`);
+  closeModal();renderAll();go('clients');registrar('Cliente',`${n} dado de alta`);toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
@@ -3271,7 +3299,112 @@ function armAutoSound(){
   ['pointerdown','touchstart','keydown'].forEach(ev=>window.addEventListener(ev,enable,true));
 }
 armAutoSound();
-paintThemeBtn();renderAll();go('home');
+/* ============================================================
+   13 · TRABAJO SIN CONEXIÓN
+   Todo se guarda en el equipo apenas se registra. Los cambios hechos
+   sin señal quedan en una cola y suben solos al recuperar conexión.
+   ============================================================ */
+const LS_KEY='adolphus.datos.v1';
+let SYNCQ=[];              /* cola de cambios pendientes de subir */
+let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
+let SYNCING=false;
+const online=()=>!OFF_SIM&&navigator.onLine;
+
+function guardarLocal(){
+  try{
+    localStorage.setItem(LS_KEY,JSON.stringify({
+      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,CALIBS,SERVS,DOCS,
+      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
+    }));
+    return true;
+  }catch(e){ // p. ej. almacenamiento lleno por fotos
+    toast('No se pudo guardar en el equipo: almacenamiento lleno');return false;
+  }
+}
+function restaurarLocal(){
+  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+  if(!d||d.v!==1)return false;
+  const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
+  const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
+  arr(ACTIVOS,d.ACTIVOS);arr(ORDENES,d.ORDENES);arr(SOLICITUDES,d.SOLICITUDES);
+  arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
+  obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
+  obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
+  SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
+  return true;
+}
+/* Registra un cambio: se guarda ya en el equipo y se encola para subir. */
+function registrar(tipo,desc){
+  SYNCQ.push({id:'q'+Date.now()+Math.floor(Math.random()*999),ts:new Date().toISOString(),tipo,desc,off:!online()});
+  guardarLocal();pintarNet();
+  if(online())setTimeout(sincronizar,600);   // con señal, sube casi al instante
+}
+function pintarNet(){
+  const c=$('#netChip');if(!c)return;
+  const n=SYNCQ.length;
+  c.classList.toggle('off',!online());
+  c.classList.toggle('sync',SYNCING);
+  c.innerHTML=SYNCING
+    ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
+    : !online()
+      ? `<span class="nd"></span><span class="nl">Sin conexión</span>${n?`<span class="qn">${n}</span>`:''}`
+      : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
+         :`<span class="nd"></span><span class="nl">Al día</span>`;
+  c.title=!online()
+    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirán solos al recuperar señal.`
+    : n?`${n} cambio${n===1?'':'s'} pendiente${n===1?'':'s'} de subir`:'Todo sincronizado';
+}
+function sincronizar(manual){
+  if(SYNCING)return;
+  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
+  if(!online()){if(manual)toast('Sin conexión — los cambios ya están guardados en este equipo');return}
+  SYNCING=true;pintarNet();
+  const n=SYNCQ.length;
+  setTimeout(()=>{                       // subida al servidor (simulada en el prototipo)
+    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();
+    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
+    toast(`${n} cambio${n===1?'':'s'} sincronizado${n===1?'':'s'} con el servidor`);
+  },1200);
+}
+function toggleOffline(){
+  OFF_SIM=!OFF_SIM;pintarNet();openSync();
+  toast(OFF_SIM?'Modo sin conexión activado — sigue trabajando normal':'Conexión restablecida');
+  if(!OFF_SIM&&SYNCQ.length)setTimeout(()=>sincronizar(),500);
+}
+function openSync(){
+  const n=SYNCQ.length;
+  $('#mTitle').textContent='Conexión y sincronización';
+  $('#mBody').innerHTML=`
+   <div class="callout ${online()?'':'warn'}">
+     <svg viewBox="0 0 24 24">${online()
+       ?'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2"/>'
+       :'<path d="M3 3l18 18M5 12.5a10 10 0 0 1 5-2.6M14.5 10.2a10 10 0 0 1 4.5 2.3M8.5 16a5.5 5.5 0 0 1 3-1.4"/><circle cx="12" cy="19.5" r="1.2"/>'}</svg>
+     <div>${online()
+       ? `<b>Con conexión.</b> Lo que registres se guarda en el equipo y sube al servidor enseguida.`
+       : `<b>Sin conexión.</b> Puedes seguir trabajando igual: calibraciones, órdenes y altas se guardan en este equipo y <b>subirán solas</b> en cuanto haya señal. No se pierde nada aunque cierres la página.`}</div></div>
+   <div class="two" style="margin-bottom:4px">
+     <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
+     <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
+   </div>
+   ${n?`<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
+      <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
+        <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
+        <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
+    :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
+   <div class="callout" style="margin-top:14px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>¿Vas a entrar a una planta sin señal? Abre el sistema <b>antes</b> de entrar: queda cargado y funciona completo sin internet. Al salir y recuperar señal, todo sube solo.</div></div>`;
+  $('#mFoot').innerHTML=`
+    <button class="btn quiet" onclick="toggleOffline()">${OFF_SIM?'Simular con señal':'Simular sin señal'}</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn" onclick="sincronizar(true)" ${!online()||!n?'disabled style="opacity:.5;cursor:not-allowed"':''}>Sincronizar ahora</button>`;
+  $('#modal').classList.add('on');
+}
+window.addEventListener('online',()=>{pintarNet();toast('Señal recuperada — subiendo cambios');sincronizar()});
+window.addEventListener('offline',()=>{pintarNet();toast('Sin conexión — se seguirá guardando en este equipo')});
+
+restaurarLocal();
+paintThemeBtn();renderAll();go('home');pintarNet();
 </script>
 </body>
 </html>
