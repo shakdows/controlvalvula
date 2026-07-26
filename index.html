@@ -2671,19 +2671,24 @@ let naSel='';
 function openNewAsset(preCli){
   if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede dar de alta equipos');return}
   naSel='';
-  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${preCli===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
+  // Si ya estás dentro de un cliente, la válvula se crea ahí: no se pregunta.
+  const fijo=S.inCli||S.cli||preCli||null;
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${(fijo||preCli)===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
   const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
   const gallery=Object.entries(MODELOS).map(([k,m])=>`
     <div class="nm-card" data-m="${k}" onclick="selNaMod('${k}')">
       <div class="nm-ph">${photoFor(k)}</div>
       <div class="nm-bd"><span class="nm-mk">${esc(m.m)}</span><span class="nm-cd">${esc(k)}</span><span class="nm-ty">${esc(m.t)}</span></div>
     </div>`).join('');
-  $('#mTitle').textContent='Nueva válvula';
+  $('#mTitle').textContent=fijo?`Nueva válvula · ${cli(fijo).n}`:'Nueva válvula';
   $('#mBody').innerHTML=`
-   <div class="two">
-     <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
-     <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
-   </div>
+   ${fijo
+     ? `<input type="hidden" id="naCli" value="${fijo}">
+        <div class="fld"><label>Área / unidad <span class="hlp" title="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
+     : `<div class="two">
+          <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
+          <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
+        </div>`}
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;display:block">1 · Elige el modelo <span style="color:var(--ink-3);font-weight:400">— se autocompletan marca, tipo, clase y despiece</span>
      <button class="btn quiet xs" id="naClear" style="display:none;float:right" onclick="clearNaMod()">✕ Quitar selección</button></label>
    <div class="nm-grid">${gallery}</div>
