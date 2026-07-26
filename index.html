@@ -552,6 +552,111 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .ficha-cap .kv b{font-weight:600}
 .ficha-badges{display:flex;flex-wrap:wrap;gap:6px}
 @media(max-width:560px){.ficha-hero{flex-direction:column}.ficha-hero .photo-frame{width:100%;height:200px}}
+/* --- ficha simplificada --- */
+.fx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:10px;width:100%}
+.fx-tile{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2);padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+.fx-tile .fx-k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:600}
+.fx-tile .fx-v{font-size:16px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.fx-tile .fx-v .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.fx-tile .fx-sub{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;margin:18px 0 4px}
+@media(max-width:520px){.fx-keyspecs{grid-template-columns:1fr}}
+.fx-keyspecs .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line-2);padding-bottom:7px}
+.fx-keyspecs .kv span{color:var(--ink-3)}
+.fx-keyspecs .kv b{font-weight:600;text-align:right}
+.fx-more{margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px}
+.fx-more summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--sel);list-style:none;display:inline-flex;align-items:center;gap:6px;user-select:none}
+.fx-more summary::-webkit-details-marker{display:none}
+.fx-more summary::before{content:'▸';display:inline-block;transition:transform var(--fast)}
+.fx-more[open] summary::before{transform:rotate(90deg)}
+.fx-more .dl{margin-top:12px}
+.fx-model{margin-top:20px}
+.fx-model h3{margin-bottom:6px;font-size:13.5px}
+.fx-model p{font-size:13px;color:var(--ink-2);line-height:1.6;max-width:68ch}
+/* --- ayuda en formularios y campos pendientes --- */
+.hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
+  color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
+.hlp:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.fld label{display:flex;align-items:center}
+.fld .req-dot{color:var(--due);margin-left:4px;font-weight:700}
+.inp.pend{border-color:var(--due);border-style:dashed;background:var(--due-bg)}
+.inp.pend::placeholder{color:var(--due);opacity:.85;font-style:italic}
+.pend-msg{display:none;font-size:11px;color:var(--due);font-weight:600;margin-top:4px;align-items:center;gap:4px}
+.fld.is-pend .pend-msg{display:flex}
+/* --- gráfica de calibración --- */
+.cc-chart{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2);padding:12px 14px 6px;margin:14px 0}
+.cc-chart h4{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;margin-bottom:8px}
+.cc-chart svg{width:100%;height:auto;display:block;overflow:visible}
+.cc-lg{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--ink-2);padding:8px 0 4px}
+.cc-lg i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+/* --- barra de contexto del cliente --- */
+.cbar{display:flex;align-items:center;gap:14px;padding:0 var(--sp-5);height:56px;flex:0 0 auto;
+  background:var(--surface);border-bottom:1px solid var(--line);z-index:var(--z-sticky);overflow-x:auto}
+.cbar-back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2);
+  background:none;border:none;cursor:pointer;padding:6px 8px 6px 4px;border-radius:var(--r-1);flex:0 0 auto}
+.cbar-back:hover{color:var(--sel);background:var(--sel-bg)}
+.cbar-back svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}
+.cbar-mark{width:34px;height:34px;flex:0 0 auto;border-radius:9px;display:grid;place-items:center;
+  font-weight:700;font-size:13px;background:var(--sel-bg);color:var(--sel)}
+.cbar-id{flex:0 0 auto;min-width:0;margin-right:6px}
+.cbar-id b{display:block;font-size:14px;font-weight:700;line-height:1.2;white-space:nowrap}
+.cbar-id span{font-size:11.5px;color:var(--ink-3)}
+.cbar-tabs{display:flex;gap:2px;margin-left:auto;flex:0 0 auto}
+.cbar-tabs a{padding:8px 13px;border-radius:var(--r-1);font-size:13px;font-weight:500;color:var(--ink-2);cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;transition:background var(--fast),color var(--fast)}
+.cbar-tabs a:hover{background:var(--surface-2);color:var(--ink)}
+.cbar-tabs a.on{background:var(--sel-bg);color:var(--sel);font-weight:600}
+.cbar-tabs a .n{font-size:11px;background:var(--surface-3);color:var(--ink-2);border-radius:20px;padding:1px 6px;font-weight:600}
+.cbar-tabs a.on .n{background:var(--sel);color:var(--surface)}
+@media(max-width:760px){.cbar{gap:10px;padding:0 var(--sp-3)}.cbar-id{display:none}}
+/* --- alta de repuesto con foto --- */
+.np-wrap{display:grid;grid-template-columns:190px 1fr;gap:var(--sp-4);align-items:start}
+@media(max-width:640px){.np-wrap{grid-template-columns:1fr}}
+.np-drop{height:170px;border:1.5px dashed var(--line);border-radius:var(--r-2);display:grid;place-items:center;cursor:pointer;
+  background:var(--surface-2);color:var(--ink-3);transition:border var(--fast),background var(--fast);overflow:hidden}
+.np-drop:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.np-drop.has{border-style:solid;padding:6px;background:var(--surface)}
+.np-drop #npPrev{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;width:100%;height:100%;justify-content:center}
+.np-drop #npPrev b{font-size:12.5px;font-weight:600}
+.np-drop #npPrev span{font-size:11px}
+.np-drop img{width:100%;height:100%;object-fit:contain;border-radius:var(--r-1)}
+.pt-thumb{width:38px;height:30px;border-radius:4px;border:1px solid var(--line-2);object-fit:contain;background:var(--surface-2);flex:0 0 auto}
+/* --- leyenda de columnas --- */
+.lgd{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px 22px;margin-top:12px}
+.lgd>div{display:flex;gap:9px;font-size:12.5px;line-height:1.5;align-items:baseline}
+.lgd b{flex:0 0 106px;font-weight:600}
+.lgd span{color:var(--ink-2)}
+.lgd .riesgo,.lgd .tag{display:inline-flex;vertical-align:middle}
+/* --- vista Clientes (tarjetas) --- */
+.cl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:var(--sp-4)}
+.cl-card{border:1px solid var(--line);border-radius:var(--r-3);background:var(--surface);overflow:hidden;cursor:pointer;
+  transition:border var(--fast),box-shadow var(--fast),transform var(--fast)}
+.cl-card:hover{border-color:var(--sel);box-shadow:var(--shadow-pop);transform:translateY(-2px)}
+.cl-head{display:flex;align-items:center;gap:13px;padding:16px 18px;border-bottom:1px solid var(--line-2)}
+.cl-mark{width:46px;height:46px;flex:0 0 auto;border-radius:12px;display:grid;place-items:center;font-weight:700;font-size:17px;
+  background:var(--sel-bg);color:var(--sel)}
+.cl-head .cl-n{font-size:15px;font-weight:700;line-height:1.2}
+.cl-head .cl-s{font-size:12px;color:var(--ink-3);margin-top:2px}
+.cl-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2)}
+.cl-stat{background:var(--surface);padding:12px 10px;text-align:center}
+.cl-stat b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.cl-stat span{font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+.cl-foot{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;font-size:12.5px;color:var(--sel);font-weight:600}
+.cl-foot svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
+/* --- galería de modelos para "Nueva válvula" --- */
+.nm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px;max-height:290px;overflow-y:auto;
+  padding:4px;border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface-2);margin:6px 0 12px}
+.nm-card{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);cursor:pointer;overflow:hidden;
+  display:flex;flex-direction:column;transition:border var(--fast),box-shadow var(--fast)}
+.nm-card:hover{border-color:var(--sel)}
+.nm-card.on{border-color:var(--sel);box-shadow:0 0 0 2px var(--sel-bg)}
+.nm-ph{height:76px;display:grid;place-items:center;padding:8px;background:radial-gradient(circle at 50% 32%,var(--surface),var(--surface-3))}
+[data-theme="dark"] .nm-ph{background:radial-gradient(circle at 50% 32%, oklch(0.31 0.012 250), oklch(0.23 0.011 252))}
+.nm-ph .vphoto{max-height:60px}
+.nm-bd{padding:7px 9px 9px;display:flex;flex-direction:column;gap:1px;border-top:1px solid var(--line-2)}
+.nm-bd .nm-mk{font-size:9.5px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.nm-bd .nm-cd{font-family:'IBM Plex Mono';font-weight:600;font-size:12.5px}
+.nm-bd .nm-ty{font-size:10.5px;color:var(--ink-2);line-height:1.3}
 .cat-thumb{width:58px;height:44px;border-radius:var(--r-1);border:1px solid var(--line-2);overflow:hidden;display:grid;place-items:center;padding:3px;
   background:radial-gradient(circle at 50% 34%, oklch(1 0 0), oklch(0.945 0.004 250))}
 [data-theme="dark"] .cat-thumb{background:radial-gradient(circle at 50% 34%, oklch(0.31 0.012 250), oklch(0.24 0.011 252))}
@@ -829,6 +934,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <div class="rail-sec">Resumen</div>
       <a data-p="home" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.4"/><rect x="14" y="3" width="7" height="5" rx="1.4"/><rect x="14" y="12" width="7" height="9" rx="1.4"/><rect x="3" y="16" width="7" height="5" rx="1.4"/></svg><span class="lbl">Panel</span></a>
       <div class="rail-sec">Operación</div>
+      <a data-p="clients"><svg viewBox="0 0 24 24"><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="9" cy="8" r="3.1"/><path d="M16 3.5a3 3 0 0 1 0 6M20 20v-1a4 4 0 0 0-3-3.8"/></svg><span class="lbl">Clientes</span><span class="ct" id="ctClients"></span></a>
       <a data-p="assets"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
       <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
@@ -878,10 +984,20 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <div class="avatar" id="ava">IA</div>
     </header>
 
+    <div class="cbar" id="cliBar" style="display:none">
+      <button class="cbar-back" onclick="exitClient()"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Clientes</button>
+      <span class="cbar-mark" id="cbMark"></span>
+      <div class="cbar-id"><b id="cbName"></b><span id="cbSub"></span></div>
+      <nav class="cbar-tabs" id="cbTabs"></nav>
+    </div>
+
     <div class="view">
 
       <!-- ═══ PANEL ═══ -->
       <section class="page on" id="p-home"><div class="view-pad" id="homeView"></div></section>
+
+      <!-- ═══ CLIENTES ═══ -->
+      <section class="page" id="p-clients"><div class="view-pad" id="clientsView"></div></section>
 
       <!-- ═══ ACTIVOS ═══ -->
       <section class="page" id="p-assets"><div class="view-pad">
@@ -889,8 +1005,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
             <button class="btn sec" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Cargar Excel</button>
-            <button class="btn sec" onclick="openNewClient()"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg>Nuevo cliente</button>
-            <button class="btn" onclick="openNewAsset()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva válvula</button>
+            <button class="btn" onclick="openNewAsset(S.fCli)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva válvula</button>
           </div></div>
         <div class="stats" id="stats"></div>
         <div class="tools">
@@ -909,11 +1024,24 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <button class="btn xs" onclick="clearPick()">Limpiar</button>
         </div>
         <div class="grid-wrap"><div class="grid-scroll" id="gridScroll"></div></div>
+        <details class="fx-more" style="margin-top:14px"><summary>¿Qué significa cada columna?</summary>
+          <div class="lgd">
+            <div><b>Tag</b><span>Nombre de la válvula en la planta (su placa: PSV-1210).</span></div>
+            <div><b>N.º de serie</b><span>Número único del fabricante. Sin él no hay trazabilidad.</span></div>
+            <div><b>Marca / modelo</b><span>Fabricante y modelo — define el despiece y los repuestos.</span></div>
+            <div><b>Clase</b><span>Para qué sirve: Control (regula), Seguridad (alivia presión), On-Off (abre/cierra), Actuador (la mueve).</span></div>
+            <div><b>Ubicación</b><span>Cliente y área de planta donde está instalada.</span></div>
+            <div><b>Criticidad</b><span>Qué tan grave es que falle: <span class="riesgo"><i class="f"></i><i></i><i></i></span> Media · <span class="riesgo alta"><i class="f"></i><i class="f"></i><i></i></span> Alta · <span class="riesgo critica"><i class="f"></i><i class="f"></i><i class="f"></i></span> Crítica (para el proceso).</span></div>
+            <div><b>Estado</b><span><span class="tag ok"><span class="dot"></span>Operativo</span> al día · <span class="tag due"><span class="dot"></span>Vence en X d</span> calibración próxima · <span class="tag late"><span class="dot"></span>Vencida</span> fuera de plazo · <span class="tag sel"><span class="dot"></span>Trabajo abierto</span> en intervención.</span></div>
+            <div><b>Últ. servicio</b><span>Fecha de la última intervención registrada.</span></div>
+          </div>
+        </details>
       </div></section>
 
       <!-- ═══ CALIBRACIONES ═══ -->
       <section class="page" id="p-cal"><div class="view-pad">
-        <div class="hd"><div><h1>Horizonte de calibración</h1><p>Válvulas de seguridad y alivio con vencimiento programado. La franja muestra los 18 meses alrededor de hoy.</p></div></div>
+        <div class="hd"><div><h1>Horizonte de calibración</h1><p>Válvulas de seguridad y alivio con vencimiento programado. La franja muestra los 18 meses alrededor de hoy.</p></div>
+          <select class="inp chip-sel" id="calCli" style="height:34px"></select></div>
         <div class="stats" id="calStats"></div>
         <div class="panel"><div class="panel-h"><h3>Programa por vencimiento</h3><span class="count" id="calCount"></span></div>
           <div id="calList"></div></div>
@@ -921,8 +1049,10 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
       <!-- ═══ ÓRDENES ═══ -->
       <section class="page" id="p-wo"><div class="view-pad">
-        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Arrastra una tarjeta para cambiarla de etapa. Al certificar, la fecha de próxima calibración del equipo se actualiza sola.</p></div>
-          <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div>
+        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Cada tarjeta avanza sola con su botón: programar → ejecutar → guardar. Al cerrar, la próxima calibración del equipo se actualiza automáticamente.</p></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select class="inp chip-sel" id="woCli" style="height:34px"></select>
+            <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div></div>
         <div class="kb" id="kanban"></div>
       </div></section>
 
@@ -978,6 +1108,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 <aside class="drawer" id="drawer" aria-hidden="true">
   <div class="dr-h">
     <div class="dr-top">
+      <button class="icon-btn" onclick="closeDrawer()" title="Volver a la lista"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div style="flex:1;min-width:0"><h2 id="drTitle"></h2><div class="sub" id="drSub"></div></div>
       <button class="icon-btn" onclick="toggleWide()" title="Ampliar" id="wideBtn"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5"/></svg></button>
       <button class="icon-btn" onclick="closeDrawer()" title="Cerrar (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -1224,6 +1355,23 @@ const MODELOS={
  'DV-55':{m:'Delval',c:'onoff',t:'Mariposa wafer',d:'Concéntrica con asiento elastomérico',b:'cuchilla'},
  'AQ-25':{m:'Bernard Controls',c:'actuador',t:'Actuador eléctrico',d:'Multivuelta con control integrado',b:'act'}
 };
+/* Configuración típica de cada modelo: se autocompleta al elegirlo en el alta.
+   Es una sugerencia editable — solo el tag y la serie son propios del equipo. */
+const MODELO_DEF={
+ '21000':{sz:'2"',rt:'600',cv:'39',air:'OPEN',rng:'7-15 psi',cr:'Alta'},
+ '41005':{sz:'3"',rt:'900',cv:'56',air:'CLOSE',rng:'3-15 psi',cr:'Crítica'},
+ '35002':{sz:'4"',rt:'300',cv:'110',air:'OPEN',rng:'7-15 psi',cr:'Alta'},
+ '1000HP':{sz:'2"',rt:'150',cv:'25',air:'OPEN',rng:'30 psig',cr:'Media'},
+ 'VRP-SB':{sz:'2"',rt:'150',cv:'',air:'',rng:'30 psig',cr:'Media'},
+ '1900':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'150 psig',cr:'Crítica'},
+ '19096':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica'},
+ 'JOS-E':{sz:'2"x3"',rt:'300',cv:'',air:'',rng:'120 psig',cr:'Crítica'},
+ '81P':{sz:'3"x4"',rt:'300',cv:'',air:'',rng:'85 psig',cr:'Crítica'},
+ 'EB-KG':{sz:'10"',rt:'150',cv:'',air:'',rng:'',cr:'Alta'},
+ 'PINCH-A':{sz:'6"',rt:'150',cv:'',air:'',rng:'',cr:'Alta'},
+ 'DV-55':{sz:'12"',rt:'150',cv:'',air:'',rng:'',cr:'Media'},
+ 'AQ-25':{sz:'—',rt:'',cv:'',air:'',rng:'380 V',cr:'Media'}
+};
 const BOM={
  globo:[
   {p:1,n:'AD-CUE-150-20',d:'Cuerpo bridado ASTM A216 WCC',q:1,g:'Cuerpo',k:0,s:0,l:'Importación 10-12 sem'},
@@ -1320,7 +1468,7 @@ const USUARIOS=[
    2 · ESTADO Y UTILIDADES
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
-const S={page:'assets',rol:'admin',cli:null,view:'todos',fCli:'',fMarca:'',sort:{k:'tag',dir:1},
+const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
          focus:0,picked:new Set(),cur:null,tab:'ficha',wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -1347,12 +1495,18 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
 function go(p){
+  // las páginas de un cliente solo se abren desde su espacio de trabajo
+  if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
-  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p));
-  $('#crumbs').innerHTML=`<span>${S.cli?esc(cli(S.cli).n):'Adolphus'}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
+  const base=S.cli?esc(cli(S.cli).n):'Adolphus';
+  $('#crumbs').innerHTML=S.inCli&&CLI_TABS.some(([x])=>x===p)
+    ? `<span>${base}</span><span class="sep">/</span><span>${esc(cli(S.inCli).n)}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`
+    : `<span>${base}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  renderCliBar();
   $('.view').scrollTop=0;
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
 }
@@ -1382,8 +1536,11 @@ function applyRole(v){
   $('#ava').textContent={admin:'IA',tec:'ST',com:'CR','cli-minera':'ML','cli-refi':'RC','cli-agro':'AV'}[v];
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
-  $$('#nav a').forEach(a=>a.style.display=(c&&['cat','imp','users'].includes(a.dataset.p))?'none':'');
-  S.picked.clear();S.view='todos';S.fCli='';S.fMarca='';PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
+  // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req'];
+  $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
+  S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.calCli='';S.woCli='';
+  PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
 }
 $('#roleSel').onchange=e=>applyRole(e.target.value);
@@ -1427,7 +1584,7 @@ function filtrados(){
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
 }
 function renderStats(){
-  const vs=visibles();
+  const vs=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
   const n=k=>vs.filter(a=>estado(a).k===k).length;
   const defs=[
    {v:'todos',lbl:'Activos totales',val:vs.length,c:''},
@@ -1438,8 +1595,9 @@ function renderStats(){
   $('#stats').innerHTML=defs.map((d,i)=>`<button class="stat ${S.view===d.v&&i>0?'active':''}" onclick="setView('${d.v}')">
     <span class="v">${d.c?`<span class="dot" style="color:var(--${d.c})"></span>`:''}${d.val}</span>
     <span class="k">${d.lbl}</span></button>`).join('');
-  $('#assetsSub').textContent=S.cli
-    ? `${cli(S.cli).ind} · ${cli(S.cli).fac}`
+  const foco=S.cli||S.inCli;
+  $('#assetsSub').textContent=foco
+    ? `${cli(foco).ind} · ${cli(foco).fac} · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas`
     : `${CLIENTES.length} clientes · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas representadas en campo`;
 }
 function setView(v){S.view=v;S.focus=0;renderAssets()}
@@ -1452,14 +1610,15 @@ function renderFilters(){
     $('#fCli').onchange=e=>{S.fCli=e.target.value;renderAssets()};
     $('#fMarca').onchange=e=>{S.fMarca=e.target.value;renderAssets()};
   }
-  $('#fCli').style.display=S.cli?'none':'';
+  $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
   $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
 }
 const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cl','Clase'],['cli','Ubicación'],['cr','Criticidad'],['est','Estado'],['ult','Últ. servicio']];
 function renderGrid(){
   const rows=filtrados();
-  $('#gCount').textContent=`${rows.length} de ${visibles().length}`;
-  $('#ctAssets').textContent=visibles().length;
+  const univ=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
+  $('#gCount').textContent=`${rows.length} de ${univ.length}`;
+  $('#ctAssets').textContent=univ.length;
   if(!rows.length){$('#gridScroll').innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><b>Nada que mostrar</b>Cambia de vista o limpia los filtros.</div>`;return}
   const th=COLS.map(([k,l])=>`<th class="sortable ${S.sort.k===k?'sorted':''}" onclick="sortBy('${k}')">${l}<span class="ar">${S.sort.k===k?(S.sort.dir>0?'▲':'▼'):'▲'}</span></th>`).join('');
   $('#gridScroll').innerHTML=`<table class="grid"><thead><tr>
@@ -1485,6 +1644,64 @@ function clearPick(){S.picked.clear();paintBulk();renderGrid()}
 function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
 function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
 function renderAssets(){renderStats();renderFilters();renderGrid();paintBulk()}
+function renderClients(){
+  const list=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
+  $('#ctClients').textContent=list.length;
+  const ini=n=>n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('#clientsView').innerHTML=`
+   <div class="hd"><div><h1>Clientes</h1><p>Cada cliente con su parque de válvulas. Entra a uno para ver, crear y gestionar sus equipos.</p></div>
+     ${S.rol!=='cliente'?`<button class="btn" onclick="openNewClient()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>`:''}</div>
+   <div class="cl-grid">${list.map(c=>{
+     const eq=ACTIVOS.filter(a=>a.cli===c.id);
+     const atn=eq.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
+     const venc=eq.filter(a=>a.prox&&dias(a.prox)<0).length;
+     return `<div class="cl-card" onclick="openClientAssets('${c.id}')">
+       <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
+         <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
+       <div class="cl-stats">
+         <div class="cl-stat"><b>${eq.length}</b><span>Válvulas</span></div>
+         <div class="cl-stat"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></div>
+         <div class="cl-stat"><b style="color:var(--${venc?'late':'ink'})">${venc}</b><span>Calib. vencida</span></div>
+       </div>
+       <div class="cl-foot">Ver válvulas <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+     </div>`}).join('')}</div>`;
+}
+/* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['req','Solicitudes']];
+function openClientAssets(id){enterClient(id,'assets')}
+function enterClient(id,page){
+  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
+  renderAll();go(page||'assets');$('.view').scrollTop=0;
+}
+function exitClient(){
+  S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.picked.clear();
+  closeDrawer();renderAll();go('clients');
+}
+/* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
+function gotoAsset(id,tab){
+  const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
+  if(!S.cli&&S.inCli!==a.cli)enterClient(a.cli,'assets');else go('assets');
+  openAsset(id);if(tab)showTab(tab);
+}
+function gotoClientPage(page,cliId){
+  if(!S.cli&&cliId&&S.inCli!==cliId)enterClient(cliId,page);else go(page);
+}
+function renderCliBar(){
+  const bar=$('#cliBar');
+  const inside=!!S.inCli&&CLI_TABS.some(([p])=>p===S.page);
+  bar.style.display=inside?'':'none';
+  if(!inside)return;
+  const c=cli(S.inCli);
+  const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;$('#cbSub').textContent=`${c.ind} · ${c.fac}`;
+  const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
+  const n={assets:eq.length,
+    cal:eq.filter(a=>a.prox).length,
+    wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='certificada'}).length,
+    req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
+  $('#cbTabs').innerHTML=CLI_TABS.map(([p,l])=>
+    `<a class="${S.page===p?'on':''}" onclick="go('${p}')">${l}${n[p]?`<span class="n">${n[p]}</span>`:''}</a>`).join('');
+}
 
 /* ============================================================
    5 · DRAWER DE DETALLE
@@ -1519,28 +1736,40 @@ function paneFicha(){
   const a=S.cur,m=MODELOS[a.mod]||{};
   const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
   const abiertas=ORDENES.filter(o=>o.act===a.id&&o.et!=='certificada');
+  const st=estado(a);
+  const d=a.prox?dias(a.prox):null;
+  const calV=a.prox?(d<0?`Vencida`:`En ${d} d`):'No aplica';
+  const calC=a.prox?(d<0?'late':d<=90?'due':'ok'):'';
+  const calSub=a.prox?a.prox:'Sin programa';
+  const crC=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  const tile=(k,v,c,sub)=>`<div class="fx-tile"><span class="fx-k">${k}</span><span class="fx-v" style="${c?`color:var(--${c})`:''}">${c?'<span class="dot"></span>':''}${esc(v)}</span>${sub?`<span class="fx-sub">${esc(sub)}</span>`:''}</div>`;
+  // datos clave (solo los que están llenos)
+  const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
   $('#pn-ficha').innerHTML=`
    <div class="ficha-hero">
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
-       <div class="ficha-badges"><span class="tag">${esc(m.m||'—')}</span><span class="tag mono">${esc(a.mod)}</span><span class="tag">${esc(CL[a.cl])}</span></div>
-       <div class="kv"><span>Tipo</span><b>${esc(m.t||'—')}</b></div>
-       <div class="kv"><span>Tamaño</span><b>${esc(a.sz||'—')}</b></div>
-       <div class="kv"><span>Rating / clase</span><b>${esc(a.rt||'—')}</b></div>
-       ${a.rng?`<div class="kv"><span>Rango / set</span><b>${esc(a.rng)}</b></div>`:''}
+       <div class="fx-tiles">
+         ${tile('Estado',st.t,st.c)}
+         ${tile('Criticidad',a.cr||'—',crC)}
+         ${tile('Calibración',calV,calC,calSub)}
+       </div>
      </div>
    </div>
    ${(!a.ser||!a.tag)?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
      <div>Llegó incompleto desde el levantamiento: falta ${!a.tag?'<b>tag</b>':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'<b>número de serie</b>':''}. Sin serie no hay trazabilidad de repuestos ni de servicio.</div></div>`:''}
    ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
-   <dl class="dl">
-     ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
-     ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
-     ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
-   </dl>
-   <div style="margin-top:24px"><h3 style="margin-bottom:8px">Sobre el modelo</h3>
-     <p style="font-size:13px;color:var(--ink-2);max-width:68ch">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>`;
+   ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+   <details class="fx-more"><summary>Ver ficha técnica completa</summary>
+     <dl class="dl">
+       ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
+       ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
+       ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
+     </dl>
+   </details>
+   <div class="fx-model"><h3>Sobre el modelo</h3>
+     <p>${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>`;
 }
 
 /* --- esquemas de despiece --- */
@@ -1648,7 +1877,7 @@ function addKit(){
   const m=MODELOS[S.cur.mod],lista=(BOM[m.b]||[]).filter(p=>p.k);
   lista.forEach(p=>{if(!S.cart.find(c=>c.n===p.n&&c.a===S.cur.id))S.cart.push({n:p.n,q:1,a:S.cur.id,s:p.s})});
   toast(`Kit de overhaul agregado · ${lista.length} posiciones`);
-  go('req');renderReq();
+  gotoClientPage('req',S.cur&&S.cur.cli);renderReq();
 }
 function renderReq(){
   const mias=S.cli?SOLICITUDES.filter(s=>s.cli===S.cli):SOLICITUDES;
@@ -1699,7 +1928,13 @@ function verSol(id){
    7 · CALIBRACIONES
    ============================================================ */
 function renderCal(){
-  const vs=visibles().filter(a=>a.prox);
+  const sel=$('#calCli');
+  if(sel&&!sel.dataset.built){
+    sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
+    sel.dataset.built='1';sel.onchange=e=>{S.calCli=e.target.value;renderCal()};
+  }
+  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.calCli||''}
+  const vs=visibles().filter(a=>a.prox&&(!S.calCli||a.cli===S.calCli));
   const venc=vs.filter(a=>dias(a.prox)<0),p90=vs.filter(a=>dias(a.prox)>=0&&dias(a.prox)<=90),ok=vs.filter(a=>dias(a.prox)>90);
   $('#ctCal').textContent=venc.length+p90.length||'';
   $('#calStats').innerHTML=[
@@ -1727,20 +1962,73 @@ function renderCal(){
 /* ============================================================
    8 · ÓRDENES DE TRABAJO (kanban)
    ============================================================ */
+const WO_NEXT={solicitada:['programada','Programar'],programada:['taller','Ingresar a taller'],taller:['certificada','Registrar y cerrar']};
 function renderWO(){
-  const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
-  $('#ctWo').textContent=mias.filter(o=>o.et!=='certificada').length||'';
+  const sel=$('#woCli');
+  if(sel&&!sel.dataset.built){
+    sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
+    sel.dataset.built='1';sel.onchange=e=>{S.woCli=e.target.value;renderWO()};
+  }
+  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.woCli||''}
+  const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
+    return (!S.cli||a?.cli===S.cli)&&(!S.woCli||a?.cli===S.woCli)});
+  $('#ctWo').textContent=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return (!S.cli||a?.cli===S.cli)&&o.et!=='certificada'}).length||'';
   $('#kanban').innerHTML=ETAPAS.map(([k,l])=>{
     const cs=mias.filter(o=>o.et===k);
     return `<div class="kb-col" data-et="${k}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropWO(event,'${k}')">
       <div class="kb-h"><span class="dot" style="color:var(--${k==='certificada'?'ok':k==='taller'?'sel':k==='programada'?'due':'ink-3'})"></span>${l}<span class="n">${cs.length}</span></div>
-      <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return `
-        <article class="wo" draggable="true" ondragstart="dragWO(event,'${o.id}')" ondragend="this.classList.remove('drag')" onclick="openAsset('${o.act}');showTab('hist')">
-          <div class="wo-t"><b class="mono">${o.n}</b><span class="tag">${o.tipo}</span></div>
-          <div class="wo-n">${esc(a?.tag||'—')}</div>
+      <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act),nx=WO_NEXT[o.et];return `
+        <article class="wo" draggable="true" ondragstart="dragWO(event,'${o.id}')" ondragend="this.classList.remove('drag')">
+          <div class="wo-t" onclick="openAsset('${o.act}');showTab('hist')"><b class="mono">${o.n}</b><span class="tag">${o.tipo}</span></div>
+          <div class="wo-n" onclick="openAsset('${o.act}');showTab('hist')">${esc(a?.tag||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
+          ${nx&&S.rol!=='cliente'?`<button class="btn ${o.et==='taller'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();advanceWO('${o.id}')">${nx[1]}</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
+}
+/* Avance automático de etapa. En la última se abre el parte de cierre y,
+   al guardar, la orden pasa sola a "Cerrada / certificada". */
+function advanceWO(id){
+  const o=ORDENES.find(x=>x.id===id);if(!o)return;
+  const nx=WO_NEXT[o.et];if(!nx)return;
+  if(nx[0]==='certificada'){openCloseWO(id);return}
+  o.et=nx[0];
+  if(nx[0]==='taller')toast(`${o.n} ingresó a taller`);
+  else toast(`${o.n} programada para ${o.f}`);
+  renderAll();
+}
+function openCloseWO(id){
+  const o=ORDENES.find(x=>x.id===id);if(!o)return;
+  const a=ACTIVOS.find(x=>x.id===o.act)||{},m=MODELOS[a.mod]||{};
+  const piezas=(BOM[m.b||'globo']||[]);
+  const hoyStr=HOY.toISOString().slice(0,10);
+  $('#mTitle').textContent=`Cerrar orden · ${o.n}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Datos del equipo ya cargados: <b>${esc(a.tag||'—')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie <b class="mono">${esc(a.ser||'—')}</b> · ${esc(cli(a.cli).n||'')}.
+     Al guardar, la orden pasa sola a <b>Cerrada / certificada</b>${a.prox?' y se renueva la próxima calibración':''}.</div></div>
+   <div class="two">
+     <div class="fld"><label>Fecha de ejecución</label><input class="inp" id="cwFec" type="date" value="${hoyStr}"></div>
+     <div class="fld"><label>Técnico responsable</label><input class="inp" id="cwTec" value="${esc(o.tec&&o.tec!=='Por asignar'?o.tec:'K. Ortiz')}"></div>
+   </div>
+   <div class="fld"><label>Trabajo realizado / hallazgos</label><textarea class="inp" id="cwHall" rows="3">${esc(o.hall||'')}</textarea></div>
+   <div class="fld"><label>Repuestos utilizados</label>
+     <div style="display:flex;flex-wrap:wrap;gap:7px;border:1px solid var(--line-2);border-radius:var(--r-2);padding:10px;max-height:150px;overflow:auto">
+       ${piezas.map(p=>`<label class="tag" style="cursor:pointer;gap:6px"><input type="checkbox" class="cwP" value="${p.n}" ${o.partes.includes(p.n)?'checked':''}> ${p.n}</label>`).join('')}
+     </div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCloseWO('${id}')">Guardar y cerrar orden</button>`;
+  $('#modal').classList.add('on');
+}
+function saveCloseWO(id){
+  const o=ORDENES.find(x=>x.id===id);if(!o)return;
+  const a=ACTIVOS.find(x=>x.id===o.act);
+  o.f=$('#cwFec').value||o.f;o.tec=$('#cwTec').value||o.tec;o.hall=$('#cwHall').value||o.hall;
+  o.partes=Array.from(document.querySelectorAll('.cwP')).filter(c=>c.checked).map(c=>c.value);
+  o.et='certificada';
+  if(a){a.ult=o.f;
+    if(a.prox){const d=new Date(o.f+'T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
+  closeModal();renderAll();go('wo');
+  toast(`${o.n} cerrada${a&&a.prox?` · próxima calibración ${a.prox}`:''}`);
 }
 let dragId=null;
 function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataTransfer.effectAllowed='move'}
@@ -1812,6 +2100,7 @@ function renderParts(){
      </div>
      <div class="ps-quick"><span class="lab">Familia</span>
        ${[['','Todas']].concat(Object.entries(CL)).map(([k,l])=>`<span class="ps-chip ${PS.cls===k?'on':''}" onclick="PS.cls='${k}';renderParts()">${l}</span>`).join('')}
+       ${S.rol!=='cliente'?`<button class="btn sec xs" style="margin-left:auto" onclick="openNewPart()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar repuesto</button>`:''}
      </div>
    </div>
    <div id="psResults"></div>`;
@@ -1892,7 +2181,8 @@ function partsDetail(){
        <thead><tr><th style="width:36px">Pos</th><th>N.º de parte</th><th style="width:112px" class="num">Precio</th><th style="width:132px">Disponibilidad</th><th style="width:120px">Acción</th><th style="width:96px">Cant.</th></tr></thead>
        <tbody>${lista.map(p=>{const sel=PS.sel[p.n]||{q:0,act:'Reemplazar'};return `<tr class="bom-row ${sel.q>0?'sel':''}" data-p="${p.p}" onmouseenter="pHot(${p.p},1)" onmouseleave="pHot(${p.p},0)" style="cursor:default">
          <td><span class="pos">${p.p}</span></td>
-         <td><div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''}</small></div></td>
+         <td><div style="display:flex;align-items:center;gap:9px">${PART_PHOTO[p.n]?`<img class="pt-thumb" src="${PART_PHOTO[p.n]}" alt="">`:''}
+           <div class="cell-2"><b class="mono">${p.n}</b><small>${esc(p.d)}${p.k?' · kit overhaul':''}${usadas[p.n]?` · usada ${usadas[p.n]}`:''}</small></div></div></td>
          <td class="num"><span class="pd-price" id="pp-${p.p}">${usd(psUnit(p.n))}<small>${sel.act==='Reparar'?'reparación':'por unidad'}</small></span></td>
          <td><span class="stk ${p.s>0?'y':'n'}"><span class="dot"></span>${p.s>0?p.s+' und · stock':'sin stock'}</span><small>${esc(p.l)}</small></td>
          <td><select class="ps-act" onchange="psAct(${p.p},'${p.n}',this.value)"><option${sel.act==='Reemplazar'?' selected':''}>Reemplazar</option><option${sel.act==='Reparar'?' selected':''}>Reparar</option></select></td>
@@ -1939,6 +2229,70 @@ function quoteParts(kind){
   if(!items.length){toast('Selecciona al menos una pieza');return}
   const cId=PS.asset?(ACTIVOS.find(x=>x.id===PS.asset)||{}).cli:(S.cli||null);
   openQuote(items,cId,kind);
+}
+/* ---- alta de repuestos (solo personal de Adolphus) ---- */
+const PART_PHOTO={};      /* n.º de parte -> foto (data URI) */
+let npFoto='';
+function openNewPart(){
+  if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede dar de alta repuestos');return}
+  npFoto='';
+  const mOpts=Object.entries(MODELOS).map(([k,m])=>`<option value="${k}" ${k===PS.mod?'selected':''}>${esc(m.m)} · ${k} — ${esc(m.t)}</option>`).join('');
+  const grupos=['Cuerpo','Bonete','Trim','Sellos','Actuador','Resorte','Instrumento','Accionamiento','Obturador','Ferretería','Accesorio','Motor','Transmisión','Control'];
+  $('#mTitle').textContent='Agregar repuesto';
+  $('#mBody').innerHTML=`
+   <div class="np-wrap">
+     <div>
+       <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">Foto del repuesto</label>
+       <div class="np-drop" id="npDrop" onclick="document.getElementById('npFile').click()">
+         <div id="npPrev">${NP_PH}</div>
+       </div>
+       <input type="file" id="npFile" accept="image/*" capture="environment" style="display:none">
+       <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="npClearFoto()">Quitar foto</button>
+     </div>
+     <div>
+       <div class="two">
+         <div class="fld"><label>N.º de parte</label><input class="inp" id="npN" placeholder="AD-TRM-316-B"></div>
+         <div class="fld"><label>Posición en el despiece</label><input class="inp" id="npP" type="number" min="1" placeholder="automática"></div>
+       </div>
+       <div class="fld"><label>Nombre / descripción</label><input class="inp" id="npD" placeholder="Anillo de asiento SS316 endurecido"></div>
+       <div class="two">
+         <div class="fld"><label>Modelo de válvula</label><select class="inp" id="npMod">${mOpts}</select></div>
+         <div class="fld"><label>Grupo</label><select class="inp" id="npG">${grupos.map(g=>`<option>${g}</option>`).join('')}</select></div>
+         <div class="fld"><label>Precio unitario (USD)</label><input class="inp" id="npPr" type="number" min="0" step="1" placeholder="480"></div>
+         <div class="fld"><label>Stock en almacén</label><input class="inp" id="npS" type="number" min="0" value="0"></div>
+         <div class="fld"><label>Disponibilidad</label><select class="inp" id="npL"><option>Almacén Lima</option><option>Importación 8 sem</option><option>Importación 10-12 sem</option><option>Bajo pedido</option></select></div>
+         <div class="fld"><label>¿Va en el kit de overhaul?</label><select class="inp" id="npK"><option value="0">No</option><option value="1">Sí</option></select></div>
+       </div>
+     </div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewPart()">Guardar repuesto</button>`;
+  $('#npFile').onchange=e=>{const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();r.onload=ev=>{npFoto=ev.target.result;
+      $('#npPrev').innerHTML=`<img src="${npFoto}" alt="Repuesto">`;$('#npDrop').classList.add('has')};
+    r.readAsDataURL(file)};
+  $('#modal').classList.add('on');
+}
+const NP_PH=`<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg><b>Subir foto</b><span>o tomar con la cámara</span>`;
+function npClearFoto(){
+  npFoto='';const p=$('#npPrev');if(p)p.innerHTML=NP_PH;
+  const d=$('#npDrop');if(d)d.classList.remove('has');
+  const f=$('#npFile');if(f)f.value='';
+}
+function saveNewPart(){
+  const n=$('#npN').value.trim().toUpperCase(),d=$('#npD').value.trim();
+  if(!n){toast('Indica el número de parte');return}
+  if(!d){toast('Indica el nombre o descripción');return}
+  const mod=$('#npMod').value,m=MODELOS[mod]||{},fam=m.b||'globo';
+  const lista=BOM[fam]=BOM[fam]||[];
+  if(lista.some(p=>p.n===n)){toast(`${n} ya existe en el despiece de ${mod}`);return}
+  const pos=parseInt($('#npP').value,10)||(Math.max(0,...lista.map(p=>p.p))+1);
+  lista.push({p:pos,n,d,q:1,g:$('#npG').value,k:$('#npK').value==='1'?1:0,s:parseInt($('#npS').value,10)||0,l:$('#npL').value});
+  lista.sort((a,b)=>a.p-b.p);
+  PRECIOS[n]=parseFloat($('#npPr').value)||120;
+  if(npFoto)PART_PHOTO[n]=npFoto;
+  closeModal();
+  PS.mod=mod;PS.sel={};renderParts();go('parts');
+  toast(`${n} agregado al despiece de ${mod}`);
 }
 function renderUsers(){
   $('#userList').innerHTML=`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Organización</th><th>Alcance</th></tr></thead>
@@ -2037,7 +2391,7 @@ function consolidar(c,arDef){
     <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
     <b>${pend.length} equipos consolidados en ${cl_.n}</b>Ya heredan el despiece de su modelo y aparecen en la grilla.
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
-      <button class="btn" onclick="go('assets')">Ver en activos</button>
+      <button class="btn" onclick="go(S.cli?'assets':'clients')">Ver en activos</button>
       <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Importar otro archivo</button></div></div></div>`;
   renderAll();toast(`${pend.length} equipos consolidados`);
 }
@@ -2078,7 +2432,7 @@ function buildCmd(q){
    {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
   ];
   const act=visibles().filter(a=>!q||[a.tag,a.ser,a.mod,MODELOS[a.mod]?.m,cli(a.cli).n].join(' ').toLowerCase().includes(q))
-    .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>{go('assets');openAsset(a.id)}}));
+    .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>gotoAsset(a.id)}));
   const partes=[];
   if(q.length>1){
     const vistos=new Set();
@@ -2224,7 +2578,7 @@ function renderHome(){
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
   const att=vs.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k))
     .sort((a,b)=>sev(a)-sev(b)||(dias(a.prox||'')??999)-(dias(b.prox||'')??999)).slice(0,7);
-  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="go('assets');openAsset('${a.id}')">
+  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="gotoAsset('${a.id}')">
     <span class="att-tag"><b>${esc(a.tag||'— sin tag —')}</b><span>${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod)}</span></span>
     <span class="att-x">${esc(cli(a.cli).n)} · ${esc(area(a))}</span>
     <span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></div>`}).join('')}</div>`
@@ -2233,22 +2587,19 @@ function renderHome(){
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
   const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
-    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="go('assets');openAsset('${x.o.act}');showTab('hist')">
+    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="gotoAsset('${x.o.act}','hist')">
       <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
-    return `<div class="feed-i" onclick="go('req')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
+    return `<div class="feed-i" onclick="gotoClientPage('req','${x.s.cli}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   $('#homeView').innerHTML=`
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1><p>${fechaLarga(HOY)}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
    ${kpiHtml}
    <div class="dash">
-     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="setView('atencion');go('assets')">Ver todo</button>`)}</div>
+     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver todo</button>`)}</div>
      <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'activos'))}</div>
      <div class="span-8">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
      <div class="span-4">${panel('Actividad reciente',feedHtml)}</div>
-     <div class="span-4">${panel('Parque por criticidad',hbars(crit))}</div>
-     <div class="span-4">${panel('Parque por clase',hbars(clase))}</div>
-     <div class="span-4">${panel('Órdenes por etapa',hbars(etapa))}</div>
    </div>`;
 }
 
@@ -2277,7 +2628,7 @@ function renderRep(){
     {v:porRep.reduce((s,x)=>s+x.value,0),k:'Repuestos movidos',d:'órdenes + solicitudes'}];
   const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
   const proxTable=`<table class="grid"><thead><tr><th>Tag</th><th>Modelo</th><th>Cliente</th><th>Vence</th><th>Restante</th></tr></thead>
-    <tbody>${prox.map(a=>{const d=dias(a.prox),c=d<0?'late':d<=90?'due':'ok';return `<tr onclick="go('assets');openAsset('${a.id}')"><td><b>${esc(a.tag)}</b></td><td class="mono">${esc(a.mod)}</td><td>${esc(cli(a.cli).n)}</td><td class="mono">${a.prox}</td><td><span class="tag ${c}"><span class="dot"></span>${d<0?`−${-d} d`:`${d} d`}</span></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:20px">Sin programa de calibración</td></tr>`}</tbody></table>`;
+    <tbody>${prox.map(a=>{const d=dias(a.prox),c=d<0?'late':d<=90?'due':'ok';return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag)}</b></td><td class="mono">${esc(a.mod)}</td><td>${esc(cli(a.cli).n)}</td><td class="mono">${a.prox}</td><td><span class="tag ${c}"><span class="dot"></span>${d<0?`−${-d} d`:`${d} d`}</span></td></tr>`}).join('')||`<tr><td colspan="5" style="text-align:center;color:var(--ink-3);padding:20px">Sin programa de calibración</td></tr>`}</tbody></table>`;
   $('#repView').innerHTML=`
    <div class="hd"><div><h1>Confiabilidad y reportes</h1><p>Indicadores del parque ${S.cli?`de ${esc(cli(S.cli).n)}`:'de todos los clientes'} · ${fechaLarga(HOY)}.</p></div>
      <button class="btn sec" onclick="toast('Reporte exportado (simulado)')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar reporte</button></div>
@@ -2310,51 +2661,96 @@ function renderNotif(){
 }
 function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
 function closeNotif(){$('#notifPop').classList.remove('on')}
-function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go('req');else if(n.id){go('assets');openAsset(n.id)}}
+function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go(S.cli?'req':'clients');else if(n.id){gotoAsset(n.id)}}
 document.addEventListener('click',closeNotif);
 
 /* ============================================================
    12.6 · ALTA DE VÁLVULA
    ============================================================ */
-function openNewAsset(){
+let naSel='';
+function openNewAsset(preCli){
   if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede dar de alta equipos');return}
-  const cOpts=CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
-  const mOpts=Object.entries(MODELOS).map(([k,m])=>`<option value="${k}">${esc(m.m)} · ${k} — ${esc(m.t)}</option>`).join('');
+  naSel='';
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${preCli===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
   const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
+  const gallery=Object.entries(MODELOS).map(([k,m])=>`
+    <div class="nm-card" data-m="${k}" onclick="selNaMod('${k}')">
+      <div class="nm-ph">${photoFor(k)}</div>
+      <div class="nm-bd"><span class="nm-mk">${esc(m.m)}</span><span class="nm-cd">${esc(k)}</span><span class="nm-ty">${esc(m.t)}</span></div>
+    </div>`).join('');
   $('#mTitle').textContent='Nueva válvula';
   $('#mBody').innerHTML=`
    <div class="two">
      <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
      <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
+   </div>
+   <label style="font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;display:block">1 · Elige el modelo <span style="color:var(--ink-3);font-weight:400">— se autocompletan marca, tipo, clase y despiece</span>
+     <button class="btn quiet xs" id="naClear" style="display:none;float:right" onclick="clearNaMod()">✕ Quitar selección</button></label>
+   <div class="nm-grid">${gallery}</div>
+   <div id="naHint" class="callout" style="display:none;margin-bottom:14px"></div>
+   <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— lo único propio de esta válvula</span></label>
+   <div class="two">
      <div class="fld"><label>Tag</label><input class="inp" id="naTag" placeholder="p. ej. PSV-1300"></div>
      <div class="fld"><label>N.º de serie</label><input class="inp" id="naSer" placeholder="p. ej. C-90-1123"></div>
-     <div class="fld"><label>Modelo</label><select class="inp" id="naMod">${mOpts}</select></div>
-     <div class="fld"><label>Clase</label><select class="inp" id="naCl">${clOpts}</select></div>
-     <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
-     <div class="fld"><label>Rating / clase</label><input class="inp" id="naRt" placeholder="300"></div>
-     <div class="fld"><label>Cv</label><input class="inp" id="naCv" placeholder="—"></div>
-     <div class="fld"><label>Rango / set</label><input class="inp" id="naRng" placeholder="150 psig"></div>
-     <div class="fld"><label>Falla a (aire)</label><select class="inp" id="naAir"><option value="">—</option><option>OPEN</option><option>CLOSE</option></select></div>
-     <div class="fld"><label>Criticidad</label><select class="inp" id="naCr"><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
-     <div class="fld"><label>Último servicio</label><input class="inp" id="naUlt" type="date"></div>
-     <div class="fld"><label>Próxima calibración</label><input class="inp" id="naProx" type="date"></div>
    </div>
-   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>La clase se ajusta al modelo elegido; puedes cambiarla. En válvulas de seguridad, fija la <b>próxima calibración</b> para que entren al horizonte y a las alertas.</div></div>`;
+   <details class="fx-more" id="naSpecs"><summary>Ficha técnica — <span id="naSpecsLbl">se completa al elegir el modelo</span></summary>
+     <div class="two" style="margin-top:10px">
+       <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
+       <div class="fld"><label>Rating / clase</label><input class="inp" id="naRt" placeholder="300"></div>
+       <div class="fld"><label>Rango / set</label><input class="inp" id="naRng" placeholder="150 psig"></div>
+       <div class="fld"><label>Criticidad</label><select class="inp" id="naCr"><option>Media</option><option>Alta</option><option>Crítica</option></select></div>
+       <div class="fld"><label>Próxima calibración</label><input class="inp" id="naProx" type="date"></div>
+       <div class="fld"><label>Último servicio</label><input class="inp" id="naUlt" type="date"></div>
+       <div class="fld"><label>Cv</label><input class="inp" id="naCv" placeholder="—"></div>
+       <div class="fld"><label>Falla a (aire)</label><select class="inp" id="naAir"><option value="">—</option><option>OPEN</option><option>CLOSE</option></select></div>
+       <div class="fld"><label>Clase</label><select class="inp" id="naCl">${clOpts}</select></div>
+     </div>
+   </details>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewAsset()">Crear válvula</button>`;
   const fillAr=()=>{const c=cli($('#naCli').value);$('#naAr').innerHTML=Object.entries(c.areas).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')};
   $('#naCli').onchange=fillAr;fillAr();
-  $('#naMod').onchange=()=>{const m=MODELOS[$('#naMod').value];if(m)$('#naCl').value=m.c};$('#naMod').onchange();
   $('#modal').classList.add('on');
 }
+function clearNaMod(){
+  naSel='';
+  document.querySelectorAll('.nm-card').forEach(c=>c.classList.remove('on'));
+  ['#naSz','#naRt','#naRng','#naCv','#naProx','#naUlt'].forEach(id=>{const el=$(id);if(el)el.value=''});
+  const air=$('#naAir');if(air)air.value='';const cr=$('#naCr');if(cr)cr.value='Media';
+  const h=$('#naHint');if(h)h.style.display='none';
+  const b=$('#naClear');if(b)b.style.display='none';
+  const lbl=$('#naSpecsLbl');if(lbl)lbl.textContent='se completa al elegir el modelo';
+  toast('Selección quitada — elige otro modelo');
+}
+function selNaMod(k){
+  naSel=k;const m=MODELOS[k]||{},d=MODELO_DEF[k]||{};
+  document.querySelectorAll('.nm-card').forEach(c=>c.classList.toggle('on',c.dataset.m===k));
+  const cb=$('#naClear');if(cb)cb.style.display='';
+  // autocompleta toda la ficha técnica típica del modelo
+  const set=(id,v)=>{const el=$(id);if(el)el.value=v??''};
+  set('#naCl',m.c);set('#naSz',d.sz);set('#naRt',d.rt);set('#naRng',d.rng);
+  set('#naCv',d.cv);set('#naAir',d.air);set('#naCr',d.cr||'Media');
+  const nBom=(BOM[m.b||'globo']||[]).length,hint=$('#naHint');
+  const ic='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>';
+  const resumen=[d.sz&&d.sz!=='—'?d.sz:'',d.rt?'clase '+d.rt:'',d.rng].filter(Boolean).join(' · ');
+  const lbl=$('#naSpecsLbl');if(lbl)lbl.innerHTML=`<b style="color:var(--ok)">completada del modelo</b>${resumen?` · ${esc(resumen)}`:''} · ajústala si tu equipo difiere`;
+  if(m.c==='seguridad'){
+    const p=new Date(HOY);p.setFullYear(p.getFullYear()+1);const ps=p.toISOString().slice(0,10);
+    set('#naProx',ps);
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). Es válvula de seguridad: <b>requiere calibración</b>, programé la próxima para <b>${ps}</b>.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
+  }else{
+    set('#naProx','');
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). No requiere calibración periódica.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
+  }
+}
 function saveNewAsset(){
+  if(!naSel){toast('Elige el modelo de válvula (paso 1)');return}
   const tag=$('#naTag').value.trim(),ser=$('#naSer').value.trim();
   if(!tag&&!ser){toast('Indica al menos el tag o el número de serie');return}
-  const id='new'+Date.now();
-  ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:$('#naCl').value,tag,ser,mod:$('#naMod').value,
-    sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:$('#naCv').value.trim(),air:$('#naAir').value,
+  const m=MODELOS[naSel]||{},id='new'+Date.now();
+  ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
+    sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
-  closeModal();renderAll();go('assets');openAsset(id);toast(`Válvula ${tag||ser} creada`);
+  closeModal();renderAll();gotoAsset(id);toast(`Válvula ${tag||ser} creada`);
 }
 
 /* ============================================================
@@ -2362,10 +2758,10 @@ function saveNewAsset(){
    ============================================================ */
 let CALIBS=[];
 const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.split('-');return `${D}/${M}/${Y}${t?' · '+t:''}`};
-function openCalib(assetId){
+function openCalib(assetId,edit){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
   if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
-  const nom=parseFloat((a.rng||'').replace(',','.'));
+  const nom=edit?edit.nom:parseFloat((a.rng||'').replace(',','.'));
   const uni=/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig';
   const hoyStr=HOY.toISOString().slice(0,10);
   const proxDef=new Date(HOY);proxDef.setFullYear(proxDef.getFullYear()+1);
@@ -2380,22 +2776,25 @@ function openCalib(assetId){
      <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="K. Ortiz"></div>
      <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="Banco neumático · patrón Fluke 700G"></div>
      <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
-     <div class="fld"><label>Presión a la que debía abrir (set)</label><input class="inp" id="cbNom" value="${isNaN(nom)?'':nom}"></div>
-     <div class="fld"><label>Unidad</label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
-     <div class="fld"><label>Tolerancia admisible (±%)</label><input class="inp" id="cbTol" value="3"></div>
+     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" title="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
+       <input class="inp ${isNaN(nom)?'pend req-cb':''}" id="cbNom" value="${isNaN(nom)?'':nom}" placeholder="presión de placa"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>Unidad <span class="hlp" title="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
+     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="3"></div>
      <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="22"></div>
    </div>
-   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found</h3>
+   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" title="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
    <div class="two">
-     <div class="fld"><label>Presión a la que abrió al llegar</label><input class="inp" id="cbAf" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>¿Cerraba bien? (hermeticidad)</label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" title="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
+       <input class="inp pend req-cb" id="cbAf" placeholder="escribe el valor medido"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" title="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
-   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left</h3>
+   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" title="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
    <div class="two">
-     <div class="fld"><label>Presión a la que abrió ya ajustada</label><input class="inp" id="cbAl" placeholder="${isNaN(nom)?'—':nom}"></div>
-     <div class="fld"><label>¿Cerraba bien al final?</label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
-     <div class="fld"><label>Contrapresión de cierre (blowdown)</label><input class="inp" id="cbBd" placeholder="7%"></div>
-     <div class="fld"><label>Válvula precintada</label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
+     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" title="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
+       <input class="inp pend req-cb" id="cbAl" placeholder="escribe el valor final"><span class="pend-msg">▲ Falta completar</span></div>
+     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" title="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" title="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
+     <div class="fld"><label>Válvula precintada <span class="hlp" title="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">4 · Cierre</h3>
    <div class="two">
@@ -2403,7 +2802,21 @@ function openCalib(assetId){
      <div class="fld"><label>Próxima calibración</label><input class="inp" id="cbProx" type="date" value="${proxDef.toISOString().slice(0,10)}"></div>
    </div>
    <div class="fld"><label>Observaciones para el informe</label><textarea class="inp" id="cbObs" rows="2" placeholder="Estado general, repuestos usados, recomendaciones…"></textarea></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}')">Generar informe y certificar</button>`;
+  $('#mTitle').textContent=edit?`Editar calibración · ${edit.cert}`:`Calibración · ${a.tag||a.ser||'activo'}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="generateCalib('${a.id}'${edit?`,'${edit.id}'`:''})">${edit?'Guardar cambios':'Generar informe y certificar'}</button>`;
+  if(edit){ // modo edición: recupera los valores del certificado
+    const set=(id,v)=>{const el=$(id);if(el&&v!==undefined&&v!==null)el.value=v};
+    set('#cbIni',edit.ini);set('#cbFin',edit.fin);set('#cbTec',edit.tec);set('#cbBanco',edit.banco);
+    set('#cbFluido',edit.fluido);set('#cbTemp',edit.temp);set('#cbNom',edit.nom);set('#cbUni',edit.uni);
+    set('#cbTol',edit.tol);set('#cbAf',edit.af);set('#cbAfH',edit.afH);set('#cbAl',edit.al);set('#cbAlH',edit.alH);
+    set('#cbBd',edit.bd);set('#cbPre',edit.pre);set('#cbProx',edit.prox);set('#cbObs',edit.obs);
+  }
+  // marca visual de "falta completar" que desaparece al escribir
+  $$('.req-cb').forEach(el=>{
+    const sync=()=>{const lleno=!!el.value.trim();
+      el.classList.toggle('pend',!lleno);el.closest('.fld').classList.toggle('is-pend',!lleno)};
+    el.oninput=sync;sync();
+  });
   $('#modal').classList.add('on');
 }
 function fillCalibExample(){
@@ -2414,8 +2827,9 @@ function fillCalibExample(){
   $('#cbBd').value='7%';
   toast('Ejemplo cargado — cambia los valores por los reales');
 }
-function generateCalib(assetId){
+function generateCalib(assetId,editId){
   const a=ACTIVOS.find(x=>x.id===assetId);if(!a)return;
+  const prev=editId?CALIBS.find(c=>c.id===editId):null;
   const num=id=>{const v=parseFloat(($('#'+id).value||'').toString().replace(',','.'));return isNaN(v)?null:v};
   const nom=num('cbNom'),uni=$('#cbUni').value,tol=num('cbTol')??3,af=num('cbAf'),al=num('cbAl');
   if(nom===null||af===null||al===null){toast('Completa el set nominal y las presiones as-found y as-left');return}
@@ -2427,7 +2841,7 @@ function generateCalib(assetId){
   const ajuste=!inTolAf,conforme=inTolAl&&hermOk;
   const verdict=!conforme?'No conforme':ajuste?'Conforme con ajuste':'Conforme';
   const vtone=!conforme?'late':ajuste?'due':'ok';
-  const cert='CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
+  const cert=prev?prev.cert:'CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
   const sg=x=>x>=0?'+':'';
   const msgs=[
     `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — ingresó a banco de pruebas el ${fmtDT(ini)}, con ${fluido.toLowerCase()} como fluido de prueba y patrón ${banco}.`,
@@ -2438,17 +2852,62 @@ function generateCalib(assetId){
     `Resultado: ${verdict.toUpperCase()}. ${pre==='Sí'?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
     obs?`Observaciones del técnico: ${obs}`:''
   ].filter(Boolean);
-  const rec={id:'cb'+Date.now(),act:a.id,cert,ini,fin,tec,banco,fluido,temp,nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs};
-  CALIBS.unshift(rec);
+  const rec={id:prev?prev.id:'cb'+Date.now(),act:a.id,cert,ini,fin,tec,banco,fluido,temp,nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs,
+    prevUlt:prev?prev.prevUlt:a.ult,prevProx:prev?prev.prevProx:a.prox};
+  if(prev)CALIBS[CALIBS.indexOf(prev)]=rec;else CALIBS.unshift(rec);
   a.ult=(fin||ini).slice(0,10);a.prox=prox;
-  const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
-  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,
-    hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`,partes:[],calib:rec.id});
-  DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
+  const hall=`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`;
+  const oExist=ORDENES.find(o=>o.calib===rec.id);
+  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;}
+  else{const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
+    ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
+  const dExist=DOCS.find(d=>d.calib===rec.id);
+  if(dExist)dExist.f=(fin||ini).slice(0,10);
+  else DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
   renderAll();
   if(S.cur&&S.cur.id===a.id){S.tab='hist';openAsset(a.id)}
   showCalibReport(rec);
-  toast(`${verdict} · certificado ${cert} emitido`);
+  toast(prev?`Certificado ${cert} actualizado · ${verdict}`:`${verdict} · certificado ${cert} emitido`);
+}
+/* Gráfica de la prueba: banda de tolerancia + recorrido nominal → as-found → as-left */
+function calibChart(rec){
+  const W=460,H=210,L=52,R=18,T=16,B=34;
+  const nom=rec.nom,tol=rec.tol||3;
+  const hi=nom*(1+tol/100),lo=nom*(1-tol/100);
+  const vals=[nom,hi,lo,rec.af,rec.al].filter(v=>typeof v==='number'&&!isNaN(v));
+  let mn=Math.min(...vals),mx=Math.max(...vals);
+  const pad=(mx-mn)*0.25||Math.max(nom*0.15,1);
+  mn-=pad;mx+=pad;
+  const y=v=>T+(H-T-B)*(1-(v-mn)/(mx-mn));
+  const xs=[L+30,L+(W-L-R-30)*0.5+15,W-R-20];
+  const pts=[{x:xs[0],v:nom,l:'Nominal',ok:true},
+             {x:xs[1],v:rec.af,l:'As-found',ok:Math.abs(rec.devAf)<=tol},
+             {x:xs[2],v:rec.al,l:'As-left',ok:Math.abs(rec.devAl)<=tol}];
+  const ticks=[mn,(mn+mx)/2,mx].map(v=>`
+    <line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" stroke="var(--line-2)" stroke-width="1"/>
+    <text x="${L-8}" y="${y(v)+3.5}" text-anchor="end" font-size="10" fill="var(--ink-3)">${v.toFixed(1)}</text>`).join('');
+  const line=pts.map((p,i)=>`${i?'L':'M'}${p.x} ${y(p.v)}`).join(' ');
+  return `<div class="cc-chart"><h4>Comportamiento en el banco de pruebas</h4>
+   <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gráfica de presiones de apertura">
+     <rect x="${L}" y="${y(hi)}" width="${W-L-R}" height="${Math.max(2,y(lo)-y(hi))}" fill="var(--ok)" opacity=".13"/>
+     <line x1="${L}" y1="${y(hi)}" x2="${W-R}" y2="${y(hi)}" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+     <line x1="${L}" y1="${y(lo)}" x2="${W-R}" y2="${y(lo)}" stroke="var(--ok)" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/>
+     ${ticks}
+     <line x1="${L}" y1="${y(nom)}" x2="${W-R}" y2="${y(nom)}" stroke="var(--sel)" stroke-width="1.5"/>
+     <text x="${L+6}" y="${y(nom)-6}" text-anchor="start" font-size="10" font-weight="600" fill="var(--sel)">set ${nom} ${esc(rec.uni)}</text>
+     <line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" stroke="var(--line)" stroke-width="1"/>
+     <path d="${line}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round"/>
+     ${pts.map(p=>`
+       <circle cx="${p.x}" cy="${y(p.v)}" r="6" fill="var(--surface)" stroke="var(--${p.ok?'ok':'late'})" stroke-width="3"/>
+       <text x="${p.x}" y="${y(p.v)-13}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--${p.ok?'ok':'late'})">${p.v}</text>
+       <text x="${p.x}" y="${H-B+17}" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">${p.l}</text>`).join('')}
+     <text x="${L-8}" y="${T-4}" text-anchor="end" font-size="9.5" fill="var(--ink-3)">${esc(rec.uni)}</text>
+   </svg>
+   <div class="cc-lg">
+     <span><i style="background:var(--sel)"></i>Presión de tarado (set)</span>
+     <span><i style="background:var(--ok);opacity:.5;height:8px"></i>Banda tolerada ±${tol}% (${lo.toFixed(1)}–${hi.toFixed(1)})</span>
+     <span><i style="background:var(--ink-2)"></i>Medición</span>
+   </div></div>`;
 }
 function showCalibReport(rec){
   if(!rec)return;
@@ -2469,13 +2928,42 @@ function showCalibReport(rec){
        <tr style="cursor:default"><td>Desviación</td><td class="mono">±${rec.tol}%</td><td class="mono" style="color:var(--${cot(rec.devAf)})">${sg(rec.devAf)}${rec.devAf.toFixed(1)}%</td><td class="mono" style="color:var(--${cot(rec.devAl)})">${sg(rec.devAl)}${rec.devAl.toFixed(1)}%</td></tr>
        <tr style="cursor:default"><td>Hermeticidad</td><td>—</td><td>${rec.afH}</td><td>${rec.alH}</td></tr>
      </tbody></table></div>
+   ${calibChart(rec)}
    <h3 style="margin:6px 0 8px">Lectura para el informe final</h3>
    <div style="font-size:13px;color:var(--ink-2);line-height:1.6">${rec.msgs.map(m=>`<p style="margin-bottom:7px">${esc(m)}</p>`).join('')}</div>
    <div class="callout ${rec.vtone==='ok'?'':rec.vtone==='due'?'warn':'bad'}" style="margin-top:12px">
      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg>
      <div><b>${rec.verdict}.</b> Próxima calibración programada para ${rec.prox}.</div></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
+  const staff=S.rol!=='cliente';
+  $('#mFoot').innerHTML=`
+    ${staff?`<button class="btn quiet" style="color:var(--late)" onclick="deleteCalib('${rec.id}')"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>
+    <button class="btn sec" onclick="editCalib('${rec.id}')"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a2.4 2.4 0 0 1 3.4 3.4L8 20l-4 1 1-4z"/></svg>Editar</button>`:''}
+    <button class="btn sec" onclick="toast('Certificado exportado a PDF (simulado)')">Exportar PDF</button><button class="btn" onclick="closeModal()">Cerrar</button>`;
   $('#modal').classList.add('on');
+}
+function editCalib(id){
+  const rec=CALIBS.find(c=>c.id===id);if(!rec)return;
+  closeModal();openCalib(rec.act,rec);
+}
+function deleteCalib(id){
+  const rec=CALIBS.find(c=>c.id===id);if(!rec)return;
+  $('#mTitle').textContent='Eliminar certificado';
+  $('#mBody').innerHTML=`<div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <div>Se eliminará el certificado <b>${rec.cert}</b>, su orden de trabajo y el documento del expediente. Las fechas del equipo volverán a como estaban antes de esta calibración. Esta acción no se puede deshacer.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmDeleteCalib('${id}')">Sí, eliminar</button>`;
+  $('#modal').classList.add('on');
+}
+function confirmDeleteCalib(id){
+  const i=CALIBS.findIndex(c=>c.id===id);if(i<0)return;
+  const rec=CALIBS[i],a=ACTIVOS.find(x=>x.id===rec.act);
+  if(a){if(rec.prevUlt!==undefined)a.ult=rec.prevUlt;if(rec.prevProx!==undefined)a.prox=rec.prevProx;}
+  CALIBS.splice(i,1);
+  for(let k=ORDENES.length-1;k>=0;k--)if(ORDENES[k].calib===id)ORDENES.splice(k,1);
+  for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].calib===id)DOCS.splice(k,1);
+  closeModal();renderAll();
+  if(S.cur&&S.cur.id===rec.act)openAsset(rec.act);
+  toast(`Certificado ${rec.cert} eliminado`);
 }
 
 /* ============================================================
@@ -2533,7 +3021,7 @@ function saveNewClient(){
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
   CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
   $('#fCli').dataset.built='';
-  closeModal();renderAll();go('assets');toast(`Cliente ${n} creado`);
+  closeModal();renderAll();go('clients');toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
@@ -2675,7 +3163,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
