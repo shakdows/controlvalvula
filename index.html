@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Adolphus · Gestión de válvulas y repuestos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16306b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Adolphus">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -3391,8 +3398,11 @@ function openSync(){
         <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
         <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
     :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
-   <div class="callout" style="margin-top:14px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>¿Vas a entrar a una planta sin señal? Abre el sistema <b>antes</b> de entrar: queda cargado y funciona completo sin internet. Al salir y recuperar señal, todo sube solo.</div></div>`;
+   <div class="callout ${SW_LISTA?'':'warn'}" style="margin-top:14px">
+     <svg viewBox="0 0 24 24">${SW_LISTA?'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
+     <div>${SW_LISTA
+       ? `<b>App guardada en este equipo.</b> Puedes cerrarla y volver a abrirla en planta <b>sin internet</b>: arranca desde la copia local. Para tenerla como app propia, usa el menú del navegador → <b>Instalar aplicación</b> / <b>Añadir a pantalla de inicio</b>.`
+       : `<b>Recomendación:</b> abre el sistema <b>antes</b> de entrar a la zona sin señal. Instalado desde el servidor (https) queda guardado en el equipo y abre sin internet; abierto como archivo suelto, mantenlo en una pestaña abierta.`}</div></div>`;
   $('#mFoot').innerHTML=`
     <button class="btn quiet" onclick="toggleOffline()">${OFF_SIM?'Simular con señal':'Simular sin señal'}</button>
     <span style="flex:1"></span>
@@ -3403,6 +3413,20 @@ function openSync(){
 window.addEventListener('online',()=>{pintarNet();toast('Señal recuperada — subiendo cambios');sincronizar()});
 window.addEventListener('offline',()=>{pintarNet();toast('Sin conexión — se seguirá guardando en este equipo')});
 
+/* Guarda la app en el equipo (PWA): al abrirla una vez con señal, queda
+   disponible aunque después entres a planta sin internet. Requiere que
+   la página se sirva por https (no funciona abriendo el archivo suelto). */
+let SW_LISTA=false;
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js')
+      .then(r=>{SW_LISTA=true;pintarNet();
+        r.addEventListener('updatefound',()=>{const w=r.installing;
+          w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)toast('Hay una versión nueva — se aplicará al reabrir')})});
+      })
+      .catch(()=>{});
+  });
+}
 restaurarLocal();
 paintThemeBtn();renderAll();go('home');pintarNet();
 </script>
