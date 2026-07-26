@@ -1136,16 +1136,20 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
       <!-- ═══ IMPORTAR ═══ -->
       <section class="page" id="p-imp"><div class="view-pad">
-        <div class="hd"><div><h1>Importar levantamiento de campo</h1><p>Acepta el Excel tal como sale de campo: con logo arriba, celdas combinadas y filas a medio llenar.</p></div></div>
+        <div class="hd"><div><h1 id="impTitle">Importar levantamiento de campo</h1><p>Un solo cargador para todo: la <b>foto o escaneo</b> de la hoja de campo, un <b>PDF</b>, o el <b>Excel</b> tal como sale de campo (con logo arriba, celdas combinadas y filas a medio llenar).</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn sec" onclick="printFieldSheet()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Hoja de campo</button>
+            <button class="btn sec" onclick="descargarPlantilla()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla Excel</button>
+          </div></div>
         <div class="steps" id="steps">
           <div class="stp on" data-s="1"><i>1</i>Archivo</div><div class="stp" data-s="2"><i>2</i>Mapeo</div>
           <div class="stp" data-s="3"><i>3</i>Validación</div><div class="stp" data-s="4"><i>4</i>Consolidación</div></div>
         <div id="imp1">
           <div class="drop" id="drop" onclick="document.getElementById('file').click()">
             <svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-            <b>Suelta el archivo .xls / .xlsx</b><span>o haz clic para elegirlo — también acepta .csv</span>
+            <b>Suelta aquí la foto, el PDF o el Excel</b><span>o haz clic para elegirlo — acepta .jpg .png .pdf .xls .xlsx .csv</span>
           </div>
-          <input type="file" id="file" accept=".xls,.xlsx,.csv" style="display:none">
+          <input type="file" id="file" accept="image/*,.pdf,.xls,.xlsx,.csv" style="display:none">
           <div class="callout" style="margin-top:16px">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
             <div>¿Sin archivo a la mano? <a href="#" onclick="demoImport();return false" style="color:var(--sel);font-weight:600">Carga un levantamiento de ejemplo</a> para recorrer el flujo completo.</div></div>
@@ -1600,7 +1604,7 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts'];
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
@@ -1730,7 +1734,7 @@ function renderClients(){
      </div>`}).join('')}</div>`;
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
@@ -1750,6 +1754,8 @@ function gotoClientPage(page,cliId){
   if(!S.cli&&cliId&&S.inCli!==cliId)enterClient(cliId,page);else go(page);
 }
 function renderCliBar(){
+  const t=$('#impTitle');
+  if(t)t.textContent=(S.inCli||S.cli)?`Importar a ${cli(S.inCli||S.cli).n}`:'Importar levantamiento de campo';
   const bar=$('#cliBar');
   const inside=!!S.inCli&&CLI_TABS.some(([p])=>p===S.page);
   bar.style.display=inside?'':'none';
@@ -1759,7 +1765,7 @@ function renderCliBar(){
   $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;$('#cbSub').textContent=`${c.ind} · ${c.fac}`;
   const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
   const n={assets:eq.length,
-    parts:0, /* el catálogo no necesita contador */
+    parts:0,imp:0, /* sin contador */
     cal:eq.filter(a=>a.prox).length,
     wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='certificada'}).length,
     req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
@@ -2460,8 +2466,28 @@ const dz=$('#drop');
 ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
 ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
 dz.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)leerArchivo(f)});
+/* Un solo cargador para los tres formatos: la foto/escaneo de la hoja de
+   campo, un PDF, o el Excel del levantamiento. Cada uno sigue su camino. */
 function leerArchivo(file){
-  const r=new FileReader();
+  const nom=(file.name||'').toLowerCase();
+  const esImg=(file.type||'').startsWith('image/')||/\.(jpe?g|png|heic|webp|bmp|gif)$/.test(nom);
+  const esPdf=file.type==='application/pdf'||/\.pdf$/.test(nom);
+  if(esImg||esPdf){                       // hoja de campo llena
+    const pintar=dataUri=>{
+      openUploadSheet();
+      setTimeout(()=>{
+        hcFoto=dataUri||'pdf';
+        const prev=$('#hcPrev'),drop=$('#hcDrop');
+        if(prev)prev.innerHTML=dataUri?`<img src="${dataUri}" alt="Hoja de campo">`:`<b>${esc(file.name)}</b><span>PDF adjunto</span>`;
+        if(drop)drop.classList.add('has');
+        toast('Hoja cargada — escribe el código del equipo y transcribe los valores');
+      },60);
+    };
+    if(esPdf){pintar(null)}
+    else{const r=new FileReader();r.onload=ev=>pintar(ev.target.result);r.readAsDataURL(file)}
+    return;
+  }
+  const r=new FileReader();               // Excel / CSV
   r.onload=ev=>{try{
     const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
     let best=[],hoja='';
@@ -2469,6 +2495,22 @@ function leerArchivo(file){
     detectar(best,hoja);
   }catch(err){toast('No se pudo leer el archivo: '+err.message)}};
   r.readAsArrayBuffer(file);
+}
+/* Plantilla Excel con el mismo formato de la hoja de campo, para llenar en PC. */
+function descargarPlantilla(){
+  const cab=['Cliente','Área / unidad','Tag','N.º de serie','Marca','Modelo','Tipo / clase','Tamaño','Rating','Cv','Rango / set','Falla a','Criticidad','Últ. servicio','Próx. calibración'];
+  const ej=[
+    ['Refinería Costa Norte','Unidad de Vacío','PSV-1210','C-88-4471','Consolidated','1900','seguridad','2"x3"','300','','150 psig','','Crítica','2025-09-02','2026-09-02'],
+    ['Refinería Costa Norte','Unidad de Crudo','TV-561B','N-11-267173','Masoneilan','21000','control','2"','600','39','7-15 psi','OPEN','Alta','2026-02-18',''],
+    ['','','','','','','','','','','','','','','']
+  ];
+  try{
+    const ws=XLSX.utils.aoa_to_sheet([cab,...ej]);
+    ws['!cols']=cab.map(c=>({wch:Math.max(12,c.length+3)}));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Levantamiento');
+    XLSX.writeFile(wb,'Plantilla levantamiento · Adolphus.xlsx');
+    toast('Plantilla descargada — llénala y súbela por este mismo cargador');
+  }catch(e){toast('No se pudo generar la plantilla')}
 }
 function detectar(arr,hoja){
   let hi=0,best=0;
@@ -2494,7 +2536,9 @@ function renderMap(hoja){
      <select class="inp" onchange="mapping['${k}']=this.value===''?undefined:+this.value"><option value="">— sin asignar —</option>
      ${headers.map((h,i)=>`<option value="${i}" ${mapping[k]===i?'selected':''}>${esc(h)}</option>`).join('')}</select></div>`).join('')}
    <div class="two" style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line-2)">
-     <div class="fld"><label>Asignar a cliente</label><select class="inp" id="impCli">${CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('')}</select></div>
+     <div class="fld"><label>Asignar a cliente</label>${(S.inCli||S.cli)
+        ? `<input class="inp" value="${esc(cli(S.inCli||S.cli).n)}" disabled style="opacity:.75"><input type="hidden" id="impCli" value="${S.inCli||S.cli}">`
+        : `<select class="inp" id="impCli">${CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('')}</select>`}</div>
      <div class="fld"><label>Área por defecto</label><select class="inp" id="impAr"></select></div></div>
    <div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn sec" onclick="paso(1)">Cancelar</button><button class="btn" onclick="validar()">Validar filas</button></div>
    </div></div>`;
@@ -2540,7 +2584,7 @@ function consolidar(c,arDef){
     <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
     <b>${pend.length} equipos consolidados en ${cl_.n}</b>Ya heredan el despiece de su modelo y aparecen en la grilla.
     <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
-      <button class="btn" onclick="go(S.cli?'assets':'clients')">Ver en activos</button>
+      <button class="btn" onclick="(S.inCli||S.cli)?go('assets'):go('clients')">Ver en activos</button>
       <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Importar otro archivo</button></div></div></div>`;
   renderAll();toast(`${pend.length} equipos consolidados`);
 }
