@@ -1136,11 +1136,12 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
       <!-- ═══ IMPORTAR ═══ -->
       <section class="page" id="p-imp"><div class="view-pad">
-        <div class="hd"><div><h1 id="impTitle">Importar levantamiento de campo</h1><p>Un solo cargador para todo. <b>Descarga la plantilla de calibraciones</b>, llénala en Excel sin internet y súbela: el sistema lee los valores y <b>certifica todo solo, sin transcribir nada</b>. También acepta la foto o el escaneo de la hoja a mano, un PDF, y el Excel de levantamiento tal como sale de campo.</p></div>
+        <div class="hd"><div><h1 id="impTitle">Importar levantamiento de campo</h1><p>Descarga el <b>Formulario de campo</b>: es un archivo que abres en la laptop o tablet <b>sin internet</b>, lo llenas como formulario y al terminar genera el archivo que subes aquí — <b>se certifica todo solo, sin escribir nada dos veces</b>. También acepta el Excel, la foto o el escaneo de la hoja a mano, y el PDF.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sec" onclick="printFieldSheet()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Hoja de campo</button>
             <button class="btn sec" onclick="descargarPlantilla()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla de equipos</button>
-            <button class="btn" onclick="descargarPlantillaCalib()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla de calibraciones</button>
+            <button class="btn sec" onclick="descargarPlantillaCalib()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla Excel</button>
+            <button class="btn" onclick="descargarFormulario()"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>Formulario de campo</button>
           </div></div>
         <div class="steps" id="steps">
           <div class="stp on" data-s="1"><i>1</i>Archivo</div><div class="stp" data-s="2"><i>2</i>Mapeo</div>
@@ -2519,6 +2520,167 @@ function descargarPlantilla(){
 const CAL_COLS=['N.º de serie','Tag','Marca / modelo','Set (presión de tarado)','Unidad','Tolerancia ±%',
   'AS-FOUND (abrió al llegar)','Hermeticidad as-found','AS-LEFT (abrió ya ajustada)','Hermeticidad as-left',
   'Blowdown %','Precintada','Fecha del ensayo','Técnico','Banco / patrón','Fluido','Temp. °C','Próxima calibración','Observaciones'];
+/* ---- Formulario de campo offline ----
+   Genera un archivo suelto que el técnico abre en la laptop o tablet sin
+   internet. Se llena como formulario y al terminar exporta un CSV que este
+   sistema lee entero: sin transcribir nada al volver. */
+function descargarFormulario(){
+  const foco=S.inCli||S.cli;
+  const todas=ACTIVOS.filter(a=>(!foco||a.cli===foco)&&a.ser);
+  // primero las que tienen programa de calibración: son las que se ensayan
+  const conProg=todas.filter(a=>a.prox);
+  const eq=conProg.length?conProg:todas;
+  if(!eq.length){toast('Este cliente no tiene válvulas registradas');return}
+  const datos=eq.map(a=>{
+    const m=MODELOS[a.mod]||{},nom=parseFloat((a.rng||'').replace(',','.'));
+    return {id:a.id,ser:a.ser,tag:a.tag||'',mod:`${m.m||''} ${a.mod}`.trim(),
+      set:isNaN(nom)?'':nom,uni:/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig',
+      area:area(a),cal:!!a.prox};
+  });
+  const nomCli=foco?cli(foco).n:'Adolphus';
+  const hoy=HOY.toISOString().slice(0,10);
+  const html=`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Formulario de campo · ${esc(nomCli)}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#eef1f4;color:#1b2126;padding:18px}
+.wrap{max-width:720px;margin:0 auto}
+header{background:#16306b;color:#fff;border-radius:12px 12px 0 0;padding:18px 20px;display:flex;align-items:center;gap:13px}
+header .lg{width:38px;height:38px;background:#fff;border-radius:8px;display:grid;place-items:center;flex:0 0 auto}
+header .lg svg{width:26px;height:26px}
+header b{font-size:16px;letter-spacing:.1em;display:block}
+header span{font-size:11px;opacity:.8;letter-spacing:.16em}
+.sub{background:#1f3f86;color:#fff;padding:9px 20px;font-size:12.5px}
+.card{background:#fff;padding:20px;border-radius:0 0 12px 12px;box-shadow:0 6px 24px rgba(20,30,45,.10)}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#5a656e;margin:18px 0 10px;padding-bottom:6px;border-bottom:1px solid #e3e8ec}
+h2:first-child{margin-top:0}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.g{grid-template-columns:1fr}}
+label{display:block;font-size:12px;font-weight:600;color:#3d4750;margin-bottom:4px}
+label i{font-weight:400;color:#8b959d;font-style:normal}
+input,select,textarea{width:100%;height:42px;border:1px solid #cdd5dc;border-radius:8px;padding:0 11px;font:inherit;font-size:14px;background:#fff}
+textarea{height:auto;padding:9px 11px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#16306b;box-shadow:0 0 0 3px #16306b22}
+input.req{border-color:#c9911f;background:#fdf7ea;border-style:dashed}
+input.ok{border-color:#2e9e63}
+.hint{font-size:11.5px;color:#8b959d;margin-top:3px}
+.dev{font-size:12px;font-weight:700;margin-top:5px}
+.btn{height:46px;border:none;border-radius:9px;background:#16306b;color:#fff;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;width:100%;margin-top:16px}
+.btn.sec{background:#fff;color:#16306b;border:1.5px solid #16306b}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.lista{margin-top:18px}
+.it{display:flex;gap:10px;align-items:center;border:1px solid #dde3e8;border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fbfcfd}
+.it b{flex:1;font-size:13.5px}
+.it .r{font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:20px}
+.r.ok{background:#e6f5ec;color:#1f7a4c}.r.due{background:#fdf3e0;color:#a2701a}.r.bad{background:#fdeaea;color:#b02a2a}
+.it button{border:none;background:none;color:#b02a2a;font-size:18px;cursor:pointer;padding:0 4px}
+.vacio{text-align:center;color:#8b959d;font-size:13px;padding:22px;border:1px dashed #cdd5dc;border-radius:9px}
+.aviso{background:#eaf1fb;border-radius:9px;padding:12px 14px;font-size:12.5px;line-height:1.55;color:#2a3b57;margin-bottom:16px}
+.ok-box{background:#e6f5ec;color:#1f7a4c;border-radius:9px;padding:14px;font-size:13px;text-align:center;margin-top:14px;font-weight:600}
+</style></head><body><div class="wrap">
+<header><span class="lg">${LOGO}</span><div><b>ADOLPHUS</b><span>HOJA DE CAMPO DIGITAL</span></div></header>
+<div class="sub">${esc(nomCli)} · funciona sin internet · guarda y sube al sistema al volver</div>
+<div class="card">
+  <div class="aviso"><b>Cómo usarlo:</b> elige la válvula, anota las dos presiones y pulsa <b>Agregar a la lista</b>. Repite con cada válvula que calibres. Al final pulsa <b>Descargar archivo</b> y súbelo al sistema: se certifica todo solo, sin volver a escribir nada.</div>
+  <h2>Válvula</h2>
+  <div><label>Equipo <i>— ya cargados los de ${esc(nomCli)}</i></label>
+    <select id="v"></select><div class="hint" id="vi"></div></div>
+  <h2>Medición en el banco</h2>
+  <div class="g">
+    <div><label>Abrió al llegar · as-found <i>*</i></label><input id="af" inputmode="decimal" placeholder="p. ej. 162"><div class="dev" id="dAf"></div></div>
+    <div><label>Abrió ya ajustada · as-left <i>*</i></label><input id="al" inputmode="decimal" placeholder="p. ej. 151"><div class="dev" id="dAl"></div></div>
+    <div><label>¿Cerró hermético al llegar?</label><select id="afh"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+    <div><label>¿Cerró hermético al final?</label><select id="alh"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+    <div><label>Contrapresión de cierre <i>— opcional</i></label><input id="bd" placeholder="7%"></div>
+    <div><label>¿Quedó precintada?</label><select id="pre"><option>Sí</option><option>No</option></select></div>
+  </div>
+  <h2>Datos del ensayo</h2>
+  <div class="g">
+    <div><label>Fecha</label><input id="fec" type="date" value="${hoy}"></div>
+    <div><label>Técnico</label><input id="tec" placeholder="Nombre del técnico"></div>
+    <div><label>Banco / patrón</label><input id="ban" value="Banco neumático · patrón Fluke 700G"></div>
+    <div><label>Fluido de prueba</label><select id="flu"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
+    <div><label>Temperatura ambiente °C</label><input id="tmp" value="22" inputmode="decimal"></div>
+    <div><label>Próxima calibración</label><input id="prox" type="date"></div>
+  </div>
+  <div style="margin-top:12px"><label>Observaciones / repuestos usados</label><textarea id="obs" rows="2" placeholder="Qué se encontró, qué se cambió…"></textarea></div>
+  <button class="btn" id="add">Agregar a la lista</button>
+  <h2 style="margin-top:24px">Calibraciones registradas <span id="n" style="color:#16306b"></span></h2>
+  <div class="lista" id="lista"></div>
+  <button class="btn sec" id="save" disabled>Descargar archivo para subir</button>
+  <div class="ok-box" id="okb" style="display:none"></div>
+</div></div>
+<script>
+const EQ=${JSON.stringify(datos)};
+const $=i=>document.getElementById(i);
+let filas=[];
+const sel=$('v');
+sel.innerHTML=EQ.map((e,i)=>'<option value="'+i+'">'+(e.tag||'(sin tag)')+' · '+e.ser+'</option>').join('');
+function eq(){return EQ[+sel.value]||{}}
+function pintaInfo(){const e=eq();
+  $('vi').textContent=e.mod+(e.set?' · set '+e.set+' '+e.uni:'')+(e.area?' · '+e.area:'');
+  const p=new Date($('fec').value||'${hoy}');p.setFullYear(p.getFullYear()+1);
+  if(!$('prox').value)$('prox').value=p.toISOString().slice(0,10);
+  dev();}
+function dev(){
+  const e=eq(),s=parseFloat(e.set)||0,tol=3;
+  [['af','dAf'],['al','dAl']].forEach(([i,d])=>{
+    const v=parseFloat(($(i).value||'').replace(',','.'));
+    $(i).classList.toggle('req',!$(i).value.trim());
+    $(i).classList.toggle('ok',!!$(i).value.trim());
+    if(!s||isNaN(v)){$(d).textContent='';return}
+    const x=(v-s)/s*100, dentro=Math.abs(x)<=tol;
+    $(d).textContent=(x>=0?'+':'')+x.toFixed(1)+'% · '+(dentro?'dentro de tolerancia':'FUERA de tolerancia');
+    $(d).style.color=dentro?'#1f7a4c':'#b02a2a';
+  });
+}
+sel.onchange=pintaInfo;$('af').oninput=dev;$('al').oninput=dev;
+$('add').onclick=()=>{
+  const e=eq(),af=$('af').value.trim(),al=$('al').value.trim();
+  if(!af||!al){alert('Escribe las dos presiones medidas (as-found y as-left).');dev();return}
+  const s=parseFloat(e.set)||0,tol=3;
+  const dAf=s?(parseFloat(af)-s)/s*100:0,dAl=s?(parseFloat(al)-s)/s*100:0;
+  const herm=$('alh').value==='Conforme';
+  const verd=!(Math.abs(dAl)<=tol&&herm)?'No conforme':(Math.abs(dAf)>tol?'Conforme con ajuste':'Conforme');
+  filas.push({ser:e.ser,tag:e.tag,mod:e.mod,set:e.set,uni:e.uni,tol:tol,af:af,afh:$('afh').value,
+    al:al,alh:$('alh').value,bd:$('bd').value,pre:$('pre').value,fec:$('fec').value,tec:$('tec').value,
+    ban:$('ban').value,flu:$('flu').value,tmp:$('tmp').value,prox:$('prox').value,obs:$('obs').value,verd:verd});
+  $('af').value='';$('al').value='';$('bd').value='';$('obs').value='';dev();
+  if(+sel.value<EQ.length-1){sel.value=+sel.value+1;pintaInfo()}
+  pintar();
+};
+function pintar(){
+  $('n').textContent=filas.length?'('+filas.length+')':'';
+  $('save').disabled=!filas.length;
+  $('lista').innerHTML=filas.length?filas.map((f,i)=>
+    '<div class="it"><b>'+(f.tag||f.ser)+'</b><span style="font-size:12px;color:#6b757d">'+f.af+' → '+f.al+' '+f.uni+'</span>'+
+    '<span class="r '+(f.verd==='Conforme'?'ok':f.verd==='Conforme con ajuste'?'due':'bad')+'">'+f.verd+'</span>'+
+    '<button onclick="quitar('+i+')" title="Quitar">×</button></div>').join('')
+    :'<div class="vacio">Todavía no has agregado ninguna calibración.</div>';
+}
+function quitar(i){filas.splice(i,1);pintar()}
+$('save').onclick=()=>{
+  const cab=['N.º de serie','Tag','Marca / modelo','Set (presión de tarado)','Unidad','Tolerancia ±%',
+   'AS-FOUND (abrió al llegar)','Hermeticidad as-found','AS-LEFT (abrió ya ajustada)','Hermeticidad as-left',
+   'Blowdown %','Precintada','Fecha del ensayo','Técnico','Banco / patrón','Fluido','Temp. °C','Próxima calibración','Observaciones'];
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const csv=[cab.map(q).join(',')].concat(filas.map(f=>[f.ser,f.tag,f.mod,f.set,f.uni,f.tol,f.af,f.afh,f.al,f.alh,
+    f.bd,f.pre,f.fec,f.tec,f.ban,f.flu,f.tmp,f.prox,f.obs].map(q).join(','))).join('\\r\\n');
+  const blob=new Blob(['\\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='Calibraciones ${esc(nomCli).replace(/[^\w ]/g,'')} '+($('fec').value||'${hoy}')+'.csv';
+  a.click();
+  $('okb').style.display='';
+  $('okb').innerHTML='✓ Archivo descargado con '+filas.length+' calibración'+(filas.length===1?'':'es')+'.<br>Súbelo en el sistema: Clientes → ${esc(nomCli)} → Importar.';
+};
+pintaInfo();pintar();
+<\/script></body></html>`;
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`Formulario de campo · ${nomCli}.html`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+  toast(`Formulario descargado con ${eq.length} válvulas — ábrelo sin internet en planta`);
+}
 function descargarPlantillaCalib(){
   const foco=S.inCli||S.cli;
   const eq=ACTIVOS.filter(a=>(!foco||a.cli===foco)&&a.prox);   // válvulas con programa de calibración
