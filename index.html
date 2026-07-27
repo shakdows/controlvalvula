@@ -1204,7 +1204,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   <div class="dr-f" id="drFoot"></div>
 </aside>
 
-<div class="cmd" id="cmd" onclick="if(event.target.id==='cmd')closeCmd()">
+<div class="cmd" id="cmd" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,closeCmd)">
   <div class="cmd-c">
     <div class="cmd-i">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -1215,13 +1215,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   </div>
 </div>
 
-<div class="modal" id="modal" onclick="if(event.target.id==='modal')closeModal()">
+<div class="modal" id="modal" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,closeModal)">
   <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
     <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="modal-b" id="mBody"></div><div class="modal-f" id="mFoot"></div></div>
 </div>
 
-<div class="quote" id="quote" onclick="if(event.target.id==='quote')closeQuote()">
+<div class="quote" id="quote" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,closeQuote)">
   <div class="quote-wrap">
     <div class="quote-bar">
       <span id="quoteKind">Cotización</span><span style="flex:1"></span>
@@ -1873,9 +1873,11 @@ function openAsset(id){
     ${d!==null&&d>=0?`<span class="tag ${d<=90?'due':'ok'}">Calibración en ${d} d</span>`:''}`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
-   : `<button class="btn quiet" style="color:var(--late)" onclick="deleteAsset('${a.id}')" title="Eliminar esta válvula"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>
+   : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+       return `<button class="btn quiet" style="color:var(--late)" onclick="deleteAsset('${a.id}')" title="Eliminar esta válvula"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>
       <span style="flex:1"></span>
-      <button class="btn sec" onclick="toast('Exportado a PDF (simulado)')">Exportar ficha</button><button class="btn sec" onclick="openCalib('${a.id}')">Registrar calibración</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;
+      ${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -2278,6 +2280,17 @@ function saveWO(){
   closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
 }
 function closeModal(){$('#modal').classList.remove('on')}
+/* Cierre por clic en el fondo. Solo cuenta si el gesto EMPEZÓ en el fondo:
+   así, arrastrar para seleccionar texto y soltar fuera no cierra la ventana. */
+let ovStart=null,ovEnd=null;
+function ovDown(e){ovStart=e.target===e.currentTarget?e.currentTarget:null}
+function ovUp(e){ovEnd=e.target===e.currentTarget?e.currentTarget:null}
+function ovClick(e,cerrar){
+  // cierra solo si el botón se pulsó Y se soltó sobre el fondo
+  const ok=e.target===e.currentTarget&&ovStart===e.currentTarget&&ovEnd===e.currentTarget;
+  ovStart=ovEnd=null;
+  if(ok)cerrar();
+}
 
 /* ============================================================
    9 · CATÁLOGO Y USUARIOS
@@ -3361,37 +3374,44 @@ const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.spli
 function openCalib(assetId,edit){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
   if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
-  const nom=edit?edit.nom:parseFloat((a.rng||'').replace(',','.'));
-  const uni=/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig';
+  // Lo que ya está en el sistema para esta válvula: no se vuelve a pedir.
+  const ult=edit?null:CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+  const nom=edit?edit.nom:(ult?ult.nom:parseFloat((a.rng||'').replace(',','.')));
+  const uni=edit?edit.uni:(ult?ult.uni:(/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig'));
   const hoyStr=HOY.toISOString().slice(0,10);
   const proxDef=new Date(HOY);proxDef.setFullYear(proxDef.getFullYear()+1);
   $('#mTitle').textContent=`Calibración · ${a.tag||a.ser||'activo'}`;
   $('#mBody').innerHTML=`
-   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
+   ${ult?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/></svg>
+     <div><b>Esta válvula ya tiene su calibración registrada:</b> certificado <b>${esc(ult.cert)}</b> del ${esc((ult.fin||ult.ini||'').slice(0,10))} — ${esc(ult.verdict)} (${ult.af} → ${ult.al} ${esc(ult.uni)}).
+     <a href="#" onclick="closeModal();showCalibReport(CALIBS.find(c=>c.id==='${ult.id}'));return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Ver el certificado</a> ·
+     <a href="#" onclick="closeModal();editCalib('${ult.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir sus datos</a>.
+     <br>Este formulario es para registrar un <b>ensayo nuevo</b>: los datos del equipo y del banco ya vienen puestos, solo faltan las dos presiones del ensayo de hoy.</div></div>`
+   :`<div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
      <div>Anota a qué presión <b>debía abrir</b> la válvula y a qué presión <b>abrió realmente</b> en el banco (antes y después de ajustarla). Lo demás ya viene prellenado. Al terminar se emite el certificado con el texto listo para tu informe.
-     <a href="#" onclick="fillCalibExample();return false" style="color:var(--sel);font-weight:600;text-decoration:underline">Rellenar con un ejemplo</a>.</div></div>
+     <a href="#" onclick="fillCalibExample();return false" style="color:var(--sel);font-weight:600;text-decoration:underline">Rellenar con un ejemplo</a>.</div></div>`}
    <h3 style="margin:4px 0 10px">1 · Inicio de la prueba</h3>
    <div class="two">
      <div class="fld"><label>Fecha y hora de inicio</label><input class="inp" id="cbIni" type="datetime-local" value="${hoyStr}T08:00"></div>
-     <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="K. Ortiz"></div>
-     <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="Banco neumático · patrón Fluke 700G"></div>
-     <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido"><option>Aire</option><option>Nitrógeno</option><option>Agua</option><option>Vapor</option></select></div>
+     <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="${esc(ult?ult.tec:'K. Ortiz')}"></div>
+     <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="${esc(ult?ult.banco:'Banco neumático · patrón Fluke 700G')}"></div>
+     <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido">${['Aire','Nitrógeno','Agua','Vapor'].map(f=>`<option ${ult&&ult.fluido===f?'selected':''}>${f}</option>`).join('')}</select></div>
      <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" title="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
        <input class="inp ${isNaN(nom)?'pend req-cb':''}" id="cbNom" value="${isNaN(nom)?'':nom}" placeholder="presión de placa"><span class="pend-msg">▲ Falta completar</span></div>
      <div class="fld"><label>Unidad <span class="hlp" title="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
-     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="3"></div>
-     <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="22"></div>
+     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="${ult?ult.tol:3}"></div>
+     <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="${esc(ult?ult.temp:'22')}"></div>
    </div>
    <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" title="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
    <div class="two">
      <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" title="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
-       <input class="inp pend req-cb" id="cbAf" placeholder="escribe el valor medido"><span class="pend-msg">▲ Falta completar</span></div>
+       <input class="inp pend req-cb" id="cbAf" placeholder="${ult?`ensayo anterior: ${ult.af}`:'escribe el valor medido'}"><span class="pend-msg">▲ Falta completar</span></div>
      <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" title="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" title="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
    <div class="two">
      <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" title="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
-       <input class="inp pend req-cb" id="cbAl" placeholder="escribe el valor final"><span class="pend-msg">▲ Falta completar</span></div>
+       <input class="inp pend req-cb" id="cbAl" placeholder="${ult?`ensayo anterior: ${ult.al}`:'escribe el valor final'}"><span class="pend-msg">▲ Falta completar</span></div>
      <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" title="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
      <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" title="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
      <div class="fld"><label>Válvula precintada <span class="hlp" title="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
