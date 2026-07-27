@@ -15,7 +15,10 @@ const APP = [
   './img/valvulas/seguridad.jpg',
   './img/valvulas/mariposa.jpg',
   './img/valvulas/cuchilla.jpg',
-  './img/valvulas/pinch.jpg'
+  './img/valvulas/pinch.jpg',
+  // librería de Excel: se guarda en la primera carga con internet para
+  // que importar y exportar sigan funcionando en planta sin señal
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
 self.addEventListener('install', e => {
@@ -35,7 +38,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin !== location.origin) return;   // no interceptar terceros
+  const externoCacheable = APP.includes(req.url);
+  if (url.origin !== location.origin && !externoCacheable) return;   // no interceptar otros terceros
 
   // La navegación siempre debe poder abrir, con o sin señal.
   if (req.mode === 'navigate') {

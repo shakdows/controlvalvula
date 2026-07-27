@@ -1136,10 +1136,11 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
       <!-- ═══ IMPORTAR ═══ -->
       <section class="page" id="p-imp"><div class="view-pad">
-        <div class="hd"><div><h1 id="impTitle">Importar levantamiento de campo</h1><p>Un solo cargador para todo: la <b>foto o escaneo</b> de la hoja de campo, un <b>PDF</b>, o el <b>Excel</b> tal como sale de campo (con logo arriba, celdas combinadas y filas a medio llenar).</p></div>
+        <div class="hd"><div><h1 id="impTitle">Importar levantamiento de campo</h1><p>Un solo cargador para todo. <b>Descarga la plantilla de calibraciones</b>, llénala en Excel sin internet y súbela: el sistema lee los valores y <b>certifica todo solo, sin transcribir nada</b>. También acepta la foto o el escaneo de la hoja a mano, un PDF, y el Excel de levantamiento tal como sale de campo.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sec" onclick="printFieldSheet()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Hoja de campo</button>
-            <button class="btn sec" onclick="descargarPlantilla()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla Excel</button>
+            <button class="btn sec" onclick="descargarPlantilla()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla de equipos</button>
+            <button class="btn" onclick="descargarPlantillaCalib()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Plantilla de calibraciones</button>
           </div></div>
         <div class="steps" id="steps">
           <div class="stp on" data-s="1"><i>1</i>Archivo</div><div class="stp" data-s="2"><i>2</i>Mapeo</div>
@@ -2512,11 +2513,111 @@ function descargarPlantilla(){
     toast('Plantilla descargada — llénala y súbela por este mismo cargador');
   }catch(e){toast('No se pudo generar la plantilla')}
 }
+/* ---- Plantilla de calibraciones: se llena en Excel y se sube ya leída ----
+   Es la alternativa a la hoja a mano: como el archivo trae los valores
+   escritos, el sistema los lee todos y certifica sin transcribir nada. */
+const CAL_COLS=['N.º de serie','Tag','Marca / modelo','Set (presión de tarado)','Unidad','Tolerancia ±%',
+  'AS-FOUND (abrió al llegar)','Hermeticidad as-found','AS-LEFT (abrió ya ajustada)','Hermeticidad as-left',
+  'Blowdown %','Precintada','Fecha del ensayo','Técnico','Banco / patrón','Fluido','Temp. °C','Próxima calibración','Observaciones'];
+function descargarPlantillaCalib(){
+  const foco=S.inCli||S.cli;
+  const eq=ACTIVOS.filter(a=>(!foco||a.cli===foco)&&a.prox);   // válvulas con programa de calibración
+  if(!eq.length){toast('Este cliente no tiene válvulas con calibración programada');return}
+  const hoy=HOY.toISOString().slice(0,10);
+  const prox=new Date(HOY);prox.setFullYear(prox.getFullYear()+1);
+  const filas=eq.map(a=>{
+    const m=MODELOS[a.mod]||{},nom=parseFloat((a.rng||'').replace(',','.'));
+    const uni=/bar/i.test(a.rng||'')?'bar':/kpa/i.test(a.rng||'')?'kPa':'psig';
+    return [a.ser||'',a.tag||'',`${m.m||''} ${a.mod}`,isNaN(nom)?'':nom,uni,3,
+      '','Conforme','','Conforme','7%','Sí',hoy,'K. Ortiz','Banco neumático · patrón Fluke 700G','Aire',22,
+      prox.toISOString().slice(0,10),''];
+  });
+  try{
+    const ws=XLSX.utils.aoa_to_sheet([CAL_COLS,...filas]);
+    ws['!cols']=CAL_COLS.map(c=>({wch:Math.max(13,Math.min(30,c.length+4))}));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Calibraciones');
+    const nom=foco?cli(foco).n.replace(/[^\wáéíóúñ ]/gi,'').trim():'Adolphus';
+    XLSX.writeFile(wb,`Calibraciones ${nom}.xlsx`);
+    toast(`Plantilla con ${eq.length} válvulas — llena AS-FOUND y AS-LEFT y súbela`);
+  }catch(e){toast('No se pudo generar la plantilla')}
+}
+/* ¿Es una plantilla de calibraciones? Se reconoce por sus encabezados. */
+function esPlantillaCalib(h){
+  const t=h.join(' ').toLowerCase();
+  return /as[\s-]?found/.test(t)&&/as[\s-]?left/.test(t);
+}
+function procesarCalibraciones(headers,filas){
+  const idx=n=>headers.findIndex(h=>new RegExp(n,'i').test(h));
+  const c={ser:idx('serie'),tag:idx('^tag'),set:idx('set|tarado'),uni:idx('unidad'),tol:idx('toleran'),
+    af:idx('as[\\s-]?found'),afh:idx('hermetic.*found|found.*hermetic'),al:idx('as[\\s-]?left'),
+    alh:idx('hermetic.*left|left.*hermetic'),bd:idx('blowdown'),pre:idx('precint'),fec:idx('fecha'),
+    tec:idx('t[eé]cnico'),banco:idx('banco|patr'),flu:idx('fluido'),tmp:idx('temp'),prox:idx('pr[oó]xima'),obs:idx('observ')};
+  const foco=S.inCli||S.cli;
+  const lista=ACTIVOS.filter(a=>!foco||a.cli===foco);
+  const num=v=>{const x=parseFloat(String(v??'').replace(',','.'));return isNaN(x)?null:x};
+  const val=(r,i)=>i>=0?String(r[i]??'').trim():'';
+  let ok=0,sinDato=0,noHallado=0;const detalle=[];
+  filas.forEach(r=>{
+    const af=num(r[c.af]),al=num(r[c.al]);
+    if(af===null||al===null){sinDato++;return}
+    const clave=val(r,c.ser)||val(r,c.tag);
+    const a=lista.find(x=>x.ser&&x.ser.toLowerCase()===clave.toLowerCase())
+          ||lista.find(x=>x.tag&&x.tag.toLowerCase()===clave.toLowerCase());
+    if(!a){noHallado++;detalle.push(`· ${clave||'(sin código)'} — no está registrada en este cliente`);return}
+    const nom=num(r[c.set])??num((a.rng||'').replace(',','.'))??0;
+    const uni=val(r,c.uni)||'psig',tol=num(r[c.tol])??3;
+    const afH=val(r,c.afh)||'Conforme',alH=val(r,c.alh)||'Conforme';
+    const fec=(val(r,c.fec)||HOY.toISOString().slice(0,10)).slice(0,10);
+    const tec=val(r,c.tec)||'—',banco=val(r,c.banco)||'—',flu=val(r,c.flu)||'Aire',tmp=val(r,c.tmp)||'22';
+    const bd=val(r,c.bd),pre=val(r,c.pre)||'Sí',obs=val(r,c.obs);
+    let prox=val(r,c.prox).slice(0,10);
+    if(!prox){const d=new Date(fec+'T00:00:00');d.setFullYear(d.getFullYear()+1);prox=d.toISOString().slice(0,10)}
+    const devAf=nom?((af-nom)/nom*100):0,devAl=nom?((al-nom)/nom*100):0;
+    const inAf=Math.abs(devAf)<=tol,inAl=Math.abs(devAl)<=tol,herm=alH.toLowerCase().startsWith('conforme');
+    const ajuste=!inAf,conforme=inAl&&herm;
+    const verdict=!conforme?'No conforme':ajuste?'Conforme con ajuste':'Conforme';
+    const vtone=!conforme?'late':ajuste?'due':'ok';
+    const cert='CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
+    const sg=x=>x>=0?'+':'';
+    const msgs=[
+      `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — fue ensayada el ${fec} con ${flu.toLowerCase()} y patrón ${banco}.`,
+      `Presión de tarado nominal: ${nom} ${uni}, con tolerancia admisible de ±${tol}%.`,
+      `As-found (cómo llegó): apertura a ${af} ${uni} → desviación ${sg(devAf)}${devAf.toFixed(1)}%, ${inAf?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad de entrada: ${afH.toLowerCase()}.`,
+      `As-left (cómo quedó): apertura a ${al} ${uni} → desviación ${sg(devAl)}${devAl.toFixed(1)}%, ${inAl?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad final: ${alH.toLowerCase()}${bd?`; contrapresión de cierre ${bd}`:''}.`,
+      ajuste?`La válvula llegó fuera de tolerancia; se reajustó el set point hasta dejarla conforme.`:`No fue necesario reajustar el set point.`,
+      `Resultado: ${verdict.toUpperCase()}. ${pre.toLowerCase().startsWith('s')?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
+      obs?`Observaciones del técnico: ${obs}`:''
+    ].filter(Boolean);
+    const rec={id:'cb'+Date.now()+ok,act:a.id,cert,ini:fec+'T08:00',fin:fec+'T10:30',tec,banco,fluido:flu,temp:tmp,
+      nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs,prevUlt:a.ult,prevProx:a.prox};
+    CALIBS.unshift(rec);
+    a.ult=fec;a.prox=prox;
+    ORDENES.unshift({id:'o'+Date.now()+ok,act:a.id,n:'AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length),
+      et:'certificada',tipo:'Calibración',f:fec,tec,hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`,partes:[],calib:rec.id});
+    DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:fec,w:'420 KB',calib:rec.id});
+    detalle.push(`· ${a.tag||a.ser}: ${af} → ${al} ${uni} · <b style="color:var(--${vtone})">${verdict}</b>`);
+    ok++;
+  });
+  renderAll();
+  if(ok)registrar('Calibración',`${ok} calibraciones cargadas desde Excel`);
+  paso(4);
+  $('#imp3').innerHTML=`<div class="panel"><div class="empty" style="text-align:left;padding:26px">
+    <svg viewBox="0 0 24 24" style="stroke:var(--${ok?'ok':'due'});opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+    <b style="text-align:center;display:block">${ok} calibraciones certificadas automáticamente</b>
+    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.9;margin-top:10px">${detalle.join('<br>')||'Sin filas con valores.'}</div>
+    ${sinDato?`<div class="callout warn" style="margin-top:14px"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>${sinDato} fila${sinDato===1?'':'s'} sin AS-FOUND o AS-LEFT: se omitieron.</div></div>`:''}
+    ${noHallado?`<div class="callout bad" style="margin-top:10px"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>${noHallado} código${noHallado===1?'':'s'} no corresponde a este cliente.</div></div>`:''}
+    <div style="margin-top:18px;display:flex;gap:8px;justify-content:center">
+      <button class="btn" onclick="go('cal')">Ver calibraciones</button>
+      <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Subir otro archivo</button></div></div></div>`;
+  toast(`${ok} calibraciones certificadas desde el Excel`);
+}
 function detectar(arr,hoja){
   let hi=0,best=0;
   arr.slice(0,20).forEach((row,i)=>{const n=row.filter(c=>String(c).trim()).length;if(n>best){best=n;hi=i}});
   headers=arr[hi].map((h,i)=>String(h).trim()||('Columna '+(i+1)));
   rawRows=arr.slice(hi+1).filter(r=>r.some(c=>String(c).trim()));
+  if(esPlantillaCalib(headers)){procesarCalibraciones(headers,rawRows);return}
   mapping={};
   const g={tag:/tag/i,ser:/serial|serie/i,marca:/marca|fabricante/i,mod:/modelo de v|modelo v|^modelo$/i,cl:/tipo de v|clase/i,sz:/tama[nñ]o|size/i,rt:/rating|clase de presi/i,cv:/^cv$/i,rng:/range|rango|set/i,air:/air to|falla/i,ar:/planta|estaci|[aá]rea/i};
   CAMPOS.forEach(([k])=>{const i=headers.findIndex(h=>g[k]&&g[k].test(h));if(i>=0)mapping[k]=i});
