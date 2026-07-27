@@ -709,6 +709,49 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 :root{ --chart:oklch(0.585 0.045 245); --chart-track:oklch(0.928 0.006 250) }
 [data-theme="dark"]{ --chart:oklch(0.680 0.050 245); --chart-track:oklch(0.318 0.012 250) }
 
+/* Familias de válvula — paleta categórica de 4 tonos, en orden fijo.
+   Validada con el verificador de paletas (banda de luminosidad, croma,
+   separación para daltonismo y contraste) en claro y en oscuro.
+   No se reutiliza ningún color de estado (ok / por vencer / vencido). */
+:root{
+  --fam-control:   #2a78d6;
+  --fam-seguridad: #eb6834;
+  --fam-onoff:     #1baf7a;
+  --fam-actuador:  #4a3aa7;
+}
+[data-theme="dark"]{
+  --fam-control:   #3987e5;
+  --fam-seguridad: #d95926;
+  --fam-onoff:     #199e70;
+  --fam-actuador:  #9085e9;
+}
+
+/* tarjetas grandes por familia (fila superior del panel) */
+.fams{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.fam{position:relative;display:flex;align-items:center;gap:12px;text-align:left;width:100%;
+  background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--fam);
+  border-radius:var(--r-2);padding:12px 14px 12px 12px;cursor:pointer;overflow:hidden;
+  transition:box-shadow var(--fast) var(--ease),transform var(--fast) var(--ease),border-color var(--fast) var(--ease)}
+.fam:hover{box-shadow:var(--shadow-pop);transform:translateY(-2px)}
+.fam-ph{flex:0 0 auto;width:76px;height:76px;border-radius:var(--r-1);display:flex;align-items:center;justify-content:center;
+  background:color-mix(in oklab,var(--fam) 13%,var(--surface));overflow:hidden}
+.fam-ph img,.fam-ph svg{max-width:100%;max-height:68px;width:auto;object-fit:contain}
+.fam-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.fam-n{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
+.fam-l{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:7px}
+.fam-l .sw{width:9px;height:9px;border-radius:3px;background:var(--fam);flex:0 0 auto}
+.fam-m{font-size:11.5px;color:var(--ink-3);margin-top:3px;display:flex;align-items:center;gap:4px}
+.fam-m b{color:var(--late);font-weight:600}
+.fam.off{opacity:.62}
+.fam:disabled{cursor:default}
+.fam:disabled:hover{box-shadow:none;transform:none}
+.fam.on{border-color:var(--fam);box-shadow:0 0 0 2px color-mix(in oklab,var(--fam) 26%,transparent)}
+
+/* leyenda de familias, compartida por los gráficos */
+.famleg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink-3)}
+.famleg span{display:inline-flex;align-items:center;gap:6px}
+.famleg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+
 .greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .greet .wave{color:var(--ink-3);font-weight:400}
 
@@ -727,7 +770,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 
 /* barras horizontales (magnitud) */
 .hb{display:flex;flex-direction:column;gap:11px}
-.hb-row{display:grid;grid-template-columns:118px 1fr 44px;align-items:center;gap:11px;font-size:12.5px}
+.hb-row{display:grid;grid-template-columns:minmax(96px,146px) 1fr 44px;align-items:center;gap:11px;font-size:12.5px}
+.hb-row.go,.col-i.go{cursor:pointer}
+.hb-row.go:hover .hb-l,.col-i.go:hover .col-x{color:var(--ink)}
 .hb-l{color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hb-track{height:9px;background:var(--chart-track);border-radius:6px;overflow:hidden}
 .hb-fill{display:block;height:100%;border-radius:6px;background:var(--chart);transition:width var(--med) var(--ease)}
@@ -1544,14 +1589,28 @@ const USUARIOS=[
    2 · ESTADO Y UTILIDADES
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
-const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
+const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
          focus:0,picked:new Set(),cur:null,tab:'ficha',wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+/* texto seguro dentro de un string JS que va en un atributo onclick="…" */
+const jsq=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 const cli=id=>CLIENTES.find(c=>c.id===id)||{};
 const area=a=>{const c=CLIENTES.find(x=>x.areas[a.ar]);return c?c.areas[a.ar]:'—'};
 const dias=f=>f?Math.round((new Date(f+'T00:00:00')-HOY)/864e5):null;
 const CL={control:'Control',seguridad:'Seguridad',onoff:'On-Off',actuador:'Actuador'};
+/* Familias de válvula: orden fijo (nunca se rota) para que un color signifique
+   siempre la misma familia, aquí y en todos los gráficos del panel. */
+const FAM=[
+ {k:'control',  n:'Válvulas de control',   c:'fam-control',   mod:'21000'},
+ {k:'seguridad',n:'Válvulas de seguridad', c:'fam-seguridad', mod:'1900'},
+ {k:'onoff',    n:'Válvulas On-Off',       c:'fam-onoff',     mod:'DV-55'},
+ {k:'actuador', n:'Actuadores',            c:'fam-actuador',  mod:'AQ-25'}
+];
+const famDe=a=>a.cl||MODELOS[a.mod]?.c||'control';
+const famColor=k=>(FAM.find(f=>f.k===k)||FAM[0]).c;
+const famNombre=k=>(FAM.find(f=>f.k===k)||{}).n||CL[k]||k;
+const famLeyenda=()=>`<div class="famleg">${FAM.map(f=>`<span><i style="background:var(--${f.c})"></i>${esc(CL[f.k])}</span>`).join('')}</div>`;
 function estado(a){
   if(!a.ser||!a.tag) return {k:'incompleto',t:'Ficha incompleta',c:'due'};
   const o=ORDENES.find(o=>o.act===a.id&&o.et!=='certificada');
@@ -1615,7 +1674,7 @@ function applyRole(v){
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
   const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
-  S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.calCli='';S.woCli='';
+  S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.fFam='';S.fTipo='';S.fMod='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
 }
@@ -1655,6 +1714,9 @@ function filtrados(){
   let r=visibles().filter(v.f);
   if(S.fCli)r=r.filter(a=>a.cli===S.fCli);
   if(S.fMarca)r=r.filter(a=>MODELOS[a.mod]?.m===S.fMarca);
+  if(S.fFam)r=r.filter(a=>famDe(a)===S.fFam);
+  if(S.fTipo)r=r.filter(a=>MODELOS[a.mod]?.t===S.fTipo);
+  if(S.fMod)r=r.filter(a=>a.mod===S.fMod);
   const k=S.sort.k,d=S.sort.dir;
   const val=a=>({tag:a.tag||'zzz',ser:a.ser||'zzz',mod:MODELOS[a.mod]?.m+' '+a.mod,cli:cli(a.cli).n,est:estado(a).t,ult:a.ult||''})[k]||'';
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
@@ -1677,8 +1739,40 @@ function renderStats(){
     : `${CLIENTES.length} clientes · ${new Set(vs.map(a=>MODELOS[a.mod]?.m)).size} marcas representadas en campo`;
 }
 function setView(v){S.view=v;S.focus=0;renderAssets()}
+function limpiarFoco(){S.fFam='';S.fTipo='';S.fMod='';S.focus=0;renderAssets()}
+/* Desde el panel: abrir la lista de válvulas ya filtrada.
+   Si el usuario está en el espacio de un cliente (o es cliente), se abre ahí
+   mismo; si está en la vista global, primero elige a qué cliente entrar. */
+function verFiltradas(campo,valor,titulo){
+  S.fFam='';S.fTipo='';S.fMod='';S[campo]=valor;S.view='todos';S.focus=0;
+  // el portal del cliente ya está acotado a su planta; el personal de Adolphus
+  // ve cifras de todo el parque, así que primero elige en qué cliente mirar
+  if(S.cli){go('assets');renderAssets();return}
+  elegirCliente(campo,valor,titulo);
+}
+const gotoFamilia=k=>verFiltradas('fFam',k,famNombre(k));
+function elegirCliente(campo,valor,titulo){
+  const test=a=>campo==='fFam'?famDe(a)===valor:campo==='fTipo'?MODELOS[a.mod]?.t===valor:a.mod===valor;
+  const filas=CLIENTES.map(c=>({c,n:ACTIVOS.filter(a=>a.cli===c.id&&test(a)).length})).filter(x=>x.n);
+  $('#mTitle').textContent=titulo;
+  $('#mBody').innerHTML=filas.length
+   ? `<p class="hint" style="margin-bottom:12px">Las válvulas viven dentro de cada cliente. Elige en qué cliente quieres verlas.</p>
+      ${filas.map(x=>`<button class="doc" style="width:100%;text-align:left" onclick="closeModal();entrarConFoco('${x.c.id}','${campo}','${jsq(valor)}')">
+        <b>${esc(x.c.n)}</b><span>${esc(x.c.fac)} · ${x.n} válvula${x.n===1?'':'s'}</span></button>`).join('')}`
+   : `<div class="empty" style="padding:28px"><b>Sin válvulas</b>Ningún cliente tiene equipos de este tipo todavía.</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
+function entrarConFoco(cliId,campo,valor){
+  enterClient(cliId,'assets');
+  S.fFam='';S.fTipo='';S.fMod='';S[campo]=valor;S.focus=0;renderAssets();
+}
 function renderFilters(){
-  $('#savedViews').innerHTML=VISTAS.map(v=>`<button class="${S.view===v.id?'on':''}" onclick="setView('${v.id}')">${v.n}</button>`).join('');
+  // filtro puntual que llega desde el panel (familia / tipo / modelo): se muestra
+  // como una pastilla que se puede quitar, para que nadie quede filtrado sin saberlo
+  const foco=S.fFam?['Familia',famNombre(S.fFam)]:S.fTipo?['Tipo',S.fTipo]:S.fMod?['Modelo',S.fMod]:null;
+  const chip=foco?`<button class="on" title="Quitar este filtro" onclick="limpiarFoco()">${esc(foco[0])}: ${esc(foco[1])} ✕</button>`:'';
+  $('#savedViews').innerHTML=VISTAS.map(v=>`<button class="${S.view===v.id?'on':''}" onclick="setView('${v.id}')">${v.n}</button>`).join('')+chip;
   if(!$('#fCli').dataset.built){
     $('#fCli').innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('');
     $('#fMarca').innerHTML='<option value="">Todas las marcas</option>'+Object.keys(MARCAS).map(m=>`<option>${m}</option>`).join('');
@@ -1814,7 +1908,7 @@ function confirmarBajaClientes(){
 const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
-  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
+  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
   renderAll();go(page||'assets');$('.view').scrollTop=0;
 }
@@ -1827,7 +1921,7 @@ function resetImport(){
   if(typeof paso==='function'&&$('#steps'))paso(1);
 }
 function exitClient(){
-  S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.picked.clear();
+  S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   closeDrawer();renderAll();go('clients');
 }
 /* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
@@ -3127,16 +3221,16 @@ const panel=(t,body,extra)=>`<div class="panel"><div class="panel-h"><h3>${esc(t
 
 function hbars(rows){
   const max=Math.max(1,...rows.map(r=>r.value));
-  return `<div class="hb">${rows.map(r=>`<div class="hb-row" title="${esc(r.label)}: ${r.value}${r.unit||''}">
+  return `<div class="hb">${rows.map(r=>`<div class="hb-row${r.go?' go':''}" title="${esc(r.tip||r.label+': '+r.value+(r.unit||''))}"${r.go?` onclick="${r.go}"`:''}>
     <span class="hb-l">${esc(r.label)}</span>
     <span class="hb-track"><span class="hb-fill" style="width:${r.value?Math.max(3,r.value/max*100):0}%${r.tone?`;background:var(--${r.tone})`:''}"></span></span>
     <span class="hb-v">${r.value}${r.unit||''}</span></div>`).join('')}</div>`;
 }
 function columns(rows){
   const max=Math.max(1,...rows.map(r=>r.value));
-  return `<div class="cols">${rows.map(r=>`<div class="col-i" title="${esc(r.x)}: ${r.value}">
+  return `<div class="cols">${rows.map(r=>`<div class="col-i${r.go?' go':''}" title="${esc(r.x)}: ${r.value}"${r.go?` onclick="${r.go}"`:''}>
     <span class="col-v">${r.value||''}</span>
-    <span class="col-bar ${r.tone||''}" style="height:${Math.round((r.value/max)*128)}px"></span>
+    <span class="col-bar ${r.tone||''}" style="height:${Math.round((r.value/max)*128)}px${r.color?`;background:var(--${r.color})`:''}"></span>
     <span class="col-x">${esc(r.x)}</span></div>`).join('')}</div>`;
 }
 function donut(segs,center,sub){
@@ -3166,8 +3260,19 @@ function renderHome(){
   const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et!=='certificada'&&(!S.cli||a?.cli===S.cli)}).length;
   const conProg=vs.filter(a=>a.prox);
   const cumpl=conProg.length?Math.round(conProg.filter(a=>dias(a.prox)>=0).length/conProg.length*100):100;
+  // Fila superior: una tarjeta grande por familia, con la foto real del equipo.
+  // El número es el parque de esa familia; debajo, cuántas piden atención.
+  const famHtml=`<div class="fams">${FAM.map(f=>{
+    const de=vs.filter(a=>famDe(a)===f.k);
+    const mal=de.filter(a=>['vencido','taller','incompleto','porvencer'].includes(estado(a).k)).length;
+    return `<button class="fam${de.length?'':' off'}" style="--fam:var(--${f.c})" ${de.length?`onclick="gotoFamilia('${f.k}')"`:'disabled'} title="${esc(f.n)}: ${de.length} equipos${de.length?' — ver la lista':''}">
+      <span class="fam-ph">${photoFor(f.mod)}</span>
+      <span class="fam-t">
+        <span class="fam-n">${de.length}</span>
+        <span class="fam-l"><i class="sw"></i>${esc(f.n)}</span>
+        <span class="fam-m">${de.length?(mal?`<b>${mal}</b> requieren atención`:'todas al día'):'sin equipos registrados'}</span>
+      </span></button>`}).join('')}</div>`;
   const kpis=[
-    {v:total,k:'Activos instalados',d:`${marcas} marcas · ${S.cli?'1 planta':CLIENTES.length+' clientes'}`},
     {v:atn,k:'Requieren atención',dot:atn?'due':'ok',cls:atn?'warn':'good',d:atn?'revisar lista':'todo al día'},
     {v:venc,k:'Calibraciones vencidas',dot:venc?'late':'ok',cls:venc?'bad':'good',d:venc?'acción inmediata':'ninguna'},
     {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en taller`},
@@ -3178,9 +3283,19 @@ function renderHome(){
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
     {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
-  const crit=['Crítica','Alta','Media'].map(c=>({label:c,value:vs.filter(a=>a.cr===c).length}));
-  const clase=Object.entries(CL).map(([k,l])=>({label:l,value:vs.filter(a=>a.cl===k).length}));
-  const etapa=ETAPAS.map(([k,l])=>({label:l,value:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et===k&&(!S.cli||a?.cli===S.cli)}).length}));
+  // Cantidad de válvulas por tipo constructivo y por modelo.
+  // El color viene de la familia del equipo (no del ranking), así una barra
+  // naranja siempre es seguridad, aquí y en las tarjetas de arriba.
+  const tipoCount={},tipoFam={};
+  vs.forEach(a=>{const t=MODELOS[a.mod]?.t;if(!t)return;tipoCount[t]=(tipoCount[t]||0)+1;tipoFam[t]=famDe(a)});
+  const porTipo=Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).slice(0,8)
+    .map(([t,v])=>({label:t,value:v,tone:famColor(tipoFam[t]),tip:`${t} · ${CL[tipoFam[t]]}: ${v} válvulas`,
+      go:`verFiltradas('fTipo','${jsq(t)}','${jsq(t)}')`}));
+  const modCount={};vs.forEach(a=>modCount[a.mod]=(modCount[a.mod]||0)+1);
+  const porMod=Object.entries(modCount).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([m,v])=>({
+    label:`${MODELOS[m]?.m||''} ${m}`.trim(),value:v,tone:famColor(MODELOS[m]?.c||'control'),
+    tip:`${MODELOS[m]?.m||''} ${m} — ${MODELOS[m]?.t||''}: ${v} válvulas`,
+    go:`verFiltradas('fMod','${jsq(m)}','${jsq(m)}')`}));
   const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
   for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
     colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
@@ -3201,14 +3316,18 @@ function renderHome(){
     return `<div class="feed-i" onclick="gotoClientPage('req','${x.s.cli}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   $('#homeView').innerHTML=`
-   <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1><p>${fechaLarga(HOY)}</p></div>
+   <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
+       <p>${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+   ${famHtml}
    ${kpiHtml}
    <div class="dash">
+     <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
+     <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
      <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver todo</button>`)}</div>
-     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'activos'))}</div>
-     <div class="span-8">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
-     <div class="span-4">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
+     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
+     <div class="span-5">${panel('Actividad reciente',feedHtml)}</div>
    </div>`;
 }
 
