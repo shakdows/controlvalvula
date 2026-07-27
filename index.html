@@ -1740,7 +1740,16 @@ const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes d
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.picked.clear();
+  resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
   renderAll();go(page||'assets');$('.view').scrollTop=0;
+}
+/* Deja el importador limpio (paso 1) para no mostrar resultados viejos. */
+function resetImport(){
+  CAL_PREVIEW=null;
+  const i3=$('#imp3');if(i3)i3.innerHTML='';
+  const i2=$('#imp2');if(i2)i2.innerHTML='';
+  const f=$('#file');if(f)f.value='';
+  if(typeof paso==='function'&&$('#steps'))paso(1);
 }
 function exitClient(){
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.picked.clear();
@@ -2708,79 +2717,126 @@ function esPlantillaCalib(h){
   const t=h.join(' ').toLowerCase();
   return /as[\s-]?found/.test(t)&&/as[\s-]?left/.test(t);
 }
+let CAL_PREVIEW=null;
+/* Lee el archivo y MUESTRA lo que va a pasar. No cambia nada hasta confirmar. */
 function procesarCalibraciones(headers,filas){
   const idx=n=>headers.findIndex(h=>new RegExp(n,'i').test(h));
-  const c={ser:idx('serie'),tag:idx('^tag'),set:idx('set|tarado'),uni:idx('unidad'),tol:idx('toleran'),
+  const c={ser:idx('serie'),tag:idx('^tag'),mod:idx('marca|modelo'),set:idx('set|tarado'),uni:idx('unidad'),tol:idx('toleran'),
     af:idx('as[\\s-]?found'),afh:idx('hermetic.*found|found.*hermetic'),al:idx('as[\\s-]?left'),
     alh:idx('hermetic.*left|left.*hermetic'),bd:idx('blowdown'),pre:idx('precint'),fec:idx('fecha'),
     tec:idx('t[eé]cnico'),banco:idx('banco|patr'),flu:idx('fluido'),tmp:idx('temp'),prox:idx('pr[oó]xima'),obs:idx('observ')};
   const foco=S.inCli||S.cli;
-  const lista=ACTIVOS.filter(a=>!foco||a.cli===foco);
   const num=v=>{const x=parseFloat(String(v??'').replace(',','.'));return isNaN(x)?null:x};
   const val=(r,i)=>i>=0?String(r[i]??'').trim():'';
-  let ok=0,sinDato=0,noHallado=0;const detalle=[],ajenos=[];
-  filas.forEach(r=>{
+  const items=filas.map(r=>{
     const af=num(r[c.af]),al=num(r[c.al]);
-    if(af===null||al===null){sinDato++;return}
     const clave=val(r,c.ser)||val(r,c.tag);
-    const a=lista.find(x=>x.ser&&x.ser.toLowerCase()===clave.toLowerCase())
-          ||lista.find(x=>x.tag&&x.tag.toLowerCase()===clave.toLowerCase());
-    if(!a){
-      const otro=ACTIVOS.find(x=>(x.ser&&x.ser.toLowerCase()===clave.toLowerCase())||(x.tag&&x.tag.toLowerCase()===clave.toLowerCase()));
-      noHallado++;ajenos.push(otro?otro.cli:null);
-      detalle.push(`· ${clave||'(sin código)'} — ${otro?`pertenece a <b>${esc(cli(otro.cli).n)}</b>`:'no está registrada en el sistema'}`);
-      return}
-    const nom=num(r[c.set])??num((a.rng||'').replace(',','.'))??0;
+    if(af===null||al===null)return {estado:'sinDato',clave};
+    // Solo se busca dentro del cliente abierto: una misma serie puede existir
+    // en otra planta del mismo grupo y no debe mezclarse ni bloquearse.
+    const propio=ACTIVOS.find(x=>x.cli===foco&&((x.ser&&x.ser.toLowerCase()===clave.toLowerCase())||(x.tag&&x.tag.toLowerCase()===clave.toLowerCase())));
+    const modTxt=val(r,c.mod);
+    const modKey=Object.keys(MODELOS).find(k=>modTxt.toUpperCase().includes(k.toUpperCase()))||null;
+    const nom=num(r[c.set])??(propio?num((propio.rng||'').replace(',','.')):null)??0;
     const uni=val(r,c.uni)||'psig',tol=num(r[c.tol])??3;
-    const afH=val(r,c.afh)||'Conforme',alH=val(r,c.alh)||'Conforme';
-    const fec=(val(r,c.fec)||HOY.toISOString().slice(0,10)).slice(0,10);
-    const tec=val(r,c.tec)||'—',banco=val(r,c.banco)||'—',flu=val(r,c.flu)||'Aire',tmp=val(r,c.tmp)||'22';
-    const bd=val(r,c.bd),pre=val(r,c.pre)||'Sí',obs=val(r,c.obs);
-    let prox=val(r,c.prox).slice(0,10);
-    if(!prox){const d=new Date(fec+'T00:00:00');d.setFullYear(d.getFullYear()+1);prox=d.toISOString().slice(0,10)}
+    const alH=val(r,c.alh)||'Conforme';
     const devAf=nom?((af-nom)/nom*100):0,devAl=nom?((al-nom)/nom*100):0;
-    const inAf=Math.abs(devAf)<=tol,inAl=Math.abs(devAl)<=tol,herm=alH.toLowerCase().startsWith('conforme');
-    const ajuste=!inAf,conforme=inAl&&herm;
-    const verdict=!conforme?'No conforme':ajuste?'Conforme con ajuste':'Conforme';
-    const vtone=!conforme?'late':ajuste?'due':'ok';
+    const verdict=!(Math.abs(devAl)<=tol&&alH.toLowerCase().startsWith('conforme'))?'No conforme'
+                 :(Math.abs(devAf)>tol?'Conforme con ajuste':'Conforme');
+    return {estado:propio?'ok':'nuevo',clave,act:propio?propio.id:null,
+      tag:val(r,c.tag)||(propio?propio.tag:''),ser:val(r,c.ser)||(propio?propio.ser:''),modTxt,modKey,
+      af,al,nom,uni,tol,afH:val(r,c.afh)||'Conforme',alH,bd:val(r,c.bd),pre:val(r,c.pre)||'Sí',
+      fec:(val(r,c.fec)||HOY.toISOString().slice(0,10)).slice(0,10),tec:val(r,c.tec)||'—',
+      banco:val(r,c.banco)||'—',flu:val(r,c.flu)||'Aire',tmp:val(r,c.tmp)||'22',
+      prox:val(r,c.prox).slice(0,10),obs:val(r,c.obs),devAf,devAl,verdict,
+      vtone:verdict==='Conforme'?'ok':verdict==='Conforme con ajuste'?'due':'late'};
+  });
+  CAL_PREVIEW={items,foco};
+  const nOk=items.filter(i=>i.estado==='ok').length;
+  const nNuevo=items.filter(i=>i.estado==='nuevo').length;
+  const nSin=items.filter(i=>i.estado==='sinDato').length;
+  const fila=i=>{
+    if(i.estado==='sinDato')return `<tr style="cursor:default"><td colspan="4" class="muted">· ${esc(i.clave||'(fila vacía)')} — sin AS-FOUND o AS-LEFT, se omite</td></tr>`;
+    const et=i.estado==='ok'?'<span class="tag ok"><span class="dot"></span>Ya registrada</span>'
+                             :'<span class="tag due"><span class="dot"></span>Se dará de alta</span>';
+    return `<tr style="cursor:default">
+      <td><div class="cell-2"><b>${esc(i.tag||i.clave)}</b><small class="mono">${esc(i.ser||'')}${i.modTxt?' · '+esc(i.modTxt):''}</small></div></td>
+      <td class="mono">${i.af} → ${i.al} ${esc(i.uni)}</td>
+      <td><span class="tag ${i.vtone}"><span class="dot"></span>${i.verdict}</span></td>
+      <td>${et}</td></tr>`;
+  };
+  paso(4);
+  $('#imp3').innerHTML=`<div class="panel">
+    <div class="panel-h"><h3>Revisa antes de importar</h3><span class="count">${items.length} filas leídas</span></div>
+    <div style="padding:0 0 4px"><table class="grid"><thead><tr><th>Válvula</th><th>Medición</th><th>Resultado</th><th>Estado</th></tr></thead>
+      <tbody>${items.map(fila).join('')}</tbody></table></div>
+    <div style="padding:var(--sp-4)">
+      ${nNuevo?`<label class="callout warn" style="cursor:pointer;align-items:center">
+        <input type="checkbox" id="calAlta" checked style="width:16px;height:16px;flex:0 0 auto">
+        <div><b>Dar de alta ${nNuevo} válvula${nNuevo===1?'':'s'} que no está${nNuevo===1?'':'n'} registrada${nNuevo===1?'':'s'}</b> en ${esc(cli(foco).n)}, usando los datos del archivo (serie, tag, modelo y presión de tarado). Si lo desmarcas, esas filas se omiten.</div></label>`:''}
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px">
+        <div style="font-size:13px"><b>${nOk+nNuevo}</b> calibraciones se registrarán en <b>${esc(cli(foco).n)}</b>${nSin?` · ${nSin} fila${nSin===1?'':'s'} omitida${nSin===1?'':'s'}`:''}</div>
+        <span style="flex:1"></span>
+        <button class="btn sec" onclick="resetImport()">Cancelar</button>
+        <button class="btn" onclick="confirmarCalibraciones()" ${(nOk+nNuevo)?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Confirmar e importar</button>
+      </div>
+    </div></div>`;
+  toast(`${items.length} filas leídas — revisa y confirma`);
+}
+/* Ahora sí: crea las válvulas que falten y emite los certificados. */
+function confirmarCalibraciones(){
+  if(!CAL_PREVIEW){toast('Vuelve a subir el archivo');return}
+  const {items,foco}=CAL_PREVIEW;
+  const alta=$('#calAlta')?$('#calAlta').checked:false;
+  const cl_=cli(foco),arDef=Object.keys(cl_.areas||{})[0]||'';
+  let ok=0,altas=0;const detalle=[];
+  items.forEach((i,n)=>{
+    if(i.estado==='sinDato')return;
+    let a=i.act?ACTIVOS.find(x=>x.id===i.act):null;
+    if(!a){
+      if(!alta)return;
+      const mk=i.modKey||'1900',m=MODELOS[mk]||{};
+      a={id:'imp'+Date.now()+n,cli:foco,ar:arDef,cl:m.c||'seguridad',tag:i.tag||'',ser:i.ser||i.clave,
+         mod:mk,sz:(MODELO_DEF[mk]||{}).sz||'',rt:(MODELO_DEF[mk]||{}).rt||'',cv:'',air:'',
+         rng:i.nom?`${i.nom} ${i.uni}`:'',cr:'Crítica',ult:'',prox:''};
+      ACTIVOS.unshift(a);altas++;
+    }
+    let prox=i.prox;
+    if(!prox){const d=new Date(i.fec+'T00:00:00');d.setFullYear(d.getFullYear()+1);prox=d.toISOString().slice(0,10)}
+    const sg=x=>x>=0?'+':'',inAf=Math.abs(i.devAf)<=i.tol,inAl=Math.abs(i.devAl)<=i.tol;
     const cert='CC-'+HOY.getFullYear()+'-'+String(101+CALIBS.length);
-    const sg=x=>x>=0?'+':'';
     const msgs=[
-      `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — fue ensayada el ${fec} con ${flu.toLowerCase()} y patrón ${banco}.`,
-      `Presión de tarado nominal: ${nom} ${uni}, con tolerancia admisible de ±${tol}%.`,
-      `As-found (cómo llegó): apertura a ${af} ${uni} → desviación ${sg(devAf)}${devAf.toFixed(1)}%, ${inAf?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad de entrada: ${afH.toLowerCase()}.`,
-      `As-left (cómo quedó): apertura a ${al} ${uni} → desviación ${sg(devAl)}${devAl.toFixed(1)}%, ${inAl?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad final: ${alH.toLowerCase()}${bd?`; contrapresión de cierre ${bd}`:''}.`,
-      ajuste?`La válvula llegó fuera de tolerancia; se reajustó el set point hasta dejarla conforme.`:`No fue necesario reajustar el set point.`,
-      `Resultado: ${verdict.toUpperCase()}. ${pre.toLowerCase().startsWith('s')?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
-      obs?`Observaciones del técnico: ${obs}`:''
+      `La válvula ${a.tag||'(sin tag)'} — ${MODELOS[a.mod]?.m||''} ${a.mod}${a.ser?', serie '+a.ser:''} — fue ensayada el ${i.fec} con ${i.flu.toLowerCase()} y patrón ${i.banco}.`,
+      `Presión de tarado nominal: ${i.nom} ${i.uni}, con tolerancia admisible de ±${i.tol}%.`,
+      `As-found (cómo llegó): apertura a ${i.af} ${i.uni} → desviación ${sg(i.devAf)}${i.devAf.toFixed(1)}%, ${inAf?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad de entrada: ${i.afH.toLowerCase()}.`,
+      `As-left (cómo quedó): apertura a ${i.al} ${i.uni} → desviación ${sg(i.devAl)}${i.devAl.toFixed(1)}%, ${inAl?'dentro de tolerancia':'FUERA de tolerancia'}. Hermeticidad final: ${i.alH.toLowerCase()}${i.bd?`; contrapresión de cierre ${i.bd}`:''}.`,
+      inAf?`No fue necesario reajustar el set point.`:`La válvula llegó fuera de tolerancia; se reajustó el set point hasta dejarla conforme.`,
+      `Resultado: ${i.verdict.toUpperCase()}. ${i.pre.toLowerCase().startsWith('s')?'Válvula precintada tras el ensayo.':'Válvula sin precintar.'} Próxima calibración: ${prox}.`,
+      i.obs?`Observaciones del técnico: ${i.obs}`:''
     ].filter(Boolean);
-    const rec={id:'cb'+Date.now()+ok,act:a.id,cert,ini:fec+'T08:00',fin:fec+'T10:30',tec,banco,fluido:flu,temp:tmp,
-      nom,uni,tol,af,al,afH,alH,bd,pre,prox,obs,devAf,devAl,verdict,vtone,msgs,prevUlt:a.ult,prevProx:a.prox};
+    const rec={id:'cb'+Date.now()+n,act:a.id,cert,ini:i.fec+'T08:00',fin:i.fec+'T10:30',tec:i.tec,banco:i.banco,
+      fluido:i.flu,temp:i.tmp,nom:i.nom,uni:i.uni,tol:i.tol,af:i.af,al:i.al,afH:i.afH,alH:i.alH,bd:i.bd,pre:i.pre,
+      prox,obs:i.obs,devAf:i.devAf,devAl:i.devAl,verdict:i.verdict,vtone:i.vtone,msgs,prevUlt:a.ult,prevProx:a.prox};
     CALIBS.unshift(rec);
-    a.ult=fec;a.prox=prox;
-    ORDENES.unshift({id:'o'+Date.now()+ok,act:a.id,n:'AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length),
-      et:'certificada',tipo:'Calibración',f:fec,tec,hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`,partes:[],calib:rec.id});
-    DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:fec,w:'420 KB',calib:rec.id});
-    detalle.push(`· ${a.tag||a.ser}: ${af} → ${al} ${uni} · <b style="color:var(--${vtone})">${verdict}</b>`);
+    a.ult=i.fec;a.prox=prox;
+    ORDENES.unshift({id:'o'+Date.now()+n,act:a.id,n:'AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length),
+      et:'certificada',tipo:'Calibración',f:i.fec,tec:i.tec,hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${i.verdict}.`,partes:[],calib:rec.id});
+    DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:i.fec,w:'420 KB',calib:rec.id});
+    detalle.push(`· ${a.tag||a.ser}: ${i.af} → ${i.al} ${i.uni} · <b style="color:var(--${i.vtone})">${i.verdict}</b>`);
     ok++;
   });
   renderAll();
-  if(ok)registrar('Calibración',`${ok} calibraciones cargadas desde Excel`);
-  paso(4);
+  if(ok)registrar('Calibración',`${ok} calibraciones importadas${altas?` y ${altas} válvulas dadas de alta`:''}`);
+  CAL_PREVIEW=null;
   $('#imp3').innerHTML=`<div class="panel"><div class="empty" style="text-align:left;padding:26px">
-    <svg viewBox="0 0 24 24" style="stroke:var(--${ok?'ok':'due'});opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
-    <b style="text-align:center;display:block">${ok} calibraciones certificadas automáticamente</b>
-    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.9;margin-top:10px">${detalle.join('<br>')||'Sin filas con valores.'}</div>
-    ${sinDato?`<div class="callout warn" style="margin-top:14px"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>${sinDato} fila${sinDato===1?'':'s'} sin AS-FOUND o AS-LEFT: se omitieron.</div></div>`:''}
-    ${noHallado?(()=>{
-      const val=ajenos.filter(Boolean),uno=val.length&&val.every(c=>c===val[0])?val[0]:null;
-      return `<div class="callout bad" style="margin-top:10px"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-        <div>${noHallado} equipo${noHallado===1?'':'s'} del archivo no pertenece${noHallado===1?'':'n'} a este cliente.
-        ${uno?`El archivo es de <b>${esc(cli(uno).n)}</b>. <a href="#" onclick="enterClient('${uno}','imp');return false" style="color:inherit;font-weight:700;text-decoration:underline">Entrar a ese cliente y volver a subirlo</a>.`:'Revisa los números de serie.'}</div></div>`;})():''}
+    <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+    <b style="text-align:center;display:block">${ok} calibraciones certificadas${altas?` · ${altas} válvulas dadas de alta`:''}</b>
+    <div style="font-size:12.5px;color:var(--ink-2);line-height:1.9;margin-top:10px">${detalle.join('<br>')||'Sin filas procesadas.'}</div>
     <div style="margin-top:18px;display:flex;gap:8px;justify-content:center">
       <button class="btn" onclick="go('cal')">Ver calibraciones</button>
-      <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Subir otro archivo</button></div></div></div>`;
-  toast(`${ok} calibraciones certificadas desde el Excel`);
+      <button class="btn sec" onclick="go('assets')">Ver válvulas</button>
+      <button class="btn sec" onclick="resetImport()">Subir otro archivo</button></div></div></div>`;
+  toast(`${ok} calibraciones certificadas${altas?` · ${altas} válvulas creadas`:''}`);
 }
 function detectar(arr,hoja){
   let hi=0,best=0;
