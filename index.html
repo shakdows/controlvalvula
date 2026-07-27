@@ -1744,7 +1744,7 @@ function renderClients(){
        ${staff?`<label class="cl-ck" onclick="event.stopPropagation()">
           <input type="checkbox" class="ck" ${marcado?'checked':''} onchange="marcarCliente('${c.id}',this.checked)"></label>`:''}
        <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
-         <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span> · `:''}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
+         <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span>${c.verif===false?' <span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px" title="El RUC tiene formato correcto pero no se confirmó contra SUNAT">sin verificar</span>':''} · `:'<span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px">sin RUC</span> · '}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
        <div class="cl-stats">
          <div class="cl-stat"><b>${eq.length}</b><span>Válvulas</span></div>
          <div class="cl-stat"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></div>
@@ -3662,12 +3662,32 @@ async function consultarRUC(){
   }
   est.innerHTML='<span class="muted">Consultando…</span>';
   const d=await buscarSunat(r);
-  if(!d){est.innerHTML=`<span style="color:var(--due)">▲ RUC válido, pero no se pudo consultar SUNAT. Escribe la razón social a mano.</span>`;return}
+  if(!d){
+    ncVerif=false;
+    est.innerHTML=`<span style="color:var(--due)">▲ <b>Formato correcto, pero sin verificar.</b> No se encontró en el padrón; escribe la razón social a mano y confírmalo en SUNAT.</span>
+      ${btnSunat(r)}`;
+    return;
+  }
+  ncVerif=true;
   $('#ncN').value=d.n;
   if(d.dir)$('#ncDir').value=d.dir;
   if(d.ind&&[...$('#ncI').options].some(o=>o.value===d.ind))$('#ncI').value=d.ind;
-  est.innerHTML=`<span style="color:var(--ok)">✓ ${esc(RUC_TIPO(r))} · ${esc(d.est||'')} · ${esc(d.cond||'')}${d.demo?' <span class="muted">(padrón de demostración)</span>':''}</span>`;
+  const activo=(d.est||'').toUpperCase().includes('ACTIVO'),habido=(d.cond||'').toUpperCase().includes('HABIDO')&&!(d.cond||'').toUpperCase().includes('NO HABIDO');
+  const alerta=(!activo||!habido)?`<div class="callout bad" style="margin:6px 0 0"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div><b>Atención:</b> esta empresa figura como <b>${esc(d.est||'')} · ${esc(d.cond||'')}</b>. Antes de facturarle, consúltalo con administración.</div></div>`:'';
+  est.innerHTML=`<span style="color:var(--${activo&&habido?'ok':'due'})">✓ ${esc(RUC_TIPO(r))} · ${esc(d.est||'')} · ${esc(d.cond||'')}${d.demo?' <span class="muted">(padrón de demostración — confírmalo en SUNAT)</span>':''}</span>${btnSunat(r)}${alerta}`;
   toast(`Datos traídos: ${d.n}`);
+}
+/* Comprobación manual en SUNAT: copia el RUC y abre la consulta oficial. */
+function btnSunat(r){
+  return `<div style="margin-top:6px"><button class="btn quiet xs" onclick="abrirSunat('${r}')" style="padding:0 8px">
+    <svg viewBox="0 0 24 24"><path d="M14 5h5v5M19 5l-9 9M12 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>
+    Comprobar en la web de SUNAT</button></div>`;
+}
+function abrirSunat(r){
+  try{navigator.clipboard.writeText(r)}catch(e){}
+  window.open('https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/FrameCriterioBusquedaWeb.jsp','_blank','noopener');
+  toast(`RUC ${r} copiado — pégalo en la página de SUNAT para comprobarlo`);
 }
 async function buscarSunat(ruc){
   // 1) Backend propio (cuando exista): devuelve los datos oficiales de SUNAT.
@@ -3682,7 +3702,9 @@ async function buscarSunat(ruc){
   const d=RUC_DEMO[ruc];
   return d?{...d,demo:true}:null;
 }
+let ncVerif=false;
 function openNewClient(){
+  ncVerif=false;
   $('#mTitle').textContent='Nuevo cliente';
   $('#mBody').innerHTML=`
    <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" title="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
@@ -3700,12 +3722,25 @@ function openNewClient(){
      <div class="fld"><label>Instalación / planta <span class="hlp" title="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
      <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
    </div>
+   <details class="fx-more" style="margin-top:12px"><summary>¿Cómo sé si el RUC es correcto?</summary>
+     <div class="lgd" style="grid-template-columns:1fr">
+       <div><b>✕ Inválido</b><span>El dígito verificador no cuadra: el número está mal escrito. SUNAT lo rechazaría igual. Corrígelo.</span></div>
+       <div><b>▲ Sin verificar</b><span>El formato es correcto, pero no se confirmó contra SUNAT. <b>Ojo:</b> un número inventado puede tener formato correcto, así que esto no garantiza que la empresa exista. Pulsa <b>Comprobar en la web de SUNAT</b>: se copia el RUC y se abre la consulta oficial para que lo pegues.</span></div>
+       <div><b>✓ Verificado</b><span>La razón social vino del padrón: si coincide con la empresa que te contrató, el RUC es el correcto. Es la única confirmación real.</span></div>
+       <div><b>ACTIVO · HABIDO</b><span>La empresa está operativa y ubicable. Si dice <b>BAJA</b>, <b>SUSPENSIÓN</b> o <b>NO HABIDO</b>, avisa a administración antes de facturarle.</span></div>
+       <div><b>Regla práctica</b><span>Pide siempre la <b>ficha RUC</b> o una factura del cliente y compara la razón social con la que aparece aquí. Si no coinciden, no es su RUC.</span></div>
+     </div>
+   </details>
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>El <b>RUC identifica a la empresa</b> y evita clientes duplicados; el usuario del portal se vincula a él. Si el mismo RUC tiene <b>varias plantas</b>, créalas como clientes distintos con el mismo RUC y distinto nombre de planta.</div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewClient()">Crear cliente</button>`;
   const r=$('#ncRuc');
-  r.oninput=()=>{r.value=r.value.replace(/\D/g,'').slice(0,11);
-    if(r.value.length===11&&!rucValido(r.value))$('#ncRucEst').innerHTML='<span style="color:var(--late)">✕ El dígito verificador no cuadra</span>';};
+  r.oninput=()=>{r.value=r.value.replace(/\D/g,'').slice(0,11);ncVerif=false;
+    const e=$('#ncRucEst');
+    if(r.value.length===11)e.innerHTML=rucValido(r.value)
+      ? `<span style="color:var(--due)">▲ Formato correcto. Pulsa <b>Buscar datos</b> para traer la razón social.</span>`
+      : '<span style="color:var(--late)">✕ El dígito verificador no cuadra</span>';
+    else e.innerHTML='Escribe el RUC y pulsa <b>Buscar datos</b>: se traen la razón social y el domicilio fiscal.';};
   r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();consultarRUC()}};
   $('#modal').classList.add('on');
   setTimeout(()=>r.focus(),80);
@@ -3721,7 +3756,7 @@ function saveNewClient(){
   const id='cli'+Date.now();
   const areasArr=($('#ncA').value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
-  CLIENTES.push({id,n,ruc,dir:$('#ncDir').value.trim(),ind:$('#ncI').value,fac:plantaNueva,areas});
+  CLIENTES.push({id,n,ruc,verif:ncVerif,dir:$('#ncDir').value.trim(),ind:$('#ncI').value,fac:plantaNueva,areas});
   $('#fCli').dataset.built='';
   closeModal();renderAll();go('clients');registrar('Cliente',`${n} (RUC ${ruc}) dado de alta`);toast(`Cliente ${n} creado`);
 }
