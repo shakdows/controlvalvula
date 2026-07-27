@@ -2481,7 +2481,7 @@ function leerArchivo(file){
         const prev=$('#hcPrev'),drop=$('#hcDrop');
         if(prev)prev.innerHTML=dataUri?`<img src="${dataUri}" alt="Hoja de campo">`:`<b>${esc(file.name)}</b><span>PDF adjunto</span>`;
         if(drop)drop.classList.add('has');
-        toast('Hoja cargada — escribe el código del equipo y transcribe los valores');
+        if(prev)toast('Hoja cargada — escribe el código del equipo y transcribe los valores');
       },60);
     };
     if(esPdf){pintar(null)}
@@ -3578,7 +3578,7 @@ function openUploadSheet(assetId,fileName){
   if(S.rol==='cliente'){toast('La carga de hojas de campo la realiza el servicio técnico');return}
   hcFoto='';
   const psv=ACTIVOS.filter(a=>(!S.inCli||a.cli===S.inCli)&&(!S.cli||a.cli===S.cli));
-  if(!psv.length){toast('Este cliente todavía no tiene válvulas registradas');return}
+  const vacio=!psv.length;
   const auto=fileName?matchAsset(fileName,psv):null;
   if(auto)assetId=auto.id;
   $('#mTitle').textContent='Cargar hoja de campo';
@@ -3589,6 +3589,10 @@ function openUploadSheet(assetId,fileName){
      <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.4"/><path d="M11 18.5h2"/></svg>
      <div>¿Prefieres no usar papel? El sistema <b>funciona sin señal en el celular</b>: puedes llenar la calibración directo en planta y se sube sola al salir.
        <a href="#" onclick="closeModal();setTimeout(()=>openCalib(document.getElementById('hcAct')?'':''),0);return false" style="display:none"></a></div></div>
+   ${vacio?`<div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div><b>Este cliente todavía no tiene válvulas registradas</b>, así que no hay a cuál asociar la hoja.
+     Registra primero la válvula (basta el tag y el n.º de serie) y vuelve a subirla.
+     <a href="#" onclick="closeModal();openNewAsset(S.inCli||S.cli);return false" style="color:inherit;font-weight:700;text-decoration:underline">Registrar la válvula ahora</a>.</div></div>`:''}
    <div class="np-wrap">
      <div>
        <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:6px">Foto o escaneo de la hoja</label>
@@ -3601,7 +3605,7 @@ function openUploadSheet(assetId,fileName){
      <div>
        <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" title="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
          <input class="inp" id="hcCod" placeholder="p. ej. C-88-4471" autocomplete="off"><span class="pend-msg" id="hcOk" style="display:none"></span></div>
-       <div class="fld"><label>Válvula</label><select class="inp" id="hcAct">${psv.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag||'(sin tag)')} · ${esc(a.ser||'')} — ${esc(cli(a.cli).n)}</option>`).join('')}</select></div>
+       <div class="fld"><label>Válvula</label><select class="inp" id="hcAct" ${vacio?'disabled':''}>${vacio?'<option value="">— sin válvulas registradas en este cliente —</option>':psv.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag||'(sin tag)')} · ${esc(a.ser||'')} — ${esc(cli(a.cli).n)}</option>`).join('')}</select></div>
        <div class="two">
          <div class="fld"><label>Fecha del ensayo</label><input class="inp" id="hcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
          <div class="fld"><label>Técnico</label><input class="inp" id="hcTec" value="K. Ortiz"></div>
@@ -3612,7 +3616,9 @@ function openUploadSheet(assetId,fileName){
        </div>
      </div>
    </div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveUploadSheet()">Registrar calibración</button>`;
+  $('#mFoot').innerHTML=vacio
+    ? `<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="closeModal();openNewAsset(S.inCli||S.cli)">Registrar la válvula</button>`
+    : `<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveUploadSheet()">Registrar calibración</button>`;
   $('#hcFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
     const m=matchAsset(f.name,psv);
     if(m){$('#hcAct').value=m.id;$('#hcCod').value=m.ser||m.tag||'';
