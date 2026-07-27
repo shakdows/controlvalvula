@@ -1412,9 +1412,9 @@ const MARCAS={
  'Bernard Controls':'Actuadores eléctricos','Klinger':'Empaquetaduras y globo','Ampo Poyam':'Esféricas servicio severo'
 };
 const CLIENTES=[
- {id:'minera',n:'Minera Los Andes S.A.A.',ind:'Minería',fac:'Concentradora C-1',areas:{mol:'Molienda',flo:'Flotación',rel:'Relaves'}},
- {id:'refi',n:'Refinería Costa Norte',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'}},
- {id:'agro',n:'Agroindustrias del Valle',ind:'Industria general',fac:'Planta Sur',areas:{cal:'Calderas',evp:'Evaporación',env:'Envasado'}}
+ {id:'minera',n:'Minera Los Andes S.A.A.',ruc:'20512217452',dir:'Av. El Derby 055 - Santiago de Surco, Lima',ind:'Minería',fac:'Concentradora C-1',areas:{mol:'Molienda',flo:'Flotación',rel:'Relaves'}},
+ {id:'refi',n:'Refinería Costa Norte',ruc:'20100128056',dir:'Carretera Ventanilla Km 25 - Callao',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'}},
+ {id:'agro',n:'Agroindustrias del Valle',ruc:'20100190797',dir:'Av. Argentina 4793 - Callao',ind:'Industria general',fac:'Planta Sur',areas:{cal:'Calderas',evp:'Evaporación',env:'Envasado'}}
 ];
 const MODELOS={
  '21000':{m:'Masoneilan',c:'control',t:'Globo reciprocante',d:'Globo bridado con actuador de diafragma multi-resorte',b:'globo'},
@@ -1744,7 +1744,7 @@ function renderClients(){
        ${staff?`<label class="cl-ck" onclick="event.stopPropagation()">
           <input type="checkbox" class="ck" ${marcado?'checked':''} onchange="marcarCliente('${c.id}',this.checked)"></label>`:''}
        <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
-         <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
+         <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span> · `:''}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
        <div class="cl-stats">
          <div class="cl-stat"><b>${eq.length}</b><span>Válvulas</span></div>
          <div class="cl-stat"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></div>
@@ -1848,7 +1848,8 @@ function renderCliBar(){
   if(!inside)return;
   const c=cli(S.inCli);
   const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;$('#cbSub').textContent=`${c.ind} · ${c.fac}`;
+  $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;
+  $('#cbSub').textContent=`${c.ruc?'RUC '+c.ruc+' · ':''}${c.ind} · ${c.fac}`;
   const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
   const n={assets:eq.length,
     parts:0,imp:0, /* sin contador */
@@ -3621,29 +3622,108 @@ function saveNewUser(){
 /* ============================================================
    12.85 · CREAR CLIENTE
    ============================================================ */
+/* ============================================================
+   RUC — identidad fiscal del cliente
+   El RUC es la llave que amarra la cuenta a una empresa real: no se
+   pueden duplicar clientes ni confundir uno con otro.
+   ============================================================ */
+/* Dígito verificador oficial (módulo 11). Detecta RUC mal tecleados sin internet. */
+function rucValido(ruc){
+  const r=String(ruc||'').replace(/\D/g,'');
+  if(r.length!==11)return false;
+  if(!['10','15','17','20'].includes(r.slice(0,2)))return false;
+  const f=[5,4,3,2,7,6,5,4,3,2];
+  let suma=0;for(let i=0;i<10;i++)suma+=(+r[i])*f[i];
+  let d=11-(suma%11);if(d===10)d=0;if(d===11)d=1;
+  return d===+r[10];
+}
+const RUC_TIPO=r=>({'10':'Persona natural con negocio','15':'Sucesión indivisa','17':'Sociedad conyugal','20':'Persona jurídica'})[String(r).slice(0,2)]||'—';
+/* Padrón de demostración. En producción esto lo responde SUNAT a través
+   del backend (ver nota en pantalla): aquí solo sirve para probar el flujo. */
+const RUC_DEMO={
+ '20100128056':{n:'REFINERIA LA PAMPILLA S.A.A.',dir:'CARRETERA VENTANILLA KM 25 - CALLAO',est:'ACTIVO',cond:'HABIDO',ind:'Petróleo y gas'},
+ '20100017491':{n:'SOUTHERN PERU COPPER CORPORATION',dir:'AV. CAMINOS DEL INCA 171 - SANTIAGO DE SURCO, LIMA',est:'ACTIVO',cond:'HABIDO',ind:'Minería'},
+ '20131312955':{n:'PETROLEOS DEL PERU PETROPERU S.A.',dir:'AV. ENRIQUE CANAVAL MOREYRA 150 - SAN ISIDRO, LIMA',est:'ACTIVO',cond:'HABIDO',ind:'Petróleo y gas'},
+ '20512217452':{n:'COMPAÑIA MINERA ANTAMINA S.A.',dir:'AV. EL DERBY 055 TORRE 1 - SANTIAGO DE SURCO, LIMA',est:'ACTIVO',cond:'HABIDO',ind:'Minería'},
+ '20100190797':{n:'ALICORP S.A.A.',dir:'AV. ARGENTINA 4793 - CARMEN DE LA LEGUA, CALLAO',est:'ACTIVO',cond:'HABIDO',ind:'Alimentos y bebidas'},
+ '20330033313':{n:'BACKUS - UNION DE CERVECERIAS PERUANAS S.A.A.',dir:'AV. NICOLAS AYLLON 3986 - ATE, LIMA',est:'ACTIVO',cond:'HABIDO',ind:'Alimentos y bebidas'}
+};
+/* Consulta el RUC. Con backend configurado va a SUNAT; sin él, usa el padrón
+   de demostración y lo dice claramente. */
+async function consultarRUC(){
+  const campo=$('#ncRuc'),r=(campo.value||'').replace(/\D/g,'');
+  const est=$('#ncRucEst');
+  campo.value=r;
+  if(r.length!==11){est.innerHTML='<span style="color:var(--due)">▲ El RUC debe tener 11 dígitos</span>';return}
+  if(!rucValido(r)){est.innerHTML='<span style="color:var(--late)">✕ RUC inválido — el dígito verificador no cuadra, revisa el número</span>';return}
+  if(CLIENTES.some(c=>c.ruc===r)){
+    const y=CLIENTES.find(c=>c.ruc===r);
+    est.innerHTML=`<span style="color:var(--late)">✕ Ese RUC ya está registrado como <b>${esc(y.n)}</b></span>`;return;
+  }
+  est.innerHTML='<span class="muted">Consultando…</span>';
+  const d=await buscarSunat(r);
+  if(!d){est.innerHTML=`<span style="color:var(--due)">▲ RUC válido, pero no se pudo consultar SUNAT. Escribe la razón social a mano.</span>`;return}
+  $('#ncN').value=d.n;
+  if(d.dir)$('#ncDir').value=d.dir;
+  if(d.ind&&[...$('#ncI').options].some(o=>o.value===d.ind))$('#ncI').value=d.ind;
+  est.innerHTML=`<span style="color:var(--ok)">✓ ${esc(RUC_TIPO(r))} · ${esc(d.est||'')} · ${esc(d.cond||'')}${d.demo?' <span class="muted">(padrón de demostración)</span>':''}</span>`;
+  toast(`Datos traídos: ${d.n}`);
+}
+async function buscarSunat(ruc){
+  // 1) Backend propio (cuando exista): devuelve los datos oficiales de SUNAT.
+  if(window.SUNAT_API){
+    try{
+      const res=await fetch(`${window.SUNAT_API}?ruc=${ruc}`,{headers:{'Accept':'application/json'}});
+      if(res.ok){const j=await res.json();
+        return {n:j.razonSocial||j.nombre,dir:j.direccion||j.domicilioFiscal,est:j.estado,cond:j.condicion,ind:null};}
+    }catch(e){/* sin conexión o sin backend: se usa el padrón local */}
+  }
+  // 2) Padrón de demostración local
+  const d=RUC_DEMO[ruc];
+  return d?{...d,demo:true}:null;
+}
 function openNewClient(){
   $('#mTitle').textContent='Nuevo cliente';
   $('#mBody').innerHTML=`
+   <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" title="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
+     <div style="display:flex;gap:8px">
+       <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1">
+       <button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>
+     </div>
+     <div id="ncRucEst" style="font-size:11.5px;margin-top:5px;line-height:1.5">Escribe el RUC y pulsa <b>Buscar datos</b>: se traen la razón social y el domicilio fiscal.</div></div>
    <div class="two">
-     <div class="fld"><label>Nombre / razón social</label><input class="inp" id="ncN" placeholder="p. ej. Cervecería del Sur S.A."></div>
+     <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" placeholder="se completa con el RUC"></div>
      <div class="fld"><label>Industria</label><select class="inp" id="ncI">${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
-     <div class="fld"><label>Instalación / planta</label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
+   </div>
+   <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="se completa con el RUC"></div>
+   <div class="two">
+     <div class="fld"><label>Instalación / planta <span class="hlp" title="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
      <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
    </div>
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>El cliente aparecerá en los filtros, en la carga de válvulas y al crear usuarios. Luego podrás asignarle válvulas y darle acceso a su portal.</div></div>`;
+     <div>El <b>RUC identifica a la empresa</b> y evita clientes duplicados; el usuario del portal se vincula a él. Si el mismo RUC tiene <b>varias plantas</b>, créalas como clientes distintos con el mismo RUC y distinto nombre de planta.</div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewClient()">Crear cliente</button>`;
+  const r=$('#ncRuc');
+  r.oninput=()=>{r.value=r.value.replace(/\D/g,'').slice(0,11);
+    if(r.value.length===11&&!rucValido(r.value))$('#ncRucEst').innerHTML='<span style="color:var(--late)">✕ El dígito verificador no cuadra</span>';};
+  r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();consultarRUC()}};
   $('#modal').classList.add('on');
+  setTimeout(()=>r.focus(),80);
 }
 function saveNewClient(){
-  const n=$('#ncN').value.trim();
-  if(!n){toast('Indica el nombre del cliente');return}
+  const n=$('#ncN').value.trim(),ruc=($('#ncRuc').value||'').replace(/\D/g,'');
+  if(!ruc){toast('Indica el RUC de la empresa');return}
+  if(!rucValido(ruc)){toast('El RUC no es válido — revisa el número');return}
+  if(!n){toast('Indica la razón social');return}
+  const plantaNueva=$('#ncF').value.trim()||'Instalación principal';
+  const rep=CLIENTES.find(c=>c.ruc===ruc&&(c.fac||'').toLowerCase()===plantaNueva.toLowerCase());
+  if(rep){toast(`Ya existe "${rep.n}" con esa planta y ese RUC`);return}
   const id='cli'+Date.now();
   const areasArr=($('#ncA').value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
-  CLIENTES.push({id,n,ind:$('#ncI').value,fac:$('#ncF').value.trim()||'Instalación principal',areas});
+  CLIENTES.push({id,n,ruc,dir:$('#ncDir').value.trim(),ind:$('#ncI').value,fac:plantaNueva,areas});
   $('#fCli').dataset.built='';
-  closeModal();renderAll();go('clients');registrar('Cliente',`${n} dado de alta`);toast(`Cliente ${n} creado`);
+  closeModal();renderAll();go('clients');registrar('Cliente',`${n} (RUC ${ruc}) dado de alta`);toast(`Cliente ${n} creado`);
 }
 
 /* ============================================================
@@ -3755,7 +3835,7 @@ function openQuote(items,cliId,kind){
         <div><b>${num}</b><br>Fecha: ${HOY.toISOString().slice(0,10)}<br>Válida hasta: ${val.toISOString().slice(0,10)}<br>Moneda: USD</div></div>
     </div>
     <div class="qp-to">
-      <div><div class="lbl">${kind==='oc'?'Proveedor':'Cliente'}</div><b>${esc(c.n||'—')}</b><br>${esc(c.ind||'')}${c.fac?' · '+esc(c.fac):''}</div>
+      <div><div class="lbl">${kind==='oc'?'Proveedor':'Cliente'}</div><b>${esc(c.n||'—')}</b><br>${c.ruc?`RUC ${esc(c.ruc)}<br>`:''}${c.dir?esc(c.dir)+'<br>':''}${esc(c.ind||'')}${c.fac?' · '+esc(c.fac):''}</div>
       <div style="text-align:right"><div class="lbl">Emitido por</div><b>Adolphus S.A.</b><br>Control de fluidos · Lima, Perú<br>ventas@adolphus.pe</div>
     </div>
     <table class="qp"><thead><tr><th class="num" style="width:24px">#</th><th>N.º de parte</th><th>Descripción</th><th>Marca / modelo</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Total</th></tr></thead>
