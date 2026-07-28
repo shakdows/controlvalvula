@@ -27,14 +27,14 @@
   --surface-3:   oklch(0.955 0.004 250);
   --ink:         oklch(0.235 0.012 255);
   --ink-2:       oklch(0.455 0.014 255);
-  --ink-3:       oklch(0.628 0.013 255);
+  --ink-3:       oklch(0.530 0.013 255);
   --line:        oklch(0.905 0.005 255);
   --line-2:      oklch(0.945 0.004 255);
-  --sel:         oklch(0.552 0.152 258);
+  --sel:         oklch(0.505 0.160 258);
   --sel-bg:      oklch(0.955 0.020 258);
-  --ok:          oklch(0.560 0.115 158);
+  --ok:          oklch(0.520 0.118 158);
   --ok-bg:       oklch(0.958 0.030 158);
-  --due:         oklch(0.640 0.135 72);
+  --due:         oklch(0.530 0.128 72);
   --due-bg:      oklch(0.962 0.045 82);
   --late:        oklch(0.545 0.185 24);
   --late-bg:     oklch(0.960 0.030 24);
@@ -59,8 +59,9 @@
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
   --shadow-pop: 0 6px 24px oklch(0.235 0.012 255 / .10), 0 1px 3px oklch(0.235 0.012 255 / .08);
   --shadow-over:0 16px 48px oklch(0.235 0.012 255 / .18);
-  --ease:cubic-bezier(.22,.61,.36,1);
-  --fast:130ms; --med:220ms;
+  --ease:cubic-bezier(.22,.61,.36,1);          /* salida, transiciones cortas */
+  --ease-out:cubic-bezier(.16,1,.3,1);         /* salida exponencial, entradas */
+  --fast:130ms; --med:220ms; --slow:340ms;
 
   --z-sticky:20; --z-rail:30; --z-scrim:40; --z-drawer:50; --z-modal:60; --z-toast:70;
   --row-h:38px; --font-d:13.5px;
@@ -76,12 +77,12 @@
   --surface-3:   oklch(0.278 0.013 258);
   --ink:         oklch(0.955 0.004 258);
   --ink-2:       oklch(0.765 0.010 258);
-  --ink-3:       oklch(0.605 0.012 258);
+  --ink-3:       oklch(0.672 0.012 258);
   --line:        oklch(0.315 0.013 258);
   --line-2:      oklch(0.272 0.012 258);
   --sel:         oklch(0.720 0.130 258);
   --sel-bg:      oklch(0.300 0.055 258);
-  --ok:          oklch(0.740 0.120 158);
+  --ok:          oklch(0.720 0.125 158);
   --ok-bg:       oklch(0.300 0.045 158);
   --due:         oklch(0.800 0.125 82);
   --due-bg:      oklch(0.320 0.050 72);
@@ -105,7 +106,10 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 ::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
 ::-webkit-scrollbar-thumb:hover{background:var(--ink-3);background-clip:padding-box}
 ::selection{background:var(--sel-bg);color:var(--ink)}
-:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:3px}
+/* el anillo sigue la forma del elemento en lugar de imponer la suya */
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+:focus-visible:not(.btn,.inp,input,select,textarea){border-radius:var(--r-1)}
+.dr-tab:focus-visible{outline-offset:-2px;border-radius:var(--r-1)}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 /* ============================================================
@@ -187,18 +191,19 @@ button.avatar:hover{background:var(--line)}
 /* ============================================================
    PRIMITIVAS
    ============================================================ */
-h1{font-size:var(--t-5);font-weight:600;letter-spacing:-.022em;line-height:1.18}
-h2{font-size:var(--t-4);font-weight:600;letter-spacing:-.015em;line-height:1.25}
+h1{font-size:var(--t-5);font-weight:600;letter-spacing:-.022em;line-height:1.18;text-wrap:balance}
+h2{font-size:var(--t-4);font-weight:600;letter-spacing:-.015em;line-height:1.25;text-wrap:balance}
 h3{font-size:var(--t-2);font-weight:600;letter-spacing:.02em;color:var(--ink-2)}
 /* el SVG no hereda la tipografía del documento: sin esto, los textos de
    los gráficos y los despieces caen en la serif por defecto */
 svg text{font-family:'IBM Plex Sans',system-ui,sans-serif}
 .muted{color:var(--ink-3)}
 .hd{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);margin-bottom:var(--sp-5);flex-wrap:wrap}
-.hd p{font-size:var(--t-3);color:var(--ink-3);margin-top:4px;max-width:68ch}
+.hd p{font-size:var(--t-3);color:var(--ink-3);margin-top:4px;max-width:68ch;text-wrap:pretty}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--e-1)}
 .panel-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:13px var(--sp-4) 12px;border-bottom:1px solid var(--line-2)}
 .panel-b{padding:var(--sp-4)}
+.btn:active:not(:disabled){transform:translateY(.5px)}
 .btn{
   display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:var(--r-1);
   background:var(--ink);color:var(--bg);border:1px solid var(--ink);font-size:13px;font-weight:600;cursor:pointer;
@@ -210,7 +215,7 @@ svg text{font-family:'IBM Plex Sans',system-ui,sans-serif}
 .btn.sec:hover{background:var(--surface-2);border-color:var(--ink-3);opacity:1}
 .btn.quiet{background:transparent;border-color:transparent;color:var(--ink-2)}
 .btn.quiet:hover{background:var(--surface-3);color:var(--ink);opacity:1}
-.btn.xs{height:26px;padding:0 9px;font-size:12px}
+.btn.xs{height:28px;padding:0 10px;font-size:12px}
 .btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.9}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .tag{display:inline-flex;align-items:center;gap:5px;height:20px;padding:0 7px;border-radius:4px;font-size:11.5px;font-weight:600;background:var(--surface-3);color:var(--ink-2);white-space:nowrap}
@@ -273,6 +278,8 @@ table.grid th.sortable:hover{color:var(--ink)}
 table.grid th .ar{opacity:.35;margin-left:4px;font-size:9px}
 table.grid th.sorted .ar{opacity:1}
 table.grid td{padding:0 12px;height:var(--row-h);border-bottom:1px solid var(--line-2);white-space:nowrap;vertical-align:middle}
+table.grid td.mono,table.grid td .mono{font-variant-numeric:tabular-nums;letter-spacing:.01em}
+table.grid td.num,table.grid th.num{text-align:right;font-variant-numeric:tabular-nums}
 table.grid tbody tr{cursor:pointer;transition:background var(--fast)}
 table.grid tbody tr:hover{background:var(--surface-2)}
 table.grid tbody tr.focus{background:var(--sel-bg)}
@@ -298,12 +305,12 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .empty svg{width:30px;height:30px;stroke:currentColor;fill:none;stroke-width:1.4;margin-bottom:10px;opacity:.5}
 
 /* ---- drawer de detalle ---- */
-.scrim{position:fixed;inset:0;background:oklch(0.235 0.012 255 /.35);opacity:0;pointer-events:none;transition:opacity var(--med) var(--ease);z-index:var(--z-scrim)}
+.scrim{position:fixed;inset:0;background:oklch(0.235 0.012 255 /.42);opacity:0;pointer-events:none;transition:opacity var(--slow) var(--ease-out);z-index:var(--z-scrim);backdrop-filter:blur(1.5px)}
 .scrim.on{opacity:1;pointer-events:auto}
 .drawer{
   position:fixed;top:0;right:0;bottom:0;width:min(660px,94vw);background:var(--surface);
   border-left:1px solid var(--line);z-index:var(--z-drawer);display:flex;flex-direction:column;
-  transform:translateX(102%);transition:transform var(--med) var(--ease),width var(--med) var(--ease);box-shadow:var(--shadow-over)
+  transform:translateX(102%);transition:transform var(--slow) var(--ease-out),width var(--med) var(--ease-out);box-shadow:var(--shadow-over)
 }
 .drawer.on{transform:none}
 .drawer.wide{width:min(1180px,98vw)}
@@ -313,7 +320,8 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
 .dr-tags{display:flex;gap:6px;flex-wrap:wrap}
 .dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
-.dr-tab{padding:9px 0 8px;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
+.dr-tab{padding:9px 2px 8px;font:inherit;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;background:none;border:0;
+  border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
 .dr-tab:hover{color:var(--ink)}
 .dr-tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
 .dr-b{flex:1;overflow:auto;padding:var(--sp-5);padding-bottom:var(--sp-6);overscroll-behavior:contain}
@@ -423,7 +431,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cmd{position:fixed;inset:0;z-index:var(--z-modal);display:none;padding-top:12vh;justify-content:center;background:oklch(0.235 0.012 255 /.35)}
 .cmd.on{display:flex}
 .cmd-c{width:min(620px,94vw);max-height:64vh;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--med) var(--ease)}
-@keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:translateY(-10px) scale(.98)}to{opacity:1;transform:none}}
 .cmd-i{display:flex;align-items:center;gap:10px;padding:0 var(--sp-4);border-bottom:1px solid var(--line-2);flex:0 0 auto}
 .cmd-i svg{width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.8}
 .cmd-i input{flex:1;height:48px;border:0;background:transparent;font-size:15px;outline:none}
@@ -442,7 +450,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 /* ---- modal ---- */
 .modal{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:oklch(0.235 0.012 255 /.35);padding:var(--sp-5)}
 .modal.on{display:flex}
-.modal-c{width:min(660px,100%);max-height:86vh;background:var(--surface);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--med) var(--ease)}
+.modal-c{width:min(660px,100%);max-height:86vh;background:var(--surface);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--slow) var(--ease-out)}
 .modal-h{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--line-2)}
 .modal-b{padding:var(--sp-5);padding-bottom:var(--sp-6);overflow:auto;overscroll-behavior:contain}
 .modal-f{padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;justify-content:flex-end;gap:var(--sp-2);background:var(--surface-2)}
@@ -654,7 +662,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .onb-s .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;
   justify-content:center;font-size:11px;font-weight:600;color:var(--ink-3)}
 .onb-s.done{opacity:.62}
-.onb-s.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.onb-s.done .n{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:700}
 .onb-s b{display:block;font-size:12.5px}
 .onb-s span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.4}
 .onb-bar{height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;margin-top:14px}
@@ -725,9 +733,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-mov-i .t small{display:block;font-size:11px;color:var(--ink-3)}
 /* la baja queda al final, separada del resto y sin competir con las
    acciones principales del pie */
-.fx-baja{margin-top:var(--sp-5);border:1px solid var(--line);border-left:3px solid var(--late);
+.fx-baja{margin-top:var(--sp-5);border:1px solid color-mix(in oklab,var(--late) 30%,var(--line));
   border-radius:var(--r-2);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;
-  gap:var(--sp-4);flex-wrap:wrap;background:var(--surface-2)}
+  gap:var(--sp-4);flex-wrap:wrap;background:var(--late-bg)}
 .fx-baja b{display:block;font-size:var(--t-2);font-weight:600}
 .fx-baja span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px}
 .fx-more{margin-top:14px;border-top:1px solid var(--line-2);padding-top:12px}
@@ -893,12 +901,13 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 /* tarjetas grandes por familia (fila superior del panel) */
 .fams{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)}
 .fam{position:relative;display:flex;align-items:center;gap:12px;text-align:left;width:100%;
-  background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--fam);
-  border-radius:var(--r-3);box-shadow:var(--e-1);padding:13px 15px 13px 12px;cursor:pointer;overflow:hidden;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-3);box-shadow:var(--e-1);padding:13px 15px;cursor:pointer;overflow:hidden;
   transition:box-shadow var(--fast) var(--ease),transform var(--fast) var(--ease),border-color var(--fast) var(--ease)}
 .fam:hover{box-shadow:var(--shadow-pop);transform:translateY(-2px)}
-.fam-ph{flex:0 0 auto;width:76px;height:76px;border-radius:var(--r-1);display:flex;align-items:center;justify-content:center;
-  background:color-mix(in oklab,var(--fam) 13%,var(--surface));overflow:hidden}
+.fam-ph{flex:0 0 auto;width:78px;height:78px;border-radius:var(--r-2);display:flex;align-items:center;justify-content:center;
+  background:color-mix(in oklab,var(--fam) 14%,var(--surface));
+  box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--fam) 26%,transparent);overflow:hidden}
 .fam-ph img,.fam-ph svg{max-width:100%;max-height:68px;width:auto;object-fit:contain}
 .fam-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 .fam-n{font-size:var(--t-6);font-weight:600;letter-spacing:-.03em;line-height:1;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1462,15 +1471,15 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
     </div>
     <div class="dr-tags" id="drTags"></div>
   </div>
-  <div class="dr-tabs" id="drTabs">
-    <div class="dr-tab on" data-t="ficha">Ficha</div>
-    <div class="dr-tab" data-t="bom">Despiece</div>
-    <div class="dr-tab" data-t="hist">Historial</div>
-    <div class="dr-tab" data-t="docs">Expediente</div>
+  <div class="dr-tabs" id="drTabs" role="tablist" aria-label="Secciones del equipo">
+    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Ficha</button>
+    <button class="dr-tab" data-t="bom" role="tab" aria-selected="false" aria-controls="pn-bom" tabindex="-1">Despiece</button>
+    <button class="dr-tab" data-t="hist" role="tab" aria-selected="false" aria-controls="pn-hist" tabindex="-1">Historial</button>
+    <button class="dr-tab" data-t="docs" role="tab" aria-selected="false" aria-controls="pn-docs" tabindex="-1">Expediente</button>
   </div>
   <div class="dr-b">
-    <div class="pane on" id="pn-ficha"></div><div class="pane" id="pn-bom"></div>
-    <div class="pane" id="pn-hist"></div><div class="pane" id="pn-docs"></div>
+    <div class="pane on" id="pn-ficha" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-bom" role="tabpanel" tabindex="0"></div>
+    <div class="pane" id="pn-hist" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-docs" role="tabpanel" tabindex="0"></div>
   </div>
   <div class="dr-f" id="drFoot"></div>
 </aside>
@@ -2240,11 +2249,42 @@ function confirmDeleteAsset(id){
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
 function showTab(t){
   S.tab=t;
-  $$('.dr-tab').forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  $$('.dr-tab').forEach(x=>{const on=x.dataset.t===t;
+    x.classList.toggle('on',on);x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});
   $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pn-'+t));
   ({ficha:paneFicha,bom:paneBOM,hist:paneHist,docs:paneDocs})[t]();
+  enfocables();
 }
 $$('.dr-tab').forEach(x=>x.onclick=()=>showTab(x.dataset.t));
+/* Recorrer las pestañas con las flechas, como espera un lector de
+   pantalla y como funciona cualquier aplicación de escritorio. */
+$('#drTabs').addEventListener('keydown',e=>{
+  const t=$$('.dr-tab'),i=t.findIndex(x=>x.dataset.t===S.tab);
+  let j=null;
+  if(e.key==='ArrowRight')j=(i+1)%t.length;
+  if(e.key==='ArrowLeft') j=(i-1+t.length)%t.length;
+  if(e.key==='Home')j=0;
+  if(e.key==='End') j=t.length-1;
+  if(j===null)return;
+  e.preventDefault();showTab(t[j].dataset.t);t[j].focus();
+});
+
+/* Muchas filas y tarjetas son <div onclick>: se pueden pulsar con el
+   ratón pero no con el teclado. Se les da foco y respuesta a Enter y
+   Espacio sin tener que tocar cada plantilla. */
+function enfocables(){
+  document.querySelectorAll('div[onclick],span[onclick],li[onclick],tr[onclick]').forEach(el=>{
+    if(el.hasAttribute('tabindex'))return;
+    el.tabIndex=0;
+    if(!el.getAttribute('role'))el.setAttribute('role','button');
+  });
+}
+document.addEventListener('keydown',e=>{
+  const el=document.activeElement;
+  if(!el||!el.hasAttribute('onclick'))return;
+  if(/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(el.tagName))return;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click()}
+});
 
 function paneFicha(){
   const a=S.cur,m=MODELOS[a.mod]||{};
@@ -4450,7 +4490,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();if(S.page==='settings'&&window.renderSettings)renderSettings()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
@@ -5133,7 +5173,7 @@ function onbHtml(){
 restaurarCuentas();
 restaurarLocal();
 paintThemeBtn();renderAll();go('home');pintarNet();
-pintarSesionGuardada();pintarCuenta();upTipo('staff');
+pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 </script>
 </body>
 </html>
