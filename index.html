@@ -2050,6 +2050,21 @@ function applyRole(v){
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
   const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
+  /* El cliente no tiene por qué aprenderse la estructura interna de
+     Adolphus: ve sus equipos y sus servicios, con ese nombre. */
+  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
+    parts:'Repuestos',req:'Solicitudes',rep:'Reportes'};
+  $$('#nav a').forEach(a=>{
+    const l=a.querySelector('.lbl');if(!l)return;
+    if(!l.dataset.base)l.dataset.base=l.textContent;
+    l.textContent=(c&&ETIQ_CLI[a.dataset.p])||l.dataset.base;
+  });
+  /* Un encabezado de sección sin nada debajo es ruido. */
+  $$('#nav .rail-sec').forEach(h=>{
+    let n=h.nextElementSibling,vis=false;
+    while(n&&!n.classList.contains('rail-sec')){if(n.tagName==='A'&&n.style.display!=='none')vis=true;n=n.nextElementSibling}
+    h.style.display=vis?'':'none';
+  });
   S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.fFam='';S.fTipo='';S.fMod='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
@@ -3929,7 +3944,84 @@ function colaHtml(){
   return `<section class="cola">${cab}${chips}<div class="cola-l">${filas}</div>${mas}</section>`;
 }
 
+/* ============================================================
+   PANEL DEL CLIENTE
+   El cliente no dirige una operación de servicio: cuida una planta.
+   Su panel responde otras preguntas — cómo están mis equipos, qué me
+   toca, qué certificados tengo, qué debo comprar — y usa su idioma.
+   ============================================================ */
+function renderHomeCliente(){
+  const vs=visibles(), c=cli(S.cli);
+  const op=vs.filter(a=>estado(a).k==='ok').length;
+  const crit=vs.filter(a=>a.cr==='Crítica').length;
+  const conProg=vs.filter(a=>a.prox).sort((x,y)=>x.prox.localeCompare(y.prox));
+  const prox=conProg[0]?dias(conProg[0].prox):null;
+  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='Atendida');
+  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='certificada'});
+  const st=k=>vs.filter(a=>estado(a).k===k).length;
+  const saludMedia=vs.length?Math.round(vs.reduce((t,a)=>t+salud(a).n,0)/vs.length):100;
+
+  const kpis=[
+    {v:`${op}/${vs.length}`,k:'Válvulas operativas',cls:op===vs.length?'good':'warn',
+     d:op===vs.length?'todo el parque al día':`${vs.length-op} necesitan atención`,go:"go('assets')"},
+    {v:saludMedia,k:'Salud media del parque',cls:saludMedia>=85?'good':saludMedia>=65?'warn':'bad',
+     d:'de 100 · ver el detalle por equipo',go:"go('assets')"},
+    {v:crit,k:'Equipos críticos',dot:crit?'late':'ok',d:crit?'fallan y para la planta':'ninguno',
+     go:"setView('criticos');go('assets')"},
+    {v:sols.length,k:'Solicitudes abiertas',dot:sols.length?'due':'ok',
+     d:sols.length?'con Adolphus':'ninguna en curso',go:"go('req')"}
+  ];
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}" style="text-align:left;cursor:pointer;font:inherit">
+    <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
+    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+
+  /* certificados: lo que el cliente necesita cuando llega la auditoría */
+  const certs=CALIBS.filter(x=>{const a=ACTIVOS.find(z=>z.id===x.act);return a?.cli===S.cli})
+    .sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||'')).slice(0,6);
+  const certHtml=certs.length?`<div class="feed">${certs.map(x=>{const a=ACTIVOS.find(z=>z.id===x.act)||{};
+    const ok=Math.abs(x.devAl)<=(x.tol||3);
+    return `<div class="feed-i"><span class="feed-ic">◎</span>
+      <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(x.cert||'')}</b><p>${esc(x.fin||x.ini||'')} · ${ok?'conforme':'no conforme'}</p></div>
+      <button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${x.id}'))">Descargar</button></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:30px"><b>Sin certificados todavía</b>Aquí aparecerán al cerrar la primera calibración.</div>`;
+
+  /* próximas calibraciones: lo que hay que programar */
+  const proxHtml=conProg.length?`<table class="grid"><thead><tr><th>Equipo</th><th>Área</th><th class="num">Vence</th><th></th></tr></thead>
+    <tbody>${conProg.slice(0,6).map(a=>{const d=dias(a.prox);
+      return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
+      <td class="muted">${esc(area(a))}</td>
+      <td class="num"><span class="tag ${d<0?'late':d<=90?'due':'ok'}">${d<0?`hace ${Math.abs(d)} d`:`en ${d} d`}</span></td>
+      <td class="mono muted" style="text-align:right">${esc(a.prox)}</td></tr>`}).join('')}</tbody></table>`
+   :`<div class="empty" style="padding:30px"><b>Sin programa de calibración</b>Pide a Adolphus el levantamiento de tu parque.</div>`;
+
+  /* servicios en curso: en qué anda Adolphus con tus equipos */
+  const servHtml=ordAb.length?`<div class="feed">${ordAb.slice(0,6).map(o=>{const a=ACTIVOS.find(z=>z.id===o.act)||{};
+    return `<div class="feed-i" onclick="gotoAsset('${o.act}','hist')"><span class="feed-ic">⚙</span>
+      <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(o.tipo)}</b><p>${esc(o.n)} · ${esc(o.tec)}</p></div>
+      <span class="tag sel">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:30px"><b>Sin servicios en curso</b>Ningún equipo tuyo está en taller ni programado.</div>`;
+
+  const estadoSegs=[
+    {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
+    {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
+
+  $('#homeView').innerHTML=`
+   <div class="hd"><div><h1>Tu planta <span class="wave">· ${esc(c.n)}</span></h1>
+     <p>${fechaLarga(HOY)} · ${vs.length} válvula${vs.length===1?'':'s'} bajo servicio de Adolphus</p></div>
+     <button class="btn sec" onclick="go('req')"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>Mis solicitudes</button></div>
+   ${colaHtml()}
+   ${kpiHtml}
+   <div class="dash">
+     <div class="span-7">${panel('Próximas calibraciones',proxHtml,`<button class="btn quiet xs" onclick="go('cal')">Ver todas</button>`)}</div>
+     <div class="span-5">${panel('Estado de tu parque',donut(estadoSegs,vs.length,'válvulas'))}</div>
+     <div class="span-7">${panel('Certificados recientes',certHtml,`<span class="count">${certs.length}</span>`)}</div>
+     <div class="span-5">${panel('Servicios en curso',servHtml,`<span class="count">${ordAb.length}</span>`)}</div>
+   </div>`;
+}
+
 function renderHome(){
+  if(S.rol==='cliente') return renderHomeCliente();
   const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
   const total=vs.length,atn=st('vencido')+st('porvencer')+st('taller')+st('incompleto'),venc=st('vencido');
   const marcas=new Set(vs.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
