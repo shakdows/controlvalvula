@@ -323,7 +323,34 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
-.dr-tags{display:flex;gap:6px;flex-wrap:wrap}
+.spill{display:inline-flex;align-items:center;gap:8px;min-width:74px}
+.spill-b{flex:1;height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;min-width:34px}
+.spill-b i{display:block;height:100%;border-radius:4px}
+.spill b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+.dr-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* Encabezado permanente: identidad, estado y salud siempre a la vista,
+   sin importar en qué pestaña esté el ingeniero. */
+.dr-id{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;justify-content:space-between}
+.dr-id .izq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
+.sal{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-pill);padding:4px 12px 4px 5px;cursor:pointer;font:inherit;transition:border-color var(--fast)}
+.sal:hover{border-color:var(--ink-3)}
+.sal-n{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;
+  color:var(--surface);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.sal-t{display:flex;flex-direction:column;line-height:1.2;text-align:left}
+.sal-t b{font-size:11.5px;font-weight:600}
+.sal-t span{font-size:10.5px;color:var(--ink-3)}
+/* desglose */
+.sal-d{display:flex;flex-direction:column;gap:1px;background:var(--line-2);border:1px solid var(--line-2);
+  border-radius:var(--r-2);overflow:hidden;margin-top:var(--sp-3)}
+.sal-r{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;background:var(--surface);padding:10px 13px}
+.sal-r b{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;color:var(--late);text-align:right}
+.sal-r span{font-size:12.5px;color:var(--ink-2)}
+.sal-tot{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.sal-tot b{font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.sal-tot span{font-size:13px;color:var(--ink-3)}
+.sal-bar{height:8px;border-radius:5px;background:var(--chart-track);overflow:hidden;margin:10px 0 4px}
+.sal-bar i{display:block;height:100%;border-radius:5px;transition:width var(--slow) var(--ease-out)}
 .dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
 .dr-tab{padding:9px 2px 8px;font:inherit;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;background:none;border:0;
   border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
@@ -1430,9 +1457,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
             <div><b>Tag</b><span>Nombre de la válvula en la planta (su placa: PSV-1210).</span></div>
             <div><b>N.º de serie</b><span>Número único del fabricante. Sin él no hay trazabilidad.</span></div>
             <div><b>Marca / modelo</b><span>Fabricante y modelo — define el despiece y los repuestos.</span></div>
-            <div><b>Clase</b><span>Para qué sirve: Control (regula), Seguridad (alivia presión), On-Off (abre/cierra), Actuador (la mueve).</span></div>
             <div><b>Ubicación</b><span>Cliente y área de planta donde está instalada.</span></div>
             <div><b>Criticidad</b><span>Qué tan grave es que falle: <span class="riesgo"><i class="f"></i><i></i><i></i></span> Media · <span class="riesgo alta"><i class="f"></i><i class="f"></i><i></i></span> Alta · <span class="riesgo critica"><i class="f"></i><i class="f"></i><i class="f"></i></span> Crítica (para el proceso).</span></div>
+            <div><b>Salud</b><span>De 0 a 100. Parte de 100 y baja por calibración vencida, correctivos recientes, datos que faltan o repuestos sin stock. Abre una válvula y pulsa la salud para ver de dónde sale cada punto.</span></div>
             <div><b>Estado</b><span><span class="tag ok"><span class="dot"></span>Operativo</span> al día · <span class="tag due"><span class="dot"></span>Vence en X d</span> calibración próxima · <span class="tag late"><span class="dot"></span>Vencida</span> fuera de plazo · <span class="tag sel"><span class="dot"></span>Trabajo abierto</span> en intervención.</span></div>
             <div><b>Últ. servicio</b><span>Fecha de la última intervención registrada.</span></div>
           </div>
@@ -1528,16 +1555,19 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <button class="icon-btn" onclick="toggleWide()" title="Ampliar" id="wideBtn"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5"/></svg></button>
       <button class="icon-btn" onclick="closeDrawer()" title="Cerrar (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="dr-tags" id="drTags"></div>
+    <div class="dr-id"><div class="izq" id="drTags"></div><div id="drSalud"></div></div>
   </div>
   <div class="dr-tabs" id="drTabs" role="tablist" aria-label="Secciones del equipo">
-    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Ficha</button>
+    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Resumen</button>
+    <button class="dr-tab" data-t="tec" role="tab" aria-selected="false" aria-controls="pn-tec" tabindex="-1">Ficha técnica</button>
     <button class="dr-tab" data-t="bom" role="tab" aria-selected="false" aria-controls="pn-bom" tabindex="-1">Despiece</button>
+    <button class="dr-tab" data-t="cal" role="tab" aria-selected="false" aria-controls="pn-cal" tabindex="-1">Calibraciones</button>
     <button class="dr-tab" data-t="hist" role="tab" aria-selected="false" aria-controls="pn-hist" tabindex="-1">Historial</button>
-    <button class="dr-tab" data-t="docs" role="tab" aria-selected="false" aria-controls="pn-docs" tabindex="-1">Expediente</button>
+    <button class="dr-tab" data-t="docs" role="tab" aria-selected="false" aria-controls="pn-docs" tabindex="-1">Documentos</button>
   </div>
   <div class="dr-b">
-    <div class="pane on" id="pn-ficha" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-bom" role="tabpanel" tabindex="0"></div>
+    <div class="pane on" id="pn-ficha" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-tec" role="tabpanel" tabindex="0"></div>
+    <div class="pane" id="pn-bom" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-cal" role="tabpanel" tabindex="0"></div>
     <div class="pane" id="pn-hist" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-docs" role="tabpanel" tabindex="0"></div>
   </div>
   <div class="dr-f" id="drFoot"></div>
@@ -1896,6 +1926,55 @@ const cli=id=>CLIENTES.find(c=>c.id===id)||{};
 const area=a=>{const c=CLIENTES.find(x=>x.areas[a.ar]);return c?c.areas[a.ar]:'—'};
 const dias=f=>f?Math.round((new Date(f+'T00:00:00')-HOY)/864e5):null;
 const CL={control:'Control',seguridad:'Seguridad',onoff:'On-Off',actuador:'Actuador'};
+
+/* ============================================================
+   ÍNDICE DE SALUD DEL ACTIVO
+   No es una nota que hay que creerse: es una lista de descuentos con
+   su motivo, para que el ingeniero pueda discutir cada punto. Las
+   reglas viven aquí, en un solo sitio, y se muestran en la ficha.
+   ============================================================ */
+const REGLAS_SALUD=[
+ {k:'cal',  n:'Calibración al día',      max:32},
+ {k:'hist', n:'Historial de fallas',     max:16},
+ {k:'ficha',n:'Ficha completa',          max:20},
+ {k:'rep',  n:'Repuestos disponibles',   max:8}
+];
+function salud(a){
+  let n=100; const m=[];
+  const baja=(pts,txt,k)=>{if(pts<=0)return;n-=pts;m.push({pts,txt,k})};
+  const d=a.prox?dias(a.prox):null;
+
+  if(!a.prox) baja(12,'Sin programa de calibración','cal');
+  else if(d<0) baja(Math.min(32,18+Math.floor(Math.abs(d)/30)*5),`Calibración vencida hace ${Math.abs(d)} días`,'cal');
+  else if(d<=30) baja(15,`La calibración vence en ${d} días`,'cal');
+  else if(d<=90) baja(7,`La calibración vence en ${d} días`,'cal');
+
+  const ords=ORDENES.filter(o=>o.act===a.id);
+  const corr=ords.filter(o=>o.tipo==='Correctivo'&&(-(dias(o.f)||0))<=365).length;
+  if(corr>=2) baja(12,`${corr} correctivos en los últimos 12 meses`,'hist');
+  else if(corr===1) baja(5,'Un correctivo en los últimos 12 meses','hist');
+  if(ords.some(o=>o.et!=='certificada')) baja(4,'Tiene un trabajo abierto sin cerrar','hist');
+
+  if(!a.ser) baja(10,'Sin número de serie: no hay trazabilidad','ficha');
+  if(!a.tag) baja(5,'Sin tag de planta','ficha');
+  if(!a.ult) baja(5,'Sin registro de último servicio','ficha');
+
+  const c=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+  if(c&&Math.abs(c.devAl)>(c.tol||3)) baja(12,'La última calibración quedó fuera de tolerancia','cal');
+
+  const lista=BOM[(MODELOS[a.mod]||{}).b||'globo']||[];
+  const kit=lista.filter(p=>p.k), sin=kit.filter(p=>!p.s).length;
+  if(kit.length&&sin) baja(Math.min(8,sin*3),`${sin} ${sin===1?'repuesto del kit sin stock':'repuestos del kit sin stock'}`,'rep');
+
+  n=Math.max(0,Math.min(100,Math.round(n)));
+  return {n,m,c:n>=85?'ok':n>=65?'due':'late',t:n>=85?'Buena':n>=65?'Atención':'Crítica'};
+}
+/* Peso para ordenar trabajo: la salud manda, la criticidad desempata. */
+const pesoCrit=c=>({'Crítica':3,'Alta':2,'Media':1}[c]||0);
+const saludPill=a=>{const s=salud(a);
+  return `<span class="spill" title="Salud ${s.n}/100 · ${s.m.length?s.m.map(x=>'−'+x.pts+' '+x.txt).join(' · '):'sin observaciones'}">
+    <span class="spill-b"><i style="width:${s.n}%;background:var(--${s.c})"></i></span><b style="color:var(--${s.c})">${s.n}</b></span>`};
+const prioridad=a=>salud(a).n-pesoCrit(a.cr)*6;
 /* Familias de válvula: orden fijo (nunca se rota) para que un color signifique
    siempre la misma familia, aquí y en todos los gráficos del panel. */
 const FAM=[
@@ -2007,6 +2086,8 @@ function filtrados(){
   if(S.fTipo)r=r.filter(a=>MODELOS[a.mod]?.t===S.fTipo);
   if(S.fMod)r=r.filter(a=>a.mod===S.fMod);
   const k=S.sort.k,d=S.sort.dir;
+  if(k==='sal') return r.sort((x,y)=>(salud(x).n-salud(y).n)*d);
+  if(k==='cr')  return r.sort((x,y)=>(pesoCrit(y.cr)-pesoCrit(x.cr))*d);
   const val=a=>({tag:a.tag||'zzz',ser:a.ser||'zzz',mod:MODELOS[a.mod]?.m+' '+a.mod,cli:cli(a.cli).n,est:estado(a).t,ult:a.ult||''})[k]||'';
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
 }
@@ -2072,7 +2153,7 @@ function renderFilters(){
   $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
   $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
 }
-const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cl','Clase'],['cli','Ubicación'],['cr','Criticidad'],['est','Estado'],['ult','Últ. servicio']];
+const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cli','Ubicación'],['cr','Criticidad'],['sal','Salud'],['est','Estado'],['ult','Últ. servicio']];
 function renderGrid(){
   const rows=filtrados();
   const univ=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
@@ -2089,9 +2170,9 @@ function renderGrid(){
       <td>${a.tag?`<b>${esc(a.tag)}</b>`:'<span style="color:var(--due)">— sin tag —</span>'}</td>
       <td class="mono" style="color:var(--ink-2)">${a.ser?esc(a.ser):'<span style="color:var(--due)">— sin serie —</span>'}</td>
       <td><div class="cell-2"><span>${esc(m.m||'—')}</span><small class="mono">${esc(a.mod)}</small></div></td>
-      <td><span class="tag">${CL[a.cl]}</span></td>
       <td><div class="cell-2"><span>${esc(cli(a.cli).n)}</span><small>${esc(area(a))}</small></div></td>
       <td><span class="riesgo ${a.cr==='Crítica'?'critica':a.cr==='Alta'?'alta':''}" title="${a.cr}">${[0,1,2].map(x=>`<i class="${x<full?'f':''}"></i>`).join('')}</span></td>
+      <td>${saludPill(a)}</td>
       <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
       <td class="mono" style="color:var(--ink-3)">${a.ult||'—'}</td></tr>`}).join('')}</tbody></table>`;
 }
@@ -2251,8 +2332,15 @@ function openAsset(id){
   const a=S.cur,m=MODELOS[a.mod]||{},e=estado(a),d=a.prox?dias(a.prox):null;
   $('#drTitle').textContent=a.tag||'Activo sin tag';
   $('#drSub').textContent=`${cli(a.cli).n} · ${cli(a.cli).fac} · ${area(a)}`;
-  $('#drTags').innerHTML=`<span class="tag">${CL[a.cl]}</span><span class="tag">${esc(m.m||'')}</span>
-    <span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
+  const cr=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  $('#drTags').innerHTML=`<span class="tag ${e.c}"><span class="dot"></span>${e.t}</span>
+    ${a.cr?`<span class="tag ${cr}">Criticidad ${esc(a.cr.toLowerCase())}</span>`:''}
+    <span class="tag">${CL[a.cl]}</span><span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
+  const sa=salud(a);
+  $('#drSalud').innerHTML=`<button class="sal" onclick="verSalud('${a.id}')" title="Cómo se calcula esta salud">
+    <span class="sal-n" style="background:var(--${sa.c})">${sa.n}</span>
+    <span class="sal-t"><b>Salud ${esc(sa.t.toLowerCase())}</b><span>${sa.m.length?sa.m.length+' motivo'+(sa.m.length>1?'s':''):'sin observaciones'}</span></span>
+  </button>`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
@@ -2308,13 +2396,31 @@ function confirmDeleteAsset(id){
   registrar('Baja',`Válvula ${a.tag||a.ser||''} · ${motivo.toLowerCase()}`);
   toast(`${a.tag||a.ser||'Equipo'} eliminado · ${motivo.toLowerCase()}`);
 }
+/* El desglose: cada punto que se descuenta, con su motivo. Un número
+   sin explicación no sirve para decidir nada. */
+function verSalud(id){
+  const a=ACTIVOS.find(x=>x.id===id)||S.cur;if(!a)return;
+  const sa=salud(a);
+  $('#mTitle').textContent=`Salud del equipo · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+    <div class="sal-tot"><b style="color:var(--${sa.c})">${sa.n}</b><span>de 100 · ${esc(sa.t)}</span></div>
+    <div class="sal-bar"><i style="width:${sa.n}%;background:var(--${sa.c})"></i></div>
+    <p class="hint">Parte de 100 y se descuenta por lo que falta o preocupa. Las reglas son fijas y se ven aquí abajo: nadie tiene que creerse el número.</p>
+    ${sa.m.length?`<div class="sal-d">${sa.m.map(x=>`<div class="sal-r"><b>−${x.pts}</b><span>${esc(x.txt)}</span></div>`).join('')}</div>`
+      :`<div class="callout" style="margin-top:14px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
+         <div>Sin descuentos: calibración vigente, ficha completa, sin correctivos recientes y con repuestos en stock.</div></div>`}
+    <p class="hint" style="margin-top:14px">La criticidad del proceso no baja la salud, pero sí adelanta el equipo en la cola de trabajo: entre dos válvulas con la misma salud, primero va la crítica.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
+    ${S.rol==='cliente'?'':`<button class="btn" onclick="closeModal();openWO('${a.id}')">Crear orden</button>`}`;
+  $('#modal').classList.add('on');
+}
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
 function showTab(t){
   S.tab=t;
   $$('.dr-tab').forEach(x=>{const on=x.dataset.t===t;
     x.classList.toggle('on',on);x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});
   $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pn-'+t));
-  ({ficha:paneFicha,bom:paneBOM,hist:paneHist,docs:paneDocs})[t]();
+  ({ficha:paneFicha,tec:paneTec,bom:paneBOM,cal:paneCal,hist:paneHist,docs:paneDocs})[t]();
   enfocables();
 }
 $$('.dr-tab').forEach(x=>x.onclick=()=>showTab(x.dataset.t));
@@ -2358,6 +2464,8 @@ function paneFicha(){
   const calC=a.prox?(d<0?'late':d<=90?'due':'ok'):'';
   const calSub=a.prox?a.prox:'Sin programa';
   const crC=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  const ultOrd=ORDENES.filter(o=>o.act===a.id&&o.et==='certificada').sort((x,y)=>y.f.localeCompare(x.f))[0];
+  const ultTec=ultOrd?ultOrd.tec:'';
   const tile=(k,v,c,sub)=>`<div class="fx-tile"><span class="fx-k">${k}</span><span class="fx-v" style="${c?`color:var(--${c})`:''}">${c?'<span class="dot"></span>':''}${esc(v)}</span>${sub?`<span class="fx-sub">${esc(sub)}</span>`:''}</div>`;
   // datos clave (solo los que están llenos)
   const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
@@ -2366,9 +2474,10 @@ function paneFicha(){
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
        <div class="fx-tiles">
-         ${tile('Estado',st.t,st.c)}
-         ${tile('Criticidad',a.cr||'—',crC)}
-         ${tile('Calibración',calV,calC,calSub)}
+         ${tile('Próxima calibración',calV,calC,calSub)}
+         ${tile('Último servicio',a.ult||'Sin registro',a.ult?'':'due',ultTec)}
+         ${tile('Trabajo abierto',abiertas.length?abiertas[0].n:'Ninguno',abiertas.length?'sel':'ok',
+                abiertas.length?ETAPAS.find(e=>e[0]===abiertas[0].et)[1]:'nada pendiente')}
        </div>
      </div>
    </div>
@@ -2377,18 +2486,9 @@ function paneFicha(){
    ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
    ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
-   <details class="fx-more"><summary>Ver ficha técnica completa</summary>
-     <dl class="dl">
-       ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
-       ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
-       ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
-     </dl>
-   </details>
    ${fichaCalib(a)}
    ${fichaRepuestos(a)}
    ${fichaMovimientos(a)}
-   <div class="fx-model"><h3>Sobre el modelo</h3>
-     <p>${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>
    ${S.rol==='cliente'?'':`<div class="fx-baja">
      <div><b>Dar de baja este equipo</b><span>Elimina la válvula y todo su historial. Pide contraseña de autorización.</span></div>
      <button class="btn quiet xs" style="color:var(--late)" onclick="deleteAsset('${a.id}')">Dar de baja</button>
@@ -2442,6 +2542,54 @@ function fichaMovimientos(a){
        <span class="t"><b>${esc(o.n)}</b><small>${esc(o.tipo)} · ${esc(o.tec)}</small></span>
        <span class="tag ${o.et==='certificada'?'ok':'sel'}">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
      </div>`).join('')}</div>`);
+}
+
+function paneTec(){
+  const a=S.cur,m=MODELOS[a.mod]||{};
+  const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
+  const faltan=[['Tag',a.tag],['N.º de serie',a.ser],['Tamaño',a.sz],['Rating / clase',a.rt],
+    ['Rango / set',a.rng],['Criticidad',a.cr],['Último servicio',a.ult]].filter(([,v])=>!v).length;
+  $('#pn-tec').innerHTML=`
+   ${faltan?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Faltan <b>${faltan}</b> ${faltan===1?'dato':'datos'} por completar. Cada uno resta salud al equipo y quita precisión al pedir repuestos.</div></div>`:''}
+   <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
+     <div class="fx-blk-h"><h3>Identificación</h3></div>
+     <dl class="dl">${row('Tag de planta',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo constructivo',m.t)}${row('Familia',CL[a.cl])}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Datos de proceso</h3></div>
+     <dl class="dl">${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Servicio</h3></div>
+     <dl class="dl">${row('Criticidad',a.cr)}${row('Ubicación',cli(a.cli).n+' · '+area(a))}${row('Último servicio',a.ult)}${row('Próxima calibración',a.prox)}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Sobre el modelo</h3></div>
+     <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p>
+   </section>`;
+}
+function paneCal(){
+  const a=S.cur;
+  const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
+  const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+     <button class="btn sec xs" onclick="openCalib('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva calibración</button>
+     <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
+  if(!cs.length){
+    $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <b>Sin calibraciones registradas</b>${a.prox?`Programada para el ${esc(a.prox)}.`:'Este equipo no tiene programa de calibración.'}</div>`;
+    return;
+  }
+  $('#pn-cal').innerHTML=bar+`${calibChart(cs[0])}
+    <section class="fx-blk"><div class="fx-blk-h"><h3>Todas las calibraciones</h3><span class="count">${cs.length}</span></div>
+    <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
+      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">As-left</th><th>Resultado</th><th></th></tr></thead>
+      <tbody>${cs.map(c=>{const ok=Math.abs(c.devAl)<=(c.tol||3);
+        return `<tr style="cursor:default"><td class="mono">${esc(c.fin||c.ini||'')}</td><td class="mono muted">${esc(c.cert||'')}</td>
+        <td class="num">${c.nom} ${esc(c.uni)}</td><td class="num">${c.af}</td><td class="num">${c.al}</td>
+        <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Conforme':'No conforme'}</span></td>
+        <td style="text-align:right"><button class="btn sec xs" onclick="showCalibReport(CALIBS.find(x=>x.id==='${c.id}'))">Certificado</button></td></tr>`}).join('')}</tbody>
+    </table></section>`;
 }
 
 /* --- esquemas de despiece --- */
@@ -3715,22 +3863,23 @@ function colaTrabajo(){
   vs.forEach(a=>{
     const e=estado(a), d=a.prox?dias(a.prox):null;
     const donde=`${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)} · ${esc(area(a))}`;
+    const pr=prioridad(a);
     if(e.k==='vencido')
-      out.push({p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
         ac:cliente?null:{t:'Calibrar',f:`openCalib('${a.id}')`}});
     else if(e.k==='taller'){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
-      out.push({p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
         ac:{t:'Ver orden',f:`gotoClientPage('wo','${a.cli}')`}});
     }
     else if(e.k==='porvencer'&&d<=60)
-      out.push({p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Vence en <em>${d} d</em> · ${esc(a.prox)}`,
         ac:cliente?null:{t:'Programar',f:`openWO('${a.id}','Calibración')`}});
     if(e.k==='incompleto')
-      out.push({p:4,g:'ficha',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:4,g:'ficha',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
         ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
   });
@@ -3739,7 +3888,9 @@ function colaTrabajo(){
       q:`Solicitud <em>${esc(x.est.toLowerCase())}</em> del ${esc(x.f)}`,
       ac:{t:cliente?'Ver':'Atender',f:`gotoClientPage('req','${x.cli}')`}});
   });
-  return out.sort((a,b)=>a.p-b.p);
+  /* dentro de un mismo grupo va primero el equipo en peor estado; la
+     criticidad del proceso desempata (ver prioridad()). */
+  return out.sort((a,b)=>a.p-b.p||(a.pr??999)-(b.pr??999));
 }
 function setCola(g){S.cola=S.cola===g?'':g;renderHome()}
 function colaHtml(){
