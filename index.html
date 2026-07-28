@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="Adolphus">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crAossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -323,7 +323,34 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
-.dr-tags{display:flex;gap:6px;flex-wrap:wrap}
+.spill{display:inline-flex;align-items:center;gap:8px;min-width:74px}
+.spill-b{flex:1;height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;min-width:34px}
+.spill-b i{display:block;height:100%;border-radius:4px}
+.spill b{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+.dr-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* Encabezado permanente: identidad, estado y salud siempre a la vista,
+   sin importar en qué pestaña esté el ingeniero. */
+.dr-id{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;justify-content:space-between}
+.dr-id .izq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
+.sal{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-pill);padding:4px 12px 4px 5px;cursor:pointer;font:inherit;transition:border-color var(--fast)}
+.sal:hover{border-color:var(--ink-3)}
+.sal-n{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;
+  color:var(--surface);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.sal-t{display:flex;flex-direction:column;line-height:1.2;text-align:left}
+.sal-t b{font-size:11.5px;font-weight:600}
+.sal-t span{font-size:10.5px;color:var(--ink-3)}
+/* desglose */
+.sal-d{display:flex;flex-direction:column;gap:1px;background:var(--line-2);border:1px solid var(--line-2);
+  border-radius:var(--r-2);overflow:hidden;margin-top:var(--sp-3)}
+.sal-r{display:grid;grid-template-columns:52px 1fr;gap:12px;align-items:center;background:var(--surface);padding:10px 13px}
+.sal-r b{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;color:var(--late);text-align:right}
+.sal-r span{font-size:12.5px;color:var(--ink-2)}
+.sal-tot{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.sal-tot b{font-size:38px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.sal-tot span{font-size:13px;color:var(--ink-3)}
+.sal-bar{height:8px;border-radius:5px;background:var(--chart-track);overflow:hidden;margin:10px 0 4px}
+.sal-bar i{display:block;height:100%;border-radius:5px;transition:width var(--slow) var(--ease-out)}
 .dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
 .dr-tab{padding:9px 2px 8px;font:inherit;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;background:none;border:0;
   border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
@@ -937,6 +964,49 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .famleg span{display:inline-flex;align-items:center;gap:6px}
 .famleg i{width:9px;height:9px;border-radius:3px;display:inline-block}
 
+/* ── LA COLA DE TRABAJO ──────────────────────────────────────
+   Un panel no sirve para contar el parque: sirve para saber qué hay
+   que hacer hoy. Esto va primero, antes que cualquier cifra. */
+.cola{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  box-shadow:var(--e-2);margin-bottom:var(--sp-4);overflow:hidden}
+.cola-h{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);
+  padding:var(--sp-4) var(--sp-4) var(--sp-3);flex-wrap:wrap}
+.cola-h h2{font-size:var(--t-4)}
+.cola-h p{font-size:var(--t-2);color:var(--ink-3);margin-top:3px}
+.cola-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 var(--sp-4) var(--sp-3)}
+.ch{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border-radius:var(--r-pill);
+  border:1px solid var(--line);background:var(--surface);font:inherit;font-size:12.5px;color:var(--ink-2);
+  cursor:pointer;transition:border-color var(--fast),background var(--fast)}
+.ch:hover{border-color:var(--ink-3)}
+.ch b{font-variant-numeric:tabular-nums;font-weight:600}
+.ch .pt{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.ch.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ch.on b{color:var(--surface)}
+.cola-l{border-top:1px solid var(--line-2)}
+.cola-i{display:grid;grid-template-columns:10px minmax(0,1.15fr) minmax(0,1fr) auto;gap:var(--sp-3);
+  align-items:center;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);
+  cursor:pointer;transition:background var(--fast)}
+.cola-i:last-child{border-bottom:0}
+.cola-i:hover{background:var(--surface-2)}
+.cola-i .pt{width:8px;height:8px;border-radius:50%}
+.cola-i .t{min-width:0}
+.cola-i .t b{display:block;font-size:var(--t-3);font-weight:600}
+.cola-i .t small{display:block;font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cola-i .q{font-size:12.5px;color:var(--ink-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cola-i .q em{font-style:normal;font-weight:600}
+.cola-i .ac{justify-self:end}
+.cola-mas{display:block;width:100%;padding:11px;background:var(--surface-2);border:0;border-top:1px solid var(--line-2);
+  font:inherit;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.cola-mas:hover{color:var(--ink);background:var(--surface-3)}
+.cola-vacio{display:flex;align-items:center;gap:14px;padding:26px var(--sp-4);border-top:1px solid var(--line-2)}
+.cola-vacio svg{width:34px;height:34px;stroke:var(--ok);fill:none;stroke-width:1.7;flex:0 0 auto}
+.cola-vacio b{display:block;font-size:var(--t-3)}
+.cola-vacio span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+@media(max-width:820px){
+  .cola-i{grid-template-columns:10px 1fr auto;row-gap:6px}
+  .cola-i .q{grid-column:2/-1}
+}
+
 .greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .greet .wave{color:var(--ink-3);font-weight:400}
 
@@ -1387,9 +1457,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
             <div><b>Tag</b><span>Nombre de la válvula en la planta (su placa: PSV-1210).</span></div>
             <div><b>N.º de serie</b><span>Número único del fabricante. Sin él no hay trazabilidad.</span></div>
             <div><b>Marca / modelo</b><span>Fabricante y modelo — define el despiece y los repuestos.</span></div>
-            <div><b>Clase</b><span>Para qué sirve: Control (regula), Seguridad (alivia presión), On-Off (abre/cierra), Actuador (la mueve).</span></div>
             <div><b>Ubicación</b><span>Cliente y área de planta donde está instalada.</span></div>
             <div><b>Criticidad</b><span>Qué tan grave es que falle: <span class="riesgo"><i class="f"></i><i></i><i></i></span> Media · <span class="riesgo alta"><i class="f"></i><i class="f"></i><i></i></span> Alta · <span class="riesgo critica"><i class="f"></i><i class="f"></i><i class="f"></i></span> Crítica (para el proceso).</span></div>
+            <div><b>Salud</b><span>De 0 a 100. Parte de 100 y baja por calibración vencida, correctivos recientes, datos que faltan o repuestos sin stock. Abre una válvula y pulsa la salud para ver de dónde sale cada punto.</span></div>
             <div><b>Estado</b><span><span class="tag ok"><span class="dot"></span>Operativo</span> al día · <span class="tag due"><span class="dot"></span>Vence en X d</span> calibración próxima · <span class="tag late"><span class="dot"></span>Vencida</span> fuera de plazo · <span class="tag sel"><span class="dot"></span>Trabajo abierto</span> en intervención.</span></div>
             <div><b>Últ. servicio</b><span>Fecha de la última intervención registrada.</span></div>
           </div>
@@ -1485,16 +1555,19 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <button class="icon-btn" onclick="toggleWide()" title="Ampliar" id="wideBtn"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5"/></svg></button>
       <button class="icon-btn" onclick="closeDrawer()" title="Cerrar (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
-    <div class="dr-tags" id="drTags"></div>
+    <div class="dr-id"><div class="izq" id="drTags"></div><div id="drSalud"></div></div>
   </div>
   <div class="dr-tabs" id="drTabs" role="tablist" aria-label="Secciones del equipo">
-    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Ficha</button>
+    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Resumen</button>
+    <button class="dr-tab" data-t="tec" role="tab" aria-selected="false" aria-controls="pn-tec" tabindex="-1">Ficha técnica</button>
     <button class="dr-tab" data-t="bom" role="tab" aria-selected="false" aria-controls="pn-bom" tabindex="-1">Despiece</button>
+    <button class="dr-tab" data-t="cal" role="tab" aria-selected="false" aria-controls="pn-cal" tabindex="-1">Calibraciones</button>
     <button class="dr-tab" data-t="hist" role="tab" aria-selected="false" aria-controls="pn-hist" tabindex="-1">Historial</button>
-    <button class="dr-tab" data-t="docs" role="tab" aria-selected="false" aria-controls="pn-docs" tabindex="-1">Expediente</button>
+    <button class="dr-tab" data-t="docs" role="tab" aria-selected="false" aria-controls="pn-docs" tabindex="-1">Documentos</button>
   </div>
   <div class="dr-b">
-    <div class="pane on" id="pn-ficha" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-bom" role="tabpanel" tabindex="0"></div>
+    <div class="pane on" id="pn-ficha" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-tec" role="tabpanel" tabindex="0"></div>
+    <div class="pane" id="pn-bom" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-cal" role="tabpanel" tabindex="0"></div>
     <div class="pane" id="pn-hist" role="tabpanel" tabindex="0"></div><div class="pane" id="pn-docs" role="tabpanel" tabindex="0"></div>
   </div>
   <div class="dr-f" id="drFoot"></div>
@@ -1844,7 +1917,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -1853,6 +1926,55 @@ const cli=id=>CLIENTES.find(c=>c.id===id)||{};
 const area=a=>{const c=CLIENTES.find(x=>x.areas[a.ar]);return c?c.areas[a.ar]:'—'};
 const dias=f=>f?Math.round((new Date(f+'T00:00:00')-HOY)/864e5):null;
 const CL={control:'Control',seguridad:'Seguridad',onoff:'On-Off',actuador:'Actuador'};
+
+/* ============================================================
+   ÍNDICE DE SALUD DEL ACTIVO
+   No es una nota que hay que creerse: es una lista de descuentos con
+   su motivo, para que el ingeniero pueda discutir cada punto. Las
+   reglas viven aquí, en un solo sitio, y se muestran en la ficha.
+   ============================================================ */
+const REGLAS_SALUD=[
+ {k:'cal',  n:'Calibración al día',      max:32},
+ {k:'hist', n:'Historial de fallas',     max:16},
+ {k:'ficha',n:'Ficha completa',          max:20},
+ {k:'rep',  n:'Repuestos disponibles',   max:8}
+];
+function salud(a){
+  let n=100; const m=[];
+  const baja=(pts,txt,k)=>{if(pts<=0)return;n-=pts;m.push({pts,txt,k})};
+  const d=a.prox?dias(a.prox):null;
+
+  if(!a.prox) baja(12,'Sin programa de calibración','cal');
+  else if(d<0) baja(Math.min(32,18+Math.floor(Math.abs(d)/30)*5),`Calibración vencida hace ${Math.abs(d)} días`,'cal');
+  else if(d<=30) baja(15,`La calibración vence en ${d} días`,'cal');
+  else if(d<=90) baja(7,`La calibración vence en ${d} días`,'cal');
+
+  const ords=ORDENES.filter(o=>o.act===a.id);
+  const corr=ords.filter(o=>o.tipo==='Correctivo'&&(-(dias(o.f)||0))<=365).length;
+  if(corr>=2) baja(12,`${corr} correctivos en los últimos 12 meses`,'hist');
+  else if(corr===1) baja(5,'Un correctivo en los últimos 12 meses','hist');
+  if(ords.some(o=>o.et!=='certificada')) baja(4,'Tiene un trabajo abierto sin cerrar','hist');
+
+  if(!a.ser) baja(10,'Sin número de serie: no hay trazabilidad','ficha');
+  if(!a.tag) baja(5,'Sin tag de planta','ficha');
+  if(!a.ult) baja(5,'Sin registro de último servicio','ficha');
+
+  const c=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+  if(c&&Math.abs(c.devAl)>(c.tol||3)) baja(12,'La última calibración quedó fuera de tolerancia','cal');
+
+  const lista=BOM[(MODELOS[a.mod]||{}).b||'globo']||[];
+  const kit=lista.filter(p=>p.k), sin=kit.filter(p=>!p.s).length;
+  if(kit.length&&sin) baja(Math.min(8,sin*3),`${sin} ${sin===1?'repuesto del kit sin stock':'repuestos del kit sin stock'}`,'rep');
+
+  n=Math.max(0,Math.min(100,Math.round(n)));
+  return {n,m,c:n>=85?'ok':n>=65?'due':'late',t:n>=85?'Buena':n>=65?'Atención':'Crítica'};
+}
+/* Peso para ordenar trabajo: la salud manda, la criticidad desempata. */
+const pesoCrit=c=>({'Crítica':3,'Alta':2,'Media':1}[c]||0);
+const saludPill=a=>{const s=salud(a);
+  return `<span class="spill" title="Salud ${s.n}/100 · ${s.m.length?s.m.map(x=>'−'+x.pts+' '+x.txt).join(' · '):'sin observaciones'}">
+    <span class="spill-b"><i style="width:${s.n}%;background:var(--${s.c})"></i></span><b style="color:var(--${s.c})">${s.n}</b></span>`};
+const prioridad=a=>salud(a).n-pesoCrit(a.cr)*6;
 /* Familias de válvula: orden fijo (nunca se rota) para que un color signifique
    siempre la misma familia, aquí y en todos los gráficos del panel. */
 const FAM=[
@@ -1928,6 +2050,21 @@ function applyRole(v){
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
   const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
+  /* El cliente no tiene por qué aprenderse la estructura interna de
+     Adolphus: ve sus equipos y sus servicios, con ese nombre. */
+  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
+    parts:'Repuestos',req:'Solicitudes',rep:'Reportes'};
+  $$('#nav a').forEach(a=>{
+    const l=a.querySelector('.lbl');if(!l)return;
+    if(!l.dataset.base)l.dataset.base=l.textContent;
+    l.textContent=(c&&ETIQ_CLI[a.dataset.p])||l.dataset.base;
+  });
+  /* Un encabezado de sección sin nada debajo es ruido. */
+  $$('#nav .rail-sec').forEach(h=>{
+    let n=h.nextElementSibling,vis=false;
+    while(n&&!n.classList.contains('rail-sec')){if(n.tagName==='A'&&n.style.display!=='none')vis=true;n=n.nextElementSibling}
+    h.style.display=vis?'':'none';
+  });
   S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.fFam='';S.fTipo='';S.fMod='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
@@ -1964,6 +2101,8 @@ function filtrados(){
   if(S.fTipo)r=r.filter(a=>MODELOS[a.mod]?.t===S.fTipo);
   if(S.fMod)r=r.filter(a=>a.mod===S.fMod);
   const k=S.sort.k,d=S.sort.dir;
+  if(k==='sal') return r.sort((x,y)=>(salud(x).n-salud(y).n)*d);
+  if(k==='cr')  return r.sort((x,y)=>(pesoCrit(y.cr)-pesoCrit(x.cr))*d);
   const val=a=>({tag:a.tag||'zzz',ser:a.ser||'zzz',mod:MODELOS[a.mod]?.m+' '+a.mod,cli:cli(a.cli).n,est:estado(a).t,ult:a.ult||''})[k]||'';
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
 }
@@ -2029,7 +2168,7 @@ function renderFilters(){
   $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
   $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
 }
-const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cl','Clase'],['cli','Ubicación'],['cr','Criticidad'],['est','Estado'],['ult','Últ. servicio']];
+const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cli','Ubicación'],['cr','Criticidad'],['sal','Salud'],['est','Estado'],['ult','Últ. servicio']];
 function renderGrid(){
   const rows=filtrados();
   const univ=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
@@ -2046,9 +2185,9 @@ function renderGrid(){
       <td>${a.tag?`<b>${esc(a.tag)}</b>`:'<span style="color:var(--due)">— sin tag —</span>'}</td>
       <td class="mono" style="color:var(--ink-2)">${a.ser?esc(a.ser):'<span style="color:var(--due)">— sin serie —</span>'}</td>
       <td><div class="cell-2"><span>${esc(m.m||'—')}</span><small class="mono">${esc(a.mod)}</small></div></td>
-      <td><span class="tag">${CL[a.cl]}</span></td>
       <td><div class="cell-2"><span>${esc(cli(a.cli).n)}</span><small>${esc(area(a))}</small></div></td>
       <td><span class="riesgo ${a.cr==='Crítica'?'critica':a.cr==='Alta'?'alta':''}" title="${a.cr}">${[0,1,2].map(x=>`<i class="${x<full?'f':''}"></i>`).join('')}</span></td>
+      <td>${saludPill(a)}</td>
       <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
       <td class="mono" style="color:var(--ink-3)">${a.ult||'—'}</td></tr>`}).join('')}</tbody></table>`;
 }
@@ -2208,8 +2347,15 @@ function openAsset(id){
   const a=S.cur,m=MODELOS[a.mod]||{},e=estado(a),d=a.prox?dias(a.prox):null;
   $('#drTitle').textContent=a.tag||'Activo sin tag';
   $('#drSub').textContent=`${cli(a.cli).n} · ${cli(a.cli).fac} · ${area(a)}`;
-  $('#drTags').innerHTML=`<span class="tag">${CL[a.cl]}</span><span class="tag">${esc(m.m||'')}</span>
-    <span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
+  const cr=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  $('#drTags').innerHTML=`<span class="tag ${e.c}"><span class="dot"></span>${e.t}</span>
+    ${a.cr?`<span class="tag ${cr}">Criticidad ${esc(a.cr.toLowerCase())}</span>`:''}
+    <span class="tag">${CL[a.cl]}</span><span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
+  const sa=salud(a);
+  $('#drSalud').innerHTML=`<button class="sal" onclick="verSalud('${a.id}')" title="Cómo se calcula esta salud">
+    <span class="sal-n" style="background:var(--${sa.c})">${sa.n}</span>
+    <span class="sal-t"><b>Salud ${esc(sa.t.toLowerCase())}</b><span>${sa.m.length?sa.m.length+' motivo'+(sa.m.length>1?'s':''):'sin observaciones'}</span></span>
+  </button>`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
@@ -2265,13 +2411,31 @@ function confirmDeleteAsset(id){
   registrar('Baja',`Válvula ${a.tag||a.ser||''} · ${motivo.toLowerCase()}`);
   toast(`${a.tag||a.ser||'Equipo'} eliminado · ${motivo.toLowerCase()}`);
 }
+/* El desglose: cada punto que se descuenta, con su motivo. Un número
+   sin explicación no sirve para decidir nada. */
+function verSalud(id){
+  const a=ACTIVOS.find(x=>x.id===id)||S.cur;if(!a)return;
+  const sa=salud(a);
+  $('#mTitle').textContent=`Salud del equipo · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+    <div class="sal-tot"><b style="color:var(--${sa.c})">${sa.n}</b><span>de 100 · ${esc(sa.t)}</span></div>
+    <div class="sal-bar"><i style="width:${sa.n}%;background:var(--${sa.c})"></i></div>
+    <p class="hint">Parte de 100 y se descuenta por lo que falta o preocupa. Las reglas son fijas y se ven aquí abajo: nadie tiene que creerse el número.</p>
+    ${sa.m.length?`<div class="sal-d">${sa.m.map(x=>`<div class="sal-r"><b>−${x.pts}</b><span>${esc(x.txt)}</span></div>`).join('')}</div>`
+      :`<div class="callout" style="margin-top:14px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
+         <div>Sin descuentos: calibración vigente, ficha completa, sin correctivos recientes y con repuestos en stock.</div></div>`}
+    <p class="hint" style="margin-top:14px">La criticidad del proceso no baja la salud, pero sí adelanta el equipo en la cola de trabajo: entre dos válvulas con la misma salud, primero va la crítica.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
+    ${S.rol==='cliente'?'':`<button class="btn" onclick="closeModal();openWO('${a.id}')">Crear orden</button>`}`;
+  $('#modal').classList.add('on');
+}
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
 function showTab(t){
   S.tab=t;
   $$('.dr-tab').forEach(x=>{const on=x.dataset.t===t;
     x.classList.toggle('on',on);x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});
   $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pn-'+t));
-  ({ficha:paneFicha,bom:paneBOM,hist:paneHist,docs:paneDocs})[t]();
+  ({ficha:paneFicha,tec:paneTec,bom:paneBOM,cal:paneCal,hist:paneHist,docs:paneDocs})[t]();
   enfocables();
 }
 $$('.dr-tab').forEach(x=>x.onclick=()=>showTab(x.dataset.t));
@@ -2315,6 +2479,8 @@ function paneFicha(){
   const calC=a.prox?(d<0?'late':d<=90?'due':'ok'):'';
   const calSub=a.prox?a.prox:'Sin programa';
   const crC=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
+  const ultOrd=ORDENES.filter(o=>o.act===a.id&&o.et==='certificada').sort((x,y)=>y.f.localeCompare(x.f))[0];
+  const ultTec=ultOrd?ultOrd.tec:'';
   const tile=(k,v,c,sub)=>`<div class="fx-tile"><span class="fx-k">${k}</span><span class="fx-v" style="${c?`color:var(--${c})`:''}">${c?'<span class="dot"></span>':''}${esc(v)}</span>${sub?`<span class="fx-sub">${esc(sub)}</span>`:''}</div>`;
   // datos clave (solo los que están llenos)
   const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
@@ -2323,9 +2489,10 @@ function paneFicha(){
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
        <div class="fx-tiles">
-         ${tile('Estado',st.t,st.c)}
-         ${tile('Criticidad',a.cr||'—',crC)}
-         ${tile('Calibración',calV,calC,calSub)}
+         ${tile('Próxima calibración',calV,calC,calSub)}
+         ${tile('Último servicio',a.ult||'Sin registro',a.ult?'':'due',ultTec)}
+         ${tile('Trabajo abierto',abiertas.length?abiertas[0].n:'Ninguno',abiertas.length?'sel':'ok',
+                abiertas.length?ETAPAS.find(e=>e[0]===abiertas[0].et)[1]:'nada pendiente')}
        </div>
      </div>
    </div>
@@ -2334,18 +2501,9 @@ function paneFicha(){
    ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
    ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
-   <details class="fx-more"><summary>Ver ficha técnica completa</summary>
-     <dl class="dl">
-       ${row('Tag',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo',m.t)}
-       ${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}
-       ${row('Criticidad',a.cr)}${row('Último servicio',a.ult)}${a.prox?row('Próxima calibración',a.prox):''}
-     </dl>
-   </details>
    ${fichaCalib(a)}
    ${fichaRepuestos(a)}
    ${fichaMovimientos(a)}
-   <div class="fx-model"><h3>Sobre el modelo</h3>
-     <p>${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p></div>
    ${S.rol==='cliente'?'':`<div class="fx-baja">
      <div><b>Dar de baja este equipo</b><span>Elimina la válvula y todo su historial. Pide contraseña de autorización.</span></div>
      <button class="btn quiet xs" style="color:var(--late)" onclick="deleteAsset('${a.id}')">Dar de baja</button>
@@ -2399,6 +2557,54 @@ function fichaMovimientos(a){
        <span class="t"><b>${esc(o.n)}</b><small>${esc(o.tipo)} · ${esc(o.tec)}</small></span>
        <span class="tag ${o.et==='certificada'?'ok':'sel'}">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
      </div>`).join('')}</div>`);
+}
+
+function paneTec(){
+  const a=S.cur,m=MODELOS[a.mod]||{};
+  const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
+  const faltan=[['Tag',a.tag],['N.º de serie',a.ser],['Tamaño',a.sz],['Rating / clase',a.rt],
+    ['Rango / set',a.rng],['Criticidad',a.cr],['Último servicio',a.ult]].filter(([,v])=>!v).length;
+  $('#pn-tec').innerHTML=`
+   ${faltan?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Faltan <b>${faltan}</b> ${faltan===1?'dato':'datos'} por completar. Cada uno resta salud al equipo y quita precisión al pedir repuestos.</div></div>`:''}
+   <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
+     <div class="fx-blk-h"><h3>Identificación</h3></div>
+     <dl class="dl">${row('Tag de planta',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo constructivo',m.t)}${row('Familia',CL[a.cl])}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Datos de proceso</h3></div>
+     <dl class="dl">${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Servicio</h3></div>
+     <dl class="dl">${row('Criticidad',a.cr)}${row('Ubicación',cli(a.cli).n+' · '+area(a))}${row('Último servicio',a.ult)}${row('Próxima calibración',a.prox)}</dl>
+   </section>
+   <section class="fx-blk">
+     <div class="fx-blk-h"><h3>Sobre el modelo</h3></div>
+     <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p>
+   </section>`;
+}
+function paneCal(){
+  const a=S.cur;
+  const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
+  const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+     <button class="btn sec xs" onclick="openCalib('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva calibración</button>
+     <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
+  if(!cs.length){
+    $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <b>Sin calibraciones registradas</b>${a.prox?`Programada para el ${esc(a.prox)}.`:'Este equipo no tiene programa de calibración.'}</div>`;
+    return;
+  }
+  $('#pn-cal').innerHTML=bar+`${calibChart(cs[0])}
+    <section class="fx-blk"><div class="fx-blk-h"><h3>Todas las calibraciones</h3><span class="count">${cs.length}</span></div>
+    <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
+      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">As-left</th><th>Resultado</th><th></th></tr></thead>
+      <tbody>${cs.map(c=>{const ok=Math.abs(c.devAl)<=(c.tol||3);
+        return `<tr style="cursor:default"><td class="mono">${esc(c.fin||c.ini||'')}</td><td class="mono muted">${esc(c.cert||'')}</td>
+        <td class="num">${c.nom} ${esc(c.uni)}</td><td class="num">${c.af}</td><td class="num">${c.al}</td>
+        <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Conforme':'No conforme'}</span></td>
+        <td style="text-align:right"><button class="btn sec xs" onclick="showCalibReport(CALIBS.find(x=>x.id==='${c.id}'))">Certificado</button></td></tr>`}).join('')}</tbody>
+    </table></section>`;
 }
 
 /* --- esquemas de despiece --- */
@@ -3653,7 +3859,169 @@ function gauge(pct,label){
     <div class="gauge-v" style="color:var(--${tone})">${Math.round(val)}%</div><div class="gauge-k">${esc(label)}</div></div>`;
 }
 
+/* ============================================================
+   LA COLA DE TRABAJO
+   Reúne en una sola lista todo lo que espera una acción, ordenado por
+   urgencia, y pone al lado el botón que la ejecuta. El panel deja de
+   describir el parque y pasa a decir qué hacer.
+   ============================================================ */
+const GRUPOS=[
+ {k:'venc', n:'Vencidas',        tono:'late'},
+ {k:'taller',n:'En taller',      tono:'sel'},
+ {k:'prox', n:'Vencen pronto',   tono:'due'},
+ {k:'ficha',n:'Ficha incompleta',tono:'due'},
+ {k:'sol',  n:'Solicitudes',     tono:'sel'}
+];
+function colaTrabajo(){
+  const vs=visibles(), cliente=S.rol==='cliente', out=[];
+  const mio=o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli};
+  vs.forEach(a=>{
+    const e=estado(a), d=a.prox?dias(a.prox):null;
+    const donde=`${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)} · ${esc(area(a))}`;
+    const pr=prioridad(a);
+    if(e.k==='vencido')
+      out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
+        ac:cliente?null:{t:'Calibrar',f:`openCalib('${a.id}')`}});
+    else if(e.k==='taller'){
+      const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
+      out.push({pr,p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
+        ac:{t:'Ver orden',f:`gotoClientPage('wo','${a.cli}')`}});
+    }
+    else if(e.k==='porvencer'&&d<=60)
+      out.push({pr,p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Vence en <em>${d} d</em> · ${esc(a.prox)}`,
+        ac:cliente?null:{t:'Programar',f:`openWO('${a.id}','Calibración')`}});
+    if(e.k==='incompleto')
+      out.push({pr,p:4,g:'ficha',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
+        ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
+  });
+  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>x.est!=='Atendida').forEach(x=>{
+    out.push({p:2.5,g:'sol',cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
+      q:`Solicitud <em>${esc(x.est.toLowerCase())}</em> del ${esc(x.f)}`,
+      ac:{t:cliente?'Ver':'Atender',f:`gotoClientPage('req','${x.cli}')`}});
+  });
+  /* dentro de un mismo grupo va primero el equipo en peor estado; la
+     criticidad del proceso desempata (ver prioridad()). */
+  return out.sort((a,b)=>a.p-b.p||(a.pr??999)-(b.pr??999));
+}
+function setCola(g){S.cola=S.cola===g?'':g;renderHome()}
+function colaHtml(){
+  const todo=colaTrabajo();
+  const cuenta=g=>todo.filter(x=>x.g===g).length;
+  const activos=GRUPOS.filter(g=>cuenta(g.k));
+  const lista=S.cola?todo.filter(x=>x.g===S.cola):todo;
+  const tope=S.colaTodo?lista.length:6;
+  const cliente=S.rol==='cliente';
+  const cab=`<div class="cola-h">
+      <div><h2>${cliente?'Lo que necesita tu planta':'Tu trabajo'}</h2>
+        <p>${todo.length?`${todo.length} ${todo.length===1?'cosa pendiente':'cosas pendientes'} · en orden de urgencia`
+          :'Nada pendiente ahora mismo'}</p></div>
+      ${todo.length&&!cliente?`<button class="btn sec xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver en la lista</button>`:''}
+    </div>`;
+  if(!todo.length) return `<section class="cola">${cab}
+    <div class="cola-vacio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
+      <div><b>Todo al día</b><span>Ninguna válvula espera calibración, orden ni repuesto.</span></div></div></section>`;
+  const chips=`<div class="cola-chips">
+    <button class="ch ${S.cola?'':'on'}" onclick="setCola('')">Todo <b>${todo.length}</b></button>
+    ${activos.map(g=>`<button class="ch ${S.cola===g.k?'on':''}" onclick="setCola('${g.k}')">
+      <span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)} <b>${cuenta(g.k)}</b></button>`).join('')}
+  </div>`;
+  const filas=lista.slice(0,tope).map(x=>{
+    const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
+    const abrir=x.id?`gotoAsset('${x.id}')`:`gotoClientPage('req','${x.cliId}')`;
+    return `<div class="cola-i" onclick="${abrir}">
+      <span class="pt" style="background:var(--${tono})"></span>
+      <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
+      <span class="q">${x.q}</span>
+      ${x.ac?`<button class="btn sec xs ac" onclick="event.stopPropagation();${x.ac.f}">${esc(x.ac.t)}</button>`
+            :`<button class="btn quiet xs ac" onclick="event.stopPropagation();${abrir}">Ver ficha</button>`}</div>`}).join('');
+  const mas=lista.length>tope
+    ? `<button class="cola-mas" onclick="S.colaTodo=true;renderHome()">Ver las ${lista.length-tope} restantes</button>`
+    : (S.colaTodo&&lista.length>6?`<button class="cola-mas" onclick="S.colaTodo=false;renderHome()">Mostrar menos</button>`:'');
+  return `<section class="cola">${cab}${chips}<div class="cola-l">${filas}</div>${mas}</section>`;
+}
+
+/* ============================================================
+   PANEL DEL CLIENTE
+   El cliente no dirige una operación de servicio: cuida una planta.
+   Su panel responde otras preguntas — cómo están mis equipos, qué me
+   toca, qué certificados tengo, qué debo comprar — y usa su idioma.
+   ============================================================ */
+function renderHomeCliente(){
+  const vs=visibles(), c=cli(S.cli);
+  const op=vs.filter(a=>estado(a).k==='ok').length;
+  const crit=vs.filter(a=>a.cr==='Crítica').length;
+  const conProg=vs.filter(a=>a.prox).sort((x,y)=>x.prox.localeCompare(y.prox));
+  const prox=conProg[0]?dias(conProg[0].prox):null;
+  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='Atendida');
+  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='certificada'});
+  const st=k=>vs.filter(a=>estado(a).k===k).length;
+  const saludMedia=vs.length?Math.round(vs.reduce((t,a)=>t+salud(a).n,0)/vs.length):100;
+
+  const kpis=[
+    {v:`${op}/${vs.length}`,k:'Válvulas operativas',cls:op===vs.length?'good':'warn',
+     d:op===vs.length?'todo el parque al día':`${vs.length-op} necesitan atención`,go:"go('assets')"},
+    {v:saludMedia,k:'Salud media del parque',cls:saludMedia>=85?'good':saludMedia>=65?'warn':'bad',
+     d:'de 100 · ver el detalle por equipo',go:"go('assets')"},
+    {v:crit,k:'Equipos críticos',dot:crit?'late':'ok',d:crit?'fallan y para la planta':'ninguno',
+     go:"setView('criticos');go('assets')"},
+    {v:sols.length,k:'Solicitudes abiertas',dot:sols.length?'due':'ok',
+     d:sols.length?'con Adolphus':'ninguna en curso',go:"go('req')"}
+  ];
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}" style="text-align:left;cursor:pointer;font:inherit">
+    <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
+    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+
+  /* certificados: lo que el cliente necesita cuando llega la auditoría */
+  const certs=CALIBS.filter(x=>{const a=ACTIVOS.find(z=>z.id===x.act);return a?.cli===S.cli})
+    .sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||'')).slice(0,6);
+  const certHtml=certs.length?`<div class="feed">${certs.map(x=>{const a=ACTIVOS.find(z=>z.id===x.act)||{};
+    const ok=Math.abs(x.devAl)<=(x.tol||3);
+    return `<div class="feed-i"><span class="feed-ic">◎</span>
+      <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(x.cert||'')}</b><p>${esc(x.fin||x.ini||'')} · ${ok?'conforme':'no conforme'}</p></div>
+      <button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${x.id}'))">Descargar</button></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:30px"><b>Sin certificados todavía</b>Aquí aparecerán al cerrar la primera calibración.</div>`;
+
+  /* próximas calibraciones: lo que hay que programar */
+  const proxHtml=conProg.length?`<table class="grid"><thead><tr><th>Equipo</th><th>Área</th><th class="num">Vence</th><th></th></tr></thead>
+    <tbody>${conProg.slice(0,6).map(a=>{const d=dias(a.prox);
+      return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
+      <td class="muted">${esc(area(a))}</td>
+      <td class="num"><span class="tag ${d<0?'late':d<=90?'due':'ok'}">${d<0?`hace ${Math.abs(d)} d`:`en ${d} d`}</span></td>
+      <td class="mono muted" style="text-align:right">${esc(a.prox)}</td></tr>`}).join('')}</tbody></table>`
+   :`<div class="empty" style="padding:30px"><b>Sin programa de calibración</b>Pide a Adolphus el levantamiento de tu parque.</div>`;
+
+  /* servicios en curso: en qué anda Adolphus con tus equipos */
+  const servHtml=ordAb.length?`<div class="feed">${ordAb.slice(0,6).map(o=>{const a=ACTIVOS.find(z=>z.id===o.act)||{};
+    return `<div class="feed-i" onclick="gotoAsset('${o.act}','hist')"><span class="feed-ic">⚙</span>
+      <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(o.tipo)}</b><p>${esc(o.n)} · ${esc(o.tec)}</p></div>
+      <span class="tag sel">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span></div>`}).join('')}</div>`
+   :`<div class="empty" style="padding:30px"><b>Sin servicios en curso</b>Ningún equipo tuyo está en taller ni programado.</div>`;
+
+  const estadoSegs=[
+    {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
+    {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
+
+  $('#homeView').innerHTML=`
+   <div class="hd"><div><h1>Tu planta <span class="wave">· ${esc(c.n)}</span></h1>
+     <p>${fechaLarga(HOY)} · ${vs.length} válvula${vs.length===1?'':'s'} bajo servicio de Adolphus</p></div>
+     <button class="btn sec" onclick="go('req')"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>Mis solicitudes</button></div>
+   ${colaHtml()}
+   ${kpiHtml}
+   <div class="dash">
+     <div class="span-7">${panel('Próximas calibraciones',proxHtml,`<button class="btn quiet xs" onclick="go('cal')">Ver todas</button>`)}</div>
+     <div class="span-5">${panel('Estado de tu parque',donut(estadoSegs,vs.length,'válvulas'))}</div>
+     <div class="span-7">${panel('Certificados recientes',certHtml,`<span class="count">${certs.length}</span>`)}</div>
+     <div class="span-5">${panel('Servicios en curso',servHtml,`<span class="count">${ordAb.length}</span>`)}</div>
+   </div>`;
+}
+
 function renderHome(){
+  if(S.rol==='cliente') return renderHomeCliente();
   const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
   const total=vs.length,atn=st('vencido')+st('porvencer')+st('taller')+st('incompleto'),venc=st('vencido');
   const marcas=new Set(vs.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
@@ -3700,14 +4068,10 @@ function renderHome(){
   const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
   for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
     colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
+  const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
+  const porEtapa=ETAPAS.map(([k,l])=>({label:l,value:ordScope.filter(o=>o.et===k).length,
+    tone:k==='certificada'?'ok':k==='taller'?'sel':'',tip:`${l}: ${ordScope.filter(o=>o.et===k).length} órdenes`}));
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
-  const att=vs.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k))
-    .sort((a,b)=>sev(a)-sev(b)||(dias(a.prox||'')??999)-(dias(b.prox||'')??999)).slice(0,7);
-  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="gotoAsset('${a.id}')">
-    <span class="att-tag"><b>${esc(a.tag||'— sin tag —')}</b><span>${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod)}</span></span>
-    <span class="att-x">${esc(cli(a.cli).n)} · ${esc(area(a))}</span>
-    <span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></div>`}).join('')}</div>`
-   :`<div class="empty" style="padding:34px"><b>Sin pendientes</b>Todo el parque está operativo y al día.</div>`;
   const ICON={Preventivo:'⟳',Correctivo:'✚',Calibración:'◎',Inspección:'◍',Overhaul:'⚙','Puesta en marcha':'▸'};
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
@@ -3720,16 +4084,17 @@ function renderHome(){
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
        <p>${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+   ${colaHtml()}
    ${onbHtml()}
-   ${famHtml}
    ${kpiHtml}
+   ${famHtml}
    <div class="dash">
+     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
+     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
      <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
      <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
-     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver todo</button>`)}</div>
-     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
-     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
-     <div class="span-5">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-7">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-5">${panel('Órdenes por etapa',hbars(porEtapa),`<span class="count">${ordAb} abiertas</span>`)}</div>
    </div>`;
 }
 
