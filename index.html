@@ -158,7 +158,9 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 }
 .icon-btn:hover{background:var(--surface-3);color:var(--ink)}
 .icon-btn svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}
-.avatar{width:28px;height:28px;border-radius:var(--r-1);background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink-2)}
+.avatar{width:28px;height:28px;border-radius:var(--r-1);background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink-2);border:0;font-family:inherit;padding:0}
+button.avatar{cursor:pointer;transition:background var(--fast) var(--ease)}
+button.avatar:hover{background:var(--line)}
 
 .view{flex:1;overflow:auto;position:relative}
 .view-pad{padding:var(--sp-5)}
@@ -533,6 +535,126 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cover-feat svg{width:18px;height:18px;flex:0 0 auto;stroke:var(--brand);fill:none;stroke-width:1.7;margin-top:1px}
 .cover-feat b{font-weight:600;color:var(--ink)}
 .cover-foot{margin-top:28px;font-size:11px;color:var(--ink-3);letter-spacing:.02em}
+
+/* ============================================================
+   ACCESO — iniciar sesión / crear cuenta
+   ============================================================ */
+.auth-tabs{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-1);padding:2px;margin:18px 0 22px}
+.auth-tabs button{flex:1;height:32px;border:0;background:transparent;border-radius:6px;font:inherit;font-size:12.5px;font-weight:600;
+  color:var(--ink-3);cursor:pointer;transition:background var(--fast) var(--ease),color var(--fast) var(--ease)}
+.auth-tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px oklch(0 0 0 /.10)}
+.auth-form{display:none}
+.auth-form.on{display:block}
+.auth-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.auth-row .inp{margin-bottom:0}
+.auth-lbl{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.auth-lbl a{font-size:11px;color:var(--sel);cursor:pointer;font-weight:500}
+.auth-lbl a:hover{text-decoration:underline}
+.auth-seg{display:flex;gap:2px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-1);padding:2px;margin-bottom:16px}
+.auth-seg button{flex:1;padding:9px 6px;border:0;background:transparent;border-radius:6px;font:inherit;font-size:12px;color:var(--ink-3);cursor:pointer;
+  display:flex;flex-direction:column;gap:2px;align-items:center;line-height:1.3}
+.auth-seg button b{font-weight:600;font-size:12.5px}
+.auth-seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px oklch(0 0 0 /.10)}
+.auth-seg button.on b{color:var(--ink)}
+.auth-chk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);margin-bottom:18px;cursor:pointer;user-select:none}
+.auth-chk input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer}
+.auth-msg{font-size:12px;border-radius:var(--r-1);padding:10px 12px;margin-bottom:14px;display:none;line-height:1.45}
+.auth-msg.on{display:block}
+.auth-msg.bad{background:var(--late-bg);color:var(--late)}
+.auth-msg.good{background:var(--ok-bg);color:var(--ok)}
+.auth-msg.info{background:var(--info-bg);color:var(--ink-2)}
+.pw-meter{display:flex;gap:4px;margin:-8px 0 8px}
+.pw-meter i{flex:1;height:3px;border-radius:2px;background:var(--line);transition:background var(--fast) var(--ease)}
+.pw-note{font-size:11px;color:var(--ink-3);margin-bottom:14px}
+.auth-alt{margin-top:22px;padding-top:20px;border-top:1px solid var(--line-2)}
+.auth-alt .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+.auth-back{background:none;border:0;font:inherit;font-size:12.5px;color:var(--sel);cursor:pointer;padding:0;margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.auth-back svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.sess-card{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-2);padding:11px 13px;cursor:pointer;margin-bottom:14px;transition:border-color var(--fast) var(--ease)}
+.sess-card:hover{border-color:var(--brand)}
+.sess-card .avatar{width:34px;height:34px;font-size:12px;flex:0 0 auto}
+.sess-card b{display:block;font-size:13px}
+.sess-card span{display:block;font-size:11.5px;color:var(--ink-3)}
+.sess-card svg{margin-left:auto;width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:2;flex:0 0 auto}
+
+/* ============================================================
+   CUENTA — menú de usuario, ajustes, plan y onboarding
+   ============================================================ */
+.acct-wrap{position:relative}
+.acct-pop{position:absolute;top:calc(100% + 9px);right:0;width:270px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-2);box-shadow:var(--shadow-over);padding:6px;z-index:60;
+  opacity:0;visibility:hidden;transform:translateY(-6px);transition:all var(--fast) var(--ease)}
+.acct-pop.on{opacity:1;visibility:visible;transform:none}
+.acct-id{display:flex;gap:11px;align-items:center;padding:11px 10px 12px}
+.acct-id .avatar{width:38px;height:38px;font-size:13px;flex:0 0 auto}
+.acct-id b{display:block;font-size:13px;line-height:1.3}
+.acct-id span{display:block;font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis}
+.acct-pop hr{border:0;border-top:1px solid var(--line-2);margin:4px 0}
+.acct-pop button.mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;font:inherit;font-size:12.5px;
+  color:var(--ink-2);padding:9px 10px;border-radius:var(--r-1);cursor:pointer}
+.acct-pop button.mi:hover{background:var(--surface-2);color:var(--ink)}
+.acct-pop button.mi svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex:0 0 auto}
+.acct-pop button.mi .kbd{margin-left:auto}
+.acct-plan{margin:4px 6px 6px;padding:10px 11px;background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-1)}
+.acct-plan b{font-size:12px;display:flex;align-items:center;gap:6px}
+.acct-plan p{font-size:11px;color:var(--ink-3);margin:3px 0 8px}
+
+.rail-plan{display:flex;align-items:center;gap:8px;margin:0 10px 10px;padding:9px 11px;border:1px solid var(--line-2);
+  border-radius:var(--r-1);background:var(--surface-2);font-size:11.5px;color:var(--ink-2);cursor:pointer;width:calc(100% - 20px)}
+.rail-plan:hover{border-color:var(--line)}
+.rail-plan b{color:var(--ink);font-weight:600}
+.rail-plan .pill{margin-left:auto;font-size:10px;padding:2px 7px;border-radius:99px;background:var(--sel-bg);color:var(--sel);font-weight:600}
+.rail-min .rail-plan{display:none}
+
+.set-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:var(--sp-4);overflow-x:auto}
+.set-tabs button{background:none;border:0;font:inherit;font-size:13px;color:var(--ink-3);padding:10px 3px;margin-right:18px;cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap}
+.set-tabs button.on{color:var(--ink);border-bottom-color:var(--brand);font-weight:600}
+.set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:var(--sp-3);align-items:start}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px solid var(--line-2)}
+.set-row:last-child{border-bottom:0}
+.set-row .t b{display:block;font-size:13px}
+.set-row .t span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;max-width:52ch;line-height:1.45}
+.tgl{position:relative;width:38px;height:21px;flex:0 0 auto;cursor:pointer;display:inline-block}
+.tgl input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+.tgl i{position:absolute;inset:0;background:var(--surface-3);border:1px solid var(--line);border-radius:99px;transition:all var(--fast) var(--ease)}
+.tgl i::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:var(--surface);
+  box-shadow:0 1px 3px oklch(0 0 0 /.22);transition:transform var(--fast) var(--ease)}
+.tgl input:checked + i{background:var(--brand);border-color:var(--brand)}
+.tgl input:checked + i::after{transform:translateX(17px)}
+.use-row{margin-bottom:16px}
+.use-row .h{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:7px}
+.use-row .h b{font-variant-numeric:tabular-nums}
+.use-bar{height:7px;border-radius:5px;background:var(--chart-track);overflow:hidden}
+.use-bar i{display:block;height:100%;border-radius:5px;background:var(--brand)}
+.use-bar i.warn{background:var(--due)}.use-bar i.bad{background:var(--late)}
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(198px,1fr));gap:var(--sp-3)}
+.plan{border:1px solid var(--line);border-radius:var(--r-2);padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.plan.on{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in oklab,var(--brand) 22%,transparent)}
+.plan h4{font-size:14px;display:flex;align-items:center;gap:8px}
+.plan .pr{font-size:26px;font-weight:600;letter-spacing:-.02em}
+.plan .pr small{font-size:12px;font-weight:400;color:var(--ink-3)}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--ink-2);margin:2px 0 auto}
+.plan li{display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.plan li svg{width:14px;height:14px;stroke:var(--ok);fill:none;stroke-width:2.2;flex:0 0 auto;margin-top:2px}
+
+.onb{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);padding:var(--sp-4);margin-bottom:var(--sp-4)}
+.onb-h{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.onb-h h3{font-size:15px}
+.onb-h p{font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.onb-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.onb-s{display:flex;gap:11px;align-items:flex-start;text-align:left;background:var(--surface-2);border:1px solid var(--line-2);
+  border-radius:var(--r-1);padding:12px;cursor:pointer;transition:border-color var(--fast) var(--ease)}
+.onb-s:hover{border-color:var(--brand)}
+.onb-s .n{flex:0 0 auto;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:600;color:var(--ink-3)}
+.onb-s.done{opacity:.62}
+.onb-s.done .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.onb-s b{display:block;font-size:12.5px}
+.onb-s span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.4}
+.onb-bar{height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;margin-top:14px}
+.onb-bar i{display:block;height:100%;background:var(--ok);border-radius:4px;transition:width var(--med) var(--ease)}
 
 /* ============================================================
    FOTOGRAFÍA DE PRODUCTO — renders metálicos autocontenidos
@@ -1005,29 +1127,73 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
     </div>
   </div>
   <div class="cover-panel">
-    <div class="cover-card">
+    <div class="cover-card" id="authCard">
       <div class="logo-full" data-logo-full></div>
-      <h1>Gestión de Válvulas</h1>
-      <p class="lede">Trazabilidad por serie, calibraciones y repuestos · Adolphus</p>
-      <label for="coverRole">Perfil de acceso</label>
-      <select class="inp" id="coverRole">
-        <option value="admin">Ingeniería · Adolphus</option>
-        <option value="tec">Servicio técnico</option>
-        <option value="com">Comercial repuestos</option>
-        <option value="cli-minera">Cliente · Minera Los Andes</option>
-        <option value="cli-refi">Cliente · Refinería Costa Norte</option>
-        <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
-      </select>
-      <button class="cover-btn" onclick="enterApp()">
-        Ingresar al panel
-        <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
-      <div class="cover-feats">
-        <div class="cover-feat"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span><b>Parque instalado</b> — tag, serie, criticidad y ubicación de cada equipo.</span></div>
-        <div class="cover-feat"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><b>Calibraciones</b> — horizonte de vencimientos y certificación en un clic.</span></div>
-        <div class="cover-feat"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span><b>Repuestos</b> — despieces heredados por modelo y pedido directo al almacén.</span></div>
+      <h1 id="authTitle">Gestión de Válvulas</h1>
+      <p class="lede" id="authLede">Trazabilidad por serie, calibraciones y repuestos · Adolphus</p>
+
+      <div id="sessResume"></div>
+
+      <div class="auth-tabs" id="authTabs">
+        <button id="tabIn" class="on" onclick="authTab('in')">Iniciar sesión</button>
+        <button id="tabUp" onclick="authTab('up')">Crear cuenta</button>
       </div>
-      <p class="cover-foot">Adolphus · Prototipo con datos de demostración</p>
+
+      <div class="auth-msg" id="authMsg"></div>
+
+      <!-- ── iniciar sesión ── -->
+      <form class="auth-form on" id="authIn" onsubmit="return login(event)" autocomplete="on">
+        <label for="inMail">Correo corporativo</label>
+        <input class="inp" id="inMail" type="email" autocomplete="username" placeholder="nombre@empresa.pe" required>
+        <div class="auth-lbl"><label for="inPw">Contraseña</label><a onclick="recuperar()">¿La olvidaste?</a></div>
+        <input class="inp" id="inPw" type="password" autocomplete="current-password" placeholder="Escribe tu contraseña" required>
+        <label class="auth-chk"><input type="checkbox" id="inRec" checked>Mantener la sesión iniciada en este equipo</label>
+        <button class="cover-btn" type="submit">Entrar<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+
+      <!-- ── crear cuenta ── -->
+      <form class="auth-form" id="authUp" onsubmit="return signup(event)" autocomplete="on">
+        <div class="auth-seg" id="upTipo">
+          <button type="button" class="on" onclick="upTipo('staff')"><b>Soy de Adolphus</b>Ingeniería, servicio o ventas</button>
+          <button type="button" onclick="upTipo('cliente')"><b>Soy cliente</b>Veo mis propias válvulas</button>
+        </div>
+        <div class="auth-row" style="margin-bottom:16px">
+          <div><label for="upN">Nombre y apellido</label><input class="inp" id="upN" placeholder="Ana Quispe" required></div>
+          <div><label for="upCargo">Cargo</label><input class="inp" id="upCargo" placeholder="Ing. de confiabilidad"></div>
+        </div>
+        <div id="upStaff">
+          <label for="upCod">Código de invitación de la empresa</label>
+          <input class="inp" id="upCod" placeholder="ADOLPHUS-2026">
+          <p class="pw-note" style="margin-top:-8px">Lo entrega el administrador desde <b>Usuarios y accesos</b>. Sin él, la cuenta queda pendiente de aprobación.</p>
+        </div>
+        <div id="upCli" style="display:none">
+          <label for="upRuc">RUC de tu empresa</label>
+          <input class="inp" id="upRuc" inputmode="numeric" maxlength="11" placeholder="20100128056" oninput="upRucCheck()">
+          <p class="pw-note" id="upRucEst" style="margin-top:-8px">Con el RUC vinculamos tu cuenta a la organización correcta.</p>
+        </div>
+        <label for="upMail">Correo corporativo</label>
+        <input class="inp" id="upMail" type="email" autocomplete="email" placeholder="nombre@empresa.pe" required>
+        <label for="upPw">Contraseña</label>
+        <input class="inp" id="upPw" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required oninput="pwMeter()">
+        <div class="pw-meter" id="pwMeter"><i></i><i></i><i></i><i></i></div>
+        <p class="pw-note" id="pwNote">Usa 8 caracteres o más, con números y mayúsculas.</p>
+        <label class="auth-chk"><input type="checkbox" id="upTerm" required>Acepto los <a onclick="event.preventDefault();verLegal('terminos')" style="color:var(--sel)">términos del servicio</a> y la <a onclick="event.preventDefault();verLegal('privacidad')" style="color:var(--sel)">política de privacidad</a></label>
+        <button class="cover-btn" type="submit">Crear cuenta<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+
+      <div class="auth-alt">
+        <div class="lbl">Recorrido de demostración</div>
+        <select class="inp" id="coverRole" style="margin-bottom:10px">
+          <option value="admin">Ingeniería · Adolphus</option>
+          <option value="tec">Servicio técnico</option>
+          <option value="com">Comercial repuestos</option>
+          <option value="cli-minera">Cliente · Minera Los Andes</option>
+          <option value="cli-refi">Cliente · Refinería Costa Norte</option>
+          <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
+        </select>
+        <button class="btn sec" style="width:100%;justify-content:center" onclick="enterApp()">Entrar con datos de ejemplo</button>
+      </div>
+      <p class="cover-foot">Adolphus S.A. · v1.4 · <a onclick="verLegal('terminos')" style="cursor:pointer;text-decoration:underline">Términos</a> · <a onclick="verLegal('privacidad')" style="cursor:pointer;text-decoration:underline">Privacidad</a></p>
     </div>
   </div>
 </div>
@@ -1036,7 +1202,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
   <!-- ══ RAIL ══ -->
   <aside class="rail">
-    <div class="ws" onclick="toast('Selector de espacio de trabajo: Adolphus / por cliente')">
+    <div class="ws" onclick="goSettings('org')" title="Ajustes de la organización">
       <span class="ws-mark" data-logo></span>
       <span class="ws-meta"><b>Adolphus S.A.</b><span id="wsSub">Control de fluidos · Lima</span></span>
     </div>
@@ -1057,8 +1223,12 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="imp"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg><span class="lbl">Importar levantamiento</span></a>
       <a data-p="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg><span class="lbl">Usuarios y accesos</span></a>
     </nav>
+    <button class="rail-plan" onclick="goSettings('plan')" title="Plan y consumo de la cuenta">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.2l5.9-.8z"/></svg>
+      <b id="railPlan">Profesional</b><span class="pill" id="railPlanCt">—</span>
+    </button>
     <div class="rail-foot">
-      <p>Adolphus<br>Prototipo · datos de demo</p>
+      <p>Adolphus<br id="railFootBr">Prototipo · datos de demo</p>
       <button class="icon-btn" onclick="toggleRail()" title="Contraer barra"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     </div>
   </aside>
@@ -1073,14 +1243,6 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
         <span class="st-lbl">Buscar tag, serie o n.º de parte</span>
         <span class="kbd">⌘K</span>
       </button>
-      <select class="inp chip-sel" id="roleSel" style="height:32px" title="Perfil activo">
-        <option value="admin">Ingeniería · Adolphus</option>
-        <option value="tec">Servicio técnico</option>
-        <option value="com">Comercial repuestos</option>
-        <option value="cli-minera">Cliente · Minera Los Andes</option>
-        <option value="cli-refi">Cliente · Refinería Costa Norte</option>
-        <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
-      </select>
       <button class="net-chip" id="netChip" onclick="openSync()" title="Estado de conexión y sincronización"></button>
       <div class="notif-wrap">
         <button class="icon-btn" onclick="toggleNotif(event)" title="Notificaciones" id="notifBtn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notif-dot" id="notifDot" style="display:none"></span></button>
@@ -1091,8 +1253,34 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       </div>
       <button class="icon-btn" onclick="toggleTheme()" title="Tema claro / oscuro" id="themeBtn"></button>
       <button class="icon-btn" onclick="openHelp()" title="Atajos de teclado"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg></button>
-      <button class="icon-btn" onclick="logout()" title="Salir · cambiar de perfil"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg></button>
-      <div class="avatar" id="ava">IA</div>
+      <div class="acct-wrap">
+        <button class="avatar" id="ava" onclick="toggleAcct(event)" title="Tu cuenta">IA</button>
+        <div class="acct-pop" id="acctPop" onclick="event.stopPropagation()">
+          <div class="acct-id"><span class="avatar" id="acctAva">IA</span>
+            <span style="min-width:0"><b id="acctN">—</b><span id="acctM">—</span></span></div>
+          <div class="acct-plan"><b id="acctPlanN">Plan Profesional</b><p id="acctPlanD">—</p>
+            <button class="btn sec xs" style="width:100%;justify-content:center" onclick="closeAcct();goSettings('plan')">Ver plan y uso</button></div>
+          <hr>
+          <button class="mi" onclick="closeAcct();goSettings('perfil')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20v-1a5 5 0 0 1 5-5h5a5 5 0 0 1 5 5v1"/></svg>Mi perfil</button>
+          <button class="mi" onclick="closeAcct();goSettings('org')"><svg viewBox="0 0 24 24"><path d="M4 21V7l7-3 7 3v14M9 21v-5h4v5M8 10h.01M12 10h.01M16 10h.01M8 13h.01M12 13h.01M16 13h.01"/></svg>Ajustes de la organización</button>
+          <button class="mi" onclick="closeAcct();go('users')" id="acctUsers"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg>Usuarios y accesos</button>
+          <button class="mi" onclick="closeAcct();openHelp()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg>Ayuda y atajos<span class="kbd">?</span></button>
+          <hr>
+          <div style="padding:4px 10px 8px" id="acctDemo">
+            <label style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px">Demostración · cambiar de perfil</label>
+            <select class="inp chip-sel" id="roleSel" style="height:32px;width:100%">
+              <option value="admin">Ingeniería · Adolphus</option>
+              <option value="tec">Servicio técnico</option>
+              <option value="com">Comercial repuestos</option>
+              <option value="cli-minera">Cliente · Minera Los Andes</option>
+              <option value="cli-refi">Cliente · Refinería Costa Norte</option>
+              <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
+            </select>
+          </div>
+          <hr>
+          <button class="mi" onclick="closeAcct();logout()"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>Cerrar sesión</button>
+        </div>
+      </div>
     </header>
 
     <div class="cbar" id="cliBar" style="display:none">
@@ -1213,13 +1401,18 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 
       <!-- ═══ USUARIOS ═══ -->
       <section class="page" id="p-users"><div class="view-pad">
-        <div class="hd"><div><h1>Usuarios y accesos</h1><p>Cada usuario cliente ve solo los activos de su propia organización. El aislamiento se aplica en base de datos, no en pantalla.</p></div>
-          <button class="btn" onclick="openNewUser()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Crear usuario</button></div>
+        <div class="hd"><div><h1>Usuarios y accesos</h1><p>Quién entra, con qué perfil y a qué organización pertenece. Un usuario cliente ve solo los activos de su propia empresa.</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn sec" onclick="goSettings('plan')"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.2l5.9-.8z"/></svg>Plan y uso</button>
+            <button class="btn" onclick="openNewUser()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Invitar persona</button></div></div>
         <div class="panel"><div id="userList"></div></div>
       </div></section>
 
       <!-- ═══ CONFIABILIDAD ═══ -->
       <section class="page" id="p-rep"><div class="view-pad" id="repView"></div></section>
+
+      <!-- ═══ AJUSTES DE LA CUENTA ═══ -->
+      <section class="page" id="p-settings"><div class="view-pad" id="setView"></div></section>
 
     </div>
   </div>
@@ -1590,7 +1783,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -1630,7 +1823,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
@@ -1677,26 +1870,18 @@ function applyRole(v){
   S.picked.clear();S.view='todos';S.inCli=null;S.fCli='';S.fMarca='';S.fFam='';S.fTipo='';S.fMod='';S.calCli='';S.woCli='';
   PS.mod=null;PS.asset=null;PS.q='';PS.cls='';closeDrawer();renderAll();go('home');
   if($('#roleSel').value!==v)$('#roleSel').value=v;
+  if(window.pintarCuenta)pintarCuenta();
 }
 $('#roleSel').onchange=e=>applyRole(e.target.value);
-function enterApp(){
-  applyRole($('#coverRole').value);
-  const v=document.getElementById('promoVid');
-  if(v){v.pause();v.muted=true;setSoundIcon(true)}
-  const c=$('#cover');c.classList.add('gone');
-  setTimeout(()=>{c.style.display='none'},600);
-}
-function logout(){
-  closeDrawer&&closeDrawer();
-  const c=$('#cover');c.style.display='';
-  requestAnimationFrame(()=>c.classList.remove('gone'));
-  const v=document.getElementById('promoVid');
-  if(v){v.muted=true;try{v.currentTime=0}catch(e){}v.play().catch(()=>{});setSoundIcon(true)}
-  armAutoSound();
-}
+/* enterApp() y logout() viven en la sección 15 (cuenta y acceso). */
 document.addEventListener('keydown',e=>{
   const c=$('#cover');
-  if(c&&!c.classList.contains('gone')&&e.key==='Enter'){e.preventDefault();e.stopPropagation();enterApp()}
+  if(c&&!c.classList.contains('gone')&&e.key==='Enter'&&e.target.tagName!=='BUTTON'){
+    const f=document.querySelector('.auth-form.on');
+    if(f&&f.contains(e.target))return;          // el formulario se envía solo
+    e.preventDefault();e.stopPropagation();
+    const b=f&&f.querySelector('button[type=submit]');b&&b.click();
+  }
 },true);
 
 /* ============================================================
@@ -2643,11 +2828,83 @@ function saveNewPart(){
   registrar('Repuesto',`${n} agregado a ${mod}`);
   toast(`${n} agregado al despiece de ${mod}`);
 }
+const ALCANCE={admin:'Maestros, catálogo, despieces, usuarios y reportes',tec:'Órdenes de trabajo, informes y certificados',
+  com:'Solicitudes, cotizaciones y stock local',cliente:'Lectura de sus activos y solicitud de repuestos'};
+const EST_TAG={activo:'ok',invitado:'sel',pendiente:'due',suspendido:'late'};
 function renderUsers(){
-  $('#userList').innerHTML=`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Organización</th><th>Alcance</th></tr></thead>
-   <tbody>${USUARIOS.map(u=>`<tr style="cursor:default"><td><b>${u.n}</b></td><td class="mono muted">${u.m}</td>
-    <td><span class="tag ${u.r==='Cliente'?'sel':''}">${u.r}</span></td><td>${u.c}</td>
-    <td class="muted" style="white-space:normal;max-width:36ch">${u.x}</td></tr>`).join('')}</tbody></table>`;
+  if(typeof CUENTAS==='undefined'||!CUENTAS)return;   // aún no arrancó la capa de cuentas
+  const pend=CUENTAS.filter(c=>c.est==='pendiente');
+  const aviso=pend.length?`<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
+    <div class="panel-b" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <span class="dot" style="color:var(--due)"></span>
+      <b style="font-size:13px">${pend.length} solicitud${pend.length===1?'':'es'} de acceso esperando aprobación</b>
+      <span class="hint" style="flex:1;min-width:180px">Se registraron desde la pantalla de acceso. Revisa que la persona y la organización sean correctas antes de activarlas.</span>
+    </div></div>`:'';
+  const filas=CUENTAS.map(c=>`<tr style="cursor:default">
+    <td><b>${esc(c.n)}</b>${c.cargo?`<span style="display:block;font-size:11px;color:var(--ink-3);margin-top:2px">${esc(c.cargo)}</span>`:''}</td>
+    <td class="mono muted">${esc(c.m)}</td>
+    <td><span class="tag ${c.perfil==='cliente'?'sel':''}">${esc(PERFILES[c.perfil]||c.perfil)}</span></td>
+    <td>${c.cli?esc(cli(c.cli).n):'Adolphus S.A.'}</td>
+    <td><span class="tag ${EST_TAG[c.est]||''}"><span class="dot"></span>${esc(c.est)}</span></td>
+    <td class="mono muted">${esc(c.ult||'—')}</td>
+    <td style="white-space:nowrap">${accionesUsuario(c)}</td></tr>`).join('');
+  $('#userList').innerHTML=aviso+`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Perfil</th><th>Organización</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead>
+   <tbody>${filas}</tbody></table>
+   <div class="panel-b" style="border-top:1px solid var(--line-2);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+     <div style="flex:1;min-width:220px"><b style="font-size:12.5px">Código de invitación · ${esc(ORG.cod)}</b>
+       <p class="hint" style="margin-top:3px">Quien se registre con este código entra activado, sin esperar aprobación. Compártelo solo con tu equipo.</p></div>
+     <button class="btn sec xs" onclick="copiarCodigo()">Copiar código</button>
+     <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
+   </div>`;
+}
+function accionesUsuario(c){
+  if(S.rol==='cliente')return '';
+  const yo=SES&&SES.id===c.id;
+  const b=[];
+  if(c.est==='pendiente'||c.est==='suspendido')b.push(`<button class="btn quiet xs" onclick="activarUsuario('${c.id}')">Activar</button>`);
+  if(c.est==='activo'&&!yo)b.push(`<button class="btn quiet xs" onclick="suspenderUsuario('${c.id}')">Suspender</button>`);
+  if(c.est==='invitado')b.push(`<button class="btn quiet xs" onclick="toast('Invitación reenviada a '+'${esc(c.m)}')">Reenviar</button>`);
+  b.push(`<button class="btn quiet xs" onclick="restablecerPw('${c.id}')" title="Genera una contraseña temporal">Restablecer</button>`);
+  return `<span style="display:flex;gap:4px;justify-content:flex-end">${b.join('')}</span>`;
+}
+function activarUsuario(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  if(c.perfil==='cliente'&&!c.cli)return vincularUsuario(c);
+  c.est='activo';guardarCuentas();renderUsers();
+  registrar('Cuenta',`${c.n} activado`);toast(`${c.n} ya puede ingresar`);
+}
+function vincularUsuario(c){
+  $('#mTitle').textContent='Vincular a una organización';
+  $('#mBody').innerHTML=`<p class="hint" style="margin-bottom:12px"><b>${esc(c.n)}</b> (${esc(c.m)}) se registró como cliente.
+    Elige de qué organización verá los equipos — solo verá los de esa empresa.</p>
+    <div class="fld"><label>Organización cliente</label><select class="inp" id="vuCli">
+      ${CLIENTES.map(x=>`<option value="${x.id}">${esc(x.n)} — RUC ${esc(x.ruc||'')}</option>`).join('')}</select></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="confirmarVinculo('${c.id}')">Vincular y activar</button>`;
+  $('#modal').classList.add('on');
+}
+function confirmarVinculo(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  c.cli=$('#vuCli').value;c.est='activo';guardarCuentas();closeModal();renderUsers();
+  registrar('Cuenta',`${c.n} vinculado a ${cli(c.cli).n}`);toast(`${c.n} vinculado a ${cli(c.cli).n}`);
+}
+function suspenderUsuario(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  c.est='suspendido';guardarCuentas();renderUsers();
+  registrar('Cuenta',`${c.n} suspendido`);toast(`${c.n} ya no puede ingresar`);
+}
+function restablecerPw(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const tmp='Adolphus'+Math.abs(Math.round((c.id.length*7919+c.m.length*104729)%9000)+1000);
+  c.pw=resumen(tmp);guardarCuentas();
+  $('#mTitle').textContent='Contraseña temporal';
+  $('#mBody').innerHTML=`<p class="hint" style="line-height:1.6">Entrégale esta contraseña a <b>${esc(c.n)}</b> por un canal seguro.
+    Al ingresar podrá cambiarla desde <b>Ajustes › Seguridad</b>.</p>
+    <div class="mono" style="margin-top:14px;font-size:19px;letter-spacing:.04em;text-align:center;padding:16px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-2)">${esc(tmp)}</div>
+    <p class="hint" style="margin-top:12px">Con servidor esto se hace por correo, con un enlace de un solo uso: nadie ve la contraseña de nadie.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Entendido</button>`;
+  $('#modal').classList.add('on');
+  registrar('Cuenta',`Contraseña restablecida a ${c.n}`);
 }
 
 /* ============================================================
@@ -3319,6 +3576,7 @@ function renderHome(){
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
        <p>${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+   ${onbHtml()}
    ${famHtml}
    ${kpiHtml}
    <div class="dash">
@@ -3713,7 +3971,7 @@ function confirmDeleteCalib(id){
    ============================================================ */
 const SCOPE_ROL={Administrador:'Maestros, catálogo, despieces, usuarios y reportes',Técnico:'Órdenes de trabajo, informes y certificados',Comercial:'Solicitudes, cotizaciones y stock local',Cliente:'Lectura de sus activos y solicitud de repuestos'};
 function openNewUser(){
-  $('#mTitle').textContent='Nuevo usuario';
+  $('#mTitle').textContent='Invitar a una persona';
   $('#mBody').innerHTML=`
    <div class="two">
      <div class="fld"><label>Nombre / área</label><input class="inp" id="nuN" placeholder="p. ej. Mantenimiento Planta"></div>
@@ -3730,12 +3988,33 @@ function openNewUser(){
   $('#nuR').onchange=sync;sync();
   $('#modal').classList.add('on');
 }
+const PERFIL_DE_ROL={'Administrador':'admin','Técnico':'tec','Comercial':'com','Cliente':'cliente'};
 function saveNewUser(){
-  const n=$('#nuN').value.trim(),m=$('#nuM').value.trim(),r=$('#nuR').value,cId=$('#nuC').value;
+  const n=$('#nuN').value.trim(),m=$('#nuM').value.trim().toLowerCase(),r=$('#nuR').value,cId=$('#nuC').value;
   if(!n||!m){toast('Indica nombre y correo');return}
   if(r==='Cliente'&&!cId){toast('Elige la organización del cliente');return}
-  USUARIOS.unshift({n,m,r,c:cId?cli(cId).n:'—',x:SCOPE_ROL[r]});
-  closeModal();renderUsers();go('users');toast(`Usuario ${n} creado · acceso ${r.toLowerCase()}`);
+  if(cuentaPorMail(m)){toast('Ya existe una cuenta con ese correo');return}
+  const p=plan();
+  const internos=CUENTAS.filter(x=>x.perfil!=='cliente').length;
+  if(r!=='Cliente'&&internos>=p.lim.us){toast(`El plan ${p.n} permite ${p.lim.us} usuarios de Adolphus. Amplía el plan para invitar a más.`);goSettings('plan');return}
+  const tmp='Adolphus'+(1000+((m.length*7919+n.length*104729)%9000));
+  CUENTAS.push({id:'u'+Date.now(),n,m,pw:resumen(tmp),perfil:PERFIL_DE_ROL[r]||'tec',cli:r==='Cliente'?cId:null,
+    cargo:'',tel:'',est:'invitado',alta:hoyISO(),ult:''});
+  ONB.equipo=true;guardarCuentas();
+  closeModal();renderUsers();go('users');
+  registrar('Cuenta',`${n} invitado como ${r}`);
+  $('#mTitle').textContent='Invitación creada';
+  $('#mBody').innerHTML=`<p class="hint" style="line-height:1.6">Envíale a <b>${esc(n)}</b> (${esc(m)}) el acceso.
+    Al primer ingreso podrá cambiar la contraseña desde <b>Ajustes › Seguridad</b>.</p>
+    <div style="margin-top:14px;display:grid;gap:8px">
+      <div class="set-row" style="padding:10px 0"><div class="t"><b>Correo</b></div><span class="mono">${esc(m)}</span></div>
+      <div class="set-row" style="padding:10px 0"><div class="t"><b>Contraseña temporal</b></div><span class="mono">${esc(tmp)}</span></div>
+      <div class="set-row" style="padding:10px 0"><div class="t"><b>O que se registre con</b></div><span class="mono">${esc(ORG.cod)}</span></div>
+    </div>
+    <p class="hint" style="margin-top:12px">Con servidor esto sale por correo automáticamente, con un enlace de un solo uso.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Listo</button>`;
+  $('#modal').classList.add('on');
+  toast(`${n} invitado · acceso ${r.toLowerCase()}`);
 }
 
 /* ============================================================
@@ -4089,7 +4368,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();if(S.page==='settings'&&window.renderSettings)renderSettings()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 $$('[data-logo]').forEach(el=>{el.innerHTML=LOGO});
 $$('[data-logo-full]').forEach(el=>{el.innerHTML=LOGO_FULL('#16306b')});
@@ -4345,8 +4624,496 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
       .catch(()=>{});
   });
 }
+
+/* ============================================================
+   15 · CUENTA, ACCESO Y AJUSTES  (la capa de producto)
+   ------------------------------------------------------------
+   Aquí vive todo lo que convierte el prototipo en un servicio:
+   la organización contratante, los planes, las cuentas de las
+   personas, la sesión y la pantalla de ajustes.
+
+   AVISO HONESTO: sin servidor, el acceso es una puerta de
+   cortesía —las cuentas viven en este equipo y la contraseña se
+   guarda con un resumen simple, no cifrada. Para producción hace
+   falta un backend con autenticación real; toda esta capa está
+   escrita para enchufarse ahí sin rehacer pantallas.
+   ============================================================ */
+
+/* La organización contratante (el "tenant"). */
+const ORG={
+  n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
+  tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
+  tz:'America/Lima · GMT-5', mon:'USD', plan:'pro', desde:'2026-01-15',
+  cod:'ADOLPHUS-2026', verif:false
+};
+
+const PLANES=[
+  {id:'ini',n:'Inicial',pr:'US$ 49',x:'por planta / mes',lim:{act:50,us:3,cli:2},
+   f:['Hasta 50 válvulas','3 usuarios de Adolphus','2 organizaciones cliente','Calibraciones y certificados','Trabajo sin conexión']},
+  {id:'pro',n:'Profesional',pr:'US$ 149',x:'por planta / mes',lim:{act:500,us:15,cli:10},
+   f:['Hasta 500 válvulas','15 usuarios de Adolphus','10 organizaciones cliente','Portal para tus clientes','Importación masiva y hoja de campo','Cotizaciones y órdenes de compra']},
+  {id:'emp',n:'Corporativo',pr:'A medida',x:'facturación anual',lim:{act:1/0,us:1/0,cli:1/0},
+   f:['Válvulas y usuarios sin límite','Integración con tu ERP','Inicio de sesión con tu directorio (SSO)','Acuerdo de nivel de servicio','Acompañamiento dedicado']}
+];
+const plan=()=>PLANES.find(p=>p.id===ORG.plan)||PLANES[1];
+const lim=n=>n===1/0?'sin límite':n;
+
+/* ── Cuentas de personas ───────────────────────────────────── */
+const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
+/* Resumen FNV-1a: sirve para no dejar la contraseña a la vista en el
+   navegador. NO es un hash de contraseñas; eso va del lado del servidor. */
+const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
+  return ('0000000'+(h>>>0).toString(16)).slice(-8)};
+const PERFILES={admin:'Administrador',tec:'Servicio técnico',com:'Comercial',cliente:'Cliente'};
+
+let CUENTAS=[
+ {id:'u1',n:'Ana Quispe',   m:'ingenieria@adolphus.pe',   pw:resumen('adolphus2026'),perfil:'admin',  cli:null,   cargo:'Jefa de Ingeniería',       tel:'+51 987 000 111',est:'activo',alta:'2026-01-15',ult:'2026-07-23'},
+ {id:'u2',n:'Luis Ramírez', m:'servicio@adolphus.pe',     pw:resumen('adolphus2026'),perfil:'tec',    cli:null,   cargo:'Supervisor de servicio',   tel:'',               est:'activo',alta:'2026-01-15',ult:'2026-07-22'},
+ {id:'u3',n:'Rosa Chávez',  m:'ventas@adolphus.pe',       pw:resumen('adolphus2026'),perfil:'com',    cli:null,   cargo:'Ejecutiva de repuestos',   tel:'',               est:'activo',alta:'2026-02-01',ult:'2026-07-21'},
+ {id:'u4',n:'Mantenimiento',m:'mantenimiento@losandes.pe',pw:resumen('cliente2026'), perfil:'cliente',cli:'minera',cargo:'Jefe de mantenimiento',  tel:'',               est:'activo',alta:'2026-03-04',ult:'2026-07-18'},
+ {id:'u5',n:'Confiabilidad',m:'confiabilidad@costanorte.pe',pw:resumen('cliente2026'),perfil:'cliente',cli:'refi', cargo:'Ing. de confiabilidad',   tel:'',               est:'activo',alta:'2026-03-04',ult:'2026-07-20'},
+ {id:'u6',n:'Jefatura de Planta',m:'planta@agrovalle.pe', pw:resumen('cliente2026'), perfil:'cliente',cli:'agro', cargo:'Jefe de planta',           tel:'',               est:'invitado',alta:'2026-06-10',ult:''}
+];
+let SES=null;                       // sesión activa (null = nadie dentro)
+let ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
+let PREF={mailVenc:true,mailOrden:true,mailSol:true,resumen:false};
+
+const cuentaPorMail=m=>CUENTAS.find(c=>c.m.toLowerCase()===String(m||'').trim().toLowerCase());
+const iniciales=n=>String(n||'?').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('').toUpperCase()||'?';
+const rolDe=c=>c.perfil==='cliente'?'cli-'+c.cli:c.perfil;
+
+function guardarCuentas(){
+  try{localStorage.setItem(LS_ACC,JSON.stringify({CUENTAS,ORG,ONB,PREF}))}catch(e){}
+}
+function restaurarCuentas(){
+  try{
+    const d=JSON.parse(localStorage.getItem(LS_ACC)||'null');
+    if(d&&Array.isArray(d.CUENTAS)&&d.CUENTAS.length){
+      CUENTAS=d.CUENTAS;
+      if(d.ORG)Object.assign(ORG,d.ORG);
+      if(d.ONB)Object.assign(ONB,d.ONB);
+      if(d.PREF)Object.assign(PREF,d.PREF);
+    }
+  }catch(e){}
+}
+
+/* ── Pantalla de acceso ────────────────────────────────────── */
+function authTab(t){
+  $('#tabIn').classList.toggle('on',t==='in');
+  $('#tabUp').classList.toggle('on',t==='up');
+  $('#authIn').classList.toggle('on',t==='in');
+  $('#authUp').classList.toggle('on',t==='up');
+  $('#authTitle').textContent=t==='in'?'Gestión de Válvulas':'Crea tu cuenta';
+  $('#authLede').textContent=t==='in'
+    ? 'Trazabilidad por serie, calibraciones y repuestos · Adolphus'
+    : 'Tu acceso queda ligado a tu organización. Toma menos de un minuto.';
+  authMsg('');
+  setTimeout(()=>{const f=$(t==='in'?'#inMail':'#upN');f&&f.focus()},60);
+}
+function authMsg(txt,tono){
+  const el=$('#authMsg');
+  el.className='auth-msg'+(txt?' on '+(tono||'bad'):'');
+  el.innerHTML=txt||'';
+}
+let UP_TIPO='staff';
+function upTipo(t){
+  UP_TIPO=t;
+  $$('#upTipo button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(t==='staff')));
+  $('#upStaff').style.display=t==='staff'?'':'none';
+  $('#upCli').style.display=t==='cliente'?'':'none';
+}
+function fuerzaPw(v){
+  let f=0;
+  if(v.length>=8)f++; if(v.length>=12)f++;
+  if(/[A-ZÁÉÍÓÚÑ]/.test(v)&&/[a-z]/.test(v))f++;
+  if(/[0-9]/.test(v))f++;
+  if(/[^\w\s]/.test(v))f=Math.min(4,f+1);
+  return Math.min(4,f);
+}
+function pwMeter(){
+  const v=$('#upPw').value,f=v?fuerzaPw(v):0;
+  const col=['var(--line)','var(--late)','var(--due)','var(--sel)','var(--ok)'][f];
+  $$('#pwMeter i').forEach((el,i)=>el.style.background=i<f?col:'var(--line)');
+  $('#pwNote').textContent=!v?'Usa 8 caracteres o más, con números y mayúsculas.'
+    :['','Muy débil — súmale largo y números.','Débil — mezcla mayúsculas y números.','Aceptable.','Fuerte.'][f];
+}
+function upRucCheck(){
+  const r=($('#upRuc').value||'').replace(/\D/g,'').slice(0,11);
+  $('#upRuc').value=r;
+  const el=$('#upRucEst');
+  if(r.length<11){el.innerHTML='Con el RUC vinculamos tu cuenta a la organización correcta.';return}
+  if(!rucValido(r)){el.innerHTML='<b style="color:var(--late)">El RUC no pasa el dígito verificador.</b> Revísalo.';return}
+  const c=CLIENTES.find(x=>x.ruc===r);
+  el.innerHTML=c?`<b style="color:var(--ok)">${esc(c.n)}</b> — ya está registrada. Tu cuenta se vinculará a esta organización.`
+   :'RUC válido. Como aún no es cliente de Adolphus, tu cuenta quedará <b>pendiente de aprobación</b>.';
+}
+
+function login(ev){
+  ev.preventDefault();
+  const m=$('#inMail').value.trim(), pw=$('#inPw').value;
+  const c=cuentaPorMail(m);
+  if(!c){authMsg('No hay ninguna cuenta con ese correo. Revísalo o crea una cuenta nueva.');return false}
+  if(c.pw!==resumen(pw)){authMsg('Contraseña incorrecta.');return false}
+  if(c.est==='pendiente'){authMsg('Tu cuenta está <b>pendiente de aprobación</b>. Un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');return false}
+  if(c.est==='suspendido'){authMsg('Esta cuenta está suspendida. Escribe a soporte@adolphus.pe.');return false}
+  abrirSesion(c,$('#inRec').checked);
+  return false;
+}
+function signup(ev){
+  ev.preventDefault();
+  const n=$('#upN').value.trim(), m=$('#upMail').value.trim().toLowerCase(), pw=$('#upPw').value;
+  if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
+  if(fuerzaPw(pw)<2){authMsg('La contraseña es demasiado débil: al menos 8 caracteres, con números.');return false}
+  let perfil='cliente',cliId=null,est='pendiente',aviso='';
+  if(UP_TIPO==='staff'){
+    const cod=($('#upCod').value||'').trim().toUpperCase();
+    perfil='tec';
+    if(cod===ORG.cod){est='activo';aviso='Cuenta creada y activada con el código de la empresa.'}
+    else{est='pendiente';aviso='Cuenta creada. Queda <b>pendiente de aprobación</b> porque el código de invitación no coincide.'}
+  }else{
+    const r=($('#upRuc').value||'').replace(/\D/g,'');
+    if(!rucValido(r)){authMsg('Ingresa el RUC de tu empresa (11 dígitos, con dígito verificador válido).');return false}
+    const c=CLIENTES.find(x=>x.ruc===r);
+    if(c){cliId=c.id;est='activo';aviso=`Cuenta creada y vinculada a <b>${esc(c.n)}</b>.`}
+    else{est='pendiente';aviso='Cuenta creada. Un ingeniero de Adolphus debe vincularla a tu organización antes del primer ingreso.'}
+  }
+  const nueva={id:'u'+Date.now(),n,m,pw:resumen(pw),perfil,cli:cliId,
+    cargo:$('#upCargo').value.trim(),tel:'',est,alta:hoyISO(),ult:'',nuevo:true};
+  CUENTAS.push(nueva);guardarCuentas();
+  registrar('Cuenta',`${n} (${m}) se registró — ${est}`);
+  renderUsers();
+  if(est!=='activo'){
+    authTab('in');$('#inMail').value=m;
+    authMsg(aviso+' Te avisaremos por correo en cuanto esté activa.','info');
+    return false;
+  }
+  ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
+  abrirSesion(nueva,true,aviso);
+  return false;
+}
+/* Deja la portada como recién abierta: sin contraseñas ni mensajes viejos. */
+function resetAuth(){
+  ['inPw','upPw','upN','upCargo','upMail','upCod','upRuc'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+  const t=$('#upTerm');if(t)t.checked=false;
+  upTipo('staff');pwMeter();upRucCheck();authMsg('');
+}
+function recuperar(){
+  const m=$('#inMail').value.trim();
+  if(!m){authMsg('Escribe primero tu correo y vuelve a pulsar «¿La olvidaste?».','info');$('#inMail').focus();return}
+  authMsg(`Si <b>${esc(m)}</b> tiene una cuenta, te llegará un enlace para restablecer la contraseña.<br>
+    <span style="opacity:.8">En esta demostración no sale ningún correo: el envío necesita servidor. Un administrador puede restablecerla desde Usuarios y accesos.</span>`,'info');
+}
+const hoyISO=()=>{const d=HOY;return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+
+function abrirSesion(c,recordar,aviso){
+  SES=c;c.ult=hoyISO();
+  if(recordar){try{localStorage.setItem(LS_SES,JSON.stringify({id:c.id}))}catch(e){}}
+  else{try{localStorage.removeItem(LS_SES)}catch(e){}}
+  guardarCuentas();
+  applyRole(rolDe(c));
+  entrarAlPanel();
+  toast(aviso?aviso.replace(/<[^>]+>/g,''):`Hola, ${c.n.split(' ')[0]}`);
+}
+function entrarAlPanel(){
+  const v=document.getElementById('promoVid');
+  if(v){v.pause();v.muted=true;setSoundIcon(true)}
+  const c=$('#cover');c.classList.add('gone');
+  setTimeout(()=>{c.style.display='none'},600);
+}
+/* Recorrido de demostración: entra sin cuenta, con el perfil elegido. */
+function enterApp(){
+  const v=$('#coverRole').value;
+  SES=CUENTAS.find(c=>rolDe(c)===v&&c.est==='activo')||null;
+  applyRole(v);
+  entrarAlPanel();
+}
+function logout(){
+  closeDrawer&&closeDrawer();closeAcct();
+  SES=null;try{localStorage.removeItem(LS_SES)}catch(e){}
+  resetAuth();authTab('in');pintarSesionGuardada();
+  const c=$('#cover');c.style.display='';
+  requestAnimationFrame(()=>c.classList.remove('gone'));
+  const v=document.getElementById('promoVid');
+  if(v){v.muted=true;try{v.currentTime=0}catch(e){}v.play().catch(()=>{});setSoundIcon(true)}
+  armAutoSound();
+}
+/* Si quedó una sesión recordada, se ofrece continuar con un clic
+   (no se entra solo: la portada es también la presentación). */
+function pintarSesionGuardada(){
+  const box=$('#sessResume');if(!box)return;
+  let id=null;try{id=(JSON.parse(localStorage.getItem(LS_SES)||'null')||{}).id}catch(e){}
+  const c=id&&CUENTAS.find(x=>x.id===id&&x.est==='activo');
+  box.innerHTML=c?`<button class="sess-card" onclick="abrirSesion(CUENTAS.find(x=>x.id==='${c.id}'),true)">
+      <span class="avatar">${esc(iniciales(c.n))}</span>
+      <span style="min-width:0;flex:1"><b>Continuar como ${esc(c.n)}</b><span>${esc(c.m)}</span></span>
+      <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>`:'';
+}
+
+/* ── Menú de cuenta ────────────────────────────────────────── */
+function toggleAcct(e){
+  e&&e.stopPropagation();
+  const p=$('#acctPop');
+  p.classList.toggle('on');
+  if(p.classList.contains('on'))pintarCuenta();
+}
+function closeAcct(){const p=$('#acctPop');p&&p.classList.remove('on')}
+document.addEventListener('click',()=>closeAcct());
+
+function pintarCuenta(){
+  const c=SES||{n:'Invitado de demostración',m:'sesión de ejemplo',perfil:S.rol,cli:S.cli,cargo:''};
+  const ini=iniciales(c.n);
+  $('#ava').textContent=ini;
+  $('#acctAva').textContent=ini;
+  $('#acctN').textContent=c.n;
+  $('#acctM').textContent=c.m;
+  $('#acctM').title=c.m;
+  const p=plan(),us=CUENTAS.filter(x=>x.perfil!=='cliente').length;
+  $('#acctPlanN').innerHTML=`Plan ${esc(p.n)} <span class="tag ok" style="font-size:9.5px;padding:1px 6px">activo</span>`;
+  $('#acctPlanD').textContent=`${ACTIVOS.length} de ${lim(p.lim.act)} válvulas · ${us} de ${lim(p.lim.us)} usuarios`;
+  $('#acctUsers').style.display=S.rol==='cliente'?'none':'';
+  $('#acctDemo').style.display=SES&&!SES.demo?'':'';
+  $('#railPlan').textContent=p.n;
+  $('#railPlanCt').textContent=`${ACTIVOS.length}/${lim(p.lim.act)}`;
+}
+
+/* ── Ajustes de la cuenta ──────────────────────────────────── */
+const SET_TABS=[['perfil','Mi perfil'],['seguridad','Seguridad'],['org','Organización'],['plan','Plan y uso'],['notif','Notificaciones']];
+function goSettings(tab){S.setTab=tab||'perfil';go('settings');renderSettings()}
+function setTab(t){S.setTab=t;renderSettings()}
+
+function renderSettings(){
+  const t=S.setTab||'perfil', c=SES, p=plan();
+  const tabs=`<div class="set-tabs">${SET_TABS
+    .filter(([k])=>!(k==='org'&&S.rol==='cliente')&&!(k==='plan'&&S.rol==='cliente'))
+    .map(([k,l])=>`<button class="${t===k?'on':''}" onclick="setTab('${k}')">${l}</button>`).join('')}</div>`;
+  let body='';
+
+  if(t==='perfil'){
+    body=c?`<div class="set-grid">
+      ${panel('Datos personales',`
+        <div class="fld"><label>Nombre y apellido</label><input class="inp" id="stN" value="${esc(c.n)}"></div>
+        <div class="fld"><label>Cargo</label><input class="inp" id="stCargo" value="${esc(c.cargo||'')}" placeholder="Ing. de confiabilidad"></div>
+        <div class="fld"><label>Teléfono</label><input class="inp" id="stTel" value="${esc(c.tel||'')}" placeholder="+51 9xx xxx xxx"></div>
+        <div class="fld"><label>Correo</label><input class="inp" value="${esc(c.m)}" disabled title="El correo identifica la cuenta; para cambiarlo escribe a soporte">
+          <span class="hint">El correo identifica tu cuenta y no se puede cambiar desde aquí.</span></div>
+        <button class="btn" onclick="guardarPerfil()">Guardar cambios</button>`)}
+      ${panel('Tu acceso',`
+        <div class="set-row"><div class="t"><b>Perfil</b><span>Define qué puedes ver y editar.</span></div>
+          <span class="tag ${c.perfil==='cliente'?'sel':''}">${esc(PERFILES[c.perfil]||c.perfil)}</span></div>
+        ${c.cli?`<div class="set-row"><div class="t"><b>Organización</b><span>Solo ves los equipos de esta empresa.</span></div><b style="font-size:12.5px">${esc(cli(c.cli).n)}</b></div>`:''}
+        <div class="set-row"><div class="t"><b>Estado</b><span>Las cuentas nuevas se activan al aprobarlas.</span></div>
+          <span class="tag ${c.est==='activo'?'ok':'due'}">${esc(c.est)}</span></div>
+        <div class="set-row"><div class="t"><b>Miembro desde</b></div><span class="mono muted">${esc(c.alta||'—')}</span></div>
+        <div class="set-row"><div class="t"><b>Último ingreso</b></div><span class="mono muted">${esc(c.ult||'—')}</span></div>`)}
+    </div>`
+    :`<div class="empty" style="padding:40px"><b>Estás en el recorrido de demostración</b>
+       Para editar un perfil, cierra la sesión y entra con una cuenta.
+       <button class="btn sec" style="margin-top:14px" onclick="logout()">Ir al acceso</button></div>`;
+  }
+
+  if(t==='seguridad'){
+    body=`<div class="set-grid">
+      ${panel('Contraseña',c?`
+        <div class="fld"><label>Contraseña actual</label><input class="inp" id="sgOld" type="password" placeholder="••••••••"></div>
+        <div class="fld"><label>Contraseña nueva</label><input class="inp" id="sgNew" type="password" placeholder="Mínimo 8 caracteres"></div>
+        <div class="fld"><label>Repite la nueva</label><input class="inp" id="sgNew2" type="password"></div>
+        <button class="btn" onclick="cambiarPw()">Actualizar contraseña</button>`
+        :`<div class="empty" style="padding:26px"><b>Sin sesión de cuenta</b>Entra con un correo y contraseña para cambiarla.</div>`)}
+      ${panel('Protección de la cuenta',`
+        <div class="set-row"><div class="t"><b>Verificación en dos pasos</b><span>Un código adicional al iniciar sesión.</span></div>
+          <span class="tag due">requiere servidor</span></div>
+        <div class="set-row"><div class="t"><b>Inicio de sesión con tu directorio (SSO)</b><span>Microsoft Entra o Google Workspace.</span></div>
+          <span class="tag">plan Corporativo</span></div>
+        <div class="set-row"><div class="t"><b>Sesiones abiertas</b><span>Este equipo, ${esc(navigator.platform||'navegador')}.</span></div>
+          <button class="btn quiet xs" onclick="logout()">Cerrar esta sesión</button></div>
+        <div class="set-row"><div class="t"><b>Bitácora de actividad</b><span>Quién hizo qué y cuándo, para auditoría.</span></div>
+          <button class="btn quiet xs" onclick="openSync()">Ver registro</button></div>`)}
+      <div class="span-12">${panel('Cómo se guardan hoy tus datos',`
+        <p class="hint" style="line-height:1.6">Este prototipo funciona <b>sin servidor</b>: las cuentas, las válvulas y los certificados
+        se guardan en el propio equipo (almacenamiento del navegador) y por eso también funciona sin señal en planta.
+        Sirve para operar y para demostrar, pero para producción hace falta un backend, que es lo que habilita
+        contraseñas cifradas, verificación en dos pasos, respaldo diario, datos compartidos entre técnicos y
+        consulta real a SUNAT. La aplicación ya está escrita para conectarse a él sin rehacer estas pantallas.</p>`)}</div>
+    </div>`;
+  }
+
+  if(t==='org'){
+    body=`<div class="set-grid">
+      ${panel('Datos de la empresa',`
+        <div class="fld"><label>Razón social</label><input class="inp" id="orN" value="${esc(ORG.n)}"></div>
+        <div class="fld"><label>RUC</label><input class="inp" id="orRuc" value="${esc(ORG.ruc)}" maxlength="11" inputmode="numeric"></div>
+        <div class="fld"><label>Dirección fiscal</label><input class="inp" id="orDir" value="${esc(ORG.dir)}"></div>
+        <div class="fld"><label>Teléfono</label><input class="inp" id="orTel" value="${esc(ORG.tel)}"></div>
+        <div class="fld"><label>Sitio web</label><input class="inp" id="orWeb" value="${esc(ORG.web)}"></div>
+        <button class="btn" onclick="guardarOrg()">Guardar organización</button>`)}
+      ${panel('Preferencias del servicio',`
+        <div class="fld"><label>Zona horaria</label>
+          <select class="inp" id="orTz"><option>America/Lima · GMT-5</option><option>America/Bogota · GMT-5</option><option>America/Santiago · GMT-4</option><option>America/Mexico_City · GMT-6</option></select></div>
+        <div class="fld"><label>Moneda de las cotizaciones</label>
+          <select class="inp" id="orMon"><option>USD</option><option>PEN</option></select></div>
+        <div class="set-row"><div class="t"><b>Código de invitación</b><span>Quien lo use al registrarse entra activado, sin aprobación manual.</span></div>
+          <span class="mono" style="font-size:12px">${esc(ORG.cod)}</span></div>
+        <div class="set-row"><div class="t"><b>Copiar el código</b><span>Compártelo solo con tu equipo.</span></div>
+          <button class="btn quiet xs" onclick="copiarCodigo()">Copiar</button></div>
+        <div class="set-row"><div class="t"><b>Exportar todos los datos</b><span>Excel con activos, calibraciones y órdenes.</span></div>
+          <button class="btn quiet xs" onclick="exportCSV()">Descargar</button></div>`)}
+    </div>`;
+  }
+
+  if(t==='plan'){
+    const us=CUENTAS.filter(x=>x.perfil!=='cliente').length, cl=CLIENTES.length;
+    const uso=(v,m)=>{const pct=m===1/0?4:Math.min(100,Math.round(v/m*100));return {pct,cls:pct>=90?'bad':pct>=70?'warn':''}};
+    const ua=uso(ACTIVOS.length,p.lim.act), uu=uso(us,p.lim.us), uc=uso(cl,p.lim.cli);
+    body=`
+      ${panel('Consumo del plan '+p.n,`
+        <div class="use-row"><div class="h"><span>Válvulas registradas</span><b>${ACTIVOS.length} / ${lim(p.lim.act)}</b></div>
+          <div class="use-bar"><i class="${ua.cls}" style="width:${ua.pct}%"></i></div></div>
+        <div class="use-row"><div class="h"><span>Usuarios de Adolphus</span><b>${us} / ${lim(p.lim.us)}</b></div>
+          <div class="use-bar"><i class="${uu.cls}" style="width:${uu.pct}%"></i></div></div>
+        <div class="use-row"><div class="h"><span>Organizaciones cliente</span><b>${cl} / ${lim(p.lim.cli)}</b></div>
+          <div class="use-bar"><i class="${uc.cls}" style="width:${uc.pct}%"></i></div></div>
+        <div class="use-row" style="margin-bottom:0"><div class="h"><span>Usuarios de tus clientes</span><b>${CUENTAS.filter(x=>x.perfil==='cliente').length} · sin costo</b></div>
+          <div class="use-bar"><i style="width:4%"></i></div></div>`,
+        `<span class="count">desde ${esc(ORG.desde)}</span>`)}
+      <div style="height:var(--sp-3)"></div>
+      ${panel('Planes',`<div class="plans">${PLANES.map(x=>`
+        <div class="plan ${x.id===ORG.plan?'on':''}">
+          <h4>${esc(x.n)}${x.id===ORG.plan?'<span class="tag ok" style="font-size:9.5px">tu plan</span>':''}</h4>
+          <div class="pr">${esc(x.pr)}<br><small>${esc(x.x)}</small></div>
+          <ul>${x.f.map(f=>`<li><svg viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5"/></svg>${esc(f)}</li>`).join('')}</ul>
+          ${x.id===ORG.plan?'<button class="btn sec" disabled style="opacity:.55;cursor:default">Plan actual</button>'
+            :`<button class="btn ${PLANES.findIndex(z=>z.id===x.id)>PLANES.findIndex(z=>z.id===ORG.plan)?'':'sec'}" onclick="cambiarPlan('${x.id}')">${x.id==='emp'?'Hablar con ventas':(PLANES.findIndex(z=>z.id===x.id)>PLANES.findIndex(z=>z.id===ORG.plan)?'Subir a ':'Bajar a ')+esc(x.n)}</button>`}
+        </div>`).join('')}</div>
+        <p class="hint" style="margin-top:14px">Los precios son referenciales para la propuesta. La facturación real se conecta cuando exista el servidor de pagos.</p>`)}
+      <div style="height:var(--sp-3)"></div>
+      ${panel('Facturación',`
+        <div class="set-row"><div class="t"><b>Titular</b></div><span>${esc(ORG.n)} · RUC ${esc(ORG.ruc)}</span></div>
+        <div class="set-row"><div class="t"><b>Ciclo</b></div><span>Mensual · renueva el 15</span></div>
+        <div class="set-row"><div class="t"><b>Comprobantes</b><span>Factura electrónica con tus datos de SUNAT.</span></div>
+          <button class="btn quiet xs" onclick="toast('La descarga de comprobantes se habilita con el módulo de facturación')">Ver comprobantes</button></div>`)}`;
+  }
+
+  if(t==='notif'){
+    const sw=(k,b,d)=>`<div class="set-row"><div class="t"><b>${b}</b><span>${d}</span></div>
+      <label class="tgl"><input type="checkbox" ${PREF[k]?'checked':''} onchange="PREF['${k}']=this.checked;guardarCuentas();toast('Preferencia guardada')"><i></i></label></div>`;
+    body=`<div class="set-grid">
+      ${panel('Avisos por correo',
+        sw('mailVenc','Calibración por vencer','Aviso 30 días antes del vencimiento de cada válvula.')+
+        sw('mailOrden','Cambios en órdenes de trabajo','Cuando una orden avanza de etapa o se certifica.')+
+        sw('mailSol','Solicitudes de repuestos','Cuando un cliente pide repuestos desde su portal.')+
+        sw('resumen','Resumen semanal','Los lunes, el estado del parque en un correo.'))}
+      ${panel('Dentro del sistema',`
+        <div class="set-row"><div class="t"><b>Campana de notificaciones</b><span>Siempre activa: vencimientos, órdenes y solicitudes.</span></div>
+          <span class="tag ok">activa</span></div>
+        <div class="set-row"><div class="t"><b>Entrega de correos</b><span>El envío necesita servidor de correo; hoy los avisos se ven en la campana.</span></div>
+          <span class="tag due">requiere servidor</span></div>`)}
+    </div>`;
+  }
+
+  $('#setView').innerHTML=`
+    <div class="hd"><div><h1>Ajustes de la cuenta</h1>
+      <p>${esc(ORG.n)} · plan ${esc(p.n)}${SES?` · ${esc(SES.m)}`:' · recorrido de demostración'}</p></div>
+      <button class="btn sec" onclick="go('home')"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Volver al panel</button></div>
+    ${tabs}${body}`;
+}
+function guardarPerfil(){
+  if(!SES)return;
+  SES.n=$('#stN').value.trim()||SES.n;
+  SES.cargo=$('#stCargo').value.trim();
+  SES.tel=$('#stTel').value.trim();
+  ONB.perfil=!!(SES.cargo&&SES.tel);
+  guardarCuentas();pintarCuenta();renderUsers();renderHome();renderSettings();
+  toast('Perfil actualizado');
+}
+function cambiarPw(){
+  if(!SES)return;
+  const o=$('#sgOld').value,n=$('#sgNew').value,n2=$('#sgNew2').value;
+  if(SES.pw!==resumen(o))return toast('La contraseña actual no coincide');
+  if(fuerzaPw(n)<2)return toast('La nueva es muy débil: 8 caracteres o más, con números');
+  if(n!==n2)return toast('Las dos contraseñas nuevas no coinciden');
+  SES.pw=resumen(n);guardarCuentas();
+  registrar('Cuenta',`${SES.n} cambió su contraseña`);
+  renderSettings();toast('Contraseña actualizada');
+}
+function guardarOrg(){
+  const r=($('#orRuc').value||'').replace(/\D/g,'');
+  if(r&&!rucValido(r))return toast('El RUC no pasa el dígito verificador');
+  ORG.n=$('#orN').value.trim()||ORG.n;ORG.ruc=r;ORG.dir=$('#orDir').value.trim();
+  ORG.tel=$('#orTel').value.trim();ORG.web=$('#orWeb').value.trim();
+  ORG.tz=$('#orTz').value;ORG.mon=$('#orMon').value;ORG.verif=!!(ORG.ruc&&ORG.dir);
+  ONB.org=ORG.verif;
+  guardarCuentas();
+  $$('.ws-meta b').forEach(el=>el.textContent=ORG.n);
+  renderHome();renderSettings();toast('Datos de la organización guardados');
+}
+function copiarCodigo(){
+  navigator.clipboard?.writeText(ORG.cod).then(()=>toast('Código copiado: '+ORG.cod)).catch(()=>toast('Código: '+ORG.cod));
+}
+function cambiarPlan(id){
+  const p=PLANES.find(x=>x.id===id);if(!p)return;
+  if(id==='emp'){
+    $('#mTitle').textContent='Plan Corporativo';
+    $('#mBody').innerHTML=`<p class="hint" style="line-height:1.6">El plan Corporativo se arma a medida: válvulas y usuarios sin límite,
+      integración con tu ERP, inicio de sesión con el directorio de la empresa y acompañamiento dedicado.</p>
+      <div class="fld" style="margin-top:14px"><label>¿A quién contactamos?</label><input class="inp" id="cpMail" value="${esc(SES?SES.m:'')}" placeholder="correo@empresa.pe"></div>`;
+    $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn" onclick="closeModal();toast('Solicitud registrada — el equipo comercial te escribirá')">Solicitar contacto</button>`;
+    $('#modal').classList.add('on');return;
+  }
+  if(p.lim.act<ACTIVOS.length)return toast(`No se puede bajar a ${p.n}: ya tienes ${ACTIVOS.length} válvulas y el tope es ${p.lim.act}`);
+  ORG.plan=id;guardarCuentas();pintarCuenta();renderSettings();
+  registrar('Cuenta',`Plan cambiado a ${p.n}`);
+  toast(`Plan ${p.n} activado`);
+}
+function verLegal(cual){
+  const T={
+    terminos:['Términos del servicio',`<p style="line-height:1.65">Adolphus S.A. presta el servicio de gestión de válvulas industriales para el registro,
+      calibración y mantenimiento del parque instalado de sus clientes. La cuenta es personal e intransferible; cada usuario responde por
+      el uso de sus credenciales. Los certificados de calibración emitidos son responsabilidad técnica del profesional que los firma.</p>
+      <p style="line-height:1.65;margin-top:12px">El servicio se factura por plan contratado. La cancelación puede solicitarse en cualquier
+      momento y los datos quedan disponibles para exportación durante 30 días.</p>
+      <p class="hint" style="margin-top:14px">Texto de muestra para la propuesta: antes de publicar, revísalo con tu asesor legal.</p>`],
+    privacidad:['Política de privacidad',`<p style="line-height:1.65">Se tratan los datos necesarios para prestar el servicio: identificación del
+      usuario (nombre, correo, cargo), datos de la organización (razón social, RUC, dirección) y los datos técnicos del parque de válvulas.
+      No se ceden a terceros ni se usan con fines publicitarios.</p>
+      <p style="line-height:1.65;margin-top:12px">En esta versión los datos se guardan <b>en el propio equipo</b>, lo que permite trabajar sin
+      señal en planta. Al conectarse el servidor, se aplicará cifrado en tránsito y en reposo, respaldo diario y el derecho de acceso,
+      rectificación y supresión previsto en la Ley 29733 de Protección de Datos Personales.</p>
+      <p class="hint" style="margin-top:14px">Texto de muestra para la propuesta: antes de publicar, revísalo con tu asesor legal.</p>`]
+  }[cual];
+  $('#mTitle').textContent=T[0];$('#mBody').innerHTML=T[1];
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
+
+/* ── Primeros pasos ────────────────────────────────────────── */
+function onbHtml(){
+  if(!SES||ONB.off||S.rol==='cliente')return '';
+  const invitados=CUENTAS.filter(c=>c.est==='invitado'||c.alta===hoyISO()).length;
+  const pasos=[
+    {k:'perfil',b:'Completa tu perfil',s:'Cargo y teléfono, para que aparezcan en los certificados.',go:"goSettings('perfil')",ok:ONB.perfil},
+    {k:'org',b:'Verifica tu organización',s:'RUC y dirección fiscal, que salen en cotizaciones y órdenes.',go:"goSettings('org')",ok:ONB.org},
+    {k:'equipo',b:'Invita a tu equipo',s:'Comparte el código de invitación con ingeniería y servicio.',go:"go('users')",ok:ONB.equipo||invitados>0},
+    {k:'movil',b:'Instálala en tu celular',s:'Para trabajar en planta aunque no haya señal.',go:"openSync()",ok:ONB.movil}
+  ];
+  const listos=pasos.filter(p=>p.ok).length;
+  if(listos===pasos.length)return '';
+  return `<div class="onb">
+    <div class="onb-h"><div><h3>Termina de configurar tu espacio</h3>
+      <p>${listos} de ${pasos.length} listos · toma un par de minutos y queda hecho para siempre.</p></div>
+      <button class="btn quiet xs" onclick="ONB.off=true;guardarCuentas();renderHome()">Ocultar</button></div>
+    <div class="onb-steps">${pasos.map((p,i)=>`<button class="onb-s ${p.ok?'done':''}" onclick="ONB.${p.k}=true;guardarCuentas();${p.go}">
+      <span class="n">${p.ok?'✓':i+1}</span><span><b>${esc(p.b)}</b><span>${esc(p.s)}</span></span></button>`).join('')}</div>
+    <div class="onb-bar"><i style="width:${Math.round(listos/pasos.length*100)}%"></i></div>
+  </div>`;
+}
+
+
+/* ── Arranque ─────────────────────────────────────────────── */
+restaurarCuentas();
 restaurarLocal();
 paintThemeBtn();renderAll();go('home');pintarNet();
+pintarSesionGuardada();pintarCuenta();upTipo('staff');
 </script>
 </body>
 </html>
