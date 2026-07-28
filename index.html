@@ -937,6 +937,49 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .famleg span{display:inline-flex;align-items:center;gap:6px}
 .famleg i{width:9px;height:9px;border-radius:3px;display:inline-block}
 
+/* ── LA COLA DE TRABAJO ──────────────────────────────────────
+   Un panel no sirve para contar el parque: sirve para saber qué hay
+   que hacer hoy. Esto va primero, antes que cualquier cifra. */
+.cola{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  box-shadow:var(--e-2);margin-bottom:var(--sp-4);overflow:hidden}
+.cola-h{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--sp-4);
+  padding:var(--sp-4) var(--sp-4) var(--sp-3);flex-wrap:wrap}
+.cola-h h2{font-size:var(--t-4)}
+.cola-h p{font-size:var(--t-2);color:var(--ink-3);margin-top:3px}
+.cola-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 var(--sp-4) var(--sp-3)}
+.ch{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border-radius:var(--r-pill);
+  border:1px solid var(--line);background:var(--surface);font:inherit;font-size:12.5px;color:var(--ink-2);
+  cursor:pointer;transition:border-color var(--fast),background var(--fast)}
+.ch:hover{border-color:var(--ink-3)}
+.ch b{font-variant-numeric:tabular-nums;font-weight:600}
+.ch .pt{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.ch.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.ch.on b{color:var(--surface)}
+.cola-l{border-top:1px solid var(--line-2)}
+.cola-i{display:grid;grid-template-columns:10px minmax(0,1.15fr) minmax(0,1fr) auto;gap:var(--sp-3);
+  align-items:center;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);
+  cursor:pointer;transition:background var(--fast)}
+.cola-i:last-child{border-bottom:0}
+.cola-i:hover{background:var(--surface-2)}
+.cola-i .pt{width:8px;height:8px;border-radius:50%}
+.cola-i .t{min-width:0}
+.cola-i .t b{display:block;font-size:var(--t-3);font-weight:600}
+.cola-i .t small{display:block;font-size:11.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cola-i .q{font-size:12.5px;color:var(--ink-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cola-i .q em{font-style:normal;font-weight:600}
+.cola-i .ac{justify-self:end}
+.cola-mas{display:block;width:100%;padding:11px;background:var(--surface-2);border:0;border-top:1px solid var(--line-2);
+  font:inherit;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+.cola-mas:hover{color:var(--ink);background:var(--surface-3)}
+.cola-vacio{display:flex;align-items:center;gap:14px;padding:26px var(--sp-4);border-top:1px solid var(--line-2)}
+.cola-vacio svg{width:34px;height:34px;stroke:var(--ok);fill:none;stroke-width:1.7;flex:0 0 auto}
+.cola-vacio b{display:block;font-size:var(--t-3)}
+.cola-vacio span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+@media(max-width:820px){
+  .cola-i{grid-template-columns:10px 1fr auto;row-gap:6px}
+  .cola-i .q{grid-column:2/-1}
+}
+
 .greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .greet .wave{color:var(--ink-3);font-weight:400}
 
@@ -1844,7 +1887,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -3653,6 +3696,88 @@ function gauge(pct,label){
     <div class="gauge-v" style="color:var(--${tone})">${Math.round(val)}%</div><div class="gauge-k">${esc(label)}</div></div>`;
 }
 
+/* ============================================================
+   LA COLA DE TRABAJO
+   Reúne en una sola lista todo lo que espera una acción, ordenado por
+   urgencia, y pone al lado el botón que la ejecuta. El panel deja de
+   describir el parque y pasa a decir qué hacer.
+   ============================================================ */
+const GRUPOS=[
+ {k:'venc', n:'Vencidas',        tono:'late'},
+ {k:'taller',n:'En taller',      tono:'sel'},
+ {k:'prox', n:'Vencen pronto',   tono:'due'},
+ {k:'ficha',n:'Ficha incompleta',tono:'due'},
+ {k:'sol',  n:'Solicitudes',     tono:'sel'}
+];
+function colaTrabajo(){
+  const vs=visibles(), cliente=S.rol==='cliente', out=[];
+  const mio=o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli};
+  vs.forEach(a=>{
+    const e=estado(a), d=a.prox?dias(a.prox):null;
+    const donde=`${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)} · ${esc(area(a))}`;
+    if(e.k==='vencido')
+      out.push({p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
+        ac:cliente?null:{t:'Calibrar',f:`openCalib('${a.id}')`}});
+    else if(e.k==='taller'){
+      const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
+      out.push({p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
+        ac:{t:'Ver orden',f:`gotoClientPage('wo','${a.cli}')`}});
+    }
+    else if(e.k==='porvencer'&&d<=60)
+      out.push({p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Vence en <em>${d} d</em> · ${esc(a.prox)}`,
+        ac:cliente?null:{t:'Programar',f:`openWO('${a.id}','Calibración')`}});
+    if(e.k==='incompleto')
+      out.push({p:4,g:'ficha',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+        q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
+        ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
+  });
+  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>x.est!=='Atendida').forEach(x=>{
+    out.push({p:2.5,g:'sol',cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
+      q:`Solicitud <em>${esc(x.est.toLowerCase())}</em> del ${esc(x.f)}`,
+      ac:{t:cliente?'Ver':'Atender',f:`gotoClientPage('req','${x.cli}')`}});
+  });
+  return out.sort((a,b)=>a.p-b.p);
+}
+function setCola(g){S.cola=S.cola===g?'':g;renderHome()}
+function colaHtml(){
+  const todo=colaTrabajo();
+  const cuenta=g=>todo.filter(x=>x.g===g).length;
+  const activos=GRUPOS.filter(g=>cuenta(g.k));
+  const lista=S.cola?todo.filter(x=>x.g===S.cola):todo;
+  const tope=S.colaTodo?lista.length:6;
+  const cliente=S.rol==='cliente';
+  const cab=`<div class="cola-h">
+      <div><h2>${cliente?'Lo que necesita tu planta':'Tu trabajo'}</h2>
+        <p>${todo.length?`${todo.length} ${todo.length===1?'cosa pendiente':'cosas pendientes'} · en orden de urgencia`
+          :'Nada pendiente ahora mismo'}</p></div>
+      ${todo.length&&!cliente?`<button class="btn sec xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver en la lista</button>`:''}
+    </div>`;
+  if(!todo.length) return `<section class="cola">${cab}
+    <div class="cola-vacio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
+      <div><b>Todo al día</b><span>Ninguna válvula espera calibración, orden ni repuesto.</span></div></div></section>`;
+  const chips=`<div class="cola-chips">
+    <button class="ch ${S.cola?'':'on'}" onclick="setCola('')">Todo <b>${todo.length}</b></button>
+    ${activos.map(g=>`<button class="ch ${S.cola===g.k?'on':''}" onclick="setCola('${g.k}')">
+      <span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)} <b>${cuenta(g.k)}</b></button>`).join('')}
+  </div>`;
+  const filas=lista.slice(0,tope).map(x=>{
+    const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
+    const abrir=x.id?`gotoAsset('${x.id}')`:`gotoClientPage('req','${x.cliId}')`;
+    return `<div class="cola-i" onclick="${abrir}">
+      <span class="pt" style="background:var(--${tono})"></span>
+      <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
+      <span class="q">${x.q}</span>
+      ${x.ac?`<button class="btn sec xs ac" onclick="event.stopPropagation();${x.ac.f}">${esc(x.ac.t)}</button>`
+            :`<button class="btn quiet xs ac" onclick="event.stopPropagation();${abrir}">Ver ficha</button>`}</div>`}).join('');
+  const mas=lista.length>tope
+    ? `<button class="cola-mas" onclick="S.colaTodo=true;renderHome()">Ver las ${lista.length-tope} restantes</button>`
+    : (S.colaTodo&&lista.length>6?`<button class="cola-mas" onclick="S.colaTodo=false;renderHome()">Mostrar menos</button>`:'');
+  return `<section class="cola">${cab}${chips}<div class="cola-l">${filas}</div>${mas}</section>`;
+}
+
 function renderHome(){
   const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
   const total=vs.length,atn=st('vencido')+st('porvencer')+st('taller')+st('incompleto'),venc=st('vencido');
@@ -3700,14 +3825,10 @@ function renderHome(){
   const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
   for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
     colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
+  const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
+  const porEtapa=ETAPAS.map(([k,l])=>({label:l,value:ordScope.filter(o=>o.et===k).length,
+    tone:k==='certificada'?'ok':k==='taller'?'sel':'',tip:`${l}: ${ordScope.filter(o=>o.et===k).length} órdenes`}));
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
-  const att=vs.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k))
-    .sort((a,b)=>sev(a)-sev(b)||(dias(a.prox||'')??999)-(dias(b.prox||'')??999)).slice(0,7);
-  const attHtml=att.length?`<div class="att">${att.map(a=>{const e=estado(a);return `<div class="att-i" onclick="gotoAsset('${a.id}')">
-    <span class="att-tag"><b>${esc(a.tag||'— sin tag —')}</b><span>${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod)}</span></span>
-    <span class="att-x">${esc(cli(a.cli).n)} · ${esc(area(a))}</span>
-    <span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></div>`}).join('')}</div>`
-   :`<div class="empty" style="padding:34px"><b>Sin pendientes</b>Todo el parque está operativo y al día.</div>`;
   const ICON={Preventivo:'⟳',Correctivo:'✚',Calibración:'◎',Inspección:'◍',Overhaul:'⚙','Puesta en marcha':'▸'};
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
@@ -3720,16 +3841,17 @@ function renderHome(){
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
        <p>${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}</p></div>
      ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+   ${colaHtml()}
    ${onbHtml()}
-   ${famHtml}
    ${kpiHtml}
+   ${famHtml}
    <div class="dash">
+     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
+     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
      <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
      <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
-     <div class="span-7">${panel('Requieren tu atención',attHtml,`<button class="btn quiet xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver todo</button>`)}</div>
-     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
-     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
-     <div class="span-5">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-7">${panel('Actividad reciente',feedHtml)}</div>
+     <div class="span-5">${panel('Órdenes por etapa',hbars(porEtapa),`<span class="count">${ordAb} abiertas</span>`)}</div>
    </div>`;
 }
 
