@@ -28,10 +28,10 @@
   --gris-2:#8695a8;
   --linea:#e2e8f0;
   --linea-2:#eef2f7;
-  --acc:#16306b;            /* azul del logotipo */
+  --acc:#102d69;            /* azul del logotipo, tomado del archivo original */
   --acc-cl:#2a58b8;
   --acc-sv:#eaf0fb;
-  --rojo:#e11a22;           /* rojo del triángulo — solo acento de marca */
+  --rojo:#d21430;           /* rojo de la marca, tomado del archivo original */
   --ok:#12a06a;
   --amb:#c9820b;
   --sans:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
@@ -60,7 +60,8 @@ header{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.92);
 .bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;
   padding:.65rem var(--pad);max-width:1240px;margin:0 auto}
 .logo{display:flex;align-items:center;gap:.6rem}
-.logo .mk{width:26px;flex:0 0 auto}
+.logo .mk{width:24px;flex:0 0 auto}
+.logo .mk svg{width:100%;height:auto;display:block}
 .logo .tx b{display:block;font-size:1rem;font-weight:800;letter-spacing:-.02em;line-height:1.1}
 .logo .tx>span{display:block;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;color:var(--gris-2)}
 header nav{display:flex;gap:1.6rem;font-size:.87rem;font-weight:600}
@@ -246,7 +247,8 @@ footer h4{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#
 footer a:hover{color:#fff}
 footer ul{list-style:none;display:grid;gap:.5rem}
 .f-marca{display:flex;align-items:center;gap:.7rem;margin-bottom:1rem}
-.f-marca .mk{width:30px;flex:0 0 auto}
+.f-marca .mk{width:26px;flex:0 0 auto}
+.f-marca .mk svg{width:100%;height:auto;display:block}
 .f-marca b{color:#fff;font-size:1.05rem;font-weight:800;letter-spacing:-.02em;display:block;
   line-height:1.15;text-transform:none;letter-spacing:-.02em}
 .f-marca>span>span{display:block;font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;color:#7f92ab}
