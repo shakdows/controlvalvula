@@ -154,6 +154,8 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
   height:52px;flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line);
   display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);z-index:var(--z-sticky)
 }
+.bar>*{flex:0 0 auto}
+.bar::before,.bar::after{content:'';flex:1 1 0;min-width:0;max-width:calc((100% - 1400px)/2)}
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);min-width:0;flex:1}
 .crumbs b{color:var(--ink);font-weight:600}
 .crumbs .sep{opacity:.45}
@@ -190,7 +192,7 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .ava-btn[aria-expanded="true"] .cv{transform:rotate(180deg)}
 
 .view{flex:1;overflow:auto;position:relative}
-.view-pad{padding:var(--sp-5)}
+.view-pad{padding:var(--sp-5);max-width:1400px;margin-inline:auto}
 .page{display:none}.page.on{display:block}
 
 /* ============================================================
@@ -313,16 +315,53 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .scrim{position:fixed;inset:0;background:oklch(0.235 0.012 255 /.42);opacity:0;pointer-events:none;transition:opacity var(--slow) var(--ease-out);z-index:var(--z-scrim);backdrop-filter:blur(1.5px)}
 .scrim.on{opacity:1;pointer-events:auto}
 .drawer{
-  position:fixed;top:0;right:0;bottom:0;width:min(660px,94vw);background:var(--surface);
-  border-left:1px solid var(--line);z-index:var(--z-drawer);display:flex;flex-direction:column;
-  transform:translateX(102%);transition:transform var(--slow) var(--ease-out),width var(--med) var(--ease-out);box-shadow:var(--shadow-over)
+  position:fixed;top:50%;left:50%;width:min(760px,94vw);height:min(88vh,940px);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  z-index:var(--z-drawer);display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:var(--shadow-over);
+  opacity:0;visibility:hidden;transform:translate(-50%,-48%) scale(.985);
+  transition:opacity var(--med) var(--ease-out),transform var(--med) var(--ease-out),
+             visibility var(--med),width var(--med) var(--ease-out),height var(--med) var(--ease-out)
 }
-.drawer.on{transform:none}
-.drawer.wide{width:min(1180px,98vw)}
+.drawer.on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.drawer.wide{width:min(1180px,96vw);height:min(94vh,1040px)}
+/* en pantallas pequeñas ocupa todo, que es lo cómodo con el pulgar */
+@media(max-width:720px){
+  .drawer{width:100vw;height:100dvh;border-radius:0;border:0;max-width:none}
+  .drawer.wide{width:100vw;height:100dvh}
+}
+:root{--dr-col:640px}
 .dr-h{padding:var(--sp-4) var(--sp-5) var(--sp-3);border-bottom:1px solid var(--line-2);flex:0 0 auto}
-.dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
+/* la columna manda: el contenido vive centrado y con un ancho cómodo,
+   aunque el panel se amplíe */
+.dr-h>*,.pane>*{max-width:var(--dr-col);margin-inline:auto}
+/* estas dos viven de tener ancho: plano + tabla, gráfica + tabla */
+#pn-bom>*,#pn-cal>*{max-width:none}
+.dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px;width:100%}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+/* Recorrido de la solicitud: dónde está, quién la tiene y qué falta. */
+.paso-l{display:flex;gap:0;margin:2px 0 var(--sp-4);overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.paso-l::-webkit-scrollbar{display:none}
+.paso-i{flex:1 0 auto;min-width:88px;display:flex;flex-direction:column;gap:7px;position:relative;padding-right:4px}
+.paso-i .lin{height:3px;border-radius:2px;background:var(--line);position:relative}
+.paso-i.hecho .lin,.paso-i.aqui .lin{background:var(--ok)}
+.paso-i.aqui .lin{background:var(--sel)}
+.paso-i .lbl2{font-size:11px;color:var(--ink-3);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.paso-i.hecho .lbl2{color:var(--ink-2)}
+.paso-i.aqui .lbl2{color:var(--sel);font-weight:700}
+.aqui-caja{background:var(--sel-bg);border:1px solid color-mix(in oklab,var(--sel) 30%,transparent);
+  border-radius:var(--r-2);padding:13px 15px;margin-bottom:var(--sp-4)}
+.aqui-caja .fila{display:flex;gap:10px;align-items:baseline;font-size:12.5px;margin-bottom:5px}
+.aqui-caja .fila:last-child{margin-bottom:0}
+.aqui-caja .fila b{color:var(--ink-3);font-weight:600;min-width:104px;font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;flex:0 0 auto}
+.aqui-caja .fila span{color:var(--ink)}
+.hist-l{display:flex;flex-direction:column;gap:0;margin-top:var(--sp-3)}
+.hist-i{display:grid;grid-template-columns:84px 1fr;gap:12px;font-size:12.5px;padding:7px 0;
+  border-bottom:1px solid var(--line-2)}
+.hist-i:last-child{border-bottom:0}
+.hist-i b{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-3);font-weight:500}
 .spill{display:inline-flex;align-items:center;gap:8px;min-width:74px}
 .spill-b{flex:1;height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;min-width:34px}
 .spill-b i{display:block;height:100%;border-radius:4px}
@@ -330,7 +369,9 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 /* Encabezado permanente: identidad, estado y salud siempre a la vista,
    sin importar en qué pestaña esté el ingeniero. */
-.dr-id{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;justify-content:space-between}
+/* Las pastillas y la salud van juntas, en la misma fila, sin el hueco
+   que dejaba separarlas a los extremos. */
+.dr-id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%}
 .dr-id .izq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
 .sal{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line);
   border-radius:var(--r-pill);padding:4px 12px 4px 5px;cursor:pointer;font:inherit;transition:border-color var(--fast)}
@@ -351,13 +392,17 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .sal-tot span{font-size:13px;color:var(--ink-3)}
 .sal-bar{height:8px;border-radius:5px;background:var(--chart-track);overflow:hidden;margin:10px 0 4px}
 .sal-bar i{display:block;height:100%;border-radius:5px;transition:width var(--slow) var(--ease-out)}
-.dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
+.dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto;
+  scrollbar-width:none}
+.dr-tabs::-webkit-scrollbar{display:none}
+.dr-tabs::before,.dr-tabs::after{content:'';flex:1 1 0;min-width:0}
 .dr-tab{padding:9px 2px 8px;font:inherit;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;background:none;border:0;
   border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
 .dr-tab:hover{color:var(--ink)}
 .dr-tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
 .dr-b{flex:1;overflow:auto;padding:var(--sp-5);padding-bottom:var(--sp-6);overscroll-behavior:contain}
-.dr-f{flex:0 0 auto;padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;gap:var(--sp-2);justify-content:flex-end;background:var(--surface-2)}
+.dr-f{flex:0 0 auto;padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);
+  display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap;background:var(--surface-2)}
 .pane{display:none}.pane.on{display:block}
 
 .dl{display:grid;grid-template-columns:132px 1fr;gap:0}
@@ -414,7 +459,10 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .doc .fm span{font-size:11.5px;color:var(--ink-3)}
 
 /* ---- kanban ---- */
-.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start}
+.kb-wrap{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;
+  scrollbar-width:thin;margin-inline:calc(var(--sp-5)*-1);padding-inline:var(--sp-5)}
+.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start;min-width:1000px}
+@media(min-width:1180px){.kb{min-width:0}}
 .kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
 .kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
 .kb-h{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:600;color:var(--ink-2)}
@@ -744,13 +792,44 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-tile .fx-v{font-size:16px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
 .fx-tile .fx-v .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .fx-tile .fx-sub{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
-.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;margin:18px 0 4px}
+.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:0}
+.ficha-cap{display:flex;flex-direction:column;justify-content:center;gap:12px;flex:1;min-width:0}
+.fx-ult{display:flex;gap:7px;align-items:baseline;font-size:12px;color:var(--ink-3);flex-wrap:wrap;
+  padding-top:10px;border-top:1px solid var(--line-2)}
+.fx-ult b{color:var(--ink-2);font-weight:600;font-family:'IBM Plex Mono';font-size:12px}
 @media(max-width:520px){.fx-keyspecs{grid-template-columns:1fr}}
 .fx-keyspecs .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line-2);padding-bottom:7px}
 .fx-keyspecs .kv span{color:var(--ink-3)}
 .fx-keyspecs .kv b{font-weight:600;text-align:right}
 
 /* bloques de la ficha */
+/* ficha técnica: dos columnas, sin filas vacías */
+.dt{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:0 var(--sp-5)}
+.dt-i{display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:9px 0;border-bottom:1px solid var(--line-2);font-size:var(--t-3)}
+.dt-i span{color:var(--ink-3);flex:0 0 auto}
+.dt-i b{font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.dt-falta{margin-top:var(--sp-4);background:var(--due-bg);border:1px solid color-mix(in oklab,var(--due) 30%,transparent);
+  border-radius:var(--r-2);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.dt-falta b{display:block;font-size:var(--t-3)}
+.dt-falta span{display:block;font-size:11.5px;color:var(--ink-2);margin-top:3px}
+.dt-nota{margin-top:var(--sp-4);font-size:12.5px;color:var(--ink-3);line-height:1.6}
+
+/* "Qué toca ahora": el primer bloque de la ficha */
+.toca{display:flex;align-items:center;gap:13px;padding:14px 16px;border-radius:var(--r-2);
+  margin-bottom:var(--sp-4);flex-wrap:wrap;border:1px solid var(--line)}
+.toca-i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.toca-t{flex:1;min-width:180px}
+.toca-t b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:700}
+.toca-t p{font-size:var(--t-3);color:var(--ink);margin-top:3px;line-height:1.45}
+.toca-b{flex:0 0 auto}
+.toca.ok  {background:var(--ok-bg);border-color:color-mix(in oklab,var(--ok) 26%,transparent)}
+.toca.due {background:var(--due-bg);border-color:color-mix(in oklab,var(--due) 30%,transparent)}
+.toca.late{background:var(--late-bg);border-color:color-mix(in oklab,var(--late) 30%,transparent)}
+.toca.sel {background:var(--sel-bg);border-color:color-mix(in oklab,var(--sel) 26%,transparent)}
+.toca.ok .toca-i{background:var(--ok)}.toca.due .toca-i{background:var(--due)}
+.toca.late .toca-i{background:var(--late)}.toca.sel .toca-i{background:var(--sel)}
+
 .fx-blk{margin-top:var(--sp-5);border-top:1px solid var(--line-2);padding-top:var(--sp-4)}
 .fx-blk-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3)}
 .fx-blk-h h3{font-size:var(--t-2);text-transform:none;letter-spacing:0;color:var(--ink)}
@@ -808,9 +887,24 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .sq-i .sq-d{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-3);flex:0 0 auto}
 .sq-ok{color:var(--ok)}
 /* --- ayuda en formularios y campos pendientes --- */
-.hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
-  color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
-.hlp:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.hlp{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--ink-3);
+  color:var(--ink-3);font-size:10.5px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;
+  flex:0 0 auto;background:none;padding:0;font-family:inherit;position:relative;
+  transition:all var(--fast) var(--ease)}
+.hlp::after{content:'';position:absolute;inset:-7px;border-radius:50%}
+.hlp:hover,.hlp:focus-visible,.hlp.on{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+/* El globo de ayuda: uno solo, colocado con posición fija, para que no
+   lo recorte el desplazamiento de una ventana. El del navegador tardaba
+   un segundo en salir y en pantalla táctil no salía nunca. */
+.tip{position:fixed;z-index:var(--z-toast);max-width:300px;background:var(--ink);color:var(--surface);
+  font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:var(--r-2);box-shadow:var(--shadow-over);
+  opacity:0;visibility:hidden;transform:translateY(4px);pointer-events:none;
+  transition:opacity var(--fast) var(--ease),transform var(--fast) var(--ease),visibility var(--fast)}
+.tip.on{opacity:1;visibility:visible;transform:none}
+.tip::after{content:'';position:absolute;left:var(--fx,18px);width:9px;height:9px;background:var(--ink);
+  transform:rotate(45deg)}
+.tip.abajo::after{top:-4px}
+.tip.arriba::after{bottom:-4px}
 .fld label{display:flex;align-items:center}
 .fld .req-dot{color:var(--due);margin-left:4px;font-weight:700}
 .inp.pend{border-color:var(--due);border-style:dashed;background:var(--due-bg)}
@@ -825,6 +919,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cc-lg i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 /* --- barra de contexto del cliente --- */
 .cbar{display:flex;align-items:center;gap:14px;padding:0 var(--sp-5);height:56px;flex:0 0 auto;
+  max-width:1400px;margin-inline:auto;width:100%;
   background:var(--surface);border-bottom:1px solid var(--line);z-index:var(--z-sticky);overflow-x:auto}
 .cbar-back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2);
   background:none;border:none;cursor:pointer;padding:6px 8px 6px 4px;border-radius:var(--r-1);flex:0 0 auto}
@@ -1002,6 +1097,14 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cola-vacio svg{width:34px;height:34px;stroke:var(--ok);fill:none;stroke-width:1.7;flex:0 0 auto}
 .cola-vacio b{display:block;font-size:var(--t-3)}
 .cola-vacio span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+
+/* buscador de empresas */
+.cl-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-4)}
+.cl-buscar{position:relative;flex:1 1 320px;min-width:220px;display:flex;align-items:center}
+.cl-buscar svg{position:absolute;left:12px;width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.9;pointer-events:none}
+.cl-buscar .inp{height:38px;padding-left:36px;width:100%;margin:0}
+.cl-buscar .inp::-webkit-search-cancel-button{cursor:pointer}
+.cl-cont{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:auto}
 @media(max-width:820px){
   .cola-i{grid-template-columns:10px 1fr auto;row-gap:6px}
   .cola-i .q{grid-column:2/-1}
@@ -1354,7 +1457,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg><span class="lbl">Usuarios y accesos</span></a>
     </nav>
     <div class="rail-foot">
-      <p>Adolphus<br id="railFootBr">Prototipo · datos de demo</p>
+      <p>Adolphus<br id="railFootBr">Versión <b class="mono" id="verApp">—</b></p>
       <button class="icon-btn" onclick="toggleRail()" title="Contraer barra"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     </div>
   </aside>
@@ -1485,7 +1588,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
             <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div></div>
-        <div class="kb" id="kanban"></div>
+        <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
@@ -1602,6 +1705,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 </div>
 
 <div class="toasts" id="toasts"></div>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
 
 <script>
 "use strict";
@@ -1899,9 +2003,27 @@ const DOCS=[
  {a:'a7',t:'INF',n:'Informe de mantenimiento AD-26-0511.pdf',f:'2026-04-02',w:'1.4 MB'},
  {a:'a7',t:'DS',n:'Datasheet Orbinox EB 10 pulg.pdf',f:'2021-03-19',w:'610 KB'}
 ];
+/* Estados de una solicitud, de punta a punta. Cada uno dice quién la
+   tiene, qué falta y de quién depende avanzar — que es lo que el
+   cliente pregunta por teléfono cuando no lo ve en pantalla. */
+const FLUJO=[
+ {k:'nueva',   n:'Nueva',        r:'Adolphus · Comercial',  sig:'Revisar el pedido y confirmar los números de parte'},
+ {k:'revision',n:'En revisión',  r:'Adolphus · Ingeniería', sig:'Verificar compatibilidad con el equipo'},
+ {k:'cotizada',n:'Cotizada',     r:'Cliente',               sig:'Aprobar o rechazar la cotización', cli:true},
+ {k:'aprobada',n:'Aprobada',     r:'Adolphus · Comercial',  sig:'Reservar repuestos y programar la visita'},
+ {k:'programada',n:'Programada', r:'Adolphus · Servicio',   sig:'Ejecutar el trabajo en la fecha acordada'},
+ {k:'ejecucion',n:'En ejecución',r:'Adolphus · Servicio',   sig:'Cerrar la orden y emitir el certificado'},
+ {k:'cerrada', n:'Cerrada',      r:'—',                     sig:'Sin pendientes'}
+];
+const pasoDe=k=>FLUJO.find(x=>x.k===k)||FLUJO[0];
+const idxPaso=k=>Math.max(0,FLUJO.findIndex(x=>x.k===k));
 let SOLICITUDES=[
- {id:'s1',n:'SOL-2026-0188',cli:'agro',f:'2026-07-18',est:'Cotizada',items:[{n:'AD-SV-KIT-SEL',q:2,a:'a12'},{n:'AD-SV-RES-150',q:1,a:'a13'}]},
- {id:'s2',n:'SOL-2026-0201',cli:'minera',f:'2026-07-21',est:'Pendiente',items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}]}
+ {id:'s1',n:'SOL-2026-0188',cli:'agro',f:'2026-07-18',est:'cotizada',prom:'2026-07-30',
+  items:[{n:'AD-SV-KIT-SEL',q:2,a:'a12'},{n:'AD-SV-RES-150',q:1,a:'a13'}],
+  hist:[{f:'2026-07-18',t:'Recibida del cliente'},{f:'2026-07-19',t:'Revisada por ingeniería'},{f:'2026-07-22',t:'Cotización enviada'}]},
+ {id:'s2',n:'SOL-2026-0201',cli:'minera',f:'2026-07-21',est:'revision',prom:'2026-07-28',
+  items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}],
+  hist:[{f:'2026-07-21',t:'Recibida del cliente'}]}
 ];
 const USUARIOS=[
  {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
@@ -1917,7 +2039,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -1996,6 +2118,58 @@ function estado(a){
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
   return {k:'ok',t:'Operativo',c:'ok'};
 }
+/* ============================================================
+   AYUDA EN CONTEXTO
+   Un solo globo, colocado con posición fija junto al icono. Aparece al
+   pasar por encima, al llegar con el teclado y al tocar en el celular —
+   los tres, porque el del navegador no cubre ninguno de los dos últimos.
+   ============================================================ */
+let tipActual=null,tipDesde=0;
+function mostrarTip(el){
+  const t=$('#tip'),txt=el.getAttribute('data-h');
+  if(!t||!txt)return;
+  if(tipActual&&tipActual!==el)tipActual.classList.remove('on');
+  if(tipActual!==el)tipDesde=Date.now();
+  tipActual=el;el.classList.add('on');
+  t.textContent=txt;t.classList.add('on');t.setAttribute('aria-hidden','false');
+  // se mide después de pintar el texto, si no el alto sale mal
+  const r=el.getBoundingClientRect(),m=8,tr=t.getBoundingClientRect();
+  let x=r.left+r.width/2-tr.width/2;
+  x=Math.max(m,Math.min(x,window.innerWidth-tr.width-m));
+  const cabeAbajo=r.bottom+tr.height+m<window.innerHeight;
+  const y=cabeAbajo?r.bottom+m:r.top-tr.height-m;
+  t.classList.toggle('abajo',cabeAbajo);t.classList.toggle('arriba',!cabeAbajo);
+  t.style.left=Math.round(x)+'px';t.style.top=Math.round(y)+'px';
+  t.style.setProperty('--fx',Math.round(Math.max(10,Math.min(r.left+r.width/2-x-4.5,tr.width-19)))+'px');
+}
+function ocultarTip(){
+  const t=$('#tip');if(!t)return;
+  t.classList.remove('on');t.setAttribute('aria-hidden','true');
+  if(tipActual)tipActual.classList.remove('on');
+  tipActual=null;
+}
+document.addEventListener('pointerover',e=>{const h=e.target.closest&&e.target.closest('[data-h]');if(h)mostrarTip(h)});
+document.addEventListener('pointerout',e=>{const h=e.target.closest&&e.target.closest('[data-h]');if(h&&h===tipActual)ocultarTip()});
+document.addEventListener('focusin',e=>{const h=e.target.closest&&e.target.closest('[data-h]');h?mostrarTip(h):ocultarTip()});
+document.addEventListener('click',e=>{
+  const h=e.target.closest&&e.target.closest('[data-h]');
+  if(h){
+    e.preventDefault();e.stopPropagation();
+    /* En pantalla táctil, el toque dispara primero pointerover (que ya lo
+       abre) y luego click. Sin este margen se cerraría en el mismo gesto. */
+    const reciente=h===tipActual&&Date.now()-tipDesde<450;
+    (h===tipActual&&!reciente)?ocultarTip():mostrarTip(h);
+    return;
+  }
+  ocultarTip();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')ocultarTip()});
+/* Al desplazar no se esconde: se vuelve a colocar. Antes, el simple
+   hecho de que el navegador desplazara el campo para mostrarlo hacía
+   desaparecer la ayuda que se acababa de abrir. */
+const reponerTip=()=>{if(tipActual)tipActual.isConnected?mostrarTip(tipActual):ocultarTip()};
+['scroll','resize'].forEach(ev=>window.addEventListener(ev,reponerTip,true));
+
 function toast(msg){
   const el=document.createElement('div');el.className='toast';
   el.innerHTML='<span class="dot"></span>'+esc(msg);
@@ -2199,9 +2373,18 @@ function clearPick(){S.picked.clear();paintBulk();renderGrid()}
 function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
 function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
 function renderAssets(){renderStats();renderFilters();renderGrid();paintBulk()}
+function buscarCli(v){S.qCli=v;renderClients()}
+function soloPend(){S.cliPend=!S.cliPend;renderClients()}
 function renderClients(){
-  const list=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
-  $('#ctClients').textContent=list.length;
+  const todos=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
+  const pend=c=>ACTIVOS.filter(a=>a.cli===c.id&&['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
+  const q=(S.qCli||'').trim().toLowerCase();
+  const list=todos.filter(c=>{
+    if(S.cliPend&&!pend(c))return false;
+    if(!q)return true;
+    return [c.n,c.ruc,c.ind,c.fac,c.dir].filter(Boolean).some(x=>String(x).toLowerCase().includes(q));
+  });
+  $('#ctClients').textContent=todos.length;
   const ini=n=>n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const staff=S.rol!=='cliente';
   const sel=S.cliSel||(S.cliSel=new Set());
@@ -2209,11 +2392,25 @@ function renderClients(){
   $('#clientsView').innerHTML=`
    <div class="hd"><div><h1>Clientes</h1><p>Cada cliente con su parque de válvulas. Entra a uno para ver, crear y gestionar sus equipos.${staff?' Marca la casilla para seleccionar y eliminar.':''}</p></div>
      ${staff?`<button class="btn" onclick="openNewClient()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>`:''}</div>
+   <div class="cl-tools">
+     <label class="cl-buscar">
+       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+       <input class="inp" type="search" placeholder="Busca la empresa por nombre, RUC o sector" value="${esc(S.qCli||'')}"
+              oninput="buscarCli(this.value)" aria-label="Buscar empresa">
+     </label>
+     <button class="ch ${S.cliPend?'on':''}" onclick="soloPend()">
+       <span class="pt" style="background:var(--due)"></span>Solo con pendientes
+       <b>${todos.filter(pend).length}</b></button>
+     ${q||S.cliPend?`<button class="btn quiet xs" onclick="S.qCli='';S.cliPend=false;renderClients()">Limpiar</button>`:''}
+     <span class="cl-cont">${list.length} de ${todos.length}</span>
+   </div>
    ${staff?`<div class="bulk ${sel.size?'on':''}" style="margin-bottom:var(--sp-4)">
       <b>${sel.size} cliente${sel.size===1?'':'s'} seleccionado${sel.size===1?'':'s'}</b>
       <span class="spacer" style="flex:1"></span>
       <button class="btn xs" onclick="pedirBajaClientes()">Eliminar seleccionados</button>
       <button class="btn xs" onclick="S.cliSel.clear();renderClients()">Limpiar</button></div>`:''}
+   ${list.length?'':`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <b>Ninguna empresa coincide</b>Prueba con otro nombre o quita el filtro.</div>`}
    <div class="cl-grid">${list.map(c=>{
      const eq=ACTIVOS.filter(a=>a.cli===c.id);
      const atn=eq.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
@@ -2255,7 +2452,7 @@ function pedirBajaClientes(){
      <div class="sq-i"><span class="cl-mark" style="width:30px;height:30px;font-size:11px">${esc(r.c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>
        <span class="sq-t"><b>${esc(r.c.n)}</b><span>${esc(r.c.ind||'')} · ${esc(r.c.fac||'')}</span></span>
        <span class="sq-d">${r.v} válvula${r.v===1?'':'s'}</span></div>`).join('')}</div>
-   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" title="Clave interna de Adolphus para confirmar bajas.">?</span></label>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Clave interna de Adolphus para confirmar bajas.">?</span></label>
      <input class="inp pend" id="dcPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
      <span class="pend-msg" id="dcErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -2309,6 +2506,40 @@ function exitClient(){
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   closeDrawer();renderAll();go('clients');
 }
+/* Abre la ficha encima de lo que se esté viendo, sin cambiar de página:
+   al cerrarla se vuelve exactamente al mismo sitio. */
+function verEquipo(id){
+  const a=ACTIVOS.find(x=>x.id===id);if(!a){toast('Ese equipo ya no existe');return}
+  S.tab='ficha';openAsset(id);
+}
+/* Detalle de una orden, también encima. */
+function verOrden(idOrAct,esActivo){
+  const o=esActivo?ORDENES.find(x=>x.act===idOrAct&&x.et!=='certificada'):ORDENES.find(x=>x.id===idOrAct);
+  if(!o){toast('Esa orden ya no está abierta');return}
+  const a=ACTIVOS.find(x=>x.id===o.act)||{}, i=ETAPAS.findIndex(e=>e[0]===o.et), sig=ETAPAS[i+1];
+  $('#mTitle').textContent=`${o.n} · ${esc(a.tag||'')}`;
+  $('#mBody').innerHTML=`
+    <div class="paso-l">${ETAPAS.map(([k,l],x)=>`<div class="paso-i ${x<i?'hecho':x===i?'aqui':''}">
+      <span class="lin"></span><span class="lbl2">${esc(l)}</span></div>`).join('')}</div>
+    <div class="aqui-caja">
+      <div class="fila"><b>Tipo</b><span>${esc(o.tipo)}</span></div>
+      <div class="fila"><b>Responsable</b><span>${esc(o.tec||'Por asignar')}</span></div>
+      <div class="fila"><b>Fecha</b><span class="mono">${esc(o.f)}</span></div>
+      <div class="fila"><b>Equipo</b><span>${esc(a.tag||'')} · ${esc(cli(a.cli).n||'')} · ${esc(a.ar?area(a):'')}</span></div>
+    </div>
+    <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
+      <div class="fx-blk-h"><h3>Alcance y hallazgos</h3></div>
+      <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(o.hall||'Sin observaciones.')}</p>
+    </section>
+    ${o.partes&&o.partes.length?`<section class="fx-blk"><div class="fx-blk-h"><h3>Repuestos previstos</h3></div>
+      <div class="parts-inline">${o.partes.map(x=>`<span class="tag mono">${esc(x)}</span>`).join('')}</div></section>`:''}`;
+  const cliente=S.rol==='cliente';
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>
+    ${!cliente&&sig?`<button class="btn" onclick="closeModal();advanceWO('${o.id}')">Pasar a ${esc(sig[1].toLowerCase())}</button>`:''}`;
+  $('#modal').classList.add('on');
+}
+
 /* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
 function gotoAsset(id,tab){
   const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
@@ -2360,7 +2591,7 @@ function openAsset(id){
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;})();
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -2379,9 +2610,9 @@ function deleteAsset(id){
      <div>Vas a dar de baja <b>${esc(a.tag||a.ser||'este equipo')}</b> — ${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')}${a.ser?`, serie <b class="mono">${esc(a.ser)}</b>`:''} de ${esc(cli(a.cli).n||'')}.
      ${(ords||cals||docs)?`Se eliminarán también <b>${ords} órdenes</b>, <b>${cals} certificados</b> y <b>${docs} documentos</b> asociados.`:''}
      Esta acción no se puede deshacer.</div></div>
-   <div class="fld"><label>Motivo de la baja <span class="hlp" title="Queda como referencia de por qué se retiró el equipo del sistema.">?</span></label>
+   <div class="fld"><label>Motivo de la baja <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Queda como referencia de por qué se retiró el equipo del sistema.">?</span></label>
      <select class="inp" id="daMotivo"><option>Registrado por error</option><option>Duplicado</option><option>Equipo retirado de planta</option><option>Dado de baja por falla</option><option>Otro</option></select></div>
-   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" title="Clave interna de Adolphus para confirmar bajas. Evita eliminaciones accidentales.">?</span></label>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Clave interna de Adolphus para confirmar bajas. Evita eliminaciones accidentales.">?</span></label>
      <input class="inp pend" id="daPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
      <span class="pend-msg" id="daErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -2485,22 +2716,14 @@ function paneFicha(){
   // datos clave (solo los que están llenos)
   const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
   $('#pn-ficha').innerHTML=`
+   ${queToca(a)}
    <div class="ficha-hero">
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
-       <div class="fx-tiles">
-         ${tile('Próxima calibración',calV,calC,calSub)}
-         ${tile('Último servicio',a.ult||'Sin registro',a.ult?'':'due',ultTec)}
-         ${tile('Trabajo abierto',abiertas.length?abiertas[0].n:'Ninguno',abiertas.length?'sel':'ok',
-                abiertas.length?ETAPAS.find(e=>e[0]===abiertas[0].et)[1]:'nada pendiente')}
-       </div>
+       ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+       <div class="fx-ult"><span>Último servicio</span><b>${esc(a.ult||'sin registro')}</b>${ultTec?`<span>· ${esc(ultTec)}</span>`:''}</div>
      </div>
    </div>
-   ${(!a.ser||!a.tag)?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-     <div>Llegó incompleto desde el levantamiento: falta ${!a.tag?'<b>tag</b>':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'<b>número de serie</b>':''}. Sin serie no hay trazabilidad de repuestos ni de servicio.</div></div>`:''}
-   ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
-   ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
    ${fichaCalib(a)}
    ${fichaRepuestos(a)}
    ${fichaMovimientos(a)}
@@ -2512,6 +2735,34 @@ function paneFicha(){
 
 /* Bloques de la ficha. Cada uno se dibuja solo si tiene algo que decir;
    si no, en lugar de un hueco deja la acción que falta por hacer. */
+/* Lo primero que se ve al abrir un equipo: qué le pasa y qué hacer.
+   Una frase y un botón. Todo lo demás queda debajo, para quien lo
+   necesite. */
+function queToca(a){
+  const e=estado(a), d=a.prox?dias(a.prox):null, cliente=S.rol==='cliente';
+  const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
+  let t,txt,ac=null;
+  if(e.k==='incompleto'){t='due';
+    txt=`Falta ${!a.tag?'el tag de planta':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'el número de serie':''}. Sin serie no se puede pedir el repuesto correcto.`;
+    if(!cliente)ac={t:'Completar la ficha',f:`showTab('tec')`};}
+  else if(e.k==='taller'){t='sel';
+    txt=`Está en servicio: orden ${o.n}, etapa ${ETAPAS.find(x=>x[0]===o.et)[1].toLowerCase()}.`;
+    ac={t:'Ver la orden',f:`verOrden('${o.id}')`};}
+  else if(e.k==='vencido'){t='late';
+    txt=`La calibración venció hace ${Math.abs(d)} días. Este equipo debería salir de servicio o calibrarse ya.`;
+    if(!cliente)ac={t:'Calibrar ahora',f:`openCalib('${a.id}')`};}
+  else if(e.k==='porvencer'){t='due';
+    txt=`La calibración vence en ${d} días (${a.prox}). Conviene programarla antes de que caiga.`;
+    if(!cliente)ac={t:'Programar la visita',f:`openWO('${a.id}','Calibración')`};}
+  else{t='ok';
+    txt=a.prox?`Sin pendientes. La próxima calibración toca el ${a.prox}.`:'Sin pendientes. Este equipo no tiene programa de calibración.';
+    if(!cliente&&!a.prox)ac={t:'Programar calibración',f:`openWO('${a.id}','Calibración')`};}
+  return `<div class="toca ${t}">
+    <span class="toca-i"></span>
+    <div class="toca-t"><b>${t==='ok'?'Todo en orden':'Qué toca ahora'}</b><p>${txt}</p></div>
+    ${ac?`<button class="btn ${t==='late'?'':'sec'} toca-b" onclick="${ac.f}">${esc(ac.t)}</button>`:''}
+  </div>`;
+}
 function fxBloque(titulo,extra,cuerpo){
   return `<section class="fx-blk"><div class="fx-blk-h"><h3>${titulo}</h3>${extra||''}</div>${cuerpo}</section>`;
 }
@@ -2560,29 +2811,26 @@ function fichaMovimientos(a){
 }
 
 function paneTec(){
-  const a=S.cur,m=MODELOS[a.mod]||{};
-  const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
-  const faltan=[['Tag',a.tag],['N.º de serie',a.ser],['Tamaño',a.sz],['Rating / clase',a.rt],
-    ['Rango / set',a.rng],['Criticidad',a.cr],['Último servicio',a.ult]].filter(([,v])=>!v).length;
+  const a=S.cur,m=MODELOS[a.mod]||{},cliente=S.rol==='cliente';
+  /* Se muestra lo que está lleno. Lo que falta no se reparte por toda
+     la pantalla: se junta al final, con un solo botón para completarlo. */
+  const campos=[
+    ['Tag de planta',a.tag],['N.º de serie',a.ser],['Marca',m.m],['Modelo',a.mod],
+    ['Tipo constructivo',m.t],['Familia',CL[a.cl]],
+    ['Tamaño',a.sz],['Rating / clase',a.rt],['Cv',a.cv],['Rango / set',a.rng],['Falla a',a.air],
+    ['Criticidad',a.cr],['Ubicación',cli(a.cli).n+' · '+area(a)],
+    ['Último servicio',a.ult],['Próxima calibración',a.prox]
+  ];
+  const hay=campos.filter(([,v])=>v&&v!=='—');
+  const faltan=campos.filter(([,v])=>!v||v==='—');
   $('#pn-tec').innerHTML=`
-   ${faltan?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-     <div>Faltan <b>${faltan}</b> ${faltan===1?'dato':'datos'} por completar. Cada uno resta salud al equipo y quita precisión al pedir repuestos.</div></div>`:''}
-   <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
-     <div class="fx-blk-h"><h3>Identificación</h3></div>
-     <dl class="dl">${row('Tag de planta',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo constructivo',m.t)}${row('Familia',CL[a.cl])}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Datos de proceso</h3></div>
-     <dl class="dl">${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Servicio</h3></div>
-     <dl class="dl">${row('Criticidad',a.cr)}${row('Ubicación',cli(a.cli).n+' · '+area(a))}${row('Último servicio',a.ult)}${row('Próxima calibración',a.prox)}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Sobre el modelo</h3></div>
-     <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p>
-   </section>`;
+   <div class="dt">${hay.map(([k,v])=>`<div class="dt-i"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+   ${faltan.length?`<div class="dt-falta">
+     <div><b>Faltan ${faltan.length} ${faltan.length===1?'dato':'datos'}</b>
+       <span>${faltan.map(([k])=>esc(k)).join(' · ')}</span></div>
+     ${cliente?'':`<button class="btn sec xs" onclick="toast('El levantamiento en planta o la carga de Excel completan estos campos');showTab('ficha')">Cómo completarlos</button>`}
+   </div>`:''}
+   <p class="dt-nota">${esc(m.d||'')}${m.m?` — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.`:''}</p>`;
 }
 function paneCal(){
   const a=S.cur;
@@ -2744,9 +2992,10 @@ function renderReq(){
         <td style="text-align:right"><button class="btn quiet xs" onclick="S.cart.splice(${i},1);renderReq()">✕</button></td></tr>`}).join('')}
         <tr style="cursor:default"><td colspan="5" style="text-align:right;font-weight:600;border-top:1px solid var(--line)">Subtotal (sin IGV)</td><td class="num" style="text-align:right;border-top:1px solid var(--line)"><b>${usd(cartSub)}</b></td><td style="border-top:1px solid var(--line)"></td></tr></tbody></table></div>`:'';
   $('#reqList').innerHTML=carrito+(mias.length?`<table class="grid">
-    <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th>Quién la tiene</th><th></th></tr></thead>
     <tbody>${mias.map(s=>`<tr style="cursor:default"><td class="mono"><b>${s.n}</b></td><td>${esc(cli(s.cli).n)}</td><td class="mono">${s.f}</td>
-      <td>${s.items.length}</td><td><span class="tag ${s.est==='Cotizada'?'ok':'due'}"><span class="dot"></span>${s.est}</span></td>
+      <td>${s.items.length}</td><td><span class="tag ${s.est==='cerrada'?'ok':s.est==='cotizada'?'sel':'due'}"><span class="dot"></span>${esc(pasoDe(s.est).n)}</span></td>
+      <td class="muted" style="white-space:normal;max-width:30ch">${esc(pasoDe(s.est).r)}</td>
       <td style="text-align:right"><button class="btn sec xs" onclick="verSol('${s.id}')">Ver detalle</button></td></tr>`).join('')}</tbody></table>`
     :(carrito?'':`<div class="empty"><b>Sin solicitudes</b>Las peticiones de repuestos aparecerán aquí.</div>`));
   $('#ctReq').textContent=mias.length;
@@ -2754,18 +3003,72 @@ function renderReq(){
 function enviarSol(){
   const n='SOL-2026-'+String(1000+Math.floor(Math.random()*8999)).slice(0,4);
   const conAct=S.cart.find(c=>c.a);
-  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'Pendiente',
-    items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
+  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'nueva',
+    items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a})),hist:[{f:hoyISO(),t:'Recibida del cliente'}]});
   S.cart=[];renderReq();registrar('Solicitud',`${n} enviada`);toast(`Solicitud ${n} enviada`);
 }
 function verSol(id){
-  const s=SOLICITUDES.find(x=>x.id===id);
-  $('#mTitle').textContent=s.n;
-  $('#mBody').innerHTML=`<table class="grid"><thead><tr><th>N.º de parte</th><th>Equipo</th><th>Cant.</th></tr></thead>
-   <tbody>${s.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a);return `<tr style="cursor:default"><td class="mono"><b>${i.n}</b></td>
-     <td>${esc(a?.tag||'')} <small class="muted">${esc(cli(a?.cli).n||'')}</small></td><td>${i.q}</td></tr>`}).join('')}</tbody></table>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button><button class="btn" onclick="closeModal();openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,SOLICITUDES.find(x=>x.id==='${id}').cli,'cot')">Generar cotización (PDF)</button>`;
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return;
+  const iAct=idxPaso(so.est), p=pasoDe(so.est), cliente=S.rol==='cliente';
+  const total=so.items.reduce((t,i)=>t+precio(i.n)*(i.q||1),0);
+  const sig=FLUJO[iAct+1];
+  $('#mTitle').textContent=`${so.n} · ${cli(so.cli).n}`;
+  $('#mBody').innerHTML=`
+    <div class="paso-l">${FLUJO.map((x,k)=>`<div class="paso-i ${k<iAct?'hecho':k===iAct?'aqui':''}">
+      <span class="lin"></span><span class="lbl2">${esc(x.n)}</span></div>`).join('')}</div>
+    <div class="aqui-caja">
+      <div class="fila"><b>Ahora la tiene</b><span>${esc(p.r)}</span></div>
+      <div class="fila"><b>Siguiente paso</b><span>${esc(p.sig)}</span></div>
+      ${so.prom?`<div class="fila"><b>Comprometido</b><span class="mono">${esc(so.prom)}</span>${dias(so.prom)<0?' <span class="tag late">atrasado</span>':''}</div>`:''}
+    </div>
+    <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
+      <thead><tr><th>N.º de parte</th><th>Equipo</th><th class="num">Cant.</th><th class="num">Unitario</th><th class="num">Importe</th></tr></thead>
+      <tbody>${so.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a)||{};const pu=precio(i.n);
+        return `<tr style="cursor:default"><td class="mono"><b>${esc(i.n)}</b></td>
+        <td>${esc(a.tag||'—')} <small class="muted">${esc(a.ar?area(a):'')}</small></td>
+        <td class="num">${i.q}</td><td class="num mono">${usd(pu)}</td><td class="num mono"><b>${usd(pu*(i.q||1))}</b></td></tr>`}).join('')}
+      <tr style="cursor:default"><td colspan="4" style="text-align:right;font-weight:600;border-top:1px solid var(--line)">Total referencial (sin IGV)</td>
+        <td class="num mono" style="border-top:1px solid var(--line)"><b>${usd(total)}</b></td></tr></tbody></table>
+    <section class="fx-blk"><div class="fx-blk-h"><h3>Qué ha pasado</h3></div>
+      <div class="hist-l">${(so.hist||[]).slice().reverse().map(h=>`<div class="hist-i"><b>${esc(h.f)}</b><span>${esc(h.t)}</span></div>`).join('')}</div>
+    </section>`;
+  /* Las acciones dependen de quién mira: el cliente aprueba o rechaza
+     cuando le toca; Adolphus mueve la solicitud al paso siguiente. */
+  const acc=[];
+  if(so.est==='cotizada'&&cliente){
+    acc.push(`<button class="btn quiet" style="color:var(--late)" onclick="rechazarSol('${id}')">Rechazar</button>`);
+    acc.push(`<span style="flex:1"></span>`);
+    acc.push(`<button class="btn sec" onclick="openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,'${cli(so.cli).n}')">Ver cotización</button>`);
+    acc.push(`<button class="btn" onclick="aprobarSol('${id}')">Aprobar cotización</button>`);
+  }else{
+    acc.push(`<button class="btn sec" onclick="closeModal()">Cerrar</button>`);
+    if(!cliente){
+      acc.push(`<button class="btn sec" onclick="openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,'${cli(so.cli).n}')">Cotización (PDF)</button>`);
+      if(sig)acc.push(`<button class="btn" onclick="avanzarSol('${id}')">Pasar a ${esc(sig.n.toLowerCase())}</button>`);
+    }
+  }
+  $('#mFoot').innerHTML=acc.join('');
   $('#modal').classList.add('on');
+}
+function tocaSol(id,est,txt){
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return null;
+  so.est=est;(so.hist=so.hist||[]).push({f:hoyISO(),t:txt});
+  guardarLocal();renderAll();verSol(id);registrar('Solicitud',`${so.n} · ${txt.toLowerCase()}`);
+  return so;
+}
+function avanzarSol(id){
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return;
+  const sig=FLUJO[idxPaso(so.est)+1];if(!sig)return;
+  tocaSol(id,sig.k,`Pasa a ${sig.n.toLowerCase()}`);
+  toast(`${so.n} · ${sig.n.toLowerCase()}`);
+}
+function aprobarSol(id){
+  const so=tocaSol(id,'aprobada','Cotización aprobada por el cliente');
+  if(so)toast(`${so.n} aprobada — Adolphus programará la visita`);
+}
+function rechazarSol(id){
+  const so=tocaSol(id,'revision','El cliente pidió revisar la cotización');
+  if(so)toast(`${so.n} devuelta a revisión`);
 }
 
 /* ============================================================
@@ -2827,6 +3130,7 @@ function renderWO(){
           <div class="wo-n" onclick="openAsset('${o.act}');showTab('hist')">${esc(a?.tag||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
           ${nx&&S.rol!=='cliente'?`<button class="btn ${o.et==='taller'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();advanceWO('${o.id}')">${nx[1]}</button>`:''}
+          <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
 }
@@ -3887,7 +4191,7 @@ function colaTrabajo(){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
       out.push({pr,p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
-        ac:{t:'Ver orden',f:`gotoClientPage('wo','${a.cli}')`}});
+        ac:{t:'Ver orden',f:`verOrden('${a.id}',1)`}});
     }
     else if(e.k==='porvencer'&&d<=60)
       out.push({pr,p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
@@ -3898,10 +4202,10 @@ function colaTrabajo(){
         q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
         ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
   });
-  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>x.est!=='Atendida').forEach(x=>{
-    out.push({p:2.5,g:'sol',cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
-      q:`Solicitud <em>${esc(x.est.toLowerCase())}</em> del ${esc(x.f)}`,
-      ac:{t:cliente?'Ver':'Atender',f:`gotoClientPage('req','${x.cli}')`}});
+  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>!['cerrada','ejecucion'].includes(x.est)).forEach(x=>{
+    out.push({p:2.5,g:'sol',solId:x.id,cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
+      q:`<em>${esc(pasoDe(x.est).n)}</em> · ${esc(pasoDe(x.est).r)}`,
+      ac:{t:cliente&&x.est==='cotizada'?'Aprobar':cliente?'Ver':'Atender',f:`verSol('${x.id}')`}});
   });
   /* dentro de un mismo grupo va primero el equipo en peor estado; la
      criticidad del proceso desempata (ver prioridad()). */
@@ -3931,7 +4235,7 @@ function colaHtml(){
   </div>`;
   const filas=lista.slice(0,tope).map(x=>{
     const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
-    const abrir=x.id?`gotoAsset('${x.id}')`:`gotoClientPage('req','${x.cliId}')`;
+    const abrir=x.id?`verEquipo('${x.id}')`:`verSol('${x.solId}')`;
     return `<div class="cola-i" onclick="${abrir}">
       <span class="pt" style="background:var(--${tono})"></span>
       <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
@@ -3956,7 +4260,7 @@ function renderHomeCliente(){
   const crit=vs.filter(a=>a.cr==='Crítica').length;
   const conProg=vs.filter(a=>a.prox).sort((x,y)=>x.prox.localeCompare(y.prox));
   const prox=conProg[0]?dias(conProg[0].prox):null;
-  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='Atendida');
+  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='cerrada');
   const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='certificada'});
   const st=k=>vs.filter(a=>estado(a).k===k).length;
   const saludMedia=vs.length?Math.round(vs.reduce((t,a)=>t+salud(a).n,0)/vs.length):100;
@@ -3988,7 +4292,7 @@ function renderHomeCliente(){
   /* próximas calibraciones: lo que hay que programar */
   const proxHtml=conProg.length?`<table class="grid"><thead><tr><th>Equipo</th><th>Área</th><th class="num">Vence</th><th></th></tr></thead>
     <tbody>${conProg.slice(0,6).map(a=>{const d=dias(a.prox);
-      return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
+      return `<tr onclick="verEquipo('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
       <td class="muted">${esc(area(a))}</td>
       <td class="num"><span class="tag ${d<0?'late':d<=90?'due':'ok'}">${d<0?`hace ${Math.abs(d)} d`:`en ${d} d`}</span></td>
       <td class="mono muted" style="text-align:right">${esc(a.prox)}</td></tr>`}).join('')}</tbody></table>`
@@ -3996,7 +4300,7 @@ function renderHomeCliente(){
 
   /* servicios en curso: en qué anda Adolphus con tus equipos */
   const servHtml=ordAb.length?`<div class="feed">${ordAb.slice(0,6).map(o=>{const a=ACTIVOS.find(z=>z.id===o.act)||{};
-    return `<div class="feed-i" onclick="gotoAsset('${o.act}','hist')"><span class="feed-ic">⚙</span>
+    return `<div class="feed-i" onclick="verOrden('${o.id}')"><span class="feed-ic">⚙</span>
       <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(o.tipo)}</b><p>${esc(o.n)} · ${esc(o.tec)}</p></div>
       <span class="tag sel">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin servicios en curso</b>Ningún equipo tuyo está en taller ni programado.</div>`;
@@ -4076,9 +4380,9 @@ function renderHome(){
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
   const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
-    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="gotoAsset('${x.o.act}','hist')">
+    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="verOrden('${x.o.id}')">
       <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
-    return `<div class="feed-i" onclick="gotoClientPage('req','${x.s.cli}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
+    return `<div class="feed-i" onclick="verSol('${x.s.id}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   $('#homeView').innerHTML=`
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
@@ -4144,7 +4448,9 @@ function buildNotif(){
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
-  SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&s.est==='Pendiente').forEach(s=>items.push({tone:'due',ic:'▤',t:`${s.n} pendiente de cotizar`,s:`${s.items.length} posiciones · ${cli(s.cli).n}`,req:true}));
+  SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
+    .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
+      s:`${pasoDe(s.est).sig} — ${pasoDe(s.est).r}`,sol:s.id}));
   return items;
 }
 function renderNotif(){
@@ -4156,7 +4462,8 @@ function renderNotif(){
 }
 function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
 function closeNotif(){$('#notifPop').classList.remove('on')}
-function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go(S.cli?'req':'clients');else if(n.id){gotoAsset(n.id)}}
+function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;
+  if(n.sol)verSol(n.sol); else if(n.id)verEquipo(n.id);}
 document.addEventListener('click',closeNotif);
 
 /* ============================================================
@@ -4179,7 +4486,7 @@ function openNewAsset(preCli){
   $('#mBody').innerHTML=`
    ${fijo
      ? `<input type="hidden" id="naCli" value="${fijo}">
-        <div class="fld"><label>Área / unidad <span class="hlp" title="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
+        <div class="fld"><label>Área / unidad <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
      : `<div class="two">
           <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
           <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
@@ -4283,25 +4590,25 @@ function openCalib(assetId,edit){
      <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="${esc(ult?ult.tec:'K. Ortiz')}"></div>
      <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="${esc(ult?ult.banco:'Banco neumático · patrón Fluke 700G')}"></div>
      <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido">${['Aire','Nitrógeno','Agua','Vapor'].map(f=>`<option ${ult&&ult.fluido===f?'selected':''}>${f}</option>`).join('')}</select></div>
-     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" title="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
+     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
        <input class="inp ${isNaN(nom)?'pend req-cb':''}" id="cbNom" value="${isNaN(nom)?'':nom}" placeholder="presión de placa"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>Unidad <span class="hlp" title="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
-     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="${ult?ult.tol:3}"></div>
+     <div class="fld"><label>Unidad <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
+     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="${ult?ult.tol:3}"></div>
      <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="${esc(ult?ult.temp:'22')}"></div>
    </div>
-   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" title="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
+   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
    <div class="two">
-     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" title="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
+     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
        <input class="inp pend req-cb" id="cbAf" placeholder="${ult?`ensayo anterior: ${ult.af}`:'escribe el valor medido'}"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" title="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
-   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" title="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
+   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
    <div class="two">
-     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" title="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
+     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
        <input class="inp pend req-cb" id="cbAl" placeholder="${ult?`ensayo anterior: ${ult.al}`:'escribe el valor final'}"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" title="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
-     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" title="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
-     <div class="fld"><label>Válvula precintada <span class="hlp" title="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
+     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
+     <div class="fld"><label>Válvula precintada <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">4 · Cierre</h3>
    <div class="two">
@@ -4611,7 +4918,7 @@ function openNewClient(){
   ncVerif=false;
   $('#mTitle').textContent='Nuevo cliente';
   $('#mBody').innerHTML=`
-   <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" title="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
+   <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
      <div style="display:flex;gap:8px">
        <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1">
        <button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>
@@ -4623,7 +4930,7 @@ function openNewClient(){
    </div>
    <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="se completa con el RUC"></div>
    <div class="two">
-     <div class="fld"><label>Instalación / planta <span class="hlp" title="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
+     <div class="fld"><label>Instalación / planta <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
      <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
    </div>
    <details class="fx-more" style="margin-top:12px"><summary>¿Cómo sé si el RUC es correcto?</summary>
@@ -4946,7 +5253,7 @@ function openUploadSheet(assetId,fileName){
        <input type="file" id="hcFile" accept="image/*,.pdf" capture="environment" style="display:none">
      </div>
      <div>
-       <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" title="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
+       <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
          <input class="inp" id="hcCod" placeholder="p. ej. C-88-4471" autocomplete="off"><span class="pend-msg" id="hcOk" style="display:none"></span></div>
        <div class="fld"><label>Válvula</label><select class="inp" id="hcAct" ${vacio?'disabled':''}>${vacio?'<option value="">— sin válvulas registradas en este cliente —</option>':psv.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag||'(sin tag)')} · ${esc(a.ser||'')} — ${esc(cli(a.cli).n)}</option>`).join('')}</select></div>
        <div class="two">
@@ -5149,6 +5456,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
+const VERSION='2026-07-29';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -5562,6 +5870,7 @@ restaurarCuentas();
 restaurarLocal();
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
+$('#verApp').textContent=VERSION;
 </script>
 </body>
 </html>
