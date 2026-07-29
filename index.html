@@ -665,6 +665,25 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cover-feat b{font-weight:600;color:var(--ink)}
 .cover-foot{margin-top:28px;font-size:11px;color:var(--ink-3);letter-spacing:.02em}
 
+/* A tamaño completo la tarjeta pide 956 px de alto: cabe en un monitor
+   pero no en una laptop, donde el botón de entrar queda justo en el
+   pliegue y el recorrido de demostración ni se ve. Por debajo de eso
+   la tarjeta respira menos —empezando por la marca, que es lo que más
+   ocupa— para que todo el acceso quepa de una vez, sin desplazar. */
+@media(max-height:960px){
+  .cover-panel{padding:20px 40px}
+  .cover-card .logo-full{width:104px;margin:0 auto 12px}
+  .cover-card h1{font-size:21px}
+  .cover-card .lede{margin:5px 0 18px}
+  .auth-tabs{margin:14px 0 16px}
+  .cover-card .inp{height:40px;margin-bottom:12px}
+  .cover-card select.inp{background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px}
+  .auth-chk{margin-bottom:14px}
+  .cover-btn{height:44px}
+  .auth-alt{margin-top:14px;padding-top:13px}
+  .cover-foot{margin-top:14px}
+}
+
 /* ============================================================
    ACCESO — iniciar sesión / crear cuenta
    ============================================================ */
@@ -5480,6 +5499,19 @@ const ICON_SOUND=`<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><pat
 $('#heroStage').innerHTML=VIDEO_PROMO
   ? `<div class="hero-video-wrap"><video id="promoVid" class="hero-video" autoplay muted loop playsinline preload="auto"><source src="${VIDEO_PROMO}" type="video/mp4"></video><button class="hero-sound" onclick="toggleSound()" aria-label="Activar sonido">${ICON_MUTED}</button></div>`
   : PHOTO.globo;
+/* El video vive en un archivo aparte (video/presentacion.mp4). Cuando
+   el portal se comparte como un solo HTML ese archivo no viaja, y sin
+   esto la portada muestra un rectángulo negro. Si el video no carga,
+   vuelve la foto de la válvula. */
+(function respaldoDelVideo(){
+  const v=document.getElementById('promoVid'); if(!v) return;
+  let hecho=false;
+  const alFallar=()=>{ if(hecho)return; hecho=true; $('#heroStage').innerHTML=PHOTO.globo };
+  v.addEventListener('error',alFallar,true);   // en captura: también los de <source>
+  v.addEventListener('loadeddata',()=>{hecho=true});
+  // si a los 4 s no llegó ni un fotograma, el archivo no está
+  setTimeout(()=>{ if(!v.videoWidth) alFallar() },4000);
+})();
 function setSoundIcon(muted){const btn=document.querySelector('.hero-sound');if(btn){btn.innerHTML=muted?ICON_MUTED:ICON_SOUND;btn.setAttribute('aria-label',muted?'Activar sonido':'Silenciar')}}
 function toggleSound(){
   const v=document.getElementById('promoVid');if(!v)return;
