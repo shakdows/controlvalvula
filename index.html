@@ -154,6 +154,8 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
   height:52px;flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line);
   display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);z-index:var(--z-sticky)
 }
+.bar>*{flex:0 0 auto}
+.bar::before,.bar::after{content:'';flex:1 1 0;min-width:0;max-width:calc((100% - 1400px)/2)}
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);min-width:0;flex:1}
 .crumbs b{color:var(--ink);font-weight:600}
 .crumbs .sep{opacity:.45}
@@ -190,7 +192,7 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .ava-btn[aria-expanded="true"] .cv{transform:rotate(180deg)}
 
 .view{flex:1;overflow:auto;position:relative}
-.view-pad{padding:var(--sp-5)}
+.view-pad{padding:var(--sp-5);max-width:1400px;margin-inline:auto}
 .page{display:none}.page.on{display:block}
 
 /* ============================================================
@@ -319,8 +321,12 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 }
 .drawer.on{transform:none}
 .drawer.wide{width:min(1180px,98vw)}
+:root{--dr-col:640px}
 .dr-h{padding:var(--sp-4) var(--sp-5) var(--sp-3);border-bottom:1px solid var(--line-2);flex:0 0 auto}
-.dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
+/* la columna manda: el contenido vive centrado y con un ancho cómodo,
+   aunque el panel se amplíe */
+.dr-h>*,.pane>*{max-width:var(--dr-col);margin-inline:auto}
+.dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px;width:100%}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
 /* Recorrido de la solicitud: dónde está, quién la tiene y qué falta. */
@@ -352,7 +358,9 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 /* Encabezado permanente: identidad, estado y salud siempre a la vista,
    sin importar en qué pestaña esté el ingeniero. */
-.dr-id{display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;justify-content:space-between}
+/* Las pastillas y la salud van juntas, en la misma fila, sin el hueco
+   que dejaba separarlas a los extremos. */
+.dr-id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;width:100%}
 .dr-id .izq{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
 .sal{display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--line);
   border-radius:var(--r-pill);padding:4px 12px 4px 5px;cursor:pointer;font:inherit;transition:border-color var(--fast)}
@@ -373,13 +381,17 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .sal-tot span{font-size:13px;color:var(--ink-3)}
 .sal-bar{height:8px;border-radius:5px;background:var(--chart-track);overflow:hidden;margin:10px 0 4px}
 .sal-bar i{display:block;height:100%;border-radius:5px;transition:width var(--slow) var(--ease-out)}
-.dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto}
+.dr-tabs{display:flex;gap:var(--sp-4);border-bottom:1px solid var(--line-2);padding:0 var(--sp-5);flex:0 0 auto;overflow-x:auto;
+  scrollbar-width:none}
+.dr-tabs::-webkit-scrollbar{display:none}
+.dr-tabs::before,.dr-tabs::after{content:'';flex:1 1 0;min-width:0}
 .dr-tab{padding:9px 2px 8px;font:inherit;font-size:13px;font-weight:500;color:var(--ink-3);cursor:pointer;background:none;border:0;
   border-bottom:2px solid transparent;white-space:nowrap;transition:color var(--fast),border-color var(--fast)}
 .dr-tab:hover{color:var(--ink)}
 .dr-tab.on{color:var(--ink);font-weight:600;border-bottom-color:var(--ink)}
 .dr-b{flex:1;overflow:auto;padding:var(--sp-5);padding-bottom:var(--sp-6);overscroll-behavior:contain}
-.dr-f{flex:0 0 auto;padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;gap:var(--sp-2);justify-content:flex-end;background:var(--surface-2)}
+.dr-f{flex:0 0 auto;padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);
+  display:flex;gap:var(--sp-2);justify-content:center;flex-wrap:wrap;background:var(--surface-2)}
 .pane{display:none}.pane.on{display:block}
 
 .dl{display:grid;grid-template-columns:132px 1fr;gap:0}
@@ -436,7 +448,10 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .doc .fm span{font-size:11.5px;color:var(--ink-3)}
 
 /* ---- kanban ---- */
-.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start}
+.kb-wrap{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;
+  scrollbar-width:thin;margin-inline:calc(var(--sp-5)*-1);padding-inline:var(--sp-5)}
+.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start;min-width:1000px}
+@media(min-width:1180px){.kb{min-width:0}}
 .kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
 .kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
 .kb-h{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:600;color:var(--ink-2)}
@@ -847,6 +862,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cc-lg i{display:inline-block;width:11px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
 /* --- barra de contexto del cliente --- */
 .cbar{display:flex;align-items:center;gap:14px;padding:0 var(--sp-5);height:56px;flex:0 0 auto;
+  max-width:1400px;margin-inline:auto;width:100%;
   background:var(--surface);border-bottom:1px solid var(--line);z-index:var(--z-sticky);overflow-x:auto}
 .cbar-back{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--ink-2);
   background:none;border:none;cursor:pointer;padding:6px 8px 6px 4px;border-radius:var(--r-1);flex:0 0 auto}
@@ -1507,7 +1523,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
             <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div></div>
-        <div class="kb" id="kanban"></div>
+        <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
