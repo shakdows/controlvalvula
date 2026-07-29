@@ -423,11 +423,8 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .callout b{color:inherit}
 
 /* ---- despiece ---- */
-.bom{display:grid;grid-template-columns:290px minmax(0,1fr);gap:var(--sp-4);align-items:start}
-.bom>*{min-width:0}
-/* la tabla de posiciones se desliza sola cuando la columna es angosta */
-.bom>div{overflow-x:auto}
-.drawer.wide .bom{grid-template-columns:380px minmax(0,1fr)}
+.bom{display:grid;grid-template-columns:290px 1fr;gap:var(--sp-4);align-items:start}
+.drawer.wide .bom{grid-template-columns:380px 1fr}
 .schema{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);padding:var(--sp-2);position:sticky;top:0}
 .schema svg{width:100%;height:auto;display:block}
 .schema figcaption{text-align:center;font-size:11px;color:var(--ink-3);padding:6px 4px 2px}
@@ -438,22 +435,6 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dpart:hover .fill,.dpart.hot .fill{fill:var(--sel-bg);stroke:var(--sel)}
 .dpart:hover .cb,.dpart.hot .cb{fill:var(--sel);stroke:var(--sel)}
 .dpart:hover .cn,.dpart.hot .cn{fill:var(--surface)}
-
-/* visor 3D del despiece */
-.es-cab{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.es-cab .views{flex:0 0 auto}
-.es-lz{width:100%;max-width:100%;height:clamp(250px,44vh,380px);display:block;touch-action:none;cursor:grab;
-  border-radius:var(--r-1);background:radial-gradient(circle at 50% 34%,var(--surface),var(--surface-2))}
-[data-theme="dark"] .es-lz{background:radial-gradient(circle at 50% 34%,oklch(0.30 0.010 250),oklch(0.24 0.010 252))}
-.es-lz:active{cursor:grabbing}
-.es-mando{display:flex;align-items:center;gap:10px;padding:8px 4px 2px}
-.es-mando label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-  color:var(--ink-3);flex:0 0 auto}
-.es-mando input[type=range]{flex:1;min-width:0;accent-color:var(--sel);height:22px}
-.es-nom{font-size:12px;color:var(--ink-2);padding:2px 4px 0;min-height:34px;line-height:1.35}
-.es-nom b{font-weight:600;color:var(--ink)}
-.es-nom .mono{font-size:11.5px;color:var(--ink-3)}
-@media(max-width:760px){.es-lz{height:min(46vh,320px)}}
 .lead{stroke:var(--line);stroke-width:1.1}
 tr.bom-row.hot{background:var(--sel-bg)}
 .pos{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:4px;background:var(--surface-3);font-size:11px;font-weight:600;font-family:'IBM Plex Mono';color:var(--ink-2)}
@@ -574,7 +555,7 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   .app{grid-template-columns:1fr}
   .rail{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);transition:transform var(--med) var(--ease)}
   .app.rail-open .rail{transform:none}
-  .bom{grid-template-columns:minmax(0,1fr)}.schema{position:static}
+  .bom{grid-template-columns:1fr}.schema{position:static}
   .stats{flex-wrap:wrap}.stat{min-width:50%;border-bottom:1px solid var(--line-2)}
   .kb{grid-template-columns:1fr}
 }
@@ -683,25 +664,6 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cover-feat svg{width:18px;height:18px;flex:0 0 auto;stroke:var(--brand);fill:none;stroke-width:1.7;margin-top:1px}
 .cover-feat b{font-weight:600;color:var(--ink)}
 .cover-foot{margin-top:28px;font-size:11px;color:var(--ink-3);letter-spacing:.02em}
-
-/* A tamaño completo la tarjeta pide 956 px de alto: cabe en un monitor
-   pero no en una laptop, donde el botón de entrar queda justo en el
-   pliegue y el recorrido de demostración ni se ve. Por debajo de eso
-   la tarjeta respira menos —empezando por la marca, que es lo que más
-   ocupa— para que todo el acceso quepa de una vez, sin desplazar. */
-@media(max-height:960px){
-  .cover-panel{padding:20px 40px}
-  .cover-card .logo-full{width:104px;margin:0 auto 12px}
-  .cover-card h1{font-size:21px}
-  .cover-card .lede{margin:5px 0 18px}
-  .auth-tabs{margin:14px 0 16px}
-  .cover-card .inp{height:40px;margin-bottom:12px}
-  .cover-card select.inp{background-position:calc(100% - 16px) 17px,calc(100% - 11px) 17px}
-  .auth-chk{margin-bottom:14px}
-  .cover-btn{height:44px}
-  .auth-alt{margin-top:14px;padding-top:13px}
-  .cover-foot{margin-top:14px}
-}
 
 /* ============================================================
    ACCESO — iniciar sesión / crear cuenta
@@ -3180,426 +3142,6 @@ function paneCal(){
     </table></section>`;
 }
 
-/* ============================================================
-   DESPIECE EN 3D — motor propio, sin librerías
-   El portal es un solo archivo que se abre sin internet; meter un
-   motor 3D de terceros lo duplicaría de tamaño. Aquí hay lo justo:
-   sólidos de revolución (que es lo que una válvula es casi toda),
-   sombreado plano y orden por profundidad. Cada pieza nace separada
-   y con su número de posición, así que despiezar y señalar no son
-   un truco: son la estructura.
-   ============================================================ */
-
-/* ── Geometría ─────────────────────────────────────────────── */
-
-/* Revoluciona un perfil CERRADO del plano (radio, altura) sobre el eje
-   vertical. Cerrado quiere decir que el primer punto es el último: así
-   el sólido queda estanco y no hacen falta tapas. */
-function torno(perfil,seg){
-  seg=seg||26; const V=[],F=[],n=perfil.length-1;
-  for(let s=0;s<seg;s++){
-    const a=s/seg*Math.PI*2,cs=Math.cos(a),sn=Math.sin(a);
-    for(let i=0;i<n;i++){const r=perfil[i][0],y=perfil[i][1];V.push([r*cs,y,r*sn])}
-  }
-  for(let s=0;s<seg;s++){const t=(s+1)%seg;
-    for(let i=0;i<n;i++){const j=(i+1)%n;
-      F.push([s*n+i,s*n+j,t*n+j,t*n+i])}}
-  return {V,F};
-}
-
-/* Un prisma recto: para lo que no es de revolución — el posicionador,
-   el yugo, la palanca de levante. */
-function caja(w,h,d,cx,cy,cz){
-  const x=w/2,y=h/2,z=d/2,V=[
-    [-x,-y,-z],[x,-y,-z],[x,y,-z],[-x,y,-z],
-    [-x,-y,z],[x,-y,z],[x,y,z],[-x,y,z]].map(p=>[p[0]+(cx||0),p[1]+(cy||0),p[2]+(cz||0)]);
-  return {V,F:[[0,1,2,3],[5,4,7,6],[4,0,3,7],[1,5,6,2],[3,2,6,7],[4,5,1,0]]};
-}
-
-/* El resorte es lo que más identifica a una válvula de seguridad, así
-   que se dibuja de verdad: un tubo barrido sobre una hélice. */
-function helice(rBob,rHilo,y0,y1,vueltas,pasos,lados){
-  pasos=pasos||vueltas*14; lados=lados||8;
-  const V=[],F=[],aros=pasos+1;
-  for(let k=0;k<=pasos;k++){
-    const t=k/pasos, a=t*vueltas*Math.PI*2, y=y0+(y1-y0)*t;
-    const c=Math.cos(a),s=Math.sin(a);
-    const cen=[rBob*c,y,rBob*s];
-    // marco local: radial (hacia afuera) y vertical
-    const rad=[c,0,s], up=[0,1,0];
-    for(let j=0;j<lados;j++){
-      const b=j/lados*Math.PI*2, cb=Math.cos(b), sb=Math.sin(b);
-      V.push([cen[0]+rHilo*(rad[0]*cb+up[0]*sb),
-              cen[1]+rHilo*(rad[1]*cb+up[1]*sb),
-              cen[2]+rHilo*(rad[2]*cb+up[2]*sb)]);
-    }
-  }
-  for(let k=0;k<pasos;k++)for(let j=0;j<lados;j++){
-    const j2=(j+1)%lados;
-    F.push([k*lados+j,k*lados+j2,(k+1)*lados+j2,(k+1)*lados+j]);
-  }
-  return {V,F};
-}
-
-/* Transformaciones sobre una malla ya construida. */
-function mueve(m,dx,dy,dz){return {V:m.V.map(p=>[p[0]+dx,p[1]+dy,p[2]+dz]),F:m.F}}
-function giraZ(m,g){const a=g*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
-  return {V:m.V.map(p=>[p[0]*c-p[1]*s,p[0]*s+p[1]*c,p[2]]),F:m.F}}
-function giraX(m,g){const a=g*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
-  return {V:m.V.map(p=>[p[0],p[1]*c-p[2]*s,p[1]*s+p[2]*c]),F:m.F}}
-/* Un tubo con brida en la punta, tumbado hacia +X o −X: los cuerpos
-   bridados son eso, un globo con dos bocas. */
-function boca(lado,rInt,rExt,largo,rBrida,espBrida,y){
-  const p=torno([[rInt,0],[rExt,0],[rExt,largo-espBrida],[rBrida,largo-espBrida],
-                 [rBrida,largo],[rInt,largo],[rInt,0]],22);
-  return mueve(giraZ(p,lado>0?-90:90),0,y,0);
-}
-
-/* ── Los modelos ───────────────────────────────────────────────
-   Las proporciones salen de las dimensiones públicas del tipo de
-   válvula (cara a cara, tipo de bonete, guiado del trim), no de un
-   archivo del fabricante: es un esquema fiel, no una réplica
-   dimensional. Cada pieza lleva `p`, que es la misma posición del
-   despiece, y `ex`, la dirección en la que se separa. */
-const ACERO   = [0.78,0.80,0.83];
-const ACERO_2 = [0.68,0.70,0.74];
-const FUNDIDO = [0.58,0.60,0.64];
-const GRAFITO = [0.34,0.36,0.40];
-const BRONCE  = [0.72,0.62,0.44];
-const SELLO   = [0.30,0.32,0.36];
-const PINTURA = [0.24,0.42,0.58];
-
-const M3D={};
-
-/* Válvula de globo de control con actuador de diafragma */
-M3D.globo=()=>[
- {p:1,n:'Cuerpo bridado',c:FUNDIDO,ex:[0,0,0],m:[
-   torno([[24,0],[34,0],[46,22],[48,44],[40,68],[30,78],[24,78],[24,58],[30,44],[30,22],[24,10],[24,0]],30),
-   boca(-1,15,22,58,32,7,40), boca(1,15,22,58,32,7,40)]},
- {p:4,n:'Anillo de asiento',c:ACERO,ex:[0,1,0],m:[
-   torno([[12,14],[23,14],[23,24],[12,24],[12,14]],26)]},
- {p:3,n:'Trim: obturador y jaula',c:ACERO,ex:[0,2,0],m:[
-   torno([[11,26],[20,26],[20,60],[11,60],[11,26]],26),
-   torno([[0,28],[13,34],[13,50],[0,50],[0,28]],26)]},
- {p:7,n:'Kit de juntas',c:BRONCE,ex:[0,3,0],m:[
-   torno([[24,76],[36,76],[36,81],[24,81],[24,76]],26)]},
- {p:2,n:'Bonete',c:ACERO_2,ex:[0,4,0],m:[
-   torno([[13,81],[38,81],[38,90],[24,98],[22,120],[13,120],[13,81]],28)]},
- {p:6,n:'Empaquetadura PTFE',c:SELLO,ex:[0,5,0],m:[
-   torno([[6,104],[15,104],[15,120],[6,120],[6,104]],24)]},
- {p:5,n:'Vástago',c:ACERO,ex:[0,6,0],m:[
-   torno([[0,44],[5.5,44],[5.5,196],[0,196],[0,44]],18)]},
- {p:0,n:'Yugo',c:PINTURA,ex:[0,7,0],m:[
-   caja(11,66,11,-26,155,0),caja(11,66,11,26,155,0),
-   torno([[10,122],[34,122],[34,130],[10,130],[10,122]],24),
-   torno([[10,186],[40,186],[40,194],[10,194],[10,186]],24)]},
- {p:9,n:'Resorte de rango',c:GRAFITO,ex:[0,8,0],m:[
-   helice(30,5,198,236,4.5)]},
- {p:8,n:'Diafragma',c:SELLO,ex:[0,9,0],m:[
-   torno([[0,238],[62,238],[62,244],[0,244],[0,238]],30)]},
- {p:0,n:'Caja del actuador',c:PINTURA,ex:[0,10,0],m:[
-   torno([[40,196],[66,214],[66,238],[40,238],[40,232],[60,232],[60,216],[40,202],[40,196]],30),
-   torno([[0,244],[66,244],[62,268],[0,276],[0,268],[54,262],[58,250],[0,250],[0,244]],30)]},
- {p:10,n:'Posicionador digital',c:PINTURA,ex:[4.2,4.5,0],m:[
-   caja(44,52,30,64,150,0),caja(10,10,16,64,120,0)]}
-];
-
-/* Válvula de seguridad de resorte (PSV) */
-M3D.psv=()=>[
- {p:1,n:'Cuerpo entrada × salida',c:FUNDIDO,ex:[0,0,0],m:[
-   torno([[26,0],[38,0],[38,10],[30,10],[30,54],[42,54],[42,64],[26,64],[26,0]],28),
-   torno([[26,0],[44,0],[44,9],[26,9],[26,0]],28),
-   boca(1,22,30,54,40,8,34)]},
- {p:2,n:'Tobera (orificio D)',c:ACERO,ex:[0,1,0],m:[
-   torno([[13,6],[24,6],[24,40],[17,46],[13,46],[13,6]],26)]},
- {p:3,n:'Disco',c:ACERO,ex:[0,2,0],m:[
-   torno([[0,48],[22,48],[22,56],[0,56],[0,48]],26)]},
- {p:4,n:'Guía de disco',c:ACERO_2,ex:[0,3,0],m:[
-   torno([[22,46],[32,46],[32,74],[22,74],[22,46]],26)]},
- {p:8,n:'Kit de juntas y sellos',c:BRONCE,ex:[0,4,0],m:[
-   torno([[26,62],[42,62],[42,67],[26,67],[26,62]],26)]},
- {p:6,n:'Husillo',c:ACERO,ex:[0,7,0],m:[
-   torno([[0,52],[5,52],[5,196],[0,196],[0,52]],18)]},
- {p:5,n:'Resorte calibrado',c:GRAFITO,ex:[0,5,0],m:[
-   helice(26,6,84,168,5.5)]},
- {p:0,n:'Platos del resorte',c:ACERO_2,ex:[0,6,0],m:[
-   torno([[5,76],[36,76],[36,84],[5,84],[5,76]],26),
-   torno([[5,168],[36,168],[36,176],[5,176],[5,168]],26)]},
- {p:7,n:'Bonete cerrado',c:FUNDIDO,ex:[0,9,0],m:[
-   torno([[14,67],[44,67],[44,76],[38,76],[38,180],[30,190],[14,190],[14,67]],28),
-   torno([[0,190],[24,190],[24,206],[0,206],[0,190]],26)]},
- {p:9,n:'Palanca de levante',c:PINTURA,ex:[3.8,8.5,0],m:[
-   caja(66,10,10,34,214,0),caja(12,26,12,0,212,0)]}
-];
-
-/* Válvula de cuchilla con actuador neumático */
-M3D.cuchilla=()=>[
- {p:1,n:'Cuerpo',c:FUNDIDO,ex:[0,0,0],m:[
-   torno([[26,0],[54,0],[54,14],[38,14],[38,44],[54,44],[54,58],[26,58],[26,0]],30),
-   torno([[26,0],[62,0],[62,8],[26,8],[26,0]],30),
-   torno([[26,50],[62,50],[62,58],[26,58],[26,50]],30)]},
- {p:3,n:'Asiento perimetral',c:SELLO,ex:[0,1.2,0],m:[
-   torno([[26,24],[32,24],[32,34],[26,34],[26,24]],28)]},
- {p:2,n:'Compuerta',c:ACERO,ex:[0,2.4,0],m:[
-   caja(76,96,5,0,44,0)]},
- {p:4,n:'Empaquetadura transversal',c:GRAFITO,ex:[0,3.6,0],m:[
-   caja(84,14,20,0,64,0)]},
- {p:8,n:'Kit de pernería',c:BRONCE,ex:[-3.6,1.6,0],m:[
-   caja(9,9,9,-46,64,14),caja(9,9,9,-46,64,-14),
-   caja(9,9,9,46,64,14),caja(9,9,9,46,64,-14)]},
- {p:5,n:'Vástago y yugo',c:PINTURA,ex:[0,4.8,0],m:[
-   torno([[0,70],[7,70],[7,150],[0,150],[0,70]],18),
-   caja(12,74,12,-34,112,0),caja(12,74,12,34,112,0),
-   torno([[7,72],[44,72],[44,80],[7,80],[7,72]],24)]},
- {p:6,n:'Actuador neumático',c:PINTURA,ex:[0,6,0],m:[
-   torno([[0,150],[40,150],[40,220],[0,220],[0,150]],30),
-   torno([[0,144],[46,144],[46,152],[0,152],[0,144]],30),
-   torno([[0,218],[46,218],[46,226],[0,226],[0,218]],30)]},
- {p:7,n:'Finales de carrera',c:GRAFITO,ex:[3.6,4,0],m:[
-   caja(38,44,26,58,180,0)]}
-];
-
-/* Actuador eléctrico multivuelta */
-M3D.act=()=>[
- {p:2,n:'Reductor multivuelta',c:PINTURA,ex:[0,0,0],m:[
-   torno([[16,0],[52,0],[52,14],[44,14],[44,56],[52,56],[52,68],[16,68],[16,0]],30)]},
- {p:6,n:'Kit de o-rings',c:SELLO,ex:[0,1.4,0],m:[
-   torno([[44,60],[54,60],[54,66],[44,66],[44,60]],28)]},
- {p:1,n:'Motor trifásico',c:PINTURA,ex:[-3.8,0.8,0],m:[
-   mueve(giraZ(torno([[0,0],[30,0],[30,74],[0,74],[0,0]],26),90),-56,40,0),
-   mueve(giraZ(torno([[0,74],[34,74],[34,82],[0,82],[0,74]],26),90),-56,40,0)]},
- {p:3,n:'Limitadores de par',c:GRAFITO,ex:[0,2.8,0],m:[
-   caja(46,30,46,0,84,0)]},
- {p:4,n:'Tarjeta lógica',c:PINTURA,ex:[0,4.2,0],m:[
-   caja(60,8,44,0,106,0),caja(22,14,22,0,118,0)]},
- {p:0,n:'Tapa de control',c:PINTURA,ex:[0,5.6,0],m:[
-   torno([[0,124],[42,124],[42,150],[0,158],[0,124]],28)]},
- {p:5,n:'Volante manual',c:GRAFITO,ex:[3.8,0.8,0],m:[
-   mueve(giraZ(torno([[36,0],[46,0],[46,7],[36,7],[36,0]],28),90),74,40,0),
-   mueve(giraZ(torno([[0,0],[12,0],[12,10],[0,10],[0,0]],22),90),74,40,0),
-   caja(8,8,86,74,40,0),caja(8,86,8,74,40,0)]}
-];
-
-/* ── El visor ──────────────────────────────────────────────── */
-function Visor3D(lienzo,modelo){
-  const piezas=(M3D[modelo]||M3D.globo)();
-  const st={gy:-0.55,gx:-0.25,esp:0,zoom:1,hot:null,sel:null};
-  let caras=[],alto=0,cen=[0,0,0],rad=1;
-
-  /* Caja de cada pieza y del conjunto montado, calculadas una vez. */
-  piezas.forEach(z=>{
-    const mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
-    z.m.forEach(m=>m.V.forEach(v=>{for(let i=0;i<3;i++){
-      if(v[i]<mn[i])mn[i]=v[i];if(v[i]>mx[i])mx[i]=v[i]}}));
-    z.mn=mn;z.mx=mx;
-    let sx=0,sy=0,sz=0,n=0;
-    z.m.forEach(m=>m.V.forEach(v=>{sx+=v[0];sy+=v[1];sz+=v[2];n++}));
-    z.cg=[sx/n,sy/n,sz/n];
-  });
-  let baseY=1e9;
-  (function altoMontado(){
-    let b=-1e9;piezas.forEach(z=>{baseY=Math.min(baseY,z.mn[1]);b=Math.max(b,z.mx[1])});
-    alto=b-baseY;
-  })();
-
-  /* A dónde va cada pieza al despiezar. No se pone a mano: se ordenan
-     por altura de montaje y se apilan con una separación fija, de modo
-     que dos piezas nunca se tapan, mida lo que mida cada una. Las que
-     van al costado (posicionador, volante, palanca) además se apartan
-     del eje, que es como se dibuja un despiece de verdad. */
-  (function calculaDespiece(){
-    const hueco=alto*0.05, tope=alto*0.16, lat=alto*0.40;
-    let y=baseY;
-    piezas.slice().sort((a,b)=>a.cg[1]-b.cg[1]).forEach(z=>{
-      /* La ranura mide lo que la pieza, salvo en las piezas largas y
-         flacas —el vástago, el husillo—: ésas estirarían la columna y
-         dejarían todo lo demás diminuto, así que se recortan y se
-         cruzan un poco con su vecina, tal como se dibuja un despiece
-         en papel. Lo ancho conserva su sitio, o el cuerpo taparía al
-         anillo de asiento que va justo debajo. */
-      const h=z.mx[1]-z.mn[1], ancho=Math.max(z.mx[0]-z.mn[0],z.mx[2]-z.mn[2]);
-      const paso=(h>ancho*2.2?Math.min(h,tope):h)+hueco;
-      z.off=[Math.sign(z.ex[0]||0)*lat, y+paso/2-z.cg[1], 0];
-      y+=paso;
-    });
-  })();
-
-  /* El encuadre se recalcula con el despiece puesto: así, cuando las
-     piezas se separan, la cámara se abre en vez de dejarlas fuera del
-     lienzo. Es lo que hace que el control de despiece se sienta bien. */
-  function encuadra(e){ /* e va de 0 (montada) a 1 (despiezada) */
-    const mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
-    piezas.forEach(z=>{for(let i=0;i<3;i++){
-      const o=z.off[i]*e;
-      if(z.mn[i]+o<mn[i])mn[i]=z.mn[i]+o;
-      if(z.mx[i]+o>mx[i])mx[i]=z.mx[i]+o}});
-    cen=[(mn[0]+mx[0])/2,(mn[1]+mx[1])/2,(mn[2]+mx[2])/2];
-    /* el alto pesa más que el ancho porque el lienzo es vertical */
-    rad=Math.max((mx[0]-mn[0])*0.62,(mx[1]-mn[1])*0.5,(mx[2]-mn[2])*0.62);
-  }
-
-  const ctx=lienzo.getContext('2d');
-  const LUZ=(()=>{const l=[-0.42,0.72,0.55],n=Math.hypot(l[0],l[1],l[2]);return l.map(x=>x/n)})();
-
-  function dibuja(){
-    const dpr=Math.min(window.devicePixelRatio||1,2);
-    const W=lienzo.clientWidth,H=lienzo.clientHeight;
-    if(!W||!H)return;
-    if(lienzo.width!==W*dpr||lienzo.height!==H*dpr){lienzo.width=W*dpr;lienzo.height=H*dpr}
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,W,H);
-
-    const e=st.esp; encuadra(e);
-    const cy=Math.cos(st.gy),sy=Math.sin(st.gy),cx=Math.cos(st.gx),sx=Math.sin(st.gx);
-    const esc=Math.min(W,H*0.92)/(rad*2.25)*st.zoom;
-    const dist=rad*6;
-    caras=[];
-
-    piezas.forEach((z,zi)=>{
-      const ox=z.off[0]*e,oy=z.off[1]*e,oz=z.off[2]*e;
-      z.m.forEach(m=>{
-        const P=m.V.map(v=>{
-          let x=v[0]-cen[0]+ox, y=v[1]-cen[1]+oy, z2=v[2]-cen[2]+oz;
-          let X= x*cy + z2*sy, Z=-x*sy + z2*cy;
-          let Y= y*cx - Z*sx;  Z = y*sx + Z*cx;
-          const f=dist/(dist+Z);
-          return [W/2+X*esc*f, H/2-Y*esc*f, Z, X,Y,Z];
-        });
-        m.F.forEach(f=>{
-          const a=P[f[0]],b=P[f[1]],c=P[f[2]];
-          // normal en el espacio de la cámara
-          const u=[b[3]-a[3],b[4]-a[4],b[5]-a[5]], w=[c[3]-a[3],c[4]-a[4],c[5]-a[5]];
-          const nx=u[1]*w[2]-u[2]*w[1], ny=u[2]*w[0]-u[0]*w[2], nz=u[0]*w[1]-u[1]*w[0];
-          const nl=Math.hypot(nx,ny,nz)||1;
-          /* iluminación a dos caras: con el orden por profundidad las
-             caras del fondo quedan tapadas y así nunca hay una negra
-             por un giro de vértices al revés */
-          const d=Math.abs((nx*LUZ[0]+ny*LUZ[1]+nz*LUZ[2])/nl);
-          let z3=0; for(let i=0;i<f.length;i++)z3+=P[f[i]][2]; z3/=f.length;
-          caras.push({pt:f.map(i=>P[i]),z:z3,l:d,zi:zi});
-        });
-      });
-    });
-
-    caras.sort((a,b)=>b.z-a.z);
-    const oscuro=document.documentElement.dataset.theme==='dark';
-    for(const c of caras){
-      const z=piezas[c.zi];
-      const marcada=st.sel===z||st.hot===z;
-      let col=z.c;
-      if(marcada)col=[0.36,0.52,0.86];
-      else if(st.sel&&st.sel!==z)col=col.map(v=>oscuro?v*0.55+0.06:v*0.42+0.5);
-      const g=0.30+0.78*c.l;
-      const r=Math.min(255,col[0]*g*255)|0,vv=Math.min(255,col[1]*g*255)|0,bb=Math.min(255,col[2]*g*255)|0;
-      ctx.beginPath();
-      ctx.moveTo(c.pt[0][0],c.pt[0][1]);
-      for(let i=1;i<c.pt.length;i++)ctx.lineTo(c.pt[i][0],c.pt[i][1]);
-      ctx.closePath();
-      ctx.fillStyle=`rgb(${r},${vv},${bb})`;ctx.fill();
-      ctx.strokeStyle=`rgb(${r},${vv},${bb})`;ctx.lineWidth=.7;ctx.stroke();
-    }
-    if(st.esp>0.12)globos(W,H,cy,sy,cx,sx,esc,dist);
-  }
-
-  /* Cuando está despiezada, cada pieza lleva su número: es el mismo
-     que la columna Pos de la tabla de repuestos. */
-  function globos(W,H,cy,sy,cx,sx,esc,dist){
-    ctx.font='600 11px "IBM Plex Mono", ui-monospace, monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    const e=st.esp,puestos=[];
-    piezas.forEach(z=>{
-      if(!z.p)return;
-      const px=z.cg[0]-cen[0]+z.off[0]*e, py=z.cg[1]-cen[1]+z.off[1]*e,
-            pz=z.cg[2]-cen[2]+z.off[2]*e;
-      let X=px*cy+pz*sy, Z=-px*sy+pz*cy, Y=py*cx-Z*sx; Z=py*sx+Z*cx;
-      const f=dist/(dist+Z);
-      let x=W/2+X*esc*f, y=H/2-Y*esc*f;
-      /* Dos globos encimados no identifican nada: si uno cae sobre otro,
-         se aparta al costado hasta encontrar sitio. */
-      for(let i=0;i<26;i++){
-        const choca=puestos.some(q=>Math.hypot(q[0]-x,q[1]-y)<21);
-        if(!choca)break;
-        x+= (i%2?-1:1)*22; if(i%2)y-=3;
-      }
-      puestos.push([x,y]);
-      const marcada=st.sel===z||st.hot===z;
-      const oscuro=document.documentElement.dataset.theme==='dark';
-      ctx.globalAlpha=Math.min(1,(st.esp-0.10)/0.18);
-      ctx.beginPath();ctx.arc(x,y,10,0,7);
-      ctx.fillStyle=marcada?'#2f57b8':(oscuro?'#e7ebf2':'#1d2430');
-      ctx.fill();
-      ctx.strokeStyle=oscuro?'#161a20':'#fff';ctx.lineWidth=1.6;ctx.stroke();
-      ctx.fillStyle=marcada?'#fff':(oscuro?'#161a20':'#fff');
-      ctx.fillText(z.p,x,y+.5);
-      ctx.globalAlpha=1;
-    });
-  }
-
-  /* Selección exacta: se recorren las caras de adelante hacia atrás y
-     se prueba si el punto cae dentro. Sin buffer de identificadores. */
-  function piezaEn(mx,my){
-    for(let i=caras.length-1;i>=0;i--){
-      const c=caras[i];
-      if(dentroDe(c.pt,mx,my)){const z=piezas[c.zi];return z.p?z:null}
-    }
-    return null;
-  }
-  function dentroDe(pt,x,y){
-    let d=false;
-    for(let i=0,j=pt.length-1;i<pt.length;j=i++){
-      const xi=pt[i][0],yi=pt[i][1],xj=pt[j][0],yj=pt[j][1];
-      if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)d=!d;
-    }
-    return d;
-  }
-
-  /* ── mando ── */
-  let arr=null;
-  lienzo.addEventListener('pointerdown',ev=>{
-    /* el estado primero: si la captura del puntero falla, el arrastre y
-       la selección tienen que seguir funcionando igual */
-    arr={x:ev.clientX,y:ev.clientY,gy:st.gy,gx:st.gx,movido:0};
-    try{lienzo.setPointerCapture(ev.pointerId)}catch(e){}
-  });
-  lienzo.addEventListener('pointermove',ev=>{
-    if(arr){
-      const dx=ev.clientX-arr.x,dy=ev.clientY-arr.y;
-      arr.movido=Math.max(arr.movido,Math.hypot(dx,dy));
-      st.gy=arr.gy+dx*0.009;
-      st.gx=Math.max(-1.2,Math.min(1.2,arr.gx+dy*0.009));
-      dibuja();return;
-    }
-    const r=lienzo.getBoundingClientRect();
-    const z=piezaEn(ev.clientX-r.left,ev.clientY-r.top);
-    if(z!==st.hot){st.hot=z;lienzo.style.cursor=z?'pointer':'grab';dibuja();
-      if(v.alSeñalar)v.alSeñalar(z?z.p:null)}
-  });
-  const suelta=ev=>{
-    if(arr&&arr.movido<4){
-      const r=lienzo.getBoundingClientRect();
-      const z=piezaEn(ev.clientX-r.left,ev.clientY-r.top);
-      st.sel=(st.sel===z)?null:z; dibuja();
-      if(v.alElegir)v.alElegir(st.sel?st.sel.p:null);
-    }
-    arr=null;
-  };
-  lienzo.addEventListener('pointerup',suelta);
-  lienzo.addEventListener('pointercancel',()=>{arr=null});
-  lienzo.addEventListener('pointerleave',()=>{if(st.hot){st.hot=null;dibuja();if(v.alSeñalar)v.alSeñalar(null)}});
-  lienzo.addEventListener('wheel',ev=>{ev.preventDefault();
-    st.zoom=Math.max(.5,Math.min(3,st.zoom*(ev.deltaY<0?1.12:.89)));dibuja()},{passive:false});
-
-  const v={
-    dibuja,
-    despiece(t){st.esp=t;dibuja()},
-    marca(p){st.hot=piezas.find(z=>z.p===p)||null;dibuja()},
-    elige(p){st.sel=piezas.find(z=>z.p===p)||null;dibuja()},
-    reinicia(){st.gy=-0.55;st.gx=-0.25;st.zoom=1;st.sel=null;dibuja()},
-    piezas
-  };
-  return v;
-}
-
 /* --- esquemas de despiece --- */
 const cal_=(n,x,y,tx,ty)=>`<circle class="cb" cx="${x}" cy="${y}" r="9"/><text class="cn" x="${x}" y="${y+3.4}" text-anchor="middle">${n}</text>`+
  (tx!==undefined?`<line class="lead" x1="${x<150?x+9:x-9}" y1="${y}" x2="${tx}" y2="${ty}"/>`:'');
@@ -3650,25 +3192,7 @@ function paneBOM(){
      <div><b>Kit de overhaul</b> del modelo ${esc(a.mod)}: ${kit.length} posiciones, ${enStock} disponibles en el almacén de Lima.
      <a href="#" onclick="addKit();return false" style="color:inherit;text-decoration:underline;font-weight:600">Agregar el kit a la solicitud</a> · <a href="#" onclick="quoteKit(S.cur.id);return false" style="color:inherit;text-decoration:underline;font-weight:600">Cotizar el kit (PDF)</a>.</div></div>
    <div class="bom">
-     <figure class="schema">
-       <div class="es-cab">
-         <div class="views">
-           <button class="${VISTA_ES==='3d'?'on':''}" onclick="verEsquema('3d')">3D</button>
-           <button class="${VISTA_ES==='3d'?'':'on'}" onclick="verEsquema('2d')">Corte 2D</button>
-         </div>
-       </div>
-       <div id="es3d" ${VISTA_ES==='3d'?'':'hidden'}>
-         <canvas class="es-lz" id="esLz" aria-label="Despiece en tres dimensiones"></canvas>
-         <div class="es-mando">
-           <label for="esDes">Despiece</label>
-           <input type="range" id="esDes" min="0" max="1" step="0.01" value="0"
-                  oninput="V3D&&V3D.despiece(+this.value)" aria-label="Separar las piezas">
-           <button class="btn quiet xs" onclick="V3D&&(V3D.reinicia(),$('#esDes').value=0,V3D.despiece(0))">Centrar</button>
-         </div>
-         <div class="es-nom" id="esNom"></div>
-       </div>
-       <div id="es2d" ${VISTA_ES==='3d'?'hidden':''}>${SCHEMA[m.b||'globo']}</div>
-       <figcaption>Esquema referencial · ${esc(m.t||'')}</figcaption></figure>
+     <figure class="schema">${SCHEMA[m.b||'globo']}<figcaption>Esquema referencial · ${esc(m.t||'')}</figcaption></figure>
      <div>
       <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
        <thead><tr><th style="width:38px">Pos</th><th>N.º de parte</th><th>Disponibilidad</th><th style="width:70px"></th></tr></thead>
@@ -3682,66 +3206,10 @@ function paneBOM(){
     g.onmouseenter=()=>hot(+g.dataset.p,1);g.onmouseleave=()=>hot(+g.dataset.p,0);
     g.onclick=()=>{const r=document.querySelector('.bom-row[data-p="'+g.dataset.p+'"]');if(r)r.scrollIntoView({block:'center',behavior:'smooth'})};
   });
-  montaVisor(m.b||'globo',lista);
-}
-
-/* ── El visor 3D dentro de la ficha ───────────────────────────
-   El plano y la tabla son la misma cosa vista de dos maneras: señalar
-   una pieza marca su fila, y pasar por la fila enciende la pieza. El
-   corte 2D no se va —es el que se imprime con la orden de trabajo—,
-   sólo deja de ser lo único. */
-let VISTA_ES='3d', V3D=null, OBS3D=null;
-function verEsquema(v){
-  VISTA_ES=v;
-  const t3=$('#es3d'),t2=$('#es2d');if(!t3||!t2)return;
-  t3.hidden=v!=='3d'; t2.hidden=v==='3d';
-  $$('.es-cab .views button').forEach((b,i)=>b.classList.toggle('on',(i===0)===(v==='3d')));
-  if(v==='3d'&&V3D)requestAnimationFrame(()=>V3D.dibuja());
-}
-function montaVisor(base,lista){
-  if(OBS3D){OBS3D.disconnect();OBS3D=null}
-  V3D=null;
-  const lz=$('#esLz'); if(!lz) return;
-  const v=Visor3D(lz,base); V3D=v;
-  const dice=p=>{
-    const caja=$('#esNom'); if(!caja) return;
-    if(!p){caja.innerHTML='<span style="color:var(--ink-3)">Arrastra para girar · toca una pieza para identificarla</span>';return}
-    const pz=v.piezas.find(z=>z.p===p)||{}, fila=lista.find(x=>x.p===p);
-    caja.innerHTML=`<b>${p} · ${esc(pz.n||'')}</b>`+(fila
-      ? `<br><span class="mono">${esc(fila.n)}</span> · ${fila.s>0?fila.s+' und en stock':'sin stock'}`:'');
-  };
-  dice(null);
-  v.alSeñalar=p=>{hotTodo(p)};
-  v.alElegir=p=>{
-    dice(p);
-    $$('.bom-row.sel').forEach(x=>x.classList.remove('sel'));
-    if(!p)return;
-    const r=document.querySelector('.bom-row[data-p="'+p+'"]');
-    if(!r)return;
-    r.classList.add('sel');
-    /* Sólo se desplaza si la fila no se ve. Si no, el panel se mueve
-       bajo el dedo justo después de tocar la pieza, y el siguiente
-       toque cae en otro lado. */
-    const cont=r.closest('.pane')||r.closest('.dr-b');
-    if(cont){
-      const a=r.getBoundingClientRect(), b=cont.getBoundingClientRect();
-      if(a.top<b.top+4||a.bottom>b.bottom-4)r.scrollIntoView({block:'nearest',behavior:'smooth'});
-    }
-  };
-  /* el panel cambia de ancho al ampliar la ficha o al girar el teléfono */
-  OBS3D=new ResizeObserver(()=>v.dibuja()); OBS3D.observe(lz);
-  requestAnimationFrame(()=>v.dibuja());
-}
-let ultimoHot=null;
-function hotTodo(p){
-  if(p===ultimoHot)return; ultimoHot=p;
-  $$('.bom-row.hot').forEach(r=>r.classList.remove('hot'));
-  if(p){const r=document.querySelector('.bom-row[data-p="'+p+'"]');if(r)r.classList.add('hot')}
 }
 function hot(p,on){
   const g=document.querySelector('.dpart[data-p="'+p+'"]'),r=document.querySelector('.bom-row[data-p="'+p+'"]');
   if(g)g.classList.toggle('hot',!!on);if(r)r.classList.toggle('hot',!!on);
-  if(V3D)V3D.marca(on?p:null);
 }
 function paneHist(){
   const os=ORDENES.filter(o=>o.act===S.cur.id).sort((a,b)=>b.f.localeCompare(a.f));
@@ -6012,19 +5480,6 @@ const ICON_SOUND=`<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><pat
 $('#heroStage').innerHTML=VIDEO_PROMO
   ? `<div class="hero-video-wrap"><video id="promoVid" class="hero-video" autoplay muted loop playsinline preload="auto"><source src="${VIDEO_PROMO}" type="video/mp4"></video><button class="hero-sound" onclick="toggleSound()" aria-label="Activar sonido">${ICON_MUTED}</button></div>`
   : PHOTO.globo;
-/* El video vive en un archivo aparte (video/presentacion.mp4). Cuando
-   el portal se comparte como un solo HTML ese archivo no viaja, y sin
-   esto la portada muestra un rectángulo negro. Si el video no carga,
-   vuelve la foto de la válvula. */
-(function respaldoDelVideo(){
-  const v=document.getElementById('promoVid'); if(!v) return;
-  let hecho=false;
-  const alFallar=()=>{ if(hecho)return; hecho=true; $('#heroStage').innerHTML=PHOTO.globo };
-  v.addEventListener('error',alFallar,true);   // en captura: también los de <source>
-  v.addEventListener('loadeddata',()=>{hecho=true});
-  // si a los 4 s no llegó ni un fotograma, el archivo no está
-  setTimeout(()=>{ if(!v.videoWidth) alFallar() },4000);
-})();
 function setSoundIcon(muted){const btn=document.querySelector('.hero-sound');if(btn){btn.innerHTML=muted?ICON_MUTED:ICON_SOUND;btn.setAttribute('aria-label',muted?'Activar sonido':'Silenciar')}}
 function toggleSound(){
   const v=document.getElementById('promoVid');if(!v)return;
