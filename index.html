@@ -2,7 +2,7 @@
 <html lang="es" data-theme="light" data-density="cozy">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Adolphus · Gestión de válvulas y repuestos</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#16306b">
@@ -152,7 +152,10 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .work{display:flex;flex-direction:column;min-width:0;overflow:hidden}
 .bar{
   height:52px;flex:0 0 auto;background:var(--surface);border-bottom:1px solid var(--line);
-  display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);z-index:var(--z-sticky)
+  display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);
+  /* un punto por encima de la barra de cliente: si no, los menús que
+     cuelgan de aquí quedan atrapados debajo de ella */
+  z-index:calc(var(--z-sticky) + 1)
 }
 .bar>*{flex:0 0 auto}
 .bar::before,.bar::after{content:'';flex:1 1 0;min-width:0;max-width:calc((100% - 1400px)/2)}
@@ -275,6 +278,9 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
 /* ---- grilla de datos ---- */
 .grid-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden}
 .grid-scroll{overflow:auto;max-height:calc(100vh - 300px)}
+/* Catálogo y Usuarios pintan su tabla directamente dentro del panel:
+   sin esto la tabla empuja la página entera en pantallas angostas. */
+#catList,#userList{overflow-x:auto}
 table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--font-d)}
 table.grid th{
   position:sticky;top:0;background:var(--surface-2);z-index:2;text-align:left;font-size:11px;font-weight:600;
@@ -679,8 +685,11 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .auth-seg button b{font-weight:600;font-size:12.5px}
 .auth-seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px oklch(0 0 0 /.10)}
 .auth-seg button.on b{color:var(--ink)}
-.auth-chk{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);margin-bottom:18px;cursor:pointer;user-select:none}
-.auth-chk input{width:15px;height:15px;accent-color:var(--brand);cursor:pointer}
+/* El texto lleva enlaces dentro, así que la caja no puede depender de
+   `gap` entre elementos flex: la separación va en la casilla misma. */
+.auth-chk{display:flex;align-items:flex-start;font-size:12px;line-height:1.5;color:var(--ink-2);
+  margin-bottom:18px;cursor:pointer;user-select:none}
+.auth-chk input{width:16px;height:16px;flex:0 0 auto;margin:1px 9px 0 0;accent-color:var(--brand);cursor:pointer}
 .auth-msg{font-size:12px;border-radius:var(--r-1);padding:10px 12px;margin-bottom:14px;display:none;line-height:1.45}
 .auth-msg.on{display:block}
 .auth-msg.bad{background:var(--late-bg);color:var(--late)}
@@ -1105,10 +1114,26 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cl-buscar .inp{height:38px;padding-left:36px;width:100%;margin:0}
 .cl-buscar .inp::-webkit-search-cancel-button{cursor:pointer}
 .cl-cont{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:auto}
+/* Bajo 820 px la fila de cuatro columnas no cabe: cada pendiente pasa
+   a ser un bloque —qué equipo, de quién, qué pasa— con el botón de la
+   acción a lo ancho, que es lo que se toca. */
 @media(max-width:820px){
-  .cola-i{grid-template-columns:10px 1fr auto;row-gap:6px}
-  .cola-i .q{grid-column:2/-1}
+  .cola-i{
+    grid-template-columns:10px minmax(0,1fr);
+    grid-template-areas:'pt t' 'q q' 'ac ac';
+    row-gap:8px;padding:13px var(--sp-4) 14px;align-items:start
+  }
+  .cola-i .pt{grid-area:pt;margin-top:6px}
+  .cola-i .t{grid-area:t}
+  .cola-i .t small{white-space:normal}
+  .cola-i .q{grid-area:q;white-space:normal;overflow:visible}
+  /* aunque sea la acción secundaria necesita borde: en su propia línea
+     y sin él parece un texto suelto */
+  .cola-i .ac{grid-area:ac;justify-self:start;min-width:190px;min-height:40px;justify-content:center;
+    border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 }
+/* En el teléfono sí ocupa el ancho: es el objetivo del pulgar. */
+@media(max-width:560px){.cola-i .ac{justify-self:stretch;width:100%}}
 
 .greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .greet .wave{color:var(--ink-3);font-weight:400}
@@ -1340,6 +1365,226 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   border-radius:var(--r-2);background:var(--surface-2);position:sticky;bottom:8px;box-shadow:var(--shadow-pop)}
 .pd-sumL{font-size:13.5px}.pd-sumL b{font-weight:700}.pd-sumL span{color:var(--ink-3);font-size:11.5px}
 .pd-sumB{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ============================================================
+   16 · CELULAR
+   Un teléfono no es una pantalla chica: es otra postura. Se sujeta
+   con una mano, se toca con el pulgar y se lee a la altura del ojo.
+   Por eso aquí la navegación baja al alcance del pulgar, cada fila
+   se vuelve una tarjeta legible de un vistazo y nada obliga a
+   desplazarse de lado salvo lo que de verdad es una tabla.
+   Todo lo de abajo es exclusivo de ≤760px: en escritorio no cambia
+   ni un píxel.
+   ============================================================ */
+.tabbar{display:none}
+.rail-scrim{display:none}
+
+@media(max-width:760px){
+
+  /* ── ALTURA REAL DEL TELÉFONO ───────────────────────────────
+     100vh miente cuando la barra del navegador se recoge; dvh no. */
+  .app{height:100dvh}
+
+  /* ── BARRA SUPERIOR ─────────────────────────────────────────
+     Sólo lo que hace falta arriba: dónde estoy, buscar, avisos y yo.
+     Tema, ayuda y salir viven en el menú de la cuenta, que está a
+     un toque y no compite por los 390 px de ancho. */
+  .bar{height:56px;padding:0 6px 0 4px;gap:2px}
+  .bar::before,.bar::after{display:none}
+  .bar>.net-chip,.bar>#themeBtn,.bar>[onclick="openHelp()"],.bar>[onclick="logout()"]{display:none}
+  .crumbs{font-size:13.5px;gap:5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden}
+  /* de la miga sólo sobrevive la hoja: el resto lo dice la pestaña */
+  .crumbs>span{display:none}
+  .crumbs>b{overflow:hidden;text-overflow:ellipsis;font-size:15px;letter-spacing:-.01em}
+  .search-trigger{width:40px;height:40px;flex:0 0 auto}
+  .icon-btn{width:40px;height:40px}
+  .ava-btn{padding:4px}
+  .avatar{width:32px;height:32px;font-size:12px}
+
+  /* ── EL CAJÓN DE NAVEGACIÓN ─────────────────────────────────
+     Con velo, para que se entienda que hay algo encima y para
+     poder cerrarlo tocando fuera. */
+  .rail{width:min(280px,84vw);box-shadow:var(--shadow-over)}
+  .rail nav a{padding:11px 12px;font-size:14.5px}
+  .rail-scrim{display:block;position:fixed;inset:0;background:oklch(0.235 0.012 255 /.42);
+    opacity:0;pointer-events:none;transition:opacity var(--med) var(--ease);z-index:var(--z-scrim)}
+  .app.rail-open .rail-scrim{opacity:1;pointer-events:auto}
+
+  /* ── BARRA INFERIOR ─────────────────────────────────────────
+     Las cuatro cosas que se hacen todo el día, al alcance del pulgar.
+     El resto entra por «Más», que abre el cajón completo. */
+  .tabbar{
+    display:grid;grid-auto-flow:column;grid-auto-columns:1fr;flex:0 0 auto;
+    background:var(--surface);border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);z-index:var(--z-sticky)
+  }
+  .tabbar button{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:56px;padding:7px 2px 8px;background:none;border:0;font:inherit;
+    font-size:10.5px;font-weight:500;color:var(--ink-3);cursor:pointer;position:relative;
+    -webkit-tap-highlight-color:transparent
+  }
+  .tabbar button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.7}
+  .tabbar button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tabbar button.on{color:var(--sel);font-weight:600}
+  .tabbar button.on::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+    width:26px;height:2.5px;border-radius:0 0 3px 3px;background:var(--sel)}
+  /* La cifra dice cuántos hay, no que algo esté mal: por eso es
+     neutra. El rojo queda reservado para lo que sí está vencido. */
+  .tabbar button .tb-ct{position:absolute;top:6px;left:calc(50% + 8px);min-width:16px;height:16px;padding:0 4px;
+    border-radius:8px;background:var(--surface-3);color:var(--ink-2);border:1px solid var(--line);
+    font-size:9.5px;font-weight:600;line-height:14px;text-align:center;font-variant-numeric:tabular-nums}
+  .tabbar button.on .tb-ct{background:var(--sel-bg);border-color:var(--sel);color:var(--sel)}
+
+  /* ── RESPIRO Y JERARQUÍA ────────────────────────────────────
+     Menos margen lateral (el ancho es oro) y títulos un escalón
+     más chicos, que a 390 px un 32 px grita. */
+  .view-pad{padding:var(--sp-4) var(--sp-3) var(--sp-5)}
+  h1{font-size:20px!important;letter-spacing:-.02em}
+  .page-h .sub,.sub{font-size:12.5px}
+  .kpi .kv{font-size:26px}
+
+  /* ── NADA SE DESBORDA ───────────────────────────────────────
+     1fr en CSS Grid es minmax(auto,1fr): el contenido más ancho
+     empuja la columna. minmax(0,1fr) le pone freno. */
+  .dash{grid-template-columns:minmax(0,1fr)}
+  .dash>[class*=span-]{grid-column:span 1;min-width:0}
+  .kpis{grid-template-columns:1fr 1fr;gap:var(--sp-2)}
+  .kpi{padding:12px 13px;min-height:86px}
+  .panel-b,.panel-h{min-width:0}
+  .cols,.hb,.serv{min-width:0}
+  .kb{grid-template-columns:minmax(0,1fr);min-width:0}
+  /* el tablero deja de deslizarse de lado: las columnas se apilan,
+     así que el sangrado negativo que le daba aire ya no aplica */
+  .kb-wrap{overflow-x:visible;margin-inline:0;padding-inline:0}
+
+  /* Los grupos de pestañas y filtros se deslizan de lado, con
+     tope magnético, en vez de romper la fila. */
+  .views,.cbar-tabs,.dr-tabs,.set-tabs{
+    overflow-x:auto;scrollbar-width:none;scroll-snap-type:x proximity;flex-wrap:nowrap;
+    min-width:0;max-width:100%
+  }
+  .views{flex:1 1 100%}
+  /* un poco de aire al final del riel: la pestaña que asoma cortada
+     es la que avisa de que hay más si se desliza */
+  .cbar-tabs,.dr-tabs,.views{padding-right:26px}
+  .views::-webkit-scrollbar,.cbar-tabs::-webkit-scrollbar,
+  .dr-tabs::-webkit-scrollbar,.set-tabs::-webkit-scrollbar{display:none}
+  .views button,.cbar-tabs button,.dr-tab{flex:0 0 auto;scroll-snap-align:start}
+  .views button{height:32px;padding:0 13px;font-size:13px}
+  .tools{gap:var(--sp-2)}
+  .tools .chip-sel,.tools .inp{flex:1 1 140px;min-width:0;height:40px}
+  .chip-sel{height:40px;font-size:13.5px}
+  /* las barras del panel se tocan: necesitan alto de dedo, no de ratón */
+  .hb{gap:2px}
+  .hb-row{padding:9px 2px;grid-template-columns:minmax(84px,1.1fr) minmax(0,1fr) 40px}
+  .hb-row.go{border-radius:var(--r-1)}
+  .hb-row.go:active{background:var(--surface-2)}
+  .col-i{padding:6px 0}
+  .tools .spacer{display:none}
+  .tools .count{margin-left:auto}
+
+  /* La barra de acciones de página: botones cómodos, en dos por
+     fila, sin que ninguno quede a medio cortar. */
+  .pg-act,.tools .btn{min-height:38px}
+  .btn{min-height:38px}
+  .btn.xs{min-height:32px;padding:0 11px;font-size:12px}
+  .ch{height:34px;padding:0 13px;font-size:13px}
+  .ck{width:18px;height:18px}
+
+  /* La cola ya es tarjeta desde 820 px; aquí sólo se ajustan los
+     márgenes al ancho del teléfono. */
+  .cola-h{padding:var(--sp-4) var(--sp-3) var(--sp-3)}
+  .cola-chips{padding:0 var(--sp-3) var(--sp-3)}
+  .cola-l .cola-i{padding-left:var(--sp-3);padding-right:var(--sp-3)}
+
+  /* ── LÍNEAS DE TIEMPO ───────────────────────────────────────
+     El riel de vencimiento se apila: nombre arriba, barra y días
+     abajo. Así la barra conserva ancho suficiente para leerse. */
+  .hz{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:11px var(--sp-3)}
+  .hz-t{width:auto;grid-column:1/-1}
+  .hz-track{grid-column:1;min-width:0}
+  .hz-d{width:auto;grid-column:2}
+
+  /* ── TABLAS ─────────────────────────────────────────────────
+     Una tabla de activos es una tabla: se desliza de lado. Pero el
+     tag se queda pegado a la izquierda, que es la columna con la
+     que uno se ubica. */
+  .grid-scroll{max-height:none;-webkit-overflow-scrolling:touch}
+  table.grid td,table.grid th{padding:0 10px}
+  table.grid td{height:46px}
+  table.grid th:first-child,table.grid td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+  table.grid th:first-child{z-index:3;background:var(--surface-2)}
+  table.grid tbody tr:hover td:first-child,
+  table.grid tbody tr.picked td:first-child{background:var(--sel-bg)}
+  table.grid th:first-child::after,table.grid td:first-child::after{
+    content:'';position:absolute;top:0;right:0;bottom:0;width:1px;background:var(--line-2)}
+
+  /* ── LA FICHA A PANTALLA COMPLETA ───────────────────────────
+     Ya ocupaba todo; lo que faltaba era que el pie no quedara bajo
+     el gesto de inicio del teléfono y que las pestañas se deslicen. */
+  .drawer{padding-bottom:env(safe-area-inset-bottom)}
+  .dr-h{padding:var(--sp-3) var(--sp-4) var(--sp-2)}
+  .dr-top h2{font-size:17px}
+  .pane{padding:var(--sp-4) var(--sp-3)!important}
+  .dr-f{padding:10px var(--sp-3);gap:8px;flex-wrap:wrap}
+  .dr-f .btn{flex:1 1 auto;min-height:40px}
+
+  /* ── FORMULARIOS ────────────────────────────────────────────
+     16 px en los campos: por debajo de eso iOS hace zoom solo y
+     deja la pantalla torcida. */
+  .inp,select.inp,textarea.inp,input[type=text],input[type=email],
+  input[type=password],input[type=number],input[type=date],input[type=search]{font-size:16px}
+  .f2,.f3,.g{grid-template-columns:1fr}
+  /* el diálogo llega casi al borde y se ancla abajo, donde está el
+     pulgar; el velo sigue cubriendo la pantalla entera */
+  .modal{padding:var(--sp-3);align-items:flex-end}
+  .modal-c{max-height:90dvh;margin-bottom:env(safe-area-inset-bottom)}
+  .modal-h{padding:var(--sp-3) var(--sp-4)}
+  .modal-b{padding:var(--sp-4);padding-bottom:var(--sp-5)}
+  .modal-f{padding:var(--sp-3) var(--sp-4);gap:8px}
+  .modal-f .btn{flex:1 1 0;min-height:44px;justify-content:center}
+
+  /* ── CLIENTES ───────────────────────────────────────────────*/
+  .cl-tools{gap:8px}
+  .cl-buscar{flex:1 1 100%}
+  .cl-cont{margin-left:0}
+  .cbar{padding:0 var(--sp-3);gap:8px}
+
+  /* ── AVISOS Y MENÚS ─────────────────────────────────────────
+     Colgados del borde derecho se salían de la pantalla; aquí se
+     anclan a los dos bordes con un margen fijo. */
+  .notif-pop,.acct-pop{
+    position:fixed;top:60px;left:8px;right:8px;width:auto;max-width:none;
+    max-height:calc(100dvh - 76px);overflow-y:auto
+  }
+  .mi{min-height:44px}
+
+  /* ── AYUDA CONTEXTUAL ───────────────────────────────────────*/
+  .hlp{width:22px;height:22px}
+  #tip{max-width:calc(100vw - 24px)}
+
+  /* ── ACCESO ─────────────────────────────────────────────────
+     Sin el panel azul de la izquierda, el logo se queda con toda la
+     pantalla y el formulario cae por debajo del pliegue. Aquí la
+     marca se achica a lo justo para identificar, y lo primero que
+     se ve es el campo del correo. */
+  .cover{grid-template-columns:1fr}
+  .cover-hero{display:none}
+  .cover-panel{padding:22px 18px 34px}
+  .cover-card .logo-full{width:104px;margin:0 auto 14px}
+  .cover-card h1{font-size:21px}
+  .cover-card .lede{margin-bottom:20px}
+  .auth-chk{font-size:12.5px;margin-bottom:20px}
+  .auth-chk input{width:20px;height:20px;margin-top:0}
+}
+
+/* Teléfonos angostos (iPhone SE y parecidos) */
+@media(max-width:380px){
+  .kpis{grid-template-columns:1fr}
+  .tabbar button{font-size:10px}
+  .crumbs>b{font-size:14px}
+}
 </style>
 </head>
 <body>
@@ -1496,6 +1741,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <button class="mi" onclick="closeAcct();goSettings('perfil')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20v-1a5 5 0 0 1 5-5h5a5 5 0 0 1 5 5v1"/></svg>Mi perfil</button>
           <button class="mi" onclick="closeAcct();goSettings('org')"><svg viewBox="0 0 24 24"><path d="M4 21V7l7-3 7 3v14M9 21v-5h4v5M8 10h.01M12 10h.01M16 10h.01M8 13h.01M12 13h.01M16 13h.01"/></svg>Ajustes de la organización</button>
           <button class="mi" onclick="closeAcct();go('users')" id="acctUsers"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg>Usuarios y accesos</button>
+          <button class="mi" onclick="toggleTheme()" id="miTema"><svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>Tema oscuro</button>
           <button class="mi" onclick="closeAcct();openHelp()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 1 1 3.4 2.5c-.6.2-.9.8-.9 1.4v.4M12 17h.01"/></svg>Ayuda y atajos<span class="kbd">?</span></button>
           <hr>
           <div style="padding:4px 10px 8px" id="acctDemo">
@@ -1646,7 +1892,12 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <section class="page" id="p-settings"><div class="view-pad" id="setView"></div></section>
 
     </div>
+
+    <!-- Navegación del pulgar: sólo se ve en celular (CSS §16) -->
+    <nav class="tabbar" id="tabbar" aria-label="Navegación principal"></nav>
   </div>
+  <!-- velo del cajón lateral en celular -->
+  <div class="rail-scrim" onclick="toggleRail()" aria-hidden="true"></div>
 </div>
 
 <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
@@ -2188,14 +2439,46 @@ function go(p){
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
   $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
   const base=S.cli?esc(cli(S.cli).n):'Adolphus';
-  $('#crumbs').innerHTML=S.inCli&&CLI_TABS.some(([x])=>x===p)
-    ? `<span>${base}</span><span class="sep">/</span><span>${esc(cli(S.inCli).n)}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`
-    : `<span>${base}</span><span class="sep">/</span><b>${TITULOS[p]}</b>`;
+  const dentro=S.inCli&&CLI_TABS.some(([x])=>x===p)?esc(cli(S.inCli).n):null;
+  // un cliente mirando su propio espacio no necesita su nombre dos veces
+  const ruta=[base,dentro&&dentro!==base?dentro:null].filter(Boolean);
+  $('#crumbs').innerHTML=ruta.map(x=>`<span>${x}</span><span class="sep">/</span>`).join('')+`<b>${TITULOS[p]}</b>`;
   renderCliBar();
+  pintarTabbar();
   $('.view').scrollTop=0;
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
 }
 $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+
+/* ── Barra inferior del celular ──────────────────────────────
+   No es un menú aparte: es un espejo del lateral. Toma los cuatro
+   primeros destinos que el rol tenga visibles —con su etiqueta y su
+   icono, ya traducidos en applyRole()— y añade «Más», que abre el
+   cajón completo. Si mañana cambia el lateral, esta barra cambia
+   sola: no hay una segunda lista que mantener. */
+const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',
+  wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',rep:'Confiab.',
+  cat:'Catálogo',imp:'Importar',users:'Usuarios'};
+const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',wo:'Servicios',
+  parts:'Repuestos',req:'Solicitudes',rep:'Reportes'};
+function pintarTabbar(){
+  const tb=$('#tabbar'); if(!tb) return;
+  const links=$$('#nav a').filter(a=>a.style.display!=='none');
+  // el orden del lateral ya es el orden de importancia; los cuatro primeros
+  const dest=links.slice(0,4);
+  const cli=S.rol==='cliente';
+  const activa=p=>p===S.page||(S.inCli&&CLI_TABS.some(([x])=>x===S.page)&&p==='clients');
+  tb.innerHTML=dest.map(a=>{
+    const p=a.dataset.p, svg=a.querySelector('svg').outerHTML;
+    const ct=a.querySelector('.ct'), n=ct&&ct.textContent.trim();
+    const lbl=(cli?TAB_CORTO_CLI[p]:TAB_CORTO[p])||a.querySelector('.lbl').textContent;
+    return `<button class="${activa(p)?'on':''}" onclick="go('${p}')" ${activa(p)?'aria-current="page"':''}>
+      ${svg}<span>${esc(lbl)}</span>${n&&n!=='0'?`<b class="tb-ct">${esc(n)}</b>`:''}</button>`;
+  }).join('')+
+  `<button onclick="toggleRail()" aria-label="Más secciones">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    <span>Más</span></button>`;
+}
 function toggleRail(){
   if(window.innerWidth<980)$('#app').classList.toggle('rail-open');
   else $('#app').classList.toggle('rail-min');
@@ -2206,6 +2489,10 @@ function toggleTheme(){
 }
 function paintThemeBtn(){
   const d=document.documentElement.dataset.theme==='dark';
+  /* En celular el icono de tema no cabe en la barra; el mismo mando
+     vive en el menú de la cuenta y dice a qué tema lleva. */
+  const mi=$('#miTema');
+  if(mi)mi.lastChild.textContent=d?'Tema claro':'Tema oscuro';
   $('#themeBtn').innerHTML=d
    ?'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>'
    :'<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>';
@@ -5181,7 +5468,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
