@@ -315,17 +315,28 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .scrim{position:fixed;inset:0;background:oklch(0.235 0.012 255 /.42);opacity:0;pointer-events:none;transition:opacity var(--slow) var(--ease-out);z-index:var(--z-scrim);backdrop-filter:blur(1.5px)}
 .scrim.on{opacity:1;pointer-events:auto}
 .drawer{
-  position:fixed;top:0;right:0;bottom:0;width:min(660px,94vw);background:var(--surface);
-  border-left:1px solid var(--line);z-index:var(--z-drawer);display:flex;flex-direction:column;
-  transform:translateX(102%);transition:transform var(--slow) var(--ease-out),width var(--med) var(--ease-out);box-shadow:var(--shadow-over)
+  position:fixed;top:50%;left:50%;width:min(760px,94vw);height:min(88vh,940px);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  z-index:var(--z-drawer);display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:var(--shadow-over);
+  opacity:0;visibility:hidden;transform:translate(-50%,-48%) scale(.985);
+  transition:opacity var(--med) var(--ease-out),transform var(--med) var(--ease-out),
+             visibility var(--med),width var(--med) var(--ease-out),height var(--med) var(--ease-out)
 }
-.drawer.on{transform:none}
-.drawer.wide{width:min(1180px,98vw)}
+.drawer.on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.drawer.wide{width:min(1180px,96vw);height:min(94vh,1040px)}
+/* en pantallas pequeñas ocupa todo, que es lo cómodo con el pulgar */
+@media(max-width:720px){
+  .drawer{width:100vw;height:100dvh;border-radius:0;border:0;max-width:none}
+  .drawer.wide{width:100vw;height:100dvh}
+}
 :root{--dr-col:640px}
 .dr-h{padding:var(--sp-4) var(--sp-5) var(--sp-3);border-bottom:1px solid var(--line-2);flex:0 0 auto}
 /* la columna manda: el contenido vive centrado y con un ancho cómodo,
    aunque el panel se amplíe */
 .dr-h>*,.pane>*{max-width:var(--dr-col);margin-inline:auto}
+/* estas dos viven de tener ancho: plano + tabla, gráfica + tabla */
+#pn-bom>*,#pn-cal>*{max-width:none}
 .dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px;width:100%}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
