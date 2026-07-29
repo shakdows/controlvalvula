@@ -792,13 +792,44 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .fx-tile .fx-v{font-size:16px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
 .fx-tile .fx-v .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .fx-tile .fx-sub{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
-.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:9px 22px;margin:18px 0 4px}
+.fx-keyspecs{display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:0}
+.ficha-cap{display:flex;flex-direction:column;justify-content:center;gap:12px;flex:1;min-width:0}
+.fx-ult{display:flex;gap:7px;align-items:baseline;font-size:12px;color:var(--ink-3);flex-wrap:wrap;
+  padding-top:10px;border-top:1px solid var(--line-2)}
+.fx-ult b{color:var(--ink-2);font-weight:600;font-family:'IBM Plex Mono';font-size:12px}
 @media(max-width:520px){.fx-keyspecs{grid-template-columns:1fr}}
 .fx-keyspecs .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line-2);padding-bottom:7px}
 .fx-keyspecs .kv span{color:var(--ink-3)}
 .fx-keyspecs .kv b{font-weight:600;text-align:right}
 
 /* bloques de la ficha */
+/* ficha técnica: dos columnas, sin filas vacías */
+.dt{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:0 var(--sp-5)}
+.dt-i{display:flex;justify-content:space-between;gap:14px;align-items:baseline;
+  padding:9px 0;border-bottom:1px solid var(--line-2);font-size:var(--t-3)}
+.dt-i span{color:var(--ink-3);flex:0 0 auto}
+.dt-i b{font-weight:600;text-align:right;min-width:0;overflow-wrap:anywhere}
+.dt-falta{margin-top:var(--sp-4);background:var(--due-bg);border:1px solid color-mix(in oklab,var(--due) 30%,transparent);
+  border-radius:var(--r-2);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.dt-falta b{display:block;font-size:var(--t-3)}
+.dt-falta span{display:block;font-size:11.5px;color:var(--ink-2);margin-top:3px}
+.dt-nota{margin-top:var(--sp-4);font-size:12.5px;color:var(--ink-3);line-height:1.6}
+
+/* "Qué toca ahora": el primer bloque de la ficha */
+.toca{display:flex;align-items:center;gap:13px;padding:14px 16px;border-radius:var(--r-2);
+  margin-bottom:var(--sp-4);flex-wrap:wrap;border:1px solid var(--line)}
+.toca-i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.toca-t{flex:1;min-width:180px}
+.toca-t b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);font-weight:700}
+.toca-t p{font-size:var(--t-3);color:var(--ink);margin-top:3px;line-height:1.45}
+.toca-b{flex:0 0 auto}
+.toca.ok  {background:var(--ok-bg);border-color:color-mix(in oklab,var(--ok) 26%,transparent)}
+.toca.due {background:var(--due-bg);border-color:color-mix(in oklab,var(--due) 30%,transparent)}
+.toca.late{background:var(--late-bg);border-color:color-mix(in oklab,var(--late) 30%,transparent)}
+.toca.sel {background:var(--sel-bg);border-color:color-mix(in oklab,var(--sel) 26%,transparent)}
+.toca.ok .toca-i{background:var(--ok)}.toca.due .toca-i{background:var(--due)}
+.toca.late .toca-i{background:var(--late)}.toca.sel .toca-i{background:var(--sel)}
+
 .fx-blk{margin-top:var(--sp-5);border-top:1px solid var(--line-2);padding-top:var(--sp-4)}
 .fx-blk-h{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3)}
 .fx-blk-h h3{font-size:var(--t-2);text-transform:none;letter-spacing:0;color:var(--ink)}
@@ -1066,6 +1097,14 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cola-vacio svg{width:34px;height:34px;stroke:var(--ok);fill:none;stroke-width:1.7;flex:0 0 auto}
 .cola-vacio b{display:block;font-size:var(--t-3)}
 .cola-vacio span{display:block;font-size:12.5px;color:var(--ink-3);margin-top:2px}
+
+/* buscador de empresas */
+.cl-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:var(--sp-4)}
+.cl-buscar{position:relative;flex:1 1 320px;min-width:220px;display:flex;align-items:center}
+.cl-buscar svg{position:absolute;left:12px;width:16px;height:16px;stroke:var(--ink-3);fill:none;stroke-width:1.9;pointer-events:none}
+.cl-buscar .inp{height:38px;padding-left:36px;width:100%;margin:0}
+.cl-buscar .inp::-webkit-search-cancel-button{cursor:pointer}
+.cl-cont{font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:auto}
 @media(max-width:820px){
   .cola-i{grid-template-columns:10px 1fr auto;row-gap:6px}
   .cola-i .q{grid-column:2/-1}
@@ -2000,7 +2039,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -2334,9 +2373,18 @@ function clearPick(){S.picked.clear();paintBulk();renderGrid()}
 function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
 function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
 function renderAssets(){renderStats();renderFilters();renderGrid();paintBulk()}
+function buscarCli(v){S.qCli=v;renderClients()}
+function soloPend(){S.cliPend=!S.cliPend;renderClients()}
 function renderClients(){
-  const list=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
-  $('#ctClients').textContent=list.length;
+  const todos=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
+  const pend=c=>ACTIVOS.filter(a=>a.cli===c.id&&['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
+  const q=(S.qCli||'').trim().toLowerCase();
+  const list=todos.filter(c=>{
+    if(S.cliPend&&!pend(c))return false;
+    if(!q)return true;
+    return [c.n,c.ruc,c.ind,c.fac,c.dir].filter(Boolean).some(x=>String(x).toLowerCase().includes(q));
+  });
+  $('#ctClients').textContent=todos.length;
   const ini=n=>n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
   const staff=S.rol!=='cliente';
   const sel=S.cliSel||(S.cliSel=new Set());
@@ -2344,11 +2392,25 @@ function renderClients(){
   $('#clientsView').innerHTML=`
    <div class="hd"><div><h1>Clientes</h1><p>Cada cliente con su parque de válvulas. Entra a uno para ver, crear y gestionar sus equipos.${staff?' Marca la casilla para seleccionar y eliminar.':''}</p></div>
      ${staff?`<button class="btn" onclick="openNewClient()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>`:''}</div>
+   <div class="cl-tools">
+     <label class="cl-buscar">
+       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+       <input class="inp" type="search" placeholder="Busca la empresa por nombre, RUC o sector" value="${esc(S.qCli||'')}"
+              oninput="buscarCli(this.value)" aria-label="Buscar empresa">
+     </label>
+     <button class="ch ${S.cliPend?'on':''}" onclick="soloPend()">
+       <span class="pt" style="background:var(--due)"></span>Solo con pendientes
+       <b>${todos.filter(pend).length}</b></button>
+     ${q||S.cliPend?`<button class="btn quiet xs" onclick="S.qCli='';S.cliPend=false;renderClients()">Limpiar</button>`:''}
+     <span class="cl-cont">${list.length} de ${todos.length}</span>
+   </div>
    ${staff?`<div class="bulk ${sel.size?'on':''}" style="margin-bottom:var(--sp-4)">
       <b>${sel.size} cliente${sel.size===1?'':'s'} seleccionado${sel.size===1?'':'s'}</b>
       <span class="spacer" style="flex:1"></span>
       <button class="btn xs" onclick="pedirBajaClientes()">Eliminar seleccionados</button>
       <button class="btn xs" onclick="S.cliSel.clear();renderClients()">Limpiar</button></div>`:''}
+   ${list.length?'':`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <b>Ninguna empresa coincide</b>Prueba con otro nombre o quita el filtro.</div>`}
    <div class="cl-grid">${list.map(c=>{
      const eq=ACTIVOS.filter(a=>a.cli===c.id);
      const atn=eq.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
@@ -2529,7 +2591,7 @@ function openAsset(id){
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn" onclick="openWO('${a.id}')">Crear orden</button>`;})();
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -2654,22 +2716,14 @@ function paneFicha(){
   // datos clave (solo los que están llenos)
   const key=[['Tipo',m.t],['Tamaño',a.sz],['Rating / clase',a.rt],['Rango / set',a.rng],['Cv',a.cv],['Falla a',a.air]].filter(([k,v])=>v&&v!=='—');
   $('#pn-ficha').innerHTML=`
+   ${queToca(a)}
    <div class="ficha-hero">
      <div class="photo-frame">${photoFor(a.mod)}</div>
      <div class="ficha-cap">
-       <div class="fx-tiles">
-         ${tile('Próxima calibración',calV,calC,calSub)}
-         ${tile('Último servicio',a.ult||'Sin registro',a.ult?'':'due',ultTec)}
-         ${tile('Trabajo abierto',abiertas.length?abiertas[0].n:'Ninguno',abiertas.length?'sel':'ok',
-                abiertas.length?ETAPAS.find(e=>e[0]===abiertas[0].et)[1]:'nada pendiente')}
-       </div>
+       ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+       <div class="fx-ult"><span>Último servicio</span><b>${esc(a.ult||'sin registro')}</b>${ultTec?`<span>· ${esc(ultTec)}</span>`:''}</div>
      </div>
    </div>
-   ${(!a.ser||!a.tag)?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-     <div>Llegó incompleto desde el levantamiento: falta ${!a.tag?'<b>tag</b>':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'<b>número de serie</b>':''}. Sin serie no hay trazabilidad de repuestos ni de servicio.</div></div>`:''}
-   ${abiertas.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>Trabajo abierto: <b>${abiertas[0].n}</b> — ${abiertas[0].tipo}, etapa <b>${ETAPAS.find(e=>e[0]===abiertas[0].et)[1]}</b>.</div></div>`:''}
-   ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
    ${fichaCalib(a)}
    ${fichaRepuestos(a)}
    ${fichaMovimientos(a)}
@@ -2681,6 +2735,34 @@ function paneFicha(){
 
 /* Bloques de la ficha. Cada uno se dibuja solo si tiene algo que decir;
    si no, en lugar de un hueco deja la acción que falta por hacer. */
+/* Lo primero que se ve al abrir un equipo: qué le pasa y qué hacer.
+   Una frase y un botón. Todo lo demás queda debajo, para quien lo
+   necesite. */
+function queToca(a){
+  const e=estado(a), d=a.prox?dias(a.prox):null, cliente=S.rol==='cliente';
+  const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
+  let t,txt,ac=null;
+  if(e.k==='incompleto'){t='due';
+    txt=`Falta ${!a.tag?'el tag de planta':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'el número de serie':''}. Sin serie no se puede pedir el repuesto correcto.`;
+    if(!cliente)ac={t:'Completar la ficha',f:`showTab('tec')`};}
+  else if(e.k==='taller'){t='sel';
+    txt=`Está en servicio: orden ${o.n}, etapa ${ETAPAS.find(x=>x[0]===o.et)[1].toLowerCase()}.`;
+    ac={t:'Ver la orden',f:`verOrden('${o.id}')`};}
+  else if(e.k==='vencido'){t='late';
+    txt=`La calibración venció hace ${Math.abs(d)} días. Este equipo debería salir de servicio o calibrarse ya.`;
+    if(!cliente)ac={t:'Calibrar ahora',f:`openCalib('${a.id}')`};}
+  else if(e.k==='porvencer'){t='due';
+    txt=`La calibración vence en ${d} días (${a.prox}). Conviene programarla antes de que caiga.`;
+    if(!cliente)ac={t:'Programar la visita',f:`openWO('${a.id}','Calibración')`};}
+  else{t='ok';
+    txt=a.prox?`Sin pendientes. La próxima calibración toca el ${a.prox}.`:'Sin pendientes. Este equipo no tiene programa de calibración.';
+    if(!cliente&&!a.prox)ac={t:'Programar calibración',f:`openWO('${a.id}','Calibración')`};}
+  return `<div class="toca ${t}">
+    <span class="toca-i"></span>
+    <div class="toca-t"><b>${t==='ok'?'Todo en orden':'Qué toca ahora'}</b><p>${txt}</p></div>
+    ${ac?`<button class="btn ${t==='late'?'':'sec'} toca-b" onclick="${ac.f}">${esc(ac.t)}</button>`:''}
+  </div>`;
+}
 function fxBloque(titulo,extra,cuerpo){
   return `<section class="fx-blk"><div class="fx-blk-h"><h3>${titulo}</h3>${extra||''}</div>${cuerpo}</section>`;
 }
@@ -2729,29 +2811,26 @@ function fichaMovimientos(a){
 }
 
 function paneTec(){
-  const a=S.cur,m=MODELOS[a.mod]||{};
-  const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
-  const faltan=[['Tag',a.tag],['N.º de serie',a.ser],['Tamaño',a.sz],['Rating / clase',a.rt],
-    ['Rango / set',a.rng],['Criticidad',a.cr],['Último servicio',a.ult]].filter(([,v])=>!v).length;
+  const a=S.cur,m=MODELOS[a.mod]||{},cliente=S.rol==='cliente';
+  /* Se muestra lo que está lleno. Lo que falta no se reparte por toda
+     la pantalla: se junta al final, con un solo botón para completarlo. */
+  const campos=[
+    ['Tag de planta',a.tag],['N.º de serie',a.ser],['Marca',m.m],['Modelo',a.mod],
+    ['Tipo constructivo',m.t],['Familia',CL[a.cl]],
+    ['Tamaño',a.sz],['Rating / clase',a.rt],['Cv',a.cv],['Rango / set',a.rng],['Falla a',a.air],
+    ['Criticidad',a.cr],['Ubicación',cli(a.cli).n+' · '+area(a)],
+    ['Último servicio',a.ult],['Próxima calibración',a.prox]
+  ];
+  const hay=campos.filter(([,v])=>v&&v!=='—');
+  const faltan=campos.filter(([,v])=>!v||v==='—');
   $('#pn-tec').innerHTML=`
-   ${faltan?`<div class="callout warn"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
-     <div>Faltan <b>${faltan}</b> ${faltan===1?'dato':'datos'} por completar. Cada uno resta salud al equipo y quita precisión al pedir repuestos.</div></div>`:''}
-   <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
-     <div class="fx-blk-h"><h3>Identificación</h3></div>
-     <dl class="dl">${row('Tag de planta',a.tag)}${row('N.º de serie',a.ser)}${row('Marca',m.m)}${row('Modelo',a.mod)}${row('Tipo constructivo',m.t)}${row('Familia',CL[a.cl])}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Datos de proceso</h3></div>
-     <dl class="dl">${row('Tamaño',a.sz)}${row('Rating / clase',a.rt)}${row('Cv',a.cv)}${row('Rango / set',a.rng)}${row('Falla a',a.air)}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Servicio</h3></div>
-     <dl class="dl">${row('Criticidad',a.cr)}${row('Ubicación',cli(a.cli).n+' · '+area(a))}${row('Último servicio',a.ult)}${row('Próxima calibración',a.prox)}</dl>
-   </section>
-   <section class="fx-blk">
-     <div class="fx-blk-h"><h3>Sobre el modelo</h3></div>
-     <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(m.d||'—')} — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.</p>
-   </section>`;
+   <div class="dt">${hay.map(([k,v])=>`<div class="dt-i"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+   ${faltan.length?`<div class="dt-falta">
+     <div><b>Faltan ${faltan.length} ${faltan.length===1?'dato':'datos'}</b>
+       <span>${faltan.map(([k])=>esc(k)).join(' · ')}</span></div>
+     ${cliente?'':`<button class="btn sec xs" onclick="toast('El levantamiento en planta o la carga de Excel completan estos campos');showTab('ficha')">Cómo completarlos</button>`}
+   </div>`:''}
+   <p class="dt-nota">${esc(m.d||'')}${m.m?` — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.`:''}</p>`;
 }
 function paneCal(){
   const a=S.cur;
