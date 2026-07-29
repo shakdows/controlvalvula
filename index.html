@@ -21,26 +21,32 @@
    El único color saturado de la interfaz es el estado del activo.
    ============================================================ */
 :root{
-  --bg:          oklch(0.972 0.003 250);
-  --surface:     oklch(1 0 0);
-  --surface-2:   oklch(0.978 0.003 250);
-  --surface-3:   oklch(0.955 0.004 250);
-  --ink:         oklch(0.235 0.012 255);
-  --ink-2:       oklch(0.455 0.014 255);
-  --ink-3:       oklch(0.530 0.013 255);
-  --line:        oklch(0.905 0.005 255);
-  --line-2:      oklch(0.945 0.004 255);
-  --sel:         oklch(0.505 0.160 258);
-  --sel-bg:      oklch(0.955 0.020 258);
-  --ok:          oklch(0.520 0.118 158);
-  --ok-bg:       oklch(0.958 0.030 158);
-  --due:         oklch(0.530 0.128 72);
-  --due-bg:      oklch(0.962 0.045 82);
-  --late:        oklch(0.545 0.185 24);
-  --late-bg:     oklch(0.960 0.030 24);
-  --info-bg:     oklch(0.960 0.020 258);
+  /* Neutros de esmalte industrial: sesgo frío-verde, no gris azulado.
+     Elegidos, no heredados — un gris puro se lee como "sin decidir". */
+  --bg:          oklch(0.964 0.005 168);
+  --surface:     oklch(0.993 0.002 168);
+  --surface-2:   oklch(0.973 0.004 168);
+  --surface-3:   oklch(0.949 0.006 168);
+  --ink:         oklch(0.232 0.014 176);
+  --ink-2:       oklch(0.452 0.012 176);
+  --ink-3:       oklch(0.572 0.011 176);
+  --line:        oklch(0.884 0.007 170);
+  --line-2:      oklch(0.933 0.005 170);
+  /* Un único acento — petróleo. Selección, foco y acción primaria.
+     No compite con ningún estado porque ningún estado es azul-verde. */
+  --sel:         oklch(0.418 0.072 191);
+  --sel-bg:      oklch(0.940 0.024 191);
+  /* Las alarmas gritan; lo normal habla bajo. "Operativo" pierde
+     saturación a propósito para que "vencida" sea lo único que salta. */
+  --ok:          oklch(0.495 0.072 152);
+  --ok-bg:       oklch(0.953 0.024 152);
+  --due:         oklch(0.545 0.118 70);
+  --due-bg:      oklch(0.956 0.042 78);
+  --late:        oklch(0.502 0.178 27);
+  --late-bg:     oklch(0.947 0.038 27);
+  --info-bg:     oklch(0.951 0.018 191);
 
-  --r-1:5px; --r-2:8px; --r-3:12px; --r-pill:99px;
+  --r-1:3px; --r-2:6px; --r-3:10px; --r-pill:99px;
 
   /* escala tipográfica — seis pasos, con contraste real entre ellos.
      Antes convivían trece tamaños entre 10 y 19 px y nada destacaba. */
@@ -48,17 +54,18 @@
   --t-2:12.5px;  /* secundario              */
   --t-3:13.5px;  /* cuerpo y tablas         */
   --t-4:17px;    /* subtítulo               */
-  --t-5:24px;    /* título de página        */
-  --t-6:32px;    /* cifra destacada         */
+  --t-5:23px;    /* título de página        */
+  --t-6:36px;    /* cifra destacada         */
 
-  /* elevación — tres niveles, no uno */
-  --e-1: 0 1px 2px oklch(0.235 0.012 255 / .05);
-  --e-2: 0 2px 6px oklch(0.235 0.012 255 / .07), 0 1px 2px oklch(0.235 0.012 255 / .05);
-  --e-3: 0 10px 30px oklch(0.235 0.012 255 / .10), 0 2px 6px oklch(0.235 0.012 255 / .06);
+  /* elevación — tres niveles, ahora más planos: una consola de
+     instrumento no flota, se apoya. El borde hace el trabajo. */
+  --e-1: 0 1px 0 oklch(0.232 0.014 176 / .045);
+  --e-2: 0 1px 2px oklch(0.232 0.014 176 / .06), 0 3px 10px oklch(0.232 0.014 176 / .045);
+  --e-3: 0 8px 28px oklch(0.232 0.014 176 / .11), 0 2px 5px oklch(0.232 0.014 176 / .05);
 
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px;
-  --shadow-pop: 0 6px 24px oklch(0.235 0.012 255 / .10), 0 1px 3px oklch(0.235 0.012 255 / .08);
-  --shadow-over:0 16px 48px oklch(0.235 0.012 255 / .18);
+  --shadow-pop: 0 5px 20px oklch(0.232 0.014 176 / .10), 0 1px 3px oklch(0.232 0.014 176 / .07);
+  --shadow-over:0 14px 44px oklch(0.232 0.014 176 / .17);
   --ease:cubic-bezier(.22,.61,.36,1);          /* salida, transiciones cortas */
   --ease-out:cubic-bezier(.16,1,.3,1);         /* salida exponencial, entradas */
   --fast:130ms; --med:220ms; --slow:340ms;
@@ -68,27 +75,27 @@
 }
 [data-density="compact"]{ --row-h:30px; --font-d:12.5px; }
 [data-theme="dark"]{
-  --e-1: 0 1px 2px oklch(0 0 0 / .30);
-  --e-2: 0 2px 6px oklch(0 0 0 / .34), 0 1px 2px oklch(0 0 0 / .26);
-  --e-3: 0 10px 30px oklch(0 0 0 / .46), 0 2px 6px oklch(0 0 0 / .30);
-  --bg:          oklch(0.185 0.010 258);
-  --surface:     oklch(0.222 0.011 258);
-  --surface-2:   oklch(0.248 0.012 258);
-  --surface-3:   oklch(0.278 0.013 258);
-  --ink:         oklch(0.955 0.004 258);
-  --ink-2:       oklch(0.765 0.010 258);
-  --ink-3:       oklch(0.672 0.012 258);
-  --line:        oklch(0.315 0.013 258);
-  --line-2:      oklch(0.272 0.012 258);
-  --sel:         oklch(0.720 0.130 258);
-  --sel-bg:      oklch(0.300 0.055 258);
-  --ok:          oklch(0.720 0.125 158);
-  --ok-bg:       oklch(0.300 0.045 158);
-  --due:         oklch(0.800 0.125 82);
-  --due-bg:      oklch(0.320 0.050 72);
-  --late:        oklch(0.700 0.155 24);
-  --late-bg:     oklch(0.310 0.060 24);
-  --info-bg:     oklch(0.280 0.030 258);
+  --e-1: 0 1px 0 oklch(0 0 0 / .28);
+  --e-2: 0 1px 2px oklch(0 0 0 / .38), 0 3px 10px oklch(0 0 0 / .30);
+  --e-3: 0 8px 28px oklch(0 0 0 / .48), 0 2px 5px oklch(0 0 0 / .30);
+  --bg:          oklch(0.176 0.009 168);
+  --surface:     oklch(0.216 0.010 168);
+  --surface-2:   oklch(0.244 0.011 168);
+  --surface-3:   oklch(0.276 0.012 168);
+  --ink:         oklch(0.952 0.005 168);
+  --ink-2:       oklch(0.762 0.010 168);
+  --ink-3:       oklch(0.668 0.012 168);
+  --line:        oklch(0.312 0.013 168);
+  --line-2:      oklch(0.268 0.011 168);
+  --sel:         oklch(0.782 0.102 187);
+  --sel-bg:      oklch(0.312 0.048 189);
+  --ok:          oklch(0.720 0.098 152);
+  --ok-bg:       oklch(0.298 0.038 152);
+  --due:         oklch(0.802 0.122 80);
+  --due-bg:      oklch(0.320 0.048 70);
+  --late:        oklch(0.702 0.152 26);
+  --late-bg:     oklch(0.312 0.058 26);
+  --info-bg:     oklch(0.278 0.026 189);
   --shadow-pop:  0 6px 24px oklch(0 0 0 / .40), 0 1px 3px oklch(0 0 0 / .30);
   --shadow-over: 0 16px 48px oklch(0 0 0 / .55);
 }
@@ -1019,17 +1026,22 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
    Validada con el verificador de paletas (banda de luminosidad, croma,
    separación para daltonismo y contraste) en claro y en oscuro.
    No se reutiliza ningún color de estado (ok / por vencer / vencido). */
+/* Se mantienen los cuatro matices —el usuario ya los reconoce— pero
+   bajan de croma y de luminosidad. Antes el naranja de seguridad era casi
+   el ámbar de "por vencer" y el verde de on-off casi el de "operativo":
+   una etiqueta de categoría se leía como un estado. Apagados quedan en
+   otro registro y ningún color de familia puede confundirse con una alarma. */
 :root{
-  --fam-control:   #2a78d6;
-  --fam-seguridad: #eb6834;
-  --fam-onoff:     #1baf7a;
-  --fam-actuador:  #4a3aa7;
+  --fam-control:   #3a6493;
+  --fam-seguridad: #a85a38;
+  --fam-onoff:     #3e7f62;
+  --fam-actuador:  #5b4e96;
 }
 [data-theme="dark"]{
-  --fam-control:   #3987e5;
-  --fam-seguridad: #d95926;
-  --fam-onoff:     #199e70;
-  --fam-actuador:  #9085e9;
+  --fam-control:   #7ba6d4;
+  --fam-seguridad: #db9270;
+  --fam-onoff:     #74b394;
+  --fam-actuador:  #9a90d2;
 }
 
 /* tarjetas grandes por familia (fila superior del panel) */
@@ -1338,6 +1350,77 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .pd-tbl table{border:none}
 .pd-sum{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:var(--sp-3);padding:13px 15px;border:1px solid var(--line);
   border-radius:var(--r-2);background:var(--surface-2);position:sticky;bottom:8px;box-shadow:var(--shadow-pop)}
+
+/* ============================================================
+   BANCADA — capa de identidad
+   Tres ideas, y ninguna es decorativa:
+   1. Todo identificador va en monoespaciada. Tag, n.º de serie y n.º de
+      parte son las cadenas que se dictan por teléfono y se contrastan
+      contra la placa del equipo; deben alinearse dígito con dígito.
+   2. Las cabeceras de tabla son versalitas de instrumento, no texto.
+   3. En pantalla ancha la ficha deja de ser un modal centrado y se
+      acopla a la derecha: seleccionar una válvula ya no borra la lista.
+   ============================================================ */
+:root{ --insp-w:520px; }
+
+/* ── 1. la identidad del equipo se lee como una placa ───────────── */
+table.grid td>b,            /* celda de tag en cualquier rejilla     */
+.cola-i .t b,               /* título de la cola de trabajo          */
+.wo-t b,                    /* tarjeta de orden en el kanban         */
+.dr-top h2{                 /* encabezado de la ficha abierta        */
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-variant-numeric:tabular-nums; letter-spacing:-.015em;
+}
+table.grid td>b{ font-weight:600; }
+.dr-top h2{ font-weight:600; letter-spacing:-.025em; }
+
+/* La acción primaria lleva el acento, no el negro. Es el único elemento
+   de la interfaz que se pinta de petróleo lleno, así que no hay duda de
+   cuál es el botón que ejecuta. `--bg` funciona de texto en ambos temas:
+   casi blanco sobre el petróleo oscuro, casi negro sobre el claro. */
+.btn{ background:var(--sel); border-color:var(--sel); }
+
+/* ── 2. cabeceras de instrumento ─────────────────────────────────── */
+table.grid th{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:10.5px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+}
+h1{ letter-spacing:-.028em; }
+
+/* La miga de pan se recorta en vez de partirse en tres líneas y chocar
+   con los controles de la barra; las pestañas del cliente se desplazan
+   en vez de cortarse. Se nota al acoplar la ficha, pero pasaba igual en
+   cualquier ventana angosta. */
+.crumbs{ min-width:0; flex-wrap:nowrap; overflow:hidden; }
+.crumbs>*{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cbar-tabs{ overflow-x:auto; scrollbar-width:none; }
+.cbar-tabs::-webkit-scrollbar{ display:none; }
+
+/* ── 3. inspector acoplado en pantalla ancha ─────────────────────── */
+/* Sólo a partir de 1440px: por debajo no sobra ancho y el modal centrado
+   que ya existía sigue siendo la mejor forma de leer la ficha. */
+@media (min-width:1440px){
+  .app{ transition:padding-right var(--med) var(--ease-out); }
+  body:has(.drawer.on) .app{ padding-right:var(--insp-w); }
+  body:has(.drawer.wide.on) .app{ padding-right:min(820px,52vw); }
+  .drawer{
+    top:0; left:auto; right:0; bottom:0;
+    width:var(--insp-w); height:100vh; max-width:none;
+    border-radius:0; border:0; border-left:1px solid var(--line);
+    box-shadow:none; transform:translateX(16px);
+  }
+  .drawer.on{ transform:none; }
+  .drawer.wide{ width:min(820px,52vw); }
+  /* sin velo: la lista de atrás sigue viva y se puede seguir recorriendo */
+  .scrim{ display:none; }
+
+  /* La ficha se compuso para 760px de modal. Acoplada es más angosta, así
+     que el héroe se apila en vez de apretarse — la foto a lo ancho y los
+     datos debajo. Al ampliarla (.wide) vuelve a caber en dos columnas. */
+  .drawer:not(.wide) .ficha-hero{ flex-direction:column; }
+  .drawer:not(.wide) .ficha-hero .photo-frame{ width:100%; height:200px; }
+  .dr-b{ overflow-x:hidden; }
+}
 .pd-sumL{font-size:13.5px}.pd-sumL b{font-weight:700}.pd-sumL span{color:var(--ink-3);font-size:11.5px}
 .pd-sumB{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 </style>
@@ -4392,14 +4475,22 @@ function renderHome(){
    ${onbHtml()}
    ${kpiHtml}
    ${famHtml}
+   <!-- Arriba sólo lo que cambia una decisión de hoy: qué vence, cómo está
+        el parque y qué se movió. El recuento de inventario —por tipo, por
+        modelo— no se decide a diario, así que baja a un desplegable y deja
+        de competir con la cola de trabajo. El análisis vive en Confiabilidad. -->
    <div class="dash">
      <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
      <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
-     <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
-     <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
      <div class="span-7">${panel('Actividad reciente',feedHtml)}</div>
      <div class="span-5">${panel('Órdenes por etapa',hbars(porEtapa),`<span class="count">${ordAb} abiertas</span>`)}</div>
-   </div>`;
+   </div>
+   <details class="fx-more" style="margin-top:14px"><summary>Composición del parque — por tipo y por modelo</summary>
+     <div class="dash" style="margin-top:12px">
+       <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
+       <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
+     </div>
+   </details>`;
 }
 
 function renderRep(){
