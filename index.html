@@ -1396,6 +1396,24 @@ h1{ letter-spacing:-.028em; }
 .cbar-tabs{ overflow-x:auto; scrollbar-width:none; }
 .cbar-tabs::-webkit-scrollbar{ display:none; }
 
+/* Ahora el panel es el menú de todo lo que sabe hacer el sistema, no una
+   lista de doce comandos: necesita alto para que se vea de un vistazo. */
+.cmd-c{ max-height:min(78vh,760px); }
+
+/* ── modo campo ──────────────────────────────────────────────────────
+   El técnico está de pie en planta, con la tablet en una mano y a veces
+   con guantes. Todo objetivo táctil pasa de 44px y la tabla respira. */
+[data-density="campo"]{ --row-h:54px; --font-d:15px; }
+[data-density="campo"] .btn{ height:44px; padding:0 18px; font-size:14.5px; }
+[data-density="campo"] .btn.xs{ height:38px; padding:0 14px; font-size:13.5px; }
+[data-density="campo"] .icon-btn{ width:44px; height:44px; }
+[data-density="campo"] .inp,
+[data-density="campo"] select.inp{ height:44px; font-size:15px; }
+[data-density="campo"] .dr-tab{ padding-top:14px; padding-bottom:13px; font-size:14.5px; }
+[data-density="campo"] .cola-i{ padding-top:15px; padding-bottom:15px; }
+[data-density="campo"] .ck{ width:20px; height:20px; }
+[data-density="campo"] .tag{ height:24px; font-size:12.5px; }
+
 /* ── 3. inspector acoplado en pantalla ancha ─────────────────────── */
 /* Sólo a partir de 1440px: por debajo no sobra ancho y el modal centrado
    que ya existía sigue siendo la mejor forma de leer la ficha. */
@@ -1550,9 +1568,9 @@ h1{ letter-spacing:-.028em; }
     <header class="bar">
       <button class="icon-btn" onclick="toggleRail()" title="Barra lateral"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
       <div class="crumbs" id="crumbs"></div>
-      <button class="search-trigger" onclick="openCmd()" aria-label="Buscar tag, serie o número de parte">
+      <button class="search-trigger" onclick="openCmd()" aria-label="Buscar un equipo o ejecutar una acción">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-        <span class="st-lbl">Buscar tag, serie o n.º de parte</span>
+        <span class="st-lbl">Buscar equipo o hacer algo…</span>
         <span class="kbd">⌘K</span>
       </button>
       <button class="net-chip" id="netChip" onclick="openSync()" title="Estado de conexión y sincronización"></button>
@@ -1763,7 +1781,7 @@ h1{ letter-spacing:-.028em; }
   <div class="cmd-c">
     <div class="cmd-i">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
-      <input id="cmdIn" placeholder="Tag, número de serie, n.º de parte, cliente o acción…" autocomplete="off">
+      <input id="cmdIn" placeholder="Un tag, un n.º de parte… o qué quieres hacer" autocomplete="off">
     </div>
     <div class="cmd-l" id="cmdList"></div>
     <div class="cmd-f"><span><span class="kbd">↑↓</span> navegar</span><span><span class="kbd">↵</span> abrir</span><span><span class="kbd">esc</span> cerrar</span></div>
@@ -2265,8 +2283,14 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
    ============================================================ */
 const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
-  // las páginas de un cliente solo se abren desde su espacio de trabajo
-  if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
+  /* Antes estas páginas rebotaban a Clientes si no habías entrado a uno,
+     así que no existía forma de ver "todas mis calibraciones vencidas"
+     ni el tablero completo de órdenes. Pero el personal de Adolphus no
+     trabaja cliente por cliente: una PSV crítica vencida es urgente sea
+     de quien sea. Los datos siempre lo permitieron —visibles() devuelve
+     todo el parque cuando no hay cliente— y cada página ya trae su
+     propio selector, así que ahora abren en alcance global y se filtran
+     desde dentro. Entrar a un cliente sigue funcionando igual. */
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
   $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
@@ -2293,10 +2317,19 @@ function paintThemeBtn(){
    ?'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M19.1 4.9l-1.8 1.8M6.7 17.3l-1.8 1.8"/></svg>'
    :'<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>';
 }
+/* Tres densidades, no dos. "Campo" existe porque el técnico usa la tablet
+   de pie en planta y muchas veces con guantes: ahí una fila de 38px no se
+   acierta. Cómoda ⇄ compacta ⇄ campo, en ese orden. */
+const DENSIDADES={cozy:'Filas cómodas',compact:'Filas compactas — más equipos por pantalla',
+                  campo:'Modo campo — filas y botones grandes para tablet'};
+function setDensidad(v){
+  if(!DENSIDADES[v])return;
+  document.documentElement.dataset.density=v;
+  toast(DENSIDADES[v]);
+}
 function toggleDensity(){
-  const c=document.documentElement.dataset.density==='compact';
-  document.documentElement.dataset.density=c?'cozy':'compact';
-  toast(c?'Densidad cómoda':'Densidad compacta');
+  const orden=['cozy','compact','campo'],act=document.documentElement.dataset.density||'cozy';
+  setDensidad(orden[(orden.indexOf(act)+1)%orden.length]);
 }
 function applyRole(v){
   S.rol=v.startsWith('cli')?'cliente':v;
@@ -2304,8 +2337,12 @@ function applyRole(v){
   $('#ava').textContent={admin:'IA',tec:'ST',com:'CR','cli-minera':'ML','cli-refi':'RC','cli-agro':'AV'}[v];
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
-  // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
+  /* Cada perfil ve las funciones de su oficio. El cliente no necesita la
+     estructura interna de Adolphus; el personal ahora sí llega directo a
+     toda la operación sin pasar por un cliente. Sólo "Usuarios y accesos"
+     queda reservado a ingeniería, que es quien da de alta las cuentas. */
+  const OCULTAS={ cliente:['clients','cat','imp','users'], admin:[], tec:['users'], com:['users'] };
+  const ocultas=OCULTAS[S.rol]||[];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
@@ -4110,24 +4147,66 @@ function demoImport(){
    11 · PALETA DE COMANDOS
    ============================================================ */
 let cmdItems=[],cmdCur=0;
+
+/* Catálogo de todo lo que se puede hacer, escrito como lo diría la
+   persona que lo necesita —"registrar una calibración", no "crear
+   registro de calibración"— y filtrado por oficio: el cliente no ve
+   herramientas de taller y el comercial no ve el importador de campo.
+   `k` son las palabras con las que alguien buscaría cada acción aunque
+   no recuerde cómo se llama en el menú. Antes esta lista tenía doce
+   entradas fijas e iguales para todos, y la mitad de las funciones del
+   sistema no se podían encontrar si no sabías en qué pantalla vivían. */
+function CATALOGO(){
+  const cliente=S.rol==='cliente', admin=S.rol==='admin', com=S.rol==='com', tec=S.rol==='tec';
+  const staff=!cliente;
+  const L=[
+   // ── ir a ──────────────────────────────────────────────────────────
+   {g:'Ir a',ic:'→',t:cliente?'Inicio':'Panel de control',s:'Lo que necesita atención hoy',k:'panel inicio home resumen',fn:()=>go('home')},
+   {g:'Ir a',ic:'→',t:cliente?'Mis equipos':'Activos instalados',s:'La lista completa de válvulas',k:'activos equipos valvulas lista grilla parque',fn:()=>go('assets')},
+   {g:'Ir a',ic:'→',t:'Calibraciones',s:'Qué vence y cuándo',k:'calibracion vencimiento horizonte psv programa',fn:()=>go('cal'),if:!com},
+   {g:'Ir a',ic:'→',t:cliente?'Servicios':'Órdenes de trabajo',s:'Tablero por etapa',k:'ordenes trabajo servicio taller ot kanban',fn:()=>go('wo'),if:!com},
+   {g:'Ir a',ic:'→',t:'Repuestos',s:'Despieces, stock y precios',k:'repuestos partes stock precio despiece bom',fn:()=>go('parts')},
+   {g:'Ir a',ic:'→',t:'Solicitudes',s:'Pedidos de repuestos en curso',k:'solicitudes pedidos cotizacion',fn:()=>go('req'),if:!tec},
+   {g:'Ir a',ic:'→',t:cliente?'Reportes':'Confiabilidad',s:'Análisis y gráficos',k:'confiabilidad reportes analitica graficos kpi',fn:()=>go('rep')},
+   {g:'Ir a',ic:'→',t:'Clientes',s:'Las empresas y su parque',k:'clientes empresas cartera',fn:()=>go('clients'),if:staff},
+   {g:'Ir a',ic:'→',t:'Catálogo y despieces',s:'Un despiece por modelo',k:'catalogo despiece modelos bom maestro',fn:()=>go('cat'),if:staff},
+   {g:'Ir a',ic:'→',t:'Usuarios y accesos',s:'Quién entra y con qué perfil',k:'usuarios accesos permisos invitar',fn:()=>go('users'),if:admin},
+
+   // ── dar de alta ───────────────────────────────────────────────────
+   {g:'Dar de alta',ic:'+',t:'Registrar una válvula nueva',s:'Elige el modelo y se autocompleta la ficha',k:'nueva valvula alta activo equipo crear registrar',fn:()=>openNewAsset(S.inCli||S.fCli||''),if:staff},
+   {g:'Dar de alta',ic:'+',t:'Crear una orden de trabajo',s:'Preventivo, correctivo o calibración',k:'nueva orden ot trabajo crear servicio',fn:()=>openWO(),if:staff},
+   {g:'Dar de alta',ic:'+',t:'Dar de alta una empresa cliente',s:'RUC, sede y áreas de planta',k:'nuevo cliente empresa alta ruc',fn:()=>openNewClient(),if:admin},
+   {g:'Dar de alta',ic:'+',t:'Invitar a una persona',s:'Dale acceso con su perfil',k:'usuario invitar persona acceso alta cuenta',fn:()=>openNewUser(),if:admin},
+
+   // ── trabajo de campo y taller ─────────────────────────────────────
+   {g:'Campo y taller',ic:'▤',t:'Imprimir la hoja de campo',s:'Para llenar a mano en planta, sin señal',k:'hoja campo imprimir papel planta offline sin internet',fn:()=>printFieldSheet(),if:staff},
+   {g:'Campo y taller',ic:'▤',t:'Descargar el formulario de campo',s:'Se llena en la laptop sin internet y se sube',k:'formulario campo offline laptop tablet descargar',fn:()=>descargarFormulario(),if:staff},
+   {g:'Campo y taller',ic:'↑',t:'Subir una hoja de campo llena',s:'Foto, escaneo, PDF o Excel',k:'subir cargar hoja llena foto escaneo pdf excel',fn:()=>openUploadSheet(),if:staff},
+   {g:'Campo y taller',ic:'↑',t:'Importar un levantamiento',s:'Carga masiva de equipos desde Excel',k:'importar levantamiento excel masivo carga csv',fn:()=>go('imp'),if:staff},
+   {g:'Campo y taller',ic:'▦',t:'Modo campo: filas grandes',s:'Botones para usar con guantes en tablet',k:'modo campo tactil guantes tablet grande densidad',fn:()=>setDensidad('campo')},
+
+   // ── plantillas y descargas ────────────────────────────────────────
+   {g:'Plantillas',ic:'↓',t:'Plantilla de equipos',s:'El Excel para levantar un parque nuevo',k:'plantilla equipos excel descargar formato',fn:()=>descargarPlantilla(),if:staff},
+   {g:'Plantillas',ic:'↓',t:'Plantilla de calibraciones',s:'El Excel para cargar resultados de banco',k:'plantilla calibracion excel descargar formato',fn:()=>descargarPlantillaCalib(),if:staff},
+   {g:'Plantillas',ic:'↓',t:'Exportar lo que estoy viendo',s:'Se descarga en CSV con los filtros puestos',k:'exportar csv descargar excel bajar datos',fn:()=>exportCSV()},
+
+   // ── ajustes ───────────────────────────────────────────────────────
+   {g:'Ajustes',ic:'◐',t:'Cambiar entre claro y oscuro',s:'',k:'tema claro oscuro noche modo dark',fn:toggleTheme},
+   {g:'Ajustes',ic:'▤',t:'Filas cómodas',s:'El tamaño de siempre',k:'densidad comoda normal filas tamaño',fn:()=>setDensidad('cozy')},
+   {g:'Ajustes',ic:'▬',t:'Filas compactas',s:'Más equipos por pantalla',k:'densidad compacta apretada filas tamaño',fn:()=>setDensidad('compact')},
+   {g:'Ajustes',ic:'⚙',t:'Mi perfil',s:'Nombre, cargo y teléfono',k:'perfil cuenta mis datos cargo telefono',fn:()=>goSettings('perfil')},
+   {g:'Ajustes',ic:'⚙',t:'Datos de la organización',s:'RUC y dirección fiscal',k:'organizacion empresa ruc direccion fiscal ajustes',fn:()=>goSettings('org'),if:staff},
+   {g:'Ajustes',ic:'↻',t:'Estado de la sincronización',s:'Qué falta subir del trabajo sin señal',k:'sincronizacion sync conexion offline pendiente',fn:()=>openSync()},
+   {g:'Ajustes',ic:'?',t:'Ayuda y atajos de teclado',s:'',k:'ayuda atajos teclado shortcuts soporte',fn:()=>openHelp()}
+  ];
+  return L.filter(a=>a.if===undefined||a.if);
+}
+
 function openCmd(){$('#cmd').classList.add('on');$('#cmdIn').value='';$('#cmdIn').focus();buildCmd('')}
 function closeCmd(){$('#cmd').classList.remove('on')}
 function buildCmd(q){
   q=q.toLowerCase().trim();
-  const acciones=[
-   {g:'Ir a',ic:'→',t:'Panel de control',s:'Resumen, KPIs y gráficos',fn:()=>go('home')},
-   {g:'Ir a',ic:'→',t:'Activos',s:'Grilla de equipos',fn:()=>go('assets')},
-   {g:'Ir a',ic:'→',t:'Calibraciones',s:'Horizonte de vencimientos',fn:()=>go('cal')},
-   {g:'Ir a',ic:'→',t:'Órdenes de trabajo',s:'Tablero por etapa',fn:()=>go('wo')},
-   {g:'Ir a',ic:'→',t:'Confiabilidad',s:'Reportes y analítica',fn:()=>go('rep')},
-   {g:'Ir a',ic:'→',t:'Importar levantamiento',s:'Carga desde Excel',fn:()=>go('imp')},
-   {g:'Acción',ic:'+',t:'Nuevo cliente',s:'Dar de alta una empresa',fn:()=>openNewClient()},
-   {g:'Acción',ic:'+',t:'Nueva válvula',s:'Dar de alta un activo',fn:()=>openNewAsset()},
-   {g:'Acción',ic:'+',t:'Nueva orden de trabajo',s:'',fn:()=>openWO()},
-   {g:'Acción',ic:'+',t:'Nuevo usuario',s:'Dar acceso a un cliente',fn:()=>openNewUser()},
-   {g:'Acción',ic:'◐',t:'Cambiar tema claro / oscuro',s:'',fn:toggleTheme},
-   {g:'Acción',ic:'≡',t:'Cambiar densidad de filas',s:'',fn:toggleDensity}
-  ];
+  const acciones=CATALOGO();
   const act=visibles().filter(a=>!q||[a.tag,a.ser,a.mod,MODELOS[a.mod]?.m,cli(a.cli).n].join(' ').toLowerCase().includes(q))
     .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>gotoAsset(a.id)}));
   const partes=[];
@@ -4139,7 +4218,15 @@ function buildCmd(q){
         partes.push({g:'Números de parte',ic:'#',t:p.n,s:`${p.d} · ${p.s>0?p.s+' en stock':'sin stock'}`,fn:()=>toast(`${p.n} — ${p.s>0?p.s+' und en Lima':'requiere importación'}`)})}
     });
   }
-  cmdItems=[...act,...partes.slice(0,5),...acciones.filter(a=>!q||a.t.toLowerCase().includes(q))].slice(0,14);
+  /* Se busca también por las palabras con las que alguien pediría la
+     acción, no sólo por su nombre: "guantes" encuentra el modo campo y
+     "sin internet" encuentra el formulario de campo. */
+  const coincide=a=>!q||`${a.t} ${a.s||''} ${a.k||''}`.toLowerCase().includes(q);
+  const accs=acciones.filter(coincide);
+  /* Abierto y sin escribir nada, esto es el menú de todo lo que puedes
+     hacer con tu perfil — por eso no se recorta. Al escribir se vuelve
+     un buscador y entran equipos y números de parte. */
+  cmdItems = q ? [...act,...partes.slice(0,5),...accs].slice(0,16) : accs;
   cmdCur=0;paintCmd();
 }
 function paintCmd(){
