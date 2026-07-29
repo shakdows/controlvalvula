@@ -323,6 +323,28 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .dr-top{display:flex;align-items:flex-start;gap:var(--sp-3);margin-bottom:10px}
 .dr-top h2{font-size:18px;letter-spacing:-.02em;flex:1;min-width:0}
 .dr-top .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
+/* Recorrido de la solicitud: dónde está, quién la tiene y qué falta. */
+.paso-l{display:flex;gap:0;margin:2px 0 var(--sp-4);overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.paso-l::-webkit-scrollbar{display:none}
+.paso-i{flex:1 0 auto;min-width:88px;display:flex;flex-direction:column;gap:7px;position:relative;padding-right:4px}
+.paso-i .lin{height:3px;border-radius:2px;background:var(--line);position:relative}
+.paso-i.hecho .lin,.paso-i.aqui .lin{background:var(--ok)}
+.paso-i.aqui .lin{background:var(--sel)}
+.paso-i .lbl2{font-size:11px;color:var(--ink-3);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.paso-i.hecho .lbl2{color:var(--ink-2)}
+.paso-i.aqui .lbl2{color:var(--sel);font-weight:700}
+.aqui-caja{background:var(--sel-bg);border:1px solid color-mix(in oklab,var(--sel) 30%,transparent);
+  border-radius:var(--r-2);padding:13px 15px;margin-bottom:var(--sp-4)}
+.aqui-caja .fila{display:flex;gap:10px;align-items:baseline;font-size:12.5px;margin-bottom:5px}
+.aqui-caja .fila:last-child{margin-bottom:0}
+.aqui-caja .fila b{color:var(--ink-3);font-weight:600;min-width:104px;font-size:11px;
+  text-transform:uppercase;letter-spacing:.05em;flex:0 0 auto}
+.aqui-caja .fila span{color:var(--ink)}
+.hist-l{display:flex;flex-direction:column;gap:0;margin-top:var(--sp-3)}
+.hist-i{display:grid;grid-template-columns:84px 1fr;gap:12px;font-size:12.5px;padding:7px 0;
+  border-bottom:1px solid var(--line-2)}
+.hist-i:last-child{border-bottom:0}
+.hist-i b{font-family:'IBM Plex Mono';font-size:11.5px;color:var(--ink-3);font-weight:500}
 .spill{display:inline-flex;align-items:center;gap:8px;min-width:74px}
 .spill-b{flex:1;height:5px;border-radius:4px;background:var(--chart-track);overflow:hidden;min-width:34px}
 .spill-b i{display:block;height:100%;border-radius:4px}
@@ -1354,7 +1376,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="users"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.1"/><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1M17 8h5M19.5 5.5v5"/></svg><span class="lbl">Usuarios y accesos</span></a>
     </nav>
     <div class="rail-foot">
-      <p>Adolphus<br id="railFootBr">Prototipo · datos de demo</p>
+      <p>Adolphus<br id="railFootBr">Versión <b class="mono" id="verApp">—</b></p>
       <button class="icon-btn" onclick="toggleRail()" title="Contraer barra"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     </div>
   </aside>
@@ -1899,9 +1921,27 @@ const DOCS=[
  {a:'a7',t:'INF',n:'Informe de mantenimiento AD-26-0511.pdf',f:'2026-04-02',w:'1.4 MB'},
  {a:'a7',t:'DS',n:'Datasheet Orbinox EB 10 pulg.pdf',f:'2021-03-19',w:'610 KB'}
 ];
+/* Estados de una solicitud, de punta a punta. Cada uno dice quién la
+   tiene, qué falta y de quién depende avanzar — que es lo que el
+   cliente pregunta por teléfono cuando no lo ve en pantalla. */
+const FLUJO=[
+ {k:'nueva',   n:'Nueva',        r:'Adolphus · Comercial',  sig:'Revisar el pedido y confirmar los números de parte'},
+ {k:'revision',n:'En revisión',  r:'Adolphus · Ingeniería', sig:'Verificar compatibilidad con el equipo'},
+ {k:'cotizada',n:'Cotizada',     r:'Cliente',               sig:'Aprobar o rechazar la cotización', cli:true},
+ {k:'aprobada',n:'Aprobada',     r:'Adolphus · Comercial',  sig:'Reservar repuestos y programar la visita'},
+ {k:'programada',n:'Programada', r:'Adolphus · Servicio',   sig:'Ejecutar el trabajo en la fecha acordada'},
+ {k:'ejecucion',n:'En ejecución',r:'Adolphus · Servicio',   sig:'Cerrar la orden y emitir el certificado'},
+ {k:'cerrada', n:'Cerrada',      r:'—',                     sig:'Sin pendientes'}
+];
+const pasoDe=k=>FLUJO.find(x=>x.k===k)||FLUJO[0];
+const idxPaso=k=>Math.max(0,FLUJO.findIndex(x=>x.k===k));
 let SOLICITUDES=[
- {id:'s1',n:'SOL-2026-0188',cli:'agro',f:'2026-07-18',est:'Cotizada',items:[{n:'AD-SV-KIT-SEL',q:2,a:'a12'},{n:'AD-SV-RES-150',q:1,a:'a13'}]},
- {id:'s2',n:'SOL-2026-0201',cli:'minera',f:'2026-07-21',est:'Pendiente',items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}]}
+ {id:'s1',n:'SOL-2026-0188',cli:'agro',f:'2026-07-18',est:'cotizada',prom:'2026-07-30',
+  items:[{n:'AD-SV-KIT-SEL',q:2,a:'a12'},{n:'AD-SV-RES-150',q:1,a:'a13'}],
+  hist:[{f:'2026-07-18',t:'Recibida del cliente'},{f:'2026-07-19',t:'Revisada por ingeniería'},{f:'2026-07-22',t:'Cotización enviada'}]},
+ {id:'s2',n:'SOL-2026-0201',cli:'minera',f:'2026-07-21',est:'revision',prom:'2026-07-28',
+  items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}],
+  hist:[{f:'2026-07-21',t:'Recibida del cliente'}]}
 ];
 const USUARIOS=[
  {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
@@ -2309,6 +2349,40 @@ function exitClient(){
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   closeDrawer();renderAll();go('clients');
 }
+/* Abre la ficha encima de lo que se esté viendo, sin cambiar de página:
+   al cerrarla se vuelve exactamente al mismo sitio. */
+function verEquipo(id){
+  const a=ACTIVOS.find(x=>x.id===id);if(!a){toast('Ese equipo ya no existe');return}
+  S.tab='ficha';openAsset(id);
+}
+/* Detalle de una orden, también encima. */
+function verOrden(idOrAct,esActivo){
+  const o=esActivo?ORDENES.find(x=>x.act===idOrAct&&x.et!=='certificada'):ORDENES.find(x=>x.id===idOrAct);
+  if(!o){toast('Esa orden ya no está abierta');return}
+  const a=ACTIVOS.find(x=>x.id===o.act)||{}, i=ETAPAS.findIndex(e=>e[0]===o.et), sig=ETAPAS[i+1];
+  $('#mTitle').textContent=`${o.n} · ${esc(a.tag||'')}`;
+  $('#mBody').innerHTML=`
+    <div class="paso-l">${ETAPAS.map(([k,l],x)=>`<div class="paso-i ${x<i?'hecho':x===i?'aqui':''}">
+      <span class="lin"></span><span class="lbl2">${esc(l)}</span></div>`).join('')}</div>
+    <div class="aqui-caja">
+      <div class="fila"><b>Tipo</b><span>${esc(o.tipo)}</span></div>
+      <div class="fila"><b>Responsable</b><span>${esc(o.tec||'Por asignar')}</span></div>
+      <div class="fila"><b>Fecha</b><span class="mono">${esc(o.f)}</span></div>
+      <div class="fila"><b>Equipo</b><span>${esc(a.tag||'')} · ${esc(cli(a.cli).n||'')} · ${esc(a.ar?area(a):'')}</span></div>
+    </div>
+    <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
+      <div class="fx-blk-h"><h3>Alcance y hallazgos</h3></div>
+      <p style="font-size:var(--t-2);color:var(--ink-2);line-height:1.6">${esc(o.hall||'Sin observaciones.')}</p>
+    </section>
+    ${o.partes&&o.partes.length?`<section class="fx-blk"><div class="fx-blk-h"><h3>Repuestos previstos</h3></div>
+      <div class="parts-inline">${o.partes.map(x=>`<span class="tag mono">${esc(x)}</span>`).join('')}</div></section>`:''}`;
+  const cliente=S.rol==='cliente';
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>
+    ${!cliente&&sig?`<button class="btn" onclick="closeModal();advanceWO('${o.id}')">Pasar a ${esc(sig[1].toLowerCase())}</button>`:''}`;
+  $('#modal').classList.add('on');
+}
+
 /* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
 function gotoAsset(id,tab){
   const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
@@ -2744,9 +2818,10 @@ function renderReq(){
         <td style="text-align:right"><button class="btn quiet xs" onclick="S.cart.splice(${i},1);renderReq()">✕</button></td></tr>`}).join('')}
         <tr style="cursor:default"><td colspan="5" style="text-align:right;font-weight:600;border-top:1px solid var(--line)">Subtotal (sin IGV)</td><td class="num" style="text-align:right;border-top:1px solid var(--line)"><b>${usd(cartSub)}</b></td><td style="border-top:1px solid var(--line)"></td></tr></tbody></table></div>`:'';
   $('#reqList').innerHTML=carrito+(mias.length?`<table class="grid">
-    <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th>Quién la tiene</th><th></th></tr></thead>
     <tbody>${mias.map(s=>`<tr style="cursor:default"><td class="mono"><b>${s.n}</b></td><td>${esc(cli(s.cli).n)}</td><td class="mono">${s.f}</td>
-      <td>${s.items.length}</td><td><span class="tag ${s.est==='Cotizada'?'ok':'due'}"><span class="dot"></span>${s.est}</span></td>
+      <td>${s.items.length}</td><td><span class="tag ${s.est==='cerrada'?'ok':s.est==='cotizada'?'sel':'due'}"><span class="dot"></span>${esc(pasoDe(s.est).n)}</span></td>
+      <td class="muted" style="white-space:normal;max-width:30ch">${esc(pasoDe(s.est).r)}</td>
       <td style="text-align:right"><button class="btn sec xs" onclick="verSol('${s.id}')">Ver detalle</button></td></tr>`).join('')}</tbody></table>`
     :(carrito?'':`<div class="empty"><b>Sin solicitudes</b>Las peticiones de repuestos aparecerán aquí.</div>`));
   $('#ctReq').textContent=mias.length;
@@ -2754,18 +2829,72 @@ function renderReq(){
 function enviarSol(){
   const n='SOL-2026-'+String(1000+Math.floor(Math.random()*8999)).slice(0,4);
   const conAct=S.cart.find(c=>c.a);
-  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'Pendiente',
-    items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a}))});
+  SOLICITUDES.unshift({id:'s'+Date.now(),n,cli:S.cli||(conAct?ACTIVOS.find(a=>a.id===conAct.a).cli:CLIENTES[0].id),f:'2026-07-23',est:'nueva',
+    items:S.cart.map(c=>({n:c.n,q:c.q,a:c.a})),hist:[{f:hoyISO(),t:'Recibida del cliente'}]});
   S.cart=[];renderReq();registrar('Solicitud',`${n} enviada`);toast(`Solicitud ${n} enviada`);
 }
 function verSol(id){
-  const s=SOLICITUDES.find(x=>x.id===id);
-  $('#mTitle').textContent=s.n;
-  $('#mBody').innerHTML=`<table class="grid"><thead><tr><th>N.º de parte</th><th>Equipo</th><th>Cant.</th></tr></thead>
-   <tbody>${s.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a);return `<tr style="cursor:default"><td class="mono"><b>${i.n}</b></td>
-     <td>${esc(a?.tag||'')} <small class="muted">${esc(cli(a?.cli).n||'')}</small></td><td>${i.q}</td></tr>`}).join('')}</tbody></table>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button><button class="btn" onclick="closeModal();openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,SOLICITUDES.find(x=>x.id==='${id}').cli,'cot')">Generar cotización (PDF)</button>`;
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return;
+  const iAct=idxPaso(so.est), p=pasoDe(so.est), cliente=S.rol==='cliente';
+  const total=so.items.reduce((t,i)=>t+precio(i.n)*(i.q||1),0);
+  const sig=FLUJO[iAct+1];
+  $('#mTitle').textContent=`${so.n} · ${cli(so.cli).n}`;
+  $('#mBody').innerHTML=`
+    <div class="paso-l">${FLUJO.map((x,k)=>`<div class="paso-i ${k<iAct?'hecho':k===iAct?'aqui':''}">
+      <span class="lin"></span><span class="lbl2">${esc(x.n)}</span></div>`).join('')}</div>
+    <div class="aqui-caja">
+      <div class="fila"><b>Ahora la tiene</b><span>${esc(p.r)}</span></div>
+      <div class="fila"><b>Siguiente paso</b><span>${esc(p.sig)}</span></div>
+      ${so.prom?`<div class="fila"><b>Comprometido</b><span class="mono">${esc(so.prom)}</span>${dias(so.prom)<0?' <span class="tag late">atrasado</span>':''}</div>`:''}
+    </div>
+    <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
+      <thead><tr><th>N.º de parte</th><th>Equipo</th><th class="num">Cant.</th><th class="num">Unitario</th><th class="num">Importe</th></tr></thead>
+      <tbody>${so.items.map(i=>{const a=ACTIVOS.find(x=>x.id===i.a)||{};const pu=precio(i.n);
+        return `<tr style="cursor:default"><td class="mono"><b>${esc(i.n)}</b></td>
+        <td>${esc(a.tag||'—')} <small class="muted">${esc(a.ar?area(a):'')}</small></td>
+        <td class="num">${i.q}</td><td class="num mono">${usd(pu)}</td><td class="num mono"><b>${usd(pu*(i.q||1))}</b></td></tr>`}).join('')}
+      <tr style="cursor:default"><td colspan="4" style="text-align:right;font-weight:600;border-top:1px solid var(--line)">Total referencial (sin IGV)</td>
+        <td class="num mono" style="border-top:1px solid var(--line)"><b>${usd(total)}</b></td></tr></tbody></table>
+    <section class="fx-blk"><div class="fx-blk-h"><h3>Qué ha pasado</h3></div>
+      <div class="hist-l">${(so.hist||[]).slice().reverse().map(h=>`<div class="hist-i"><b>${esc(h.f)}</b><span>${esc(h.t)}</span></div>`).join('')}</div>
+    </section>`;
+  /* Las acciones dependen de quién mira: el cliente aprueba o rechaza
+     cuando le toca; Adolphus mueve la solicitud al paso siguiente. */
+  const acc=[];
+  if(so.est==='cotizada'&&cliente){
+    acc.push(`<button class="btn quiet" style="color:var(--late)" onclick="rechazarSol('${id}')">Rechazar</button>`);
+    acc.push(`<span style="flex:1"></span>`);
+    acc.push(`<button class="btn sec" onclick="openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,'${cli(so.cli).n}')">Ver cotización</button>`);
+    acc.push(`<button class="btn" onclick="aprobarSol('${id}')">Aprobar cotización</button>`);
+  }else{
+    acc.push(`<button class="btn sec" onclick="closeModal()">Cerrar</button>`);
+    if(!cliente){
+      acc.push(`<button class="btn sec" onclick="openQuote(SOLICITUDES.find(x=>x.id==='${id}').items,'${cli(so.cli).n}')">Cotización (PDF)</button>`);
+      if(sig)acc.push(`<button class="btn" onclick="avanzarSol('${id}')">Pasar a ${esc(sig.n.toLowerCase())}</button>`);
+    }
+  }
+  $('#mFoot').innerHTML=acc.join('');
   $('#modal').classList.add('on');
+}
+function tocaSol(id,est,txt){
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return null;
+  so.est=est;(so.hist=so.hist||[]).push({f:hoyISO(),t:txt});
+  guardarLocal();renderAll();verSol(id);registrar('Solicitud',`${so.n} · ${txt.toLowerCase()}`);
+  return so;
+}
+function avanzarSol(id){
+  const so=SOLICITUDES.find(x=>x.id===id);if(!so)return;
+  const sig=FLUJO[idxPaso(so.est)+1];if(!sig)return;
+  tocaSol(id,sig.k,`Pasa a ${sig.n.toLowerCase()}`);
+  toast(`${so.n} · ${sig.n.toLowerCase()}`);
+}
+function aprobarSol(id){
+  const so=tocaSol(id,'aprobada','Cotización aprobada por el cliente');
+  if(so)toast(`${so.n} aprobada — Adolphus programará la visita`);
+}
+function rechazarSol(id){
+  const so=tocaSol(id,'revision','El cliente pidió revisar la cotización');
+  if(so)toast(`${so.n} devuelta a revisión`);
 }
 
 /* ============================================================
@@ -2827,6 +2956,7 @@ function renderWO(){
           <div class="wo-n" onclick="openAsset('${o.act}');showTab('hist')">${esc(a?.tag||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
           ${nx&&S.rol!=='cliente'?`<button class="btn ${o.et==='taller'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();advanceWO('${o.id}')">${nx[1]}</button>`:''}
+          <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
 }
@@ -3887,7 +4017,7 @@ function colaTrabajo(){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
       out.push({pr,p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
-        ac:{t:'Ver orden',f:`gotoClientPage('wo','${a.cli}')`}});
+        ac:{t:'Ver orden',f:`verOrden('${a.id}',1)`}});
     }
     else if(e.k==='porvencer'&&d<=60)
       out.push({pr,p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
@@ -3898,10 +4028,10 @@ function colaTrabajo(){
         q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
         ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
   });
-  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>x.est!=='Atendida').forEach(x=>{
-    out.push({p:2.5,g:'sol',cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
-      q:`Solicitud <em>${esc(x.est.toLowerCase())}</em> del ${esc(x.f)}`,
-      ac:{t:cliente?'Ver':'Atender',f:`gotoClientPage('req','${x.cli}')`}});
+  SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>!['cerrada','ejecucion'].includes(x.est)).forEach(x=>{
+    out.push({p:2.5,g:'sol',solId:x.id,cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
+      q:`<em>${esc(pasoDe(x.est).n)}</em> · ${esc(pasoDe(x.est).r)}`,
+      ac:{t:cliente&&x.est==='cotizada'?'Aprobar':cliente?'Ver':'Atender',f:`verSol('${x.id}')`}});
   });
   /* dentro de un mismo grupo va primero el equipo en peor estado; la
      criticidad del proceso desempata (ver prioridad()). */
@@ -3931,7 +4061,7 @@ function colaHtml(){
   </div>`;
   const filas=lista.slice(0,tope).map(x=>{
     const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
-    const abrir=x.id?`gotoAsset('${x.id}')`:`gotoClientPage('req','${x.cliId}')`;
+    const abrir=x.id?`verEquipo('${x.id}')`:`verSol('${x.solId}')`;
     return `<div class="cola-i" onclick="${abrir}">
       <span class="pt" style="background:var(--${tono})"></span>
       <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
@@ -3956,7 +4086,7 @@ function renderHomeCliente(){
   const crit=vs.filter(a=>a.cr==='Crítica').length;
   const conProg=vs.filter(a=>a.prox).sort((x,y)=>x.prox.localeCompare(y.prox));
   const prox=conProg[0]?dias(conProg[0].prox):null;
-  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='Atendida');
+  const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='cerrada');
   const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='certificada'});
   const st=k=>vs.filter(a=>estado(a).k===k).length;
   const saludMedia=vs.length?Math.round(vs.reduce((t,a)=>t+salud(a).n,0)/vs.length):100;
@@ -3988,7 +4118,7 @@ function renderHomeCliente(){
   /* próximas calibraciones: lo que hay que programar */
   const proxHtml=conProg.length?`<table class="grid"><thead><tr><th>Equipo</th><th>Área</th><th class="num">Vence</th><th></th></tr></thead>
     <tbody>${conProg.slice(0,6).map(a=>{const d=dias(a.prox);
-      return `<tr onclick="gotoAsset('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
+      return `<tr onclick="verEquipo('${a.id}')"><td><b>${esc(a.tag||a.ser||'')}</b></td>
       <td class="muted">${esc(area(a))}</td>
       <td class="num"><span class="tag ${d<0?'late':d<=90?'due':'ok'}">${d<0?`hace ${Math.abs(d)} d`:`en ${d} d`}</span></td>
       <td class="mono muted" style="text-align:right">${esc(a.prox)}</td></tr>`}).join('')}</tbody></table>`
@@ -3996,7 +4126,7 @@ function renderHomeCliente(){
 
   /* servicios en curso: en qué anda Adolphus con tus equipos */
   const servHtml=ordAb.length?`<div class="feed">${ordAb.slice(0,6).map(o=>{const a=ACTIVOS.find(z=>z.id===o.act)||{};
-    return `<div class="feed-i" onclick="gotoAsset('${o.act}','hist')"><span class="feed-ic">⚙</span>
+    return `<div class="feed-i" onclick="verOrden('${o.id}')"><span class="feed-ic">⚙</span>
       <div class="feed-m"><b>${esc(a.tag||'')} · ${esc(o.tipo)}</b><p>${esc(o.n)} · ${esc(o.tec)}</p></div>
       <span class="tag sel">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin servicios en curso</b>Ningún equipo tuyo está en taller ni programado.</div>`;
@@ -4076,9 +4206,9 @@ function renderHome(){
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
   const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
-    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="gotoAsset('${x.o.act}','hist')">
+    if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="verOrden('${x.o.id}')">
       <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
-    return `<div class="feed-i" onclick="gotoClientPage('req','${x.s.cli}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
+    return `<div class="feed-i" onclick="verSol('${x.s.id}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   $('#homeView').innerHTML=`
    <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
@@ -4144,7 +4274,9 @@ function buildNotif(){
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
-  SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&s.est==='Pendiente').forEach(s=>items.push({tone:'due',ic:'▤',t:`${s.n} pendiente de cotizar`,s:`${s.items.length} posiciones · ${cli(s.cli).n}`,req:true}));
+  SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
+    .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
+      s:`${pasoDe(s.est).sig} — ${pasoDe(s.est).r}`,sol:s.id}));
   return items;
 }
 function renderNotif(){
@@ -4156,7 +4288,8 @@ function renderNotif(){
 }
 function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
 function closeNotif(){$('#notifPop').classList.remove('on')}
-function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;if(n.req)go(S.cli?'req':'clients');else if(n.id){gotoAsset(n.id)}}
+function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;
+  if(n.sol)verSol(n.sol); else if(n.id)verEquipo(n.id);}
 document.addEventListener('click',closeNotif);
 
 /* ============================================================
@@ -5149,6 +5282,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
+const VERSION='2026-07-29';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -5562,6 +5696,7 @@ restaurarCuentas();
 restaurarLocal();
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
+$('#verApp').textContent=VERSION;
 </script>
 </body>
 </html>
