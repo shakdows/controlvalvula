@@ -856,9 +856,24 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .sq-i .sq-d{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-3);flex:0 0 auto}
 .sq-ok{color:var(--ok)}
 /* --- ayuda en formularios y campos pendientes --- */
-.hlp{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1px solid var(--ink-3);
-  color:var(--ink-3);font-size:10px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;flex:0 0 auto}
-.hlp:hover{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+.hlp{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--ink-3);
+  color:var(--ink-3);font-size:10.5px;font-weight:700;cursor:help;margin-left:5px;vertical-align:middle;line-height:1;
+  flex:0 0 auto;background:none;padding:0;font-family:inherit;position:relative;
+  transition:all var(--fast) var(--ease)}
+.hlp::after{content:'';position:absolute;inset:-7px;border-radius:50%}
+.hlp:hover,.hlp:focus-visible,.hlp.on{border-color:var(--sel);color:var(--sel);background:var(--sel-bg)}
+/* El globo de ayuda: uno solo, colocado con posición fija, para que no
+   lo recorte el desplazamiento de una ventana. El del navegador tardaba
+   un segundo en salir y en pantalla táctil no salía nunca. */
+.tip{position:fixed;z-index:var(--z-toast);max-width:300px;background:var(--ink);color:var(--surface);
+  font-size:12.5px;line-height:1.5;padding:9px 12px;border-radius:var(--r-2);box-shadow:var(--shadow-over);
+  opacity:0;visibility:hidden;transform:translateY(4px);pointer-events:none;
+  transition:opacity var(--fast) var(--ease),transform var(--fast) var(--ease),visibility var(--fast)}
+.tip.on{opacity:1;visibility:visible;transform:none}
+.tip::after{content:'';position:absolute;left:var(--fx,18px);width:9px;height:9px;background:var(--ink);
+  transform:rotate(45deg)}
+.tip.abajo::after{top:-4px}
+.tip.arriba::after{bottom:-4px}
 .fld label{display:flex;align-items:center}
 .fld .req-dot{color:var(--due);margin-left:4px;font-weight:700}
 .inp.pend{border-color:var(--due);border-style:dashed;background:var(--due-bg)}
@@ -1651,6 +1666,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 </div>
 
 <div class="toasts" id="toasts"></div>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
 
 <script>
 "use strict";
@@ -2063,6 +2079,58 @@ function estado(a){
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
   return {k:'ok',t:'Operativo',c:'ok'};
 }
+/* ============================================================
+   AYUDA EN CONTEXTO
+   Un solo globo, colocado con posición fija junto al icono. Aparece al
+   pasar por encima, al llegar con el teclado y al tocar en el celular —
+   los tres, porque el del navegador no cubre ninguno de los dos últimos.
+   ============================================================ */
+let tipActual=null,tipDesde=0;
+function mostrarTip(el){
+  const t=$('#tip'),txt=el.getAttribute('data-h');
+  if(!t||!txt)return;
+  if(tipActual&&tipActual!==el)tipActual.classList.remove('on');
+  if(tipActual!==el)tipDesde=Date.now();
+  tipActual=el;el.classList.add('on');
+  t.textContent=txt;t.classList.add('on');t.setAttribute('aria-hidden','false');
+  // se mide después de pintar el texto, si no el alto sale mal
+  const r=el.getBoundingClientRect(),m=8,tr=t.getBoundingClientRect();
+  let x=r.left+r.width/2-tr.width/2;
+  x=Math.max(m,Math.min(x,window.innerWidth-tr.width-m));
+  const cabeAbajo=r.bottom+tr.height+m<window.innerHeight;
+  const y=cabeAbajo?r.bottom+m:r.top-tr.height-m;
+  t.classList.toggle('abajo',cabeAbajo);t.classList.toggle('arriba',!cabeAbajo);
+  t.style.left=Math.round(x)+'px';t.style.top=Math.round(y)+'px';
+  t.style.setProperty('--fx',Math.round(Math.max(10,Math.min(r.left+r.width/2-x-4.5,tr.width-19)))+'px');
+}
+function ocultarTip(){
+  const t=$('#tip');if(!t)return;
+  t.classList.remove('on');t.setAttribute('aria-hidden','true');
+  if(tipActual)tipActual.classList.remove('on');
+  tipActual=null;
+}
+document.addEventListener('pointerover',e=>{const h=e.target.closest&&e.target.closest('[data-h]');if(h)mostrarTip(h)});
+document.addEventListener('pointerout',e=>{const h=e.target.closest&&e.target.closest('[data-h]');if(h&&h===tipActual)ocultarTip()});
+document.addEventListener('focusin',e=>{const h=e.target.closest&&e.target.closest('[data-h]');h?mostrarTip(h):ocultarTip()});
+document.addEventListener('click',e=>{
+  const h=e.target.closest&&e.target.closest('[data-h]');
+  if(h){
+    e.preventDefault();e.stopPropagation();
+    /* En pantalla táctil, el toque dispara primero pointerover (que ya lo
+       abre) y luego click. Sin este margen se cerraría en el mismo gesto. */
+    const reciente=h===tipActual&&Date.now()-tipDesde<450;
+    (h===tipActual&&!reciente)?ocultarTip():mostrarTip(h);
+    return;
+  }
+  ocultarTip();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')ocultarTip()});
+/* Al desplazar no se esconde: se vuelve a colocar. Antes, el simple
+   hecho de que el navegador desplazara el campo para mostrarlo hacía
+   desaparecer la ayuda que se acababa de abrir. */
+const reponerTip=()=>{if(tipActual)tipActual.isConnected?mostrarTip(tipActual):ocultarTip()};
+['scroll','resize'].forEach(ev=>window.addEventListener(ev,reponerTip,true));
+
 function toast(msg){
   const el=document.createElement('div');el.className='toast';
   el.innerHTML='<span class="dot"></span>'+esc(msg);
@@ -2322,7 +2390,7 @@ function pedirBajaClientes(){
      <div class="sq-i"><span class="cl-mark" style="width:30px;height:30px;font-size:11px">${esc(r.c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>
        <span class="sq-t"><b>${esc(r.c.n)}</b><span>${esc(r.c.ind||'')} · ${esc(r.c.fac||'')}</span></span>
        <span class="sq-d">${r.v} válvula${r.v===1?'':'s'}</span></div>`).join('')}</div>
-   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" title="Clave interna de Adolphus para confirmar bajas.">?</span></label>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Clave interna de Adolphus para confirmar bajas.">?</span></label>
      <input class="inp pend" id="dcPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
      <span class="pend-msg" id="dcErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -2480,9 +2548,9 @@ function deleteAsset(id){
      <div>Vas a dar de baja <b>${esc(a.tag||a.ser||'este equipo')}</b> — ${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')}${a.ser?`, serie <b class="mono">${esc(a.ser)}</b>`:''} de ${esc(cli(a.cli).n||'')}.
      ${(ords||cals||docs)?`Se eliminarán también <b>${ords} órdenes</b>, <b>${cals} certificados</b> y <b>${docs} documentos</b> asociados.`:''}
      Esta acción no se puede deshacer.</div></div>
-   <div class="fld"><label>Motivo de la baja <span class="hlp" title="Queda como referencia de por qué se retiró el equipo del sistema.">?</span></label>
+   <div class="fld"><label>Motivo de la baja <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Queda como referencia de por qué se retiró el equipo del sistema.">?</span></label>
      <select class="inp" id="daMotivo"><option>Registrado por error</option><option>Duplicado</option><option>Equipo retirado de planta</option><option>Dado de baja por falla</option><option>Otro</option></select></div>
-   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" title="Clave interna de Adolphus para confirmar bajas. Evita eliminaciones accidentales.">?</span></label>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Clave interna de Adolphus para confirmar bajas. Evita eliminaciones accidentales.">?</span></label>
      <input class="inp pend" id="daPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
      <span class="pend-msg" id="daErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -4339,7 +4407,7 @@ function openNewAsset(preCli){
   $('#mBody').innerHTML=`
    ${fijo
      ? `<input type="hidden" id="naCli" value="${fijo}">
-        <div class="fld"><label>Área / unidad <span class="hlp" title="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
+        <div class="fld"><label>Área / unidad <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
      : `<div class="two">
           <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
           <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
@@ -4443,25 +4511,25 @@ function openCalib(assetId,edit){
      <div class="fld"><label>Técnico responsable</label><input class="inp" id="cbTec" value="${esc(ult?ult.tec:'K. Ortiz')}"></div>
      <div class="fld"><label>Banco / patrón de referencia</label><input class="inp" id="cbBanco" value="${esc(ult?ult.banco:'Banco neumático · patrón Fluke 700G')}"></div>
      <div class="fld"><label>Fluido de prueba</label><select class="inp" id="cbFluido">${['Aire','Nitrógeno','Agua','Vapor'].map(f=>`<option ${ult&&ult.fluido===f?'selected':''}>${f}</option>`).join('')}</select></div>
-     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" title="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
+     <div class="fld ${isNaN(nom)?'is-pend':''}"><label>Presión a la que debía abrir (set) <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la presión de tarado de fábrica o de placa: a esa presión DEBE abrir la válvula. Suele venir del dato de la ficha.">?</span></label>
        <input class="inp ${isNaN(nom)?'pend req-cb':''}" id="cbNom" value="${isNaN(nom)?'':nom}" placeholder="presión de placa"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>Unidad <span class="hlp" title="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
-     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" title="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="${ult?ult.tol:3}"></div>
+     <div class="fld"><label>Unidad <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Unidad de presión del ensayo: psig es lo habitual en Perú.">?</span></label><select class="inp" id="cbUni">${['psig','psi','bar','kPa'].map(u=>`<option ${u===uni?'selected':''}>${u}</option>`).join('')}</select></div>
+     <div class="fld"><label>Tolerancia admisible (±%) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Cuánto puede desviarse de la presión de tarado y seguir siendo aceptable. Norma habitual: ±3%.">?</span></label><input class="inp" id="cbTol" value="${ult?ult.tol:3}"></div>
      <div class="fld"><label>Temperatura ambiente (°C)</label><input class="inp" id="cbTemp" value="${esc(ult?ult.temp:'22')}"></div>
    </div>
-   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" title="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
+   <h3 style="margin:16px 0 10px">2 · Cómo llegó · as-found <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la primera prueba, ANTES de tocar la válvula: sirve para saber si estaba trabajando bien en planta.">?</span></h3>
    <div class="two">
-     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" title="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
+     <div class="fld is-pend"><label>Presión a la que abrió al llegar <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Sube la presión en el banco hasta que la válvula abra de golpe y anota ese número. Es el dato más importante del ensayo.">?</span></label>
        <input class="inp pend req-cb" id="cbAf" placeholder="${ult?`ensayo anterior: ${ult.af}`:'escribe el valor medido'}"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" title="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>¿Cerraba bien? (hermeticidad) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Tras abrir, ¿la válvula volvió a sellar sin fugas? Conforme = sella bien.">?</span></label><select class="inp" id="cbAfH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
    </div>
-   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" title="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
+   <h3 style="margin:16px 0 10px">3 · Cómo quedó · as-left <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es la prueba final, DESPUÉS de ajustar la válvula: es el estado con el que se devuelve al cliente.">?</span></h3>
    <div class="two">
-     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" title="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
+     <div class="fld is-pend"><label>Presión a la que abrió ya ajustada <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Tras el ajuste, vuelve a probarla y anota la presión de apertura final. Debe quedar dentro de la tolerancia.">?</span></label>
        <input class="inp pend req-cb" id="cbAl" placeholder="${ult?`ensayo anterior: ${ult.al}`:'escribe el valor final'}"><span class="pend-msg">▲ Falta completar</span></div>
-     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" title="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
-     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" title="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
-     <div class="fld"><label>Válvula precintada <span class="hlp" title="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
+     <div class="fld"><label>¿Cerraba bien al final? <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Hermeticidad después del ajuste. Si no queda conforme, el resultado será No conforme.">?</span></label><select class="inp" id="cbAlH"><option>Conforme</option><option>Fuga leve</option><option>Fuga</option></select></div>
+     <div class="fld"><label>Contrapresión de cierre (blowdown) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Cuánto tiene que bajar la presión para que la válvula vuelva a cerrar, en % del set. Lo típico es 7%. Opcional.">?</span></label><input class="inp" id="cbBd" placeholder="opcional — p. ej. 7%"></div>
+     <div class="fld"><label>Válvula precintada <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Si se colocó el precinto de seguridad tras el ensayo, para que nadie altere el ajuste.">?</span></label><select class="inp" id="cbPre"><option>Sí</option><option>No</option></select></div>
    </div>
    <h3 style="margin:16px 0 10px">4 · Cierre</h3>
    <div class="two">
@@ -4771,7 +4839,7 @@ function openNewClient(){
   ncVerif=false;
   $('#mTitle').textContent='Nuevo cliente';
   $('#mBody').innerHTML=`
-   <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" title="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
+   <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
      <div style="display:flex;gap:8px">
        <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1">
        <button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>
@@ -4783,7 +4851,7 @@ function openNewClient(){
    </div>
    <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="se completa con el RUC"></div>
    <div class="two">
-     <div class="fld"><label>Instalación / planta <span class="hlp" title="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
+     <div class="fld"><label>Instalación / planta <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
      <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
    </div>
    <details class="fx-more" style="margin-top:12px"><summary>¿Cómo sé si el RUC es correcto?</summary>
@@ -5106,7 +5174,7 @@ function openUploadSheet(assetId,fileName){
        <input type="file" id="hcFile" accept="image/*,.pdf" capture="environment" style="display:none">
      </div>
      <div>
-       <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" title="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
+       <div class="fld"><label>Código del equipo (está en la hoja) <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el n.º de serie impreso en el recuadro 'CÓDIGO PARA SUBIR AL SISTEMA'. Al escribirlo, el sistema identifica la válvula solo.">?</span></label>
          <input class="inp" id="hcCod" placeholder="p. ej. C-88-4471" autocomplete="off"><span class="pend-msg" id="hcOk" style="display:none"></span></div>
        <div class="fld"><label>Válvula</label><select class="inp" id="hcAct" ${vacio?'disabled':''}>${vacio?'<option value="">— sin válvulas registradas en este cliente —</option>':psv.map(a=>`<option value="${a.id}" ${a.id===assetId?'selected':''}>${esc(a.tag||'(sin tag)')} · ${esc(a.ser||'')} — ${esc(cli(a.cli).n)}</option>`).join('')}</select></div>
        <div class="two">
