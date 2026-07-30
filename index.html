@@ -1367,6 +1367,71 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .pd-sumB{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 
 /* ============================================================
+   RECLAMOS / SERVICIO NO CONFORME
+   La lista responde de un vistazo lo único que importa mientras el
+   expediente está abierto: qué falta para poder responderle al
+   cliente. El detalle es el formato de calidad tal cual, numerado
+   del 1 al 16, y se imprime así.
+   ============================================================ */
+.snc-l{display:grid;gap:var(--sp-3)}
+.snc-c{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  box-shadow:var(--e-1);padding:15px 17px;cursor:pointer;transition:border-color var(--fast),box-shadow var(--fast)}
+.snc-c:hover{border-color:var(--ink-3);box-shadow:var(--e-2)}
+.snc-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:7px}
+.snc-n{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.snc-f{margin-left:auto;font-size:11.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.snc-t{display:block;font-size:var(--t-3);font-weight:600;line-height:1.4}
+.snc-m{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-top:5px}
+.snc-p{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--due);margin-top:10px;
+  padding-top:9px;border-top:1px solid var(--line-2)}
+.snc-p .pt{width:7px;height:7px;border-radius:50%;background:var(--due);flex:0 0 auto}
+.snc-p.ok{color:var(--ok)} .snc-p.ok .pt{background:var(--ok)}
+
+/* el formulario */
+.snc-form .two{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-3)}
+.snc-form .three{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:var(--sp-3)}
+.snc-sec{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
+  margin:var(--sp-5) 0 var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--line-2)}
+.snc-sec:first-of-type{margin-top:var(--sp-4)}
+.opc{display:block;font-weight:400;text-transform:none;letter-spacing:0;
+  color:var(--ink-3);font-size:10.5px;margin-top:1px}
+.snc-sec .opc{display:inline;margin-left:6px}
+.snc-form .inp:disabled{background:var(--surface-2);color:var(--ink-3);cursor:not-allowed}
+
+/* lo que trae el TAG */
+.snc-ctx{background:var(--sel-bg);border:1px solid color-mix(in oklab,var(--sel) 26%,transparent);
+  border-radius:var(--r-2);padding:13px 15px;margin-bottom:var(--sp-3)}
+.snc-ctx.vacio{background:var(--surface-2);border-color:var(--line);color:var(--ink-3);font-size:12.5px;line-height:1.5}
+.snc-ctx-h{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--sel);margin-bottom:10px}
+.snc-ctx-h svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.4}
+.snc-dt{display:grid;grid-template-columns:auto 1fr;gap:5px var(--sp-4);font-size:12.5px;align-items:baseline}
+.snc-dt span{color:var(--ink-3)} .snc-dt b{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.snc-hist{font-size:12px;color:var(--ink-2);line-height:1.65;margin-top:10px;padding-top:9px;
+  border-top:1px solid color-mix(in oklab,var(--sel) 18%,transparent)}
+.snc-hist b{font-weight:700;font-variant-numeric:tabular-nums}
+.snc-ctx .btn{margin-top:9px}
+
+/* el expediente */
+.snc-cab{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-3);margin-bottom:var(--sp-4)}
+.snc-doc{display:grid;gap:0}
+.snc-r{display:flex;gap:13px;padding:11px 0;border-bottom:1px solid var(--line-2)}
+.snc-r:last-child{border-bottom:0}
+.snc-i{flex:0 0 22px;height:22px;border-radius:50%;background:var(--surface-3);color:var(--ink-3);
+  font-size:11px;font-weight:700;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.snc-r>div{min-width:0}
+.snc-r b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:700}
+.snc-r p{margin:3px 0 0;font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
+.snc-r.sin p{color:var(--ink-3);font-style:italic}
+.snc-r.sin .snc-i{background:var(--due-bg);color:var(--due)}
+
+@media(max-width:760px){
+  .snc-form .two,.snc-form .three{grid-template-columns:1fr}
+  .snc-dt{grid-template-columns:1fr;gap:1px}
+  .snc-dt span{font-size:11px;margin-top:6px}
+}
+
+/* ============================================================
    16 · CELULAR
    Un teléfono no es una pantalla chica: es otra postura. Se sujeta
    con una mano, se toca con el pulgar y se lee a la altura del ojo.
@@ -1694,6 +1759,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
       <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
+      <a data-p="snc"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg><span class="lbl">Reclamos</span><span class="ct" id="ctSnc"></span></a>
       <div class="rail-sec">Análisis</div>
       <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
       <div class="rail-sec">Maestros</div>
@@ -1838,6 +1904,14 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
+      <!-- ═══ RECLAMOS / SNC ═══ -->
+      <section class="page" id="p-snc"><div class="view-pad">
+        <div class="hd"><div><h1>Reclamos y servicio no conforme</h1>
+          <p>El formato de calidad, con el equipo y su historia ya cargados. Solo se escribe lo del hecho: hallazgo, acción inmediata, causa raíz y acción correctiva.</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="sncBtn"></div></div>
+        <div id="sncList"></div>
+      </div></section>
+
       <section class="page" id="p-req"><div class="view-pad">
         <div class="hd"><div><h1>Solicitudes de repuestos</h1><p>Lo que los clientes piden desde su portal, con el equipo y el historial ya adjuntos.</p></div></div>
         <div class="panel"><div id="reqList"></div></div>
@@ -2279,6 +2353,45 @@ let SOLICITUDES=[
   items:[{n:'AD-KG-ASI-EPDM',q:4,a:'a7'},{n:'AD-KG-EMP-TRA',q:4,a:'a7'}],
   hist:[{f:'2026-07-21',t:'Recibida del cliente'}]}
 ];
+/* ── Reclamos / Servicio No Conforme ──────────────────────────
+   El formato de calidad que pide el cliente tiene dieciséis campos.
+   La mitad no se escribe: sale del TAG y de la historia del equipo.
+   Aquí solo viven los del hecho — hallazgo, acción inmediata, causa
+   raíz y acción correctiva. */
+const SNC_EST=[
+ ['abierto',   'Abierto',             'late','Falta la acción inmediata'],
+ ['analisis',  'En análisis',         'due', 'Falta la causa raíz'],
+ ['correctiva','En acción correctiva','sel', 'Falta cerrar la acción correctiva'],
+ ['cerrado',   'Cerrado',             'ok',  'Sin pendientes']
+];
+const sncEst=k=>SNC_EST.find(e=>e[0]===k)||SNC_EST[0];
+const QUIEN=[['cliente','El cliente'],['adolphus','Adolphus'],['fabricante','El fabricante']];
+
+let RECLAMOS=[
+ {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',
+  det:'Posicionador con deriva de señal tras el arranque de la unidad de vacío.',
+  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'cliente',
+  hall:'La válvula no alcanzaba el 100 % de apertura con señal de 20 mA. Deriva de 6 % respecto al lazo.',
+  doma:'DOM-41005-3',
+  accInm:'Recalibrar el lazo en sitio y dejar la válvula en control manual hasta el cambio del posicionador.',
+  fInm:'2026-06-13',respInm:'O. Julio de la Rosa',
+  obs:'La unidad no paró. Se coordinó con el jefe de turno para operar en manual 48 horas.',
+  causa:'El posicionador se montó sin purgar la línea de aire de instrumentos; el filtro reguló con humedad y la boquilla se obstruyó parcialmente.',
+  accCor:'Incorporar la purga de la línea de aire y la verificación del filtro coalescente como paso obligatorio del protocolo de montaje, y capacitar a los tres técnicos de campo.',
+  fIni:'2026-06-16',fFin:'2026-06-30',respCor:'Ana Quispe',
+  prov:'Masoneilan',ocProv:'PO-2026-0774'},
+ {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'analisis',
+  det:'Fuga por el manguito de la válvula pinch a los tres meses del cambio.',
+  ocCli:'OC-77123',refCli:'',ident:'cliente',
+  hall:'Manguito con desgarro longitudinal en la zona de cierre. El cliente reporta pérdida de pulpa en la celda de flotación.',
+  doma:'',
+  accInm:'Aislar la línea, retirar la válvula y montar la de reserva del cliente.',
+  fInm:'2026-07-20',respInm:'O. Julio de la Rosa',
+  obs:'Se recuperó el manguito para enviarlo al fabricante.',
+  causa:'',accCor:'',fIni:'',fFin:'',respCor:'',
+  prov:'RF Valves',ocProv:''}
+];
+
 const USUARIOS=[
  {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
  {n:'Servicio Técnico',m:'servicio@adolphus.pe',r:'Técnico',c:'—',x:'Órdenes de trabajo, informes y certificados'},
@@ -2434,7 +2547,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
@@ -2460,10 +2573,10 @@ $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
    cajón completo. Si mañana cambia el lateral, esta barra cambia
    sola: no hay una segunda lista que mantener. */
 const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',
-  wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',rep:'Confiab.',
+  wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Confiab.',
   cat:'Catálogo',imp:'Importar',users:'Usuarios'};
 const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',wo:'Servicios',
-  parts:'Repuestos',req:'Solicitudes',rep:'Reportes'};
+  parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Reportes'};
 function pintarTabbar(){
   const tb=$('#tabbar'); if(!tb) return;
   const links=$$('#nav a').filter(a=>a.style.display!=='none');
@@ -2512,12 +2625,12 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','snc','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
   const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
-    parts:'Repuestos',req:'Solicitudes',rep:'Reportes'};
+    parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Reportes'};
   $$('#nav a').forEach(a=>{
     const l=a.querySelector('.lbl');if(!l)return;
     if(!l.dataset.base)l.dataset.base=l.textContent;
@@ -2777,7 +2890,7 @@ function confirmarBajaClientes(){
   toast(`${ids.length} cliente${ids.length===1?'':'s'} eliminado${ids.length===1?'':'s'}`);
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['snc','Reclamos'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
@@ -3261,6 +3374,302 @@ function addKit(){
   toast(`Kit de overhaul agregado · ${lista.length} posiciones`);
   gotoClientPage('req',S.cur&&S.cur.cli);renderReq();
 }
+/* ============================================================
+   RECLAMOS / SERVICIO NO CONFORME
+   El punto de esta pantalla: el TAG hace el trabajo. Al elegirlo se
+   traen producto, proveedor, serie, área, criticidad y todo lo que la
+   válvula ya tiene registrado — órdenes, calibraciones y repuestos
+   usados. Lo que queda por escribir es lo que ningún dato antiguo
+   puede saber: qué pasó, por qué, y qué se hizo al respecto.
+   ============================================================ */
+const sncActivo=r=>ACTIVOS.find(a=>a.id===r.act);
+/* Producto tal como lo pide el formato: marca, modelo y serie. */
+function sncProducto(a){
+  if(!a) return '';
+  const m=MODELOS[a.mod]||{};
+  return [m.m,a.mod,a.ser&&('s/n '+a.ser)].filter(Boolean).join(' ');
+}
+/* Cuánto le falta al expediente para poder mandarse al cliente. */
+function sncFalta(r){
+  const f=[];
+  if(!r.accInm)  f.push('acción inmediata');
+  if(!r.fInm)    f.push('fecha de la acción inmediata');
+  if(!r.respInm) f.push('responsable de la acción inmediata');
+  if(!r.causa)   f.push('causa raíz');
+  if(!r.accCor)  f.push('acción correctiva');
+  if(!r.fIni)    f.push('fecha de inicio de la correctiva');
+  if(!r.fFin)    f.push('fecha de fin de la correctiva');
+  if(!r.respCor) f.push('responsable de la correctiva');
+  return f;
+}
+/* El cliente ve los suyos por su rol; el personal de Adolphus, los de
+   la empresa en cuya carpeta está parado. */
+const sncFoco=()=>S.cli||S.inCli||null;
+const sncMios=()=>{const f=sncFoco();return f?RECLAMOS.filter(r=>r.cli===f):RECLAMOS};
+
+function renderSNC(){
+  const caja=$('#sncList'); if(!caja) return;
+  const cliente=S.rol==='cliente';
+  const bot=$('#sncBtn');
+  if(bot) bot.innerHTML = cliente
+    ? `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Reportar un problema</button>`
+    : `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo reclamo</button>`;
+
+  const lista=sncMios().slice().sort((a,b)=>b.f.localeCompare(a.f));
+  const ct=$('#ctSnc'); if(ct)ct.textContent=lista.filter(r=>r.est!=='cerrado').length||'';
+
+  if(!lista.length){
+    caja.innerHTML=`<div class="panel"><div class="empty">
+      <svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg>
+      <b>Sin reclamos registrados</b>${cliente
+        ?'Si una válvula falló o el servicio no salió como esperabas, repórtalo aquí.'
+        :'Cuando el cliente reporte un problema o se detecte un servicio no conforme, se abre desde aquí.'}</div></div>`;
+    return;
+  }
+  caja.innerHTML=`<div class="snc-l">${lista.map(r=>{
+    const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
+    return `<article class="snc-c" onclick="verSNC('${r.id}')">
+      <div class="snc-h">
+        <span class="mono snc-n">${esc(r.n)}</span>
+        <span class="tag ${e[2]}">${e[1]}</span>
+        <span class="snc-f">${r.f}</span>
+      </div>
+      <b class="snc-t">${esc(r.det)}</b>
+      <div class="snc-m">
+        ${a?`<span class="tag mono">${esc(a.tag)}</span>`:''}
+        <span>${esc(sncProducto(a)||'Sin equipo asociado')}</span>
+        ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
+      </div>
+      ${falta.length
+        ? `<div class="snc-p"><span class="pt"></span>Falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} campo${falta.length-2>1?'s':''} más`:''}</div>`
+        : `<div class="snc-p ok"><span class="pt"></span>Expediente completo · listo para enviar al cliente</div>`}
+    </article>`}).join('')}</div>`;
+}
+
+/* ── El formulario ──────────────────────────────────────────
+   Arriba el TAG y lo que trae consigo; abajo, en tres bloques, lo que
+   toca escribir. Los dieciséis campos del formato están todos, en el
+   mismo orden en que el cliente los pide. */
+function openSNC(id){
+  const r=id?RECLAMOS.find(x=>x.id===id):null;
+  /* dentro de la carpeta de un cliente solo se ofrecen sus equipos */
+  const f=sncFoco();
+  const opts=(f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS).filter(a=>a.tag);
+  const cliente=S.rol==='cliente';
+  const num=r?r.n:'SNC-2026-'+String(RECLAMOS.length+1).padStart(3,'0');
+  $('#mTitle').textContent=r?`Editar ${r.n}`:'Nuevo reclamo';
+  $('#mBody').innerHTML=`
+    <div class="snc-form">
+      <div class="fld">
+        <label for="sncAct">Equipo — escribe o elige el TAG</label>
+        <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
+          <option value="">Sin equipo asociado</option>
+          ${opts.map(a=>`<option value="${a.id}" ${r&&r.act===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
+        </select>
+      </div>
+      <div id="sncCtx"></div>
+
+      <h4 class="snc-sec">1 · Qué pasó</h4>
+      <div class="fld"><label for="sncDet">Detalle de la incidencia</label>
+        <textarea class="inp" id="sncDet" rows="2" placeholder="En una línea: qué ocurrió.">${esc(r?r.det:'')}</textarea></div>
+      <div class="two">
+        <div class="fld"><label for="sncOcCli">Orden de compra del cliente</label>
+          <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
+        <div class="fld"><label for="sncRefCli">Referencia del cliente <span class="opc">si tiene su propio n.º de reclamo</span></label>
+          <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
+      </div>
+      <div class="fld"><label for="sncQuien">Quién identifica el servicio no conforme</label>
+        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
+        <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
+      <div class="fld"><label for="sncDoma">Código DOMA del cliente <span class="opc">si lo maneja</span></label>
+        <input class="inp" id="sncDoma" placeholder="DOM-…" value="${esc(r?r.doma:'')}"></div>
+
+      <h4 class="snc-sec">2 · Qué se hizo de inmediato</h4>
+      <div class="fld"><label for="sncAccInm">Acción inmediata <span class="opc">empieza con un verbo</span></label>
+        <textarea class="inp" id="sncAccInm" rows="2" placeholder="Aislar la línea y montar la válvula de reserva…">${esc(r?r.accInm:'')}</textarea></div>
+      <div class="two">
+        <div class="fld"><label for="sncFInm">Fecha</label>
+          <input class="inp" id="sncFInm" type="date" value="${r?r.fInm:''}"></div>
+        <div class="fld"><label for="sncRespInm">Responsable</label>
+          <input class="inp" id="sncRespInm" list="sncGente" value="${esc(r?r.respInm:'')}"></div>
+      </div>
+      <div class="fld"><label for="sncObs">Observaciones relevantes</label>
+        <textarea class="inp" id="sncObs" rows="2" placeholder="Si la planta paró, si se coordinó con alguien, si se guardó la pieza…">${esc(r?r.obs:'')}</textarea></div>
+
+      <h4 class="snc-sec">3 · Por qué pasó y cómo se corrige${cliente?' <span class="opc">lo completa Adolphus</span>':''}</h4>
+      <div class="fld"><label for="sncCausa">Causa raíz <span class="opc">por qué ocurrió el hallazgo</span></label>
+        <textarea class="inp" id="sncCausa" rows="3" ${cliente?'disabled':''} placeholder="No el síntoma: la razón de fondo.">${esc(r?r.causa:'')}</textarea></div>
+      <div class="fld"><label for="sncAccCor">Acción correctiva <span class="opc">cómo se corrige esa causa, en verbo</span></label>
+        <textarea class="inp" id="sncAccCor" rows="3" ${cliente?'disabled':''} placeholder="Incorporar…, capacitar…, cambiar el procedimiento…">${esc(r?r.accCor:'')}</textarea></div>
+      <div class="three">
+        <div class="fld"><label for="sncFIni">Inicio</label>
+          <input class="inp" id="sncFIni" type="date" ${cliente?'disabled':''} value="${r?r.fIni:''}"></div>
+        <div class="fld"><label for="sncFFin">Fin</label>
+          <input class="inp" id="sncFFin" type="date" ${cliente?'disabled':''} value="${r?r.fFin:''}"></div>
+        <div class="fld"><label for="sncRespCor">Responsable</label>
+          <input class="inp" id="sncRespCor" list="sncGente" ${cliente?'disabled':''} value="${esc(r?r.respCor:'')}"></div>
+      </div>
+      <div class="two">
+        <div class="fld"><label for="sncProv">Proveedor</label>
+          <input class="inp" id="sncProv" value="${esc(r?r.prov:'')}"></div>
+        <div class="fld"><label for="sncOcProv">N.º de OC / PO / PSV / SVV</label>
+          <input class="inp" id="sncOcProv" placeholder="PO-2026-…" value="${esc(r?r.ocProv:'')}"></div>
+      </div>
+      <datalist id="sncGente">${(typeof CUENTAS!=='undefined'?CUENTAS:[]).filter(c=>c.perfil!=='cliente').map(c=>`<option value="${esc(c.n)}">`).join('')}
+        <option value="O. Julio de la Rosa"><option value="M. Ángel Torres"></datalist>
+      <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
+    </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':'Abrir el reclamo'}</button>`;
+  $('#modal').classList.add('on');
+  pintarCtxSNC();
+}
+
+/* Lo que el TAG trae consigo. No es decoración: es la prueba de que
+   no hay que volver a escribir lo que el portal ya sabe. */
+function pintarCtxSNC(){
+  const caja=$('#sncCtx'); if(!caja) return;
+  const a=ACTIVOS.find(x=>x.id===$('#sncAct').value);
+  if(!a){caja.innerHTML=`<div class="snc-ctx vacio">Elige el TAG y se traen solos el producto, el proveedor, la serie y todo el historial del equipo.</div>`;return}
+  const m=MODELOS[a.mod]||{}, e=estado(a);
+  const os=ORDENES.filter(o=>o.act===a.id).sort((x,y)=>y.f.localeCompare(x.f));
+  const cs=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>y.f.localeCompare(x.f));
+  const usadas=[...new Set(os.flatMap(o=>o.partes))];
+  // el proveedor sale de la marca; el producto, de marca + modelo + serie
+  const pv=$('#sncProv'); if(pv&&!pv.value)pv.value=m.m||'';
+  caja.innerHTML=`<div class="snc-ctx">
+    <div class="snc-ctx-h"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      Traído del equipo — no hay que escribirlo</div>
+    <div class="snc-dt">
+      <span>Producto</span><b>${esc(sncProducto(a))}</b>
+      <span>Proveedor</span><b>${esc(m.m||'—')}</b>
+      <span>Cliente</span><b>${esc(cli(a.cli).n)}</b>
+      <span>Ubicación</span><b>${esc(area(a))} · criticidad ${esc(a.cr)}</b>
+      <span>Estado hoy</span><b>${esc(e.t)}</b>
+      <span>Último servicio</span><b>${a.ult||'—'}</b>
+    </div>
+    <div class="snc-hist">${(os.length||cs.length)?`
+      ${os.length?`<b>${os.length}</b> orden${os.length===1?'':'es'} de trabajo · la última ${os[0].f}, ${esc(os[0].tipo.toLowerCase())}<br>`:''}
+      ${cs.length?`<b>${cs.length}</b> calibración${cs.length===1?'':'es'} · la última ${cs[0].f}<br>`:''}
+      ${usadas.length?`<b>${usadas.length}</b> repuesto${usadas.length===1?'':'s'} usado${usadas.length===1?'':'s'}: <span class="mono">${usadas.slice(0,3).map(esc).join(', ')}${usadas.length>3?'…':''}</span>`:''}`
+      :'Este equipo todavía no registra intervenciones. Cuando las tenga, aparecerán aquí solas.'}
+    </div>
+    <button class="btn quiet xs" onclick="closeModal();verEquipo('${a.id}')">Ver la ficha completa</button>
+  </div>`;
+}
+
+function guardarSNC(){
+  const v=i=>($('#'+i)?$('#'+i).value.trim():'');
+  const det=v('sncDet');
+  if(!det){toast('Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
+  const id=v('sncId');
+  const datos={
+    act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'),
+    ident:v('sncQuien'), hall:v('sncHall'), doma:v('sncDoma'),
+    accInm:v('sncAccInm'), fInm:v('sncFInm'), respInm:v('sncRespInm'), obs:v('sncObs'),
+    causa:v('sncCausa'), accCor:v('sncAccCor'), fIni:v('sncFIni'), fFin:v('sncFFin'),
+    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv')
+  };
+  /* El estado no se elige a mano: lo dice lo que está lleno. */
+  datos.est = datos.fFin&&datos.accCor ? 'cerrado'
+            : datos.accCor            ? 'correctiva'
+            : datos.causa             ? 'analisis'
+            : 'abierto';
+  if(id){
+    Object.assign(RECLAMOS.find(x=>x.id===id),datos);
+    registrar('Reclamo',`${v('sncNum')} actualizado`);
+    toast('Reclamo actualizado');
+  }else{
+    const a=ACTIVOS.find(x=>x.id===datos.act);
+    RECLAMOS.unshift(Object.assign({
+      id:'r'+Date.now(), n:v('sncNum'),
+      cli:sncFoco()||(a?a.cli:null)||'refi',
+      f:HOY.toISOString().slice(0,10),
+      por:(typeof SES!=='undefined'&&SES?SES.n:'Adolphus')
+    },datos));
+    registrar('Reclamo',`${v('sncNum')} abierto`);
+    toast('Reclamo abierto');
+  }
+  closeModal();renderAll();go('snc');
+}
+
+/* El expediente, en el orden exacto del formato que pide el cliente.
+   Se imprime tal cual: los dieciséis puntos, numerados. */
+function verSNC(id){
+  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
+  const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
+  const cliente=S.rol==='cliente';
+  const fila=(n,t,val,vacio)=>`<div class="snc-r${val?'':' sin'}">
+      <span class="snc-i">${n}</span>
+      <div><b>${t}</b><p>${val?esc(val).replace(/\n/g,'<br>'):(vacio||'Pendiente')}</p></div></div>`;
+  $('#mTitle').textContent=r.n;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${e[2]}">${e[1]}</span>
+      <span>Abierto el ${r.f} por ${esc(r.por)}</span>
+      ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
+    </div>
+    ${falta.length?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para poder responderle al cliente: ${esc(falta.join(', '))}.</div></div>`:''}
+    <div class="snc-doc">
+      ${fila(1,'Detalle de la incidencia',r.det)}
+      ${fila(2,'Orden de compra del cliente',r.ocCli,'No indicada')}
+      ${fila(3,'Referencia del cliente',r.refCli,'No aplica')}
+      ${fila(4,'Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
+      ${fila(5,'Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · '))}
+      ${fila(6,'Acción inmediata',r.accInm)}
+      ${fila(7,'Fecha de la acción inmediata',r.fInm)}
+      ${fila(8,'Responsable de la acción inmediata',r.respInm)}
+      ${fila(9,'Observaciones relevantes',r.obs,'Ninguna')}
+      ${fila(10,'Causa raíz',r.causa)}
+      ${fila(11,'Acción correctiva',r.accCor)}
+      ${fila(12,'Fecha de inicio de la acción correctiva',r.fIni)}
+      ${fila(13,'Fecha de fin de la acción correctiva',r.fFin)}
+      ${fila(14,'Responsable de la acción correctiva',r.respCor)}
+      ${fila(15,'Proveedor',r.prov)}
+      ${fila(16,'N.º de OC / PO / PSV / SVV',r.ocProv,'No indicado')}
+    </div>`;
+  $('#mFoot').innerHTML=`
+    ${a?`<button class="btn quiet" onclick="closeModal();verEquipo('${a.id}')">Ver el equipo</button>`:''}
+    <button class="btn sec" onclick="imprimirSNC('${r.id}')">Imprimir</button>
+    ${cliente?'':`<button class="btn" onclick="openSNC('${r.id}')">Editar</button>`}`;
+  $('#modal').classList.add('on');
+}
+
+function imprimirSNC(id){
+  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
+  const a=sncActivo(r);
+  const campos=[
+   ['Detalle de la incidencia',r.det],['Orden de compra del cliente',r.ocCli],
+   ['Referencia del cliente',r.refCli],
+   ['Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall],
+   ['Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · ')],
+   ['Acción inmediata',r.accInm],['Fecha de la acción inmediata',r.fInm],
+   ['Responsable de la acción inmediata',r.respInm],['Observaciones relevantes',r.obs],
+   ['Causa raíz',r.causa],['Acción correctiva',r.accCor],
+   ['Fecha de inicio de la acción correctiva',r.fIni],['Fecha de fin de la acción correctiva',r.fFin],
+   ['Responsable de la acción correctiva',r.respCor],['Proveedor',r.prov],
+   ['N.º de OC / PO / PSV / SVV',r.ocProv]
+  ];
+  const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana de impresión');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>${esc(r.n)} · Adolphus</title><style>
+   body{font:13px/1.55 system-ui,-apple-system,sans-serif;color:#1d2430;max-width:760px;margin:34px auto;padding:0 26px}
+   h1{font-size:20px;margin:0 0 2px} .sub{color:#5b6472;font-size:12.5px;margin-bottom:22px}
+   ol{padding-left:0;list-style:none;counter-reset:c} li{counter-increment:c;display:flex;gap:13px;padding:9px 0;border-bottom:1px solid #e8ebf0;break-inside:avoid}
+   li::before{content:counter(c);flex:0 0 22px;height:22px;border-radius:50%;background:#eef1f6;color:#5b6472;
+     font-size:11px;font-weight:700;display:grid;place-items:center}
+   b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#5b6472;font-weight:700}
+   p{margin:2px 0 0;white-space:pre-wrap} .vacio{color:#9aa3b0;font-style:italic}
+   </style></head><body>
+   <h1>${esc(r.n)} · Servicio no conforme</h1>
+   <div class="sub">${esc(cli(r.cli).n)}${a?' · '+esc(a.tag):''} · abierto el ${r.f} por ${esc(r.por)} · Adolphus S.A.</div>
+   <ol>${campos.map(([t,v])=>`<li><div><b>${esc(t)}</b><p${v?'':' class="vacio"'}>${v?esc(v):'Pendiente'}</p></div></li>`).join('')}</ol>
+   </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+}
+
 function renderReq(){
   const mias=S.cli?SOLICITUDES.filter(s=>s.cli===S.cli):SOLICITUDES;
   const cartSub=S.cart.reduce((s,c)=>s+precio(c.n)*(c.q||1),0);
@@ -5471,7 +5880,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
