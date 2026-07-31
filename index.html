@@ -6242,7 +6242,7 @@ const online=()=>!OFF_SIM&&navigator.onLine;
 function guardarLocal(){
   try{
     localStorage.setItem(LS_KEY,JSON.stringify({
-      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,CALIBS,SERVS,DOCS,
+      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,CALIBS,SERVS,DOCS,
       CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
     }));
     return true;
@@ -6256,6 +6256,7 @@ function restaurarLocal(){
   const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
   const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
   arr(ACTIVOS,d.ACTIVOS);arr(ORDENES,d.ORDENES);arr(SOLICITUDES,d.SOLICITUDES);
+  arr(RECLAMOS,d.RECLAMOS);
   arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
@@ -6365,7 +6366,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-07-29';
+const VERSION='2026-07-31 · reclamos 2';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
