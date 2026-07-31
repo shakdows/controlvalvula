@@ -1394,8 +1394,11 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .snc-sec{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);
   margin:var(--sp-5) 0 var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--line-2)}
 .snc-sec:first-of-type{margin-top:var(--sp-4)}
-.opc{display:block;font-weight:400;text-transform:none;letter-spacing:0;
+/* La aclaración va debajo del rótulo. `.fld label` es flex, así que
+   no basta con display:block: hay que romper la línea. */
+.opc{flex-basis:100%;font-weight:400;text-transform:none;letter-spacing:0;
   color:var(--ink-3);font-size:10.5px;margin-top:1px}
+.fld label{flex-wrap:wrap}
 .snc-sec .opc{display:inline;margin-left:6px}
 .snc-form .inp:disabled{background:var(--surface-2);color:var(--ink-3);cursor:not-allowed}
 
@@ -1425,6 +1428,19 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .snc-r p{margin:3px 0 0;font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
 .snc-r.sin p{color:var(--ink-3);font-style:italic}
 .snc-r.sin .snc-i{background:var(--due-bg);color:var(--due)}
+
+/* cotizaciones: elegir del catálogo y el total al pie */
+.snc-form .grid-wrap{overflow-x:auto}
+.cot-add{display:flex;gap:8px;align-items:center}
+.cot-add .inp{flex:1;min-width:0}
+.cot-add .btn{flex:0 0 auto}
+.cot-pu{height:30px;width:96px;text-align:right;padding:0 8px;margin:0}
+.cot-tot{margin-left:auto;width:min(300px,100%);margin-top:var(--sp-3)}
+.cot-tot div{display:flex;justify-content:space-between;align-items:baseline;padding:5px 2px;font-size:13px}
+.cot-tot div span{color:var(--ink-3)}
+.cot-tot .gr{border-top:1.5px solid var(--ink);margin-top:5px;padding-top:9px;font-size:15.5px;font-weight:700}
+.cot-tot .gr span{color:var(--ink)}
+@media(max-width:560px){.cot-add{flex-direction:column;align-items:stretch}}
 
 /* la decisión de Adolphus, arriba del expediente */
 .snc-dec{display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap;
@@ -1781,6 +1797,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
       <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
+      <a data-p="cot"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5M9.5 13h5M9.5 17h5"/></svg><span class="lbl">Cotizaciones</span><span class="ct" id="ctCot"></span></a>
       <a data-p="snc"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg><span class="lbl">Reclamos</span><span class="ct" id="ctSnc"></span></a>
       <div class="rail-sec">Análisis</div>
       <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
@@ -1926,6 +1943,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
+      <!-- ═══ COTIZACIONES ═══ -->
+      <section class="page" id="p-cot"><div class="view-pad">
+        <div class="hd"><div><h1 id="cotH1">Cotizaciones</h1><p id="cotSub"></p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="cotBtn"></div></div>
+        <div id="cotList"></div>
+      </div></section>
+
       <!-- ═══ RECLAMOS / SNC ═══ -->
       <section class="page" id="p-snc"><div class="view-pad">
         <div class="hd"><div><h1>Reclamos y servicio no conforme</h1>
@@ -2418,6 +2442,35 @@ let RECLAMOS=[
   prov:'RF Valves',ocProv:''}
 ];
 
+/* ── Cotizaciones ────────────────────────────────────────────
+   Las solicitudes las empieza el cliente; una cotización la empieza
+   Adolphus. Sirve para ofrecer algo que el cliente no pidió —el kit de
+   un overhaul que toca, el repuesto de una válvula que va a fallar— y
+   para que él lo acepte o lo rechace sin salir del portal. */
+const COT_EST=[
+ ['borrador', 'Borrador',  'ink-3','Todavía no la ve el cliente'],
+ ['enviada',  'Enviada',   'sel',  'Esperando respuesta del cliente'],
+ ['aceptada', 'Aceptada',  'ok',   'El cliente la aprobó'],
+ ['rechazada','Rechazada', 'late', 'El cliente no la tomó']
+];
+const cotEst=k=>COT_EST.find(e=>e[0]===k)||COT_EST[0];
+const IGV=0.18;
+
+let COTIZACIONES=[
+ {id:'c1',n:'COT-2026-0044',cli:'refi',f:'2026-07-14',valida:'2026-08-13',est:'enviada',
+  por:'Rosa Chávez',act:'a4',
+  items:[{n:'AD-SV-KIT-SEL',q:2,pu:165},{n:'AD-SV-TOB-D',q:1,pu:540},{n:'AD-SV-DIS-316',q:1,pu:320}],
+  nota:'Kit de overhaul de la PSV-1210, que vence en setiembre. Precios puestos en almacén Lima, entrega inmediata.',
+  hist:[{f:'2026-07-14',t:'Enviada por Rosa Chávez'}]},
+ {id:'c2',n:'COT-2026-0041',cli:'minera',f:'2026-06-28',valida:'2026-07-28',est:'aceptada',
+  por:'Rosa Chávez',act:'a7',
+  items:[{n:'AD-KG-ASI-EPDM',q:4,pu:180},{n:'AD-KG-EMP-TRA',q:4,pu:120}],
+  nota:'Repuestos de las cuchillas de molienda para el próximo mantenimiento.',
+  hist:[{f:'2026-06-28',t:'Enviada por Rosa Chávez'},{f:'2026-07-02',t:'Aceptada por el cliente'}]}
+];
+const cotSub=c=>(c.items||[]).reduce((s,i)=>s+(i.pu!=null?i.pu:precio(i.n))*(i.q||1),0);
+const cotTot=c=>cotSub(c)*(1+IGV);
+
 const USUARIOS=[
  {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
  {n:'Servicio Técnico',m:'servicio@adolphus.pe',r:'Técnico',c:'—',x:'Órdenes de trabajo, informes y certificados'},
@@ -2573,10 +2626,12 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
-  if(CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
+  /* Las páginas de un cliente solo se abren desde su espacio de
+     trabajo — salvo Reclamos, que también se ve de corrido. */
+  if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
   $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
@@ -2599,10 +2654,10 @@ $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
    cajón completo. Si mañana cambia el lateral, esta barra cambia
    sola: no hay una segunda lista que mantener. */
 const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',
-  wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Confiab.',
+  wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Confiab.',
   cat:'Catálogo',imp:'Importar',users:'Usuarios'};
 const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',wo:'Servicios',
-  parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Reportes'};
+  parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Reportes'};
 function pintarTabbar(){
   const tb=$('#tabbar'); if(!tb) return;
   const links=$$('#nav a').filter(a=>a.style.display!=='none');
@@ -2651,12 +2706,15 @@ function applyRole(v){
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','snc','imp'];
+  /* Reclamos es la excepción: calidad los mira todos juntos, de todos
+   los clientes, así que vive en el lateral aunque también aparezca
+   dentro de la carpeta de cada cliente. */
+  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
   const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
-    parts:'Repuestos',req:'Solicitudes',snc:'Reclamos',rep:'Reportes'};
+    parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos',rep:'Reportes'};
   $$('#nav a').forEach(a=>{
     const l=a.querySelector('.lbl');if(!l)return;
     if(!l.dataset.base)l.dataset.base=l.textContent;
@@ -2844,6 +2902,8 @@ function renderClients(){
      const eq=ACTIVOS.filter(a=>a.cli===c.id);
      const atn=eq.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
      const venc=eq.filter(a=>a.prox&&dias(a.prox)<0).length;
+     /* reclamos que esperan algo de Adolphus: por revisar o sin cerrar */
+     const rec=RECLAMOS.filter(r=>r.cli===c.id&&!['cerrado','rechazado'].includes(r.est)).length;
      const marcado=sel.has(c.id);
      return `<div class="cl-card ${marcado?'sel':''}" onclick="openClientAssets('${c.id}')">
        ${staff?`<label class="cl-ck" onclick="event.stopPropagation()">
@@ -2853,6 +2913,7 @@ function renderClients(){
        <div class="cl-stats">
          <div class="cl-stat"><b>${eq.length}</b><span>Válvulas</span></div>
          <div class="cl-stat"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></div>
+         <div class="cl-stat"><b style="color:var(--${rec?'late':'ink'})">${rec}</b><span>Reclamos</span></div>
          <div class="cl-stat"><b style="color:var(--${venc?'late':'ink'})">${venc}</b><span>Calib. vencida</span></div>
        </div>
        <div class="cl-foot">Ver válvulas <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
@@ -2916,7 +2977,7 @@ function confirmarBajaClientes(){
   toast(`${ids.length} cliente${ids.length===1?'':'s'} eliminado${ids.length===1?'':'s'}`);
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['snc','Reclamos'],['imp','Importar']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
@@ -3400,6 +3461,300 @@ function addKit(){
   toast(`Kit de overhaul agregado · ${lista.length} posiciones`);
   gotoClientPage('req',S.cur&&S.cur.cli);renderReq();
 }
+/* ============================================================
+   COTIZACIONES
+   El cliente ve una oferta clara con su total y decide. Adolphus la
+   arma con el catálogo que ya existe, así que los números de parte,
+   los precios y el stock no se teclean.
+   ============================================================ */
+const BASE_N={globo:'Válvula de globo',psv:'Válvula de seguridad',cuchilla:'Cuchilla y on-off',act:'Actuador'};
+const cotFoco=()=>S.cli||S.inCli||null;
+const cotMias=()=>{
+  const f=cotFoco();
+  let l=f?COTIZACIONES.filter(c=>c.cli===f):COTIZACIONES;
+  /* un borrador es de Adolphus hasta que decide enviarlo */
+  if(S.rol==='cliente') l=l.filter(c=>c.est!=='borrador');
+  return l.slice().sort((a,b)=>b.f.localeCompare(a.f));
+};
+const cotVencida=c=>c.est==='enviada'&&c.valida&&dias(c.valida)<0;
+
+function renderCot(){
+  const caja=$('#cotList'); if(!caja) return;
+  const cliente=S.rol==='cliente';
+  const sub=$('#cotSub');
+  if(sub) sub.textContent = cliente
+    ? 'Lo que Adolphus te ofrece, con su precio y hasta cuándo vale. Ábrela para ver el detalle y aceptarla o rechazarla.'
+    : 'Lo que le ofreces al cliente: el kit que toca, el repuesto que va a hacer falta. Él la acepta o la rechaza desde su portal.';
+  const bot=$('#cotBtn');
+  if(bot) bot.innerHTML = cliente ? '' :
+    `<button class="btn" onclick="openCot()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva cotización</button>`;
+
+  const lista=cotMias();
+  const ct=$('#ctCot'); if(ct)ct.textContent=lista.filter(c=>c.est==='enviada').length||'';
+
+  if(!lista.length){
+    caja.innerHTML=`<div class="panel"><div class="empty">
+      <svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/></svg>
+      <b>Sin cotizaciones</b>${cliente?'Cuando Adolphus te ofrezca algo, aparecerá aquí.':'Arma una con el catálogo y mándasela al cliente.'}</div></div>`;
+    return;
+  }
+  caja.innerHTML=`<div class="snc-l">${lista.map(c=>{
+    const e=cotEst(c.est), a=ACTIVOS.find(x=>x.id===c.act), venc=cotVencida(c);
+    const nq=(c.items||[]).reduce((s,i)=>s+(i.q||1),0);
+    return `<article class="snc-c" onclick="verCot('${c.id}')">
+      <div class="snc-h">
+        <span class="mono snc-n">${esc(c.n)}</span>
+        <span class="tag ${venc?'due':e[2]}">${venc?'Vencida':e[1]}</span>
+        <span class="snc-f">${c.f}</span>
+      </div>
+      <b class="snc-t">${(c.items||[]).length} posicion${(c.items||[]).length===1?'':'es'} · ${nq} unidad${nq===1?'':'es'} · <span class="mono">${usd(cotTot(c))}</span> con IGV</b>
+      <div class="snc-m">
+        ${a?`<span class="tag mono">${esc(a.tag)}</span>`:''}
+        <span>${esc((c.items||[]).map(i=>i.n).slice(0,3).join(', '))}${(c.items||[]).length>3?'…':''}</span>
+        ${!cotFoco()?`<span>· ${esc(cli(c.cli).n)}</span>`:''}
+      </div>
+      <div class="snc-p ${c.est==='aceptada'?'ok':''}"><span class="pt"></span>${
+        c.est==='borrador' ? 'Borrador · el cliente todavía no la ve'
+        : venc              ? `Venció el ${c.valida} · vuelve a enviarla con precios de hoy`
+        : c.est==='enviada' ? (cliente?`Válida hasta el ${c.valida} · te toca aceptarla o rechazarla`:`Válida hasta el ${c.valida} · esperando al cliente`)
+        : c.est==='aceptada'? 'Aceptada por el cliente'
+        : `No la tomó${c.motivo?' · '+esc(c.motivo).slice(0,70):''}`}</div>
+    </article>`}).join('')}</div>`;
+}
+
+/* ── Armarla ─────────────────────────────────────────────────
+   El catálogo pone el número de parte, la descripción, el precio y el
+   stock. Aquí solo se elige qué y cuánto. */
+let COT_TMP=null;
+function openCot(id){
+  if(S.rol==='cliente'){toast('Las cotizaciones las emite Adolphus');return}
+  const c=id?COTIZACIONES.find(x=>x.id===id):null;
+  const f=cotFoco();
+  const val=new Date(HOY); val.setDate(val.getDate()+30);
+  COT_TMP = c ? JSON.parse(JSON.stringify(c)) : {
+    id:'', n:'COT-2026-'+String(45+COTIZACIONES.length).padStart(4,'0'),
+    cli:f||CLIENTES[0].id, f:HOY.toISOString().slice(0,10),
+    valida:val.toISOString().slice(0,10), est:'borrador',
+    por:(typeof SES!=='undefined'&&SES?SES.n:'Adolphus'), act:'', items:[], nota:'', hist:[]
+  };
+  $('#mTitle').textContent=c?`Editar ${c.n}`:'Nueva cotización';
+  pintarCot();
+  $('#modal').classList.add('on');
+}
+function pintarCot(){
+  const t=COT_TMP; if(!t) return;
+  const equipos=ACTIVOS.filter(a=>a.cli===t.cli&&a.tag);
+  const sub=cotSub(t), igv=sub*IGV, tot=sub+igv;
+  $('#mBody').innerHTML=`
+    <div class="snc-form">
+      <div class="two">
+        <div class="fld"><label for="cotCli">Cliente</label>
+          <select class="inp" id="cotCli" onchange="cotCampo('cli',this.value)">
+            ${CLIENTES.map(c=>`<option value="${c.id}" ${t.cli===c.id?'selected':''}>${esc(c.n)}</option>`).join('')}
+          </select></div>
+        <div class="fld"><label for="cotAct">Equipo <span class="opc">si es para uno en concreto</span></label>
+          <select class="inp" id="cotAct" onchange="cotCampo('act',this.value)">
+            <option value="">Sin equipo</option>
+            ${equipos.map(a=>`<option value="${a.id}" ${t.act===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
+          </select></div>
+      </div>
+
+      <h4 class="snc-sec">Qué se cotiza</h4>
+      <div class="cot-add">
+        <select class="inp" id="cotParte" aria-label="Repuesto del catálogo">
+          <option value="">Elige un repuesto del catálogo…</option>
+          ${Object.entries(BOM).map(([base,ps])=>`<optgroup label="${esc(BASE_N[base]||base)}">${
+            ps.map(p=>`<option value="${esc(p.n)}">${esc(p.n)} · ${esc(p.d)} — ${usd(precio(p.n))}</option>`).join('')}</optgroup>`).join('')}
+        </select>
+        <button class="btn sec" onclick="cotAgregar()">Agregar</button>
+      </div>
+      ${t.items.length?`
+      <div class="grid-wrap" style="margin-top:var(--sp-3)">
+        <table class="grid"><thead><tr>
+          <th>N.º de parte</th><th style="width:100px">Cant.</th>
+          <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:104px">Total</th><th style="width:38px"></th>
+        </tr></thead><tbody>
+        ${t.items.map((it,i)=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
+          <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}${m.s>0?` · ${m.s} en stock`:' · importación'}</small></div></td>
+          <td><span class="ps-qty"><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},-1)" aria-label="Quitar una unidad">−</button><b>${it.q||1}</b><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},1)" aria-label="Agregar una unidad">+</button></span></td>
+          <td class="num"><input class="inp cot-pu mono" type="number" min="0" step="1" value="${pu}" onchange="cotPrecio(${i},this.value)" aria-label="Precio unitario"></td>
+          <td class="num mono">${usd(pu*(it.q||1))}</td>
+          <td style="text-align:right"><button class="icon-btn" onclick="cotQuitar(${i})" aria-label="Quitar del listado"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></td>
+        </tr>`}).join('')}
+        </tbody></table>
+      </div>
+      <div class="cot-tot">
+        <div><span>Subtotal</span><b class="mono">${usd(sub)}</b></div>
+        <div><span>IGV 18 %</span><b class="mono">${usd(igv)}</b></div>
+        <div class="gr"><span>Total</span><b class="mono">${usd(tot)}</b></div>
+      </div>`
+      :`<div class="snc-nota" style="margin-top:var(--sp-3)">Todavía no hay posiciones. Elige un repuesto del catálogo y agrégalo.</div>`}
+
+      <h4 class="snc-sec">Condiciones</h4>
+      <div class="two">
+        <div class="fld"><label for="cotVal">Válida hasta</label>
+          <input class="inp" id="cotVal" type="date" value="${t.valida}" onchange="cotCampo('valida',this.value)"></div>
+        <div class="fld"><label for="cotNum">N.º de cotización</label>
+          <input class="inp mono" id="cotNum" value="${esc(t.n)}" onchange="cotCampo('n',this.value)"></div>
+      </div>
+      <div class="fld"><label for="cotNota">Nota para el cliente</label>
+        <textarea class="inp" id="cotNota" rows="3" onchange="cotCampo('nota',this.value)"
+          placeholder="Por qué se la mandas, plazo de entrega, condiciones de pago…">${esc(t.nota||'')}</textarea></div>
+    </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn sec" onclick="guardarCot(false)">Guardar borrador</button>
+    <button class="btn" onclick="guardarCot(true)">Enviar al cliente</button>`;
+}
+function cotCampo(k,v){COT_TMP[k]=v; if(k==='cli'){COT_TMP.act='';pintarCot()}}
+function cotAgregar(){
+  const n=$('#cotParte').value; if(!n){toast('Elige un repuesto del catálogo');return}
+  const y=COT_TMP.items.find(i=>i.n===n);
+  if(y)y.q=(y.q||1)+1; else COT_TMP.items.push({n,q:1,pu:precio(n)});
+  pintarCot();
+}
+function cotCant(i,d){const it=COT_TMP.items[i];it.q=Math.max(1,(it.q||1)+d);pintarCot()}
+function cotPrecio(i,v){COT_TMP.items[i].pu=Math.max(0,+v||0);pintarCot()}
+function cotQuitar(i){COT_TMP.items.splice(i,1);pintarCot()}
+
+function guardarCot(enviar){
+  const t=COT_TMP; if(!t) return;
+  if(!t.items.length){toast('Agrega al menos una posición');return}
+  const nuevo=!t.id;
+  if(enviar)t.est='enviada';
+  if(nuevo)t.id='c'+Date.now();
+  t.hist=t.hist||[];
+  if(enviar)t.hist.push({f:HOY.toISOString().slice(0,10),t:`Enviada por ${t.por}`});
+  else if(nuevo)t.hist.push({f:t.f,t:`Borrador creado por ${t.por}`});
+  const i=COTIZACIONES.findIndex(x=>x.id===t.id);
+  if(i>=0)COTIZACIONES[i]=t; else COTIZACIONES.unshift(t);
+  registrar('Cotización',`${t.n} ${enviar?'enviada':'guardada'}`);
+  toast(enviar?'Cotización enviada · el cliente ya la ve':'Borrador guardado');
+  COT_TMP=null;closeModal();renderAll();go('cot');
+}
+
+/* ── El detalle, y la decisión del cliente ───────────────────*/
+function verCot(id){
+  const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
+  const e=cotEst(c.est), a=ACTIVOS.find(x=>x.id===c.act), cliente=S.rol==='cliente';
+  const venc=cotVencida(c), sub=cotSub(c), igv=sub*IGV, tot=sub+igv;
+
+  let aviso='';
+  if(c.est==='enviada'&&!venc&&cliente)
+    aviso=`<div class="snc-dec"><div class="snc-dec-t">
+        <b>Válida hasta el ${c.valida}</b>
+        <span>Si la aceptas, Adolphus prepara el pedido con estos precios.</span></div>
+      <div class="snc-dec-b">
+        <button class="btn sec" onclick="rechazarCot('${c.id}')">No la tomo</button>
+        <button class="btn" onclick="aceptarCot('${c.id}')">Aceptar</button></div></div>`;
+  else if(venc)
+    aviso=`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <div>Venció el ${c.valida}. ${cliente?'Pídele a Adolphus una nueva con precios de hoy.':'Vuelve a enviarla con precios de hoy.'}</div></div>`;
+  else if(c.est==='aceptada')
+    aviso=`<div class="callout ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <div>${cliente?'La aceptaste':'El cliente la aceptó'}${c.decidido?' el '+c.decidido:''}.</div></div>`;
+  else if(c.est==='rechazada')
+    aviso=`<div class="snc-dec no"><div class="snc-dec-t"><b>No la tomó</b>
+      <span>${esc(c.motivo||'Sin motivo registrado')}</span></div></div>`;
+  else if(c.est==='borrador'&&!cliente)
+    aviso=`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Es un borrador: el cliente todavía no la ve. Usa <b>Editar</b> para terminarla y enviarla.</div></div>`;
+
+  $('#mTitle').textContent=c.n;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${venc?'due':e[2]}">${venc?'Vencida':e[1]}</span>
+      <span>Emitida el ${c.f} por ${esc(c.por)}</span>
+      ${!cotFoco()?`<span>· ${esc(cli(c.cli).n)}</span>`:''}
+      ${a?`<span class="tag mono">${esc(a.tag)}</span>`:''}
+    </div>
+    ${aviso}
+    <div class="grid-wrap"><table class="grid"><thead><tr>
+      <th>N.º de parte</th><th class="num" style="width:64px">Cant.</th>
+      <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:112px">Total</th>
+    </tr></thead><tbody>
+      ${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
+        <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}</small></div></td>
+        <td class="num mono">${it.q||1}</td><td class="num mono">${usd(pu)}</td>
+        <td class="num mono">${usd(pu*(it.q||1))}</td></tr>`}).join('')}
+    </tbody></table></div>
+    <div class="cot-tot">
+      <div><span>Subtotal</span><b class="mono">${usd(sub)}</b></div>
+      <div><span>IGV 18 %</span><b class="mono">${usd(igv)}</b></div>
+      <div class="gr"><span>Total</span><b class="mono">${usd(tot)}</b></div>
+    </div>
+    ${c.nota?`<div class="snc-nota" style="margin-top:var(--sp-4)">${esc(c.nota)}</div>`:''}
+    ${(c.hist&&c.hist.length)?`<div class="snc-bit">${c.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:''}`;
+  $('#mFoot').innerHTML=`
+    <button class="btn sec" onclick="imprimirCot('${c.id}')">Imprimir</button>
+    ${cliente?'':`<button class="btn" onclick="openCot('${c.id}')">Editar</button>`}`;
+  $('#modal').classList.add('on');
+}
+function aceptarCot(id){
+  const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
+  c.est='aceptada'; c.decidido=HOY.toISOString().slice(0,10);
+  (c.hist=c.hist||[]).push({f:c.decidido,t:'Aceptada por el cliente'});
+  registrar('Cotización',`${c.n} aceptada`);
+  toast('Cotización aceptada · Adolphus ya la ve');
+  renderAll();verCot(id);
+}
+function rechazarCot(id){
+  const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
+  $('#mTitle').textContent=`${c.n} · no la tomo`;
+  $('#mBody').innerHTML=`
+    <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:var(--sp-4)">
+      Cuéntale a Adolphus por qué, para que pueda ajustar la próxima.</p>
+    <div class="fld"><label for="cotMot">Motivo</label>
+      <textarea class="inp" id="cotMot" rows="3" placeholder="El precio está por encima del presupuesto, ya lo compramos, el plazo no alcanza…"></textarea></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verCot('${id}')">Volver</button>
+    <button class="btn" onclick="confirmarRechazoCot('${id}')">Enviar</button>`;
+  setTimeout(()=>$('#cotMot')&&$('#cotMot').focus(),60);
+}
+function confirmarRechazoCot(id){
+  const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
+  const m=$('#cotMot').value.trim();
+  if(!m){toast('Escribe el motivo');$('#cotMot').focus();return}
+  c.est='rechazada'; c.motivo=m; c.decidido=HOY.toISOString().slice(0,10);
+  (c.hist=c.hist||[]).push({f:c.decidido,t:`No la tomó — ${m}`});
+  registrar('Cotización',`${c.n} rechazada`);
+  toast('Adolphus ya sabe por qué');
+  renderAll();verCot(id);
+}
+
+function imprimirCot(id){
+  const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
+  const a=ACTIVOS.find(x=>x.id===c.act), cl=cli(c.cli);
+  const sub=cotSub(c), igv=sub*IGV, tot=sub+igv;
+  const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana de impresión');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>${esc(c.n)} · Adolphus</title><style>
+   body{font:13px/1.55 system-ui,-apple-system,sans-serif;color:#1d2430;max-width:780px;margin:34px auto;padding:0 26px}
+   h1{font-size:20px;margin:0 0 2px} .sub{color:#5b6472;font-size:12.5px;margin-bottom:24px}
+   table{width:100%;border-collapse:collapse;font-size:12.5px}
+   th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#5b6472;
+      border-bottom:1.5px solid #1d2430;padding:0 8px 6px}
+   td{padding:8px;border-bottom:1px solid #e8ebf0;vertical-align:top}
+   .n{text-align:right;font-variant-numeric:tabular-nums} .pn{font-family:ui-monospace,monospace;font-weight:600}
+   small{display:block;color:#5b6472}
+   .tot{margin-left:auto;width:280px;margin-top:16px}
+   .tot div{display:flex;justify-content:space-between;padding:5px 8px}
+   .tot .g{border-top:1.5px solid #1d2430;font-weight:700;font-size:15px;margin-top:4px;padding-top:9px}
+   .nota{margin-top:22px;padding:13px 15px;background:#f4f6f9;border-radius:8px;font-size:12.5px;white-space:pre-wrap}
+   </style></head><body>
+   <h1>${esc(c.n)} · Cotización</h1>
+   <div class="sub">${esc(cl.n)}${cl.ruc?' · RUC '+esc(cl.ruc):''}${a?' · '+esc(a.tag):''}<br>
+     Emitida el ${c.f} por ${esc(c.por)} · válida hasta el ${c.valida} · Adolphus S.A.</div>
+   <table><thead><tr><th>N.º de parte</th><th class="n">Cant.</th><th class="n">P. unitario</th><th class="n">Total</th></tr></thead>
+   <tbody>${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);
+     return `<tr><td><span class="pn">${esc(it.n)}</span><small>${esc(m.d||'')}</small></td>
+     <td class="n">${it.q||1}</td><td class="n">${usd(pu)}</td><td class="n">${usd(pu*(it.q||1))}</td></tr>`}).join('')}</tbody></table>
+   <div class="tot"><div><span>Subtotal</span><b>${usd(sub)}</b></div>
+     <div><span>IGV 18 %</span><b>${usd(igv)}</b></div>
+     <div class="g"><span>Total</span><b>${usd(tot)}</b></div></div>
+   ${c.nota?`<div class="nota">${esc(c.nota)}</div>`:''}
+   </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+}
+
 /* ============================================================
    RECLAMOS / SERVICIO NO CONFORME
    El punto de esta pantalla: el TAG hace el trabajo. Al elegirlo se
@@ -5360,6 +5715,27 @@ function buildNotif(){
         s:`${esc(cli(r.cli).n)} · ${eq}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
     }
   });
+
+  /* Cotizaciones: al cliente le avisa que tiene una por decidir; a
+     Adolphus, cuál ya respondió el cliente y cuál sigue esperando. */
+  COTIZACIONES.filter(c=>(!S.cli||c.cli===S.cli)&&c.est!=='borrador').forEach(c=>{
+    const venc=cotVencida(c);
+    if(S.cli){
+      if(c.est==='enviada'&&!venc)
+        items.push({tone:'sel',ic:'$',t:`${c.n} · cotización nueva`,
+          s:`${usd(cotTot(c))} · válida hasta el ${c.valida}`,cot:c.id});
+      return;
+    }
+    if(c.est==='aceptada'&&!c.visto)
+      items.push({tone:'ok',ic:'$',t:`${esc(cli(c.cli).n)} aceptó ${c.n}`,
+        s:`${usd(cotTot(c))} · prepara el pedido`,cot:c.id});
+    else if(c.est==='rechazada'&&!c.visto)
+      items.push({tone:'ink-3',ic:'$',t:`${esc(cli(c.cli).n)} no tomó ${c.n}`,
+        s:esc(c.motivo||'Sin motivo'),cot:c.id});
+    else if(venc)
+      items.push({tone:'due',ic:'$',t:`${c.n} venció`,
+        s:`${esc(cli(c.cli).n)} · vuelve a enviarla con precios de hoy`,cot:c.id});
+  });
   return items;
 }
 function renderNotif(){
@@ -5372,7 +5748,7 @@ function renderNotif(){
 function toggleNotif(e){e.stopPropagation();$('#notifPop').classList.toggle('on')}
 function closeNotif(){$('#notifPop').classList.remove('on')}
 function notifGo(i){const n=NOTIF[i];closeNotif();if(!n)return;
-  if(n.rec)verSNC(n.rec); else if(n.sol)verSol(n.sol); else if(n.id)verEquipo(n.id);}
+  if(n.cot)verCot(n.cot); else if(n.rec)verSNC(n.rec); else if(n.sol)verSol(n.sol); else if(n.id)verEquipo(n.id);}
 document.addEventListener('click',closeNotif);
 
 /* ============================================================
@@ -6090,7 +6466,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -6242,7 +6618,7 @@ const online=()=>!OFF_SIM&&navigator.onLine;
 function guardarLocal(){
   try{
     localStorage.setItem(LS_KEY,JSON.stringify({
-      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,CALIBS,SERVS,DOCS,
+      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,CALIBS,SERVS,DOCS,
       CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
     }));
     return true;
@@ -6256,7 +6632,7 @@ function restaurarLocal(){
   const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
   const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
   arr(ACTIVOS,d.ACTIVOS);arr(ORDENES,d.ORDENES);arr(SOLICITUDES,d.SOLICITUDES);
-  arr(RECLAMOS,d.RECLAMOS);
+  arr(RECLAMOS,d.RECLAMOS);arr(COTIZACIONES,d.COTIZACIONES);
   arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
@@ -6366,7 +6742,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-07-31 · reclamos 2';
+const VERSION='2026-07-31 · cotizaciones';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
