@@ -35,3 +35,11 @@ cp -R package/skills/. .claude/skills/
 
 Se omitió `improve-ui/agents/openai.yaml` del upstream: es un manifiesto específico de
 Codex/ChatGPT y no aplica a Claude Code.
+
+## No confundir con `frontend-design`
+
+`.claude/skills/frontend-design` es un symlink a `../../.agents/skills/frontend-design`,
+no forma parte de UI Skills. Viene de `anthropics/skills` (Apache 2.0) vía
+`npx skills add`, que instala en `.agents/skills/` (layout multi-agente) y symlinkea
+hacia cada agente. Su versión queda fijada en `skills-lock.json` de la raíz; se
+actualiza con ese CLI, no con el `cp` de arriba.
