@@ -988,8 +988,12 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   background:var(--sel-bg);color:var(--sel)}
 .cl-head .cl-n{font-size:15px;font-weight:700;line-height:1.2}
 .cl-head .cl-s{font-size:12px;color:var(--ink-3);margin-top:2px}
-.cl-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-2)}
-.cl-stat{background:var(--surface);padding:12px 10px;text-align:center}
+.cl-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line-2)}
+/* cada cifra es un botón: lleva a lo que cuenta */
+.cl-stat{background:var(--surface);padding:12px 10px;text-align:center;border:0;font:inherit;
+  cursor:pointer;transition:background var(--fast)}
+.cl-stat:hover{background:var(--surface-2)}
+@media(min-width:520px){.cl-stats{grid-template-columns:repeat(4,1fr)}}
 .cl-stat b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em}
 .cl-stat span{font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
 .cl-foot{display:flex;align-items:center;justify-content:space-between;padding:11px 18px;font-size:12.5px;color:var(--sel);font-weight:600}
@@ -1428,6 +1432,29 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .snc-r p{margin:3px 0 0;font-size:13.5px;line-height:1.5;overflow-wrap:anywhere}
 .snc-r.sin p{color:var(--ink-3);font-style:italic}
 .snc-r.sin .snc-i{background:var(--due-bg);color:var(--due)}
+
+/* fotos y video del reclamo */
+.ev-drop{display:flex;flex-direction:column;align-items:center;gap:5px;padding:22px 16px;text-align:center;
+  border:1.5px dashed var(--line);border-radius:var(--r-2);background:var(--surface-2);cursor:pointer;
+  transition:border-color var(--fast),background var(--fast)}
+.ev-drop:hover,.ev-drop.over,.ev-drop:focus-visible{border-color:var(--sel);background:var(--sel-bg)}
+.ev-drop svg{width:28px;height:28px;stroke:var(--ink-3);fill:none;stroke-width:1.6}
+.ev-drop b{font-size:13.5px;font-weight:600}
+.ev-drop span{font-size:12px;color:var(--ink-3);max-width:38ch;line-height:1.45}
+.ev-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px;margin-top:var(--sp-3)}
+.ev-grid:empty{display:none}
+.ev-i{position:relative;margin:0;border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden;background:var(--surface-2)}
+.ev-i img,.ev-i video{display:block;width:100%;height:84px;object-fit:cover;background:var(--surface-3)}
+.ev-i figcaption{font-size:10.5px;color:var(--ink-3);padding:5px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-grid.ver .ev-i{cursor:pointer;transition:border-color var(--fast)}
+.ev-grid.ver .ev-i:hover,.ev-grid.ver .ev-i:focus-visible{border-color:var(--sel)}
+.ev-play{position:absolute;top:34px;left:50%;transform:translateX(-50%);color:#fff;font-size:19px;
+  text-shadow:0 1px 6px rgba(0,0,0,.6);pointer-events:none}
+.ev-x{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;
+  background:oklch(0 0 0/.62);color:#fff;display:grid;place-items:center;padding:0}
+.ev-x svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2.4}
+.ev-full img,.ev-full video{display:block;width:100%;height:auto;max-height:66vh;object-fit:contain;
+  border-radius:var(--r-2);background:var(--surface-3)}
 
 /* cotizaciones: elegir del catálogo y el total al pie */
 .snc-form .grid-wrap{overflow-x:auto}
@@ -2911,10 +2938,10 @@ function renderClients(){
        <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
          <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span>${c.verif===false?' <span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px" title="El RUC tiene formato correcto pero no se confirmó contra SUNAT">sin verificar</span>':''} · `:'<span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px">sin RUC</span> · '}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
        <div class="cl-stats">
-         <div class="cl-stat"><b>${eq.length}</b><span>Válvulas</span></div>
-         <div class="cl-stat"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></div>
-         <div class="cl-stat"><b style="color:var(--${rec?'late':'ink'})">${rec}</b><span>Reclamos</span></div>
-         <div class="cl-stat"><b style="color:var(--${venc?'late':'ink'})">${venc}</b><span>Calib. vencida</span></div>
+         <button class="cl-stat" onclick="event.stopPropagation();irCli('${c.id}','assets','todos')" title="Ver las válvulas de ${esc(c.n)}"><b>${eq.length}</b><span>Válvulas</span></button>
+         <button class="cl-stat" onclick="event.stopPropagation();irCli('${c.id}','assets','atencion')" title="Ver las que requieren atención"><b style="color:var(--${atn?'due':'ink'})">${atn}</b><span>Atención</span></button>
+         <button class="cl-stat" onclick="event.stopPropagation();irCli('${c.id}','snc')" title="Ver los reclamos de ${esc(c.n)}"><b style="color:var(--${rec?'late':'ink'})">${rec}</b><span>Reclamos</span></button>
+         <button class="cl-stat" onclick="event.stopPropagation();irCli('${c.id}','cal')" title="Ver el programa de calibración"><b style="color:var(--${venc?'late':'ink'})">${venc}</b><span>Calib. vencida</span></button>
        </div>
        <div class="cl-foot">Ver válvulas <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
      </div>`}).join('')}</div>`;
@@ -2979,6 +3006,9 @@ function confirmarBajaClientes(){
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
 const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
+/* Cada cifra de la tarjeta lleva a lo que cuenta: si Los Andes marca
+   un reclamo, un clic enseña cuál es y desde cuándo. */
+function irCli(id,pag,vista){enterClient(id,pag);if(vista){S.view=vista;renderAssets()}}
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
@@ -3870,6 +3900,20 @@ function openSNC(id){
         <div class="fld"><label for="sncRefCli">Tu n.º de reclamo <span class="opc">si tu empresa usa uno</span></label>
           <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
       </div>
+
+      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
+      <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
+           ondragover="event.preventDefault();this.classList.add('over')"
+           ondragleave="this.classList.remove('over')"
+           ondrop="event.preventDefault();this.classList.remove('over');evSubir(event.dataTransfer.files)"
+           tabindex="0" role="button" aria-label="Agregar fotos o video">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
+        <b>Agrega fotos o un video</b>
+        <span>Arrástralos aquí, o toca para elegirlos o tomarlos con la cámara</span>
+      </div>
+      <input type="file" id="evFile" accept="image/*,video/*" multiple capture="environment"
+             style="display:none" onchange="evSubir(this.files);this.value=''">
+      <div class="ev-grid" id="evGrid"></div>
       <div class="snc-nota">Adolphus revisa tu reclamo y te avisa si lo toma. Si lo toma, verás aquí mismo qué se hizo, por qué pasó y cómo se corrigió.</div>
       <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
     </div>`;
@@ -3893,6 +3937,20 @@ function openSNC(id){
         <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="fld"><label for="sncDoma">Código DOMA del cliente <span class="opc">si lo maneja</span></label>
         <input class="inp" id="sncDoma" placeholder="DOM-…" value="${esc(r?r.doma:'')}"></div>
+
+      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
+      <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
+           ondragover="event.preventDefault();this.classList.add('over')"
+           ondragleave="this.classList.remove('over')"
+           ondrop="event.preventDefault();this.classList.remove('over');evSubir(event.dataTransfer.files)"
+           tabindex="0" role="button" aria-label="Agregar fotos o video">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
+        <b>Agrega fotos o un video</b>
+        <span>Arrástralos aquí, o toca para elegirlos o tomarlos con la cámara</span>
+      </div>
+      <input type="file" id="evFile" accept="image/*,video/*" multiple capture="environment"
+             style="display:none" onchange="evSubir(this.files);this.value=''">
+      <div class="ev-grid" id="evGrid"></div>
 
       <h4 class="snc-sec">2 · Qué se hizo de inmediato</h4>
       <div class="fld"><label for="sncAccInm">Acción inmediata <span class="opc">empieza con un verbo</span></label>
@@ -3935,7 +3993,68 @@ function openSNC(id){
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
     <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':(cliente?'Enviar el reclamo':'Abrir el reclamo')}</button>`;
   $('#modal').classList.add('on');
-  pintarCtxSNC();
+  EV_TMP = r ? (r.ev||[]).slice() : [];
+  pintarCtxSNC(); pintarEv();
+}
+
+/* ── Evidencia ───────────────────────────────────────────────
+   Una foto del golpe o un video de la fuga explica en dos segundos lo
+   que en texto cuesta un párrafo. Se guarda dentro del reclamo, así
+   que viaja con él. El navegador solo aguanta unos megas: por eso las
+   fotos se reducen antes de guardarlas y el video se limita. */
+let EV_TMP=[];
+const EV_MAX_VIDEO=8*1024*1024;   // 8 MB
+function evSubir(files){
+  [...(files||[])].forEach(f=>{
+    if(f.type.startsWith('image/')) return evFoto(f);
+    if(f.type.startsWith('video/')){
+      if(f.size>EV_MAX_VIDEO){toast(`${f.name} pesa demasiado · máximo 8 MB de video`);return}
+      const rd=new FileReader();
+      rd.onload=e=>{EV_TMP.push({t:'video',n:f.name,d:e.target.result});pintarEv()};
+      rd.readAsDataURL(f);return;
+    }
+    toast('Solo fotos o video');
+  });
+}
+/* Una foto de celular son 4000 px que nadie va a mirar: se reduce al
+   lado largo de 1400 y se guarda en JPEG. */
+function evFoto(f){
+  const rd=new FileReader();
+  rd.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      const k=Math.min(1,1400/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');
+      c.width=Math.round(im.width*k); c.height=Math.round(im.height*k);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      EV_TMP.push({t:'foto',n:f.name,d:c.toDataURL('image/jpeg',0.82)});
+      pintarEv();
+    };
+    im.onerror=()=>toast('No se pudo leer '+f.name);
+    im.src=e.target.result;
+  };
+  rd.readAsDataURL(f);
+}
+function evQuitar(i){EV_TMP.splice(i,1);pintarEv()}
+function pintarEv(){
+  const g=$('#evGrid'); if(!g) return;
+  g.innerHTML=EV_TMP.map((x,i)=>`<figure class="ev-i">
+    ${x.t==='foto'?`<img src="${x.d}" alt="${esc(x.n)}">`
+                  :`<video src="${x.d}" muted playsinline></video><span class="ev-play">▶</span>`}
+    <button class="ev-x" onclick="evQuitar(${i})" aria-label="Quitar ${esc(x.n)}">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <figcaption>${esc(x.n)}</figcaption></figure>`).join('');
+}
+/* Verla en grande sin salir del reclamo. */
+function verEv(id,i){
+  const r=RECLAMOS.find(x=>x.id===id), x=r&&(r.ev||[])[i]; if(!x) return;
+  $('#mTitle').textContent=x.n;
+  $('#mBody').innerHTML=`<div class="ev-full">${x.t==='foto'
+    ?`<img src="${x.d}" alt="${esc(x.n)}">`
+    :`<video src="${x.d}" controls autoplay playsinline></video>`}</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verSNC('${id}')">Volver al reclamo</button>
+    <a class="btn" href="${x.d}" download="${esc(x.n)}">Descargar</a>`;
+  $('#modal').classList.add('on');
 }
 
 /* Lo que el TAG trae consigo. No es decoración: es la prueba de que
@@ -3980,6 +4099,7 @@ function guardarSNC(){
   const datos={
     act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'), hall:v('sncHall')
   };
+  datos.ev=EV_TMP.slice();
   if(!cliente) Object.assign(datos,{
     ident:v('sncQuien'), doma:v('sncDoma'),
     accInm:v('sncAccInm'), fInm:v('sncFInm'), respInm:v('sncRespInm'), obs:v('sncObs'),
@@ -4126,11 +4246,19 @@ function verSNC(id){
       <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para poder responderle al cliente: ${esc(falta.join(', '))}.</div></div>`;
 
   /* Lo que ve el cliente: su reclamo, y qué hizo Adolphus. */
+  /* Las fotos y el video van arriba del texto: se entienden antes. */
+  const evidencia=(r.ev&&r.ev.length)?`<div class="ev-grid ver">${r.ev.map((x,i)=>`
+    <figure class="ev-i" onclick="verEv('${r.id}',${i})" tabindex="0" role="button" aria-label="Ver ${esc(x.n)}">
+      ${x.t==='foto'?`<img src="${x.d}" alt="${esc(x.n)}">`
+                    :`<video src="${x.d}" muted playsinline></video><span class="ev-play">▶</span>`}
+      <figcaption>${esc(x.n)}</figcaption></figure>`).join('')}</div>`:'';
+
   const vistaCliente=`
     <div class="snc-doc">
       ${fila('·','Lo que reportaste',r.det)}
       ${fila('·','Con detalle',r.hall,'—')}
       ${fila('·','Equipo',[a&&a.tag,sncProducto(a)].filter(Boolean).join(' · '),'No indicado')}
+      ${evidencia?`<div class="snc-r"><span class="snc-i">·</span><div style="width:100%"><b>Fotos y video</b>${evidencia}</div></div>`:''}
       ${r.est==='rechazado'?'':`
         ${fila('·','Qué se hizo de inmediato',r.accInm,'Todavía no se registra')}
         ${r.fInm?fila('·','Cuándo',r.fInm):''}
@@ -4146,6 +4274,7 @@ function verSNC(id){
       ${fila(3,'Referencia del cliente',r.refCli,'No aplica')}
       ${fila(4,'Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
       ${fila(5,'Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · '))}
+      ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video adjuntos</b>${evidencia}</div></div>`:''}
       ${fila(6,'Acción inmediata',r.accInm)}
       ${fila(7,'Fecha de la acción inmediata',r.fInm)}
       ${fila(8,'Responsable de la acción inmediata',r.respInm)}
@@ -6742,7 +6871,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-07-31 · cotizaciones';
+const VERSION='2026-07-31 · fotos en reclamos';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
