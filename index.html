@@ -1806,6 +1806,93 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   .tabbar button{font-size:10px}
   .crumbs>b{font-size:14px}
 }
+
+/* ============================================================
+   §17 · APP VIVA
+   Hasta aquí el portal se veía bien pero se sentía estático: las
+   páginas aparecían de golpe y casi nada devolvía señal al tocarlo.
+   Este bloque hace que todo responda — entrar, pasar, pulsar — con
+   el mismo ritmo en todas las pantallas, no sólo en el panel.
+   Regla de oro: el movimiento explica algo (de dónde vino, qué se
+   pulsó, cuánto mide la barra). Si no explica nada, no va.
+   ============================================================ */
+
+/* ── 1. Cada página entra, no aparece ────────────────────────
+   Los bloques de la página suben en orden. El panel ya tiene su
+   propia coreografía (más específica), así que no se pisan. */
+@keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page.on>*{animation:entra var(--med) var(--ease-out) both}
+.page.on>*:nth-child(2){animation-delay:35ms}
+.page.on>*:nth-child(3){animation-delay:70ms}
+.page.on>*:nth-child(n+4){animation-delay:95ms}
+
+/* ── 2. Las filas responden ──────────────────────────────────
+   Al pasar, la fila se marca con la barrita de selección: se ve
+   cuál vas a abrir antes de hacer clic. Al pulsar, se hunde. */
+table.grid tbody tr{transition:background var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+@media(hover:hover){
+  table.grid tbody tr:hover{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--sel)}
+}
+table.grid tbody tr:active{background:var(--surface-3)}
+table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var(--sel)}
+/* el encabezado pegajoso se despega con sombra cuando hay scroll */
+.app.scrolled table.grid thead th{box-shadow:0 4px 10px -7px oklch(0 0 0 /.45)}
+
+/* ── 3. Todo lo pulsable devuelve señal ──────────────────────
+   Un toque sin respuesta se siente roto. 60 ms bastan. */
+.btn,.chip,.views button,.cbar-tabs a,.cola-i .ac .btn,.tabbar button{
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease),
+             border-color var(--fast) var(--ease),transform 60ms var(--ease),box-shadow var(--fast) var(--ease)
+}
+.chip:active,.views button:active,.cbar-tabs a:active{transform:scale(.97)}
+.icon-btn:active,.ava-btn:active{transform:scale(.93)}
+/* Las tarjetas de cliente, repuesto y familia ya se levantaban al
+   pasar; ahora también se hunden al pulsar, y la de modelo —que sólo
+   cambiaba el borde— se levanta como sus hermanas. */
+.cl-card:active,.ps-card:active,.fam:not(:disabled):active,.nm-card:active{
+  transform:translateY(0) scale(.994);box-shadow:var(--e-1)
+}
+@media(hover:hover){
+  .nm-card{transition:box-shadow var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),border-color var(--fast)}
+  .nm-card:hover{box-shadow:var(--shadow-pop);transform:translateY(-2px)}
+}
+/* la foto del producto se acerca un punto: la tarjeta se siente viva */
+.ps-card .ph img,.fam-ph img{transition:transform var(--slow) var(--ease-out)}
+@media(hover:hover){
+  .ps-card:hover .ph img,.fam:not(:disabled):hover .fam-ph img{transform:scale(1.055)}
+}
+
+/* ── 4. El modal llega desde el fondo, no se planta ─────────── */
+.modal.on{animation:vela var(--med) var(--ease-out);backdrop-filter:blur(2.5px)}
+@keyframes vela{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1}}
+@keyframes popup{from{opacity:0;transform:translateY(14px) scale(.975)}to{opacity:1;transform:none}}
+.modal-c{animation:popup var(--slow) var(--ease-out)}
+@media(max-width:760px){
+  /* en celular la hoja sube desde abajo, como manda el teléfono */
+  @keyframes popup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+}
+
+/* ── 5. Los gráficos se dibujan ──────────────────────────────
+   La barra crece hasta su valor y la dona se traza. Ver el número
+   crecer es lo que hace entender que es una medida y no un adorno. */
+.hb-fill{transition:width 620ms var(--ease-out),filter var(--fast)}
+.col-bar{transition:height 620ms var(--ease-out),filter var(--fast)}
+.arco{transition:stroke-dasharray 700ms var(--ease-out)}
+
+/* ── 6. La barra superior se despega al bajar ────────────────*/
+.bar{transition:box-shadow var(--med) var(--ease)}
+.app.scrolled .bar{box-shadow:0 6px 16px -12px oklch(0 0 0 /.5)}
+
+/* ── 7. Quien pidió menos movimiento, recibe menos ───────────
+   Los estados siguen (color, sombra, foco); sólo se va el baile. */
+@media(prefers-reduced-motion:reduce){
+  .page.on>*,.modal.on,.modal-c,.toast{animation:none!important}
+  .hb-fill,.col-bar,.arco{transition:none!important}
+  .chip:active,.views button:active,.cbar-tabs a:active,.icon-btn:active,.ava-btn:active{transform:none}
+  .cl-card:hover,.ps-card:hover,.fam:hover,.nm-card:hover{transform:none}
+  .ps-card:hover .ph img,.fam:hover .fam-ph img{transform:none}
+  .cl-card:active,.ps-card:active,.fam:active,.nm-card:active{transform:none}
+}
 </style>
 </head>
 <body>
@@ -2786,8 +2873,21 @@ function go(p){
   renderCliBar();
   pintarTabbar();
   $('.view').scrollTop=0;
+  $('#app').classList.remove('scrolled');
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
+  // la página que entra se dibuja: barras, donas y cifras arrancan de cero
+  requestAnimationFrame(animarVista);
 }
+/* La barra de arriba se despega con una sombra en cuanto bajas: así
+   se entiende que hay más contenido y que ella se queda fija. */
+(function sombraAlBajar(){
+  const v=$('.view'); if(!v)return;
+  let puesta=false;
+  v.addEventListener('scroll',()=>{
+    const hay=v.scrollTop>4;
+    if(hay!==puesta){puesta=hay;$('#app').classList.toggle('scrolled',hay)}
+  },{passive:true});
+})();
 $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
 
 /* ── Barra inferior del celular ──────────────────────────────
@@ -5536,7 +5636,7 @@ function donut(segs,center,sub){
   const use=segs.filter(s=>s.value>0),tot=use.reduce((s,x)=>s+x.value,0)||1,R=54,C=2*Math.PI*R;let off=0;
   const gap=use.length>1?2:0;
   const arcs=use.map(s=>{const len=s.value/tot*C,vis=Math.max(0.6,len-gap);
-    const seg=`<circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--${s.tone})" stroke-width="15" stroke-dasharray="${vis} ${C-vis}" stroke-dashoffset="${-off}" transform="rotate(-90 66 66)"/>`;off+=len;return seg}).join('');
+    const seg=`<circle class="arco" cx="66" cy="66" r="${R}" fill="none" stroke="var(--${s.tone})" stroke-width="15" stroke-dasharray="${vis} ${C-vis}" stroke-dashoffset="${-off}" transform="rotate(-90 66 66)"/>`;off+=len;return seg}).join('');
   return `<div class="donut-wrap"><svg class="donut" viewBox="0 0 132 132" aria-hidden="true">
     <circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--surface-3)" stroke-width="15"/>${arcs}
     <text x="66" y="62" text-anchor="middle" font-size="27" font-weight="600" fill="var(--ink)" font-family="'IBM Plex Sans',sans-serif">${center}</text>
@@ -5547,7 +5647,7 @@ function gauge(pct,label){
   const C=Math.PI*52,val=Math.max(0,Math.min(100,pct)),tone=val>=90?'ok':val>=70?'due':'late',len=val/100*C;
   return `<div class="gauge-wrap"><svg viewBox="0 0 140 84" width="168" height="100" aria-hidden="true">
     <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--surface-3)" stroke-width="13" stroke-linecap="round"/>
-    <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--${tone})" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/></svg>
+    <path class="arco" d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--${tone})" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/></svg>
     <div class="gauge-v" style="color:var(--${tone})">${Math.round(val)}%</div><div class="gauge-k">${esc(label)}</div></div>`;
 }
 
@@ -5668,6 +5768,52 @@ function animarHero(){
     if(k<1)requestAnimationFrame(paso);
   })(t0);
 }
+/* ── Las cifras suben en lugar de aparecer ──────────────────
+   Sólo enteros y porcentajes: "4/6" o "S/ 1 250" se dejan quietos,
+   que animar un dato mal leído es peor que no animarlo. */
+function subirCifra(nodo,fin,suf){
+  const t0=performance.now(),dur=650;
+  (function paso(t){
+    const k=Math.min(1,(t-t0)/dur);
+    nodo.textContent=Math.round(fin*(1-Math.pow(1-k,3)))+suf;
+    if(k<1)requestAnimationFrame(paso);
+  })(t0);
+}
+function prepararCifra(el){
+  const n=Array.from(el.childNodes).find(x=>x.nodeType===3&&/^\s*\d+%?\s*$/.test(x.textContent));
+  if(!n)return;
+  const m=n.textContent.trim().match(/^(\d+)(%?)$/), fin=+m[1];
+  if(fin<3)return;                    // por 0, 1 o 2 no vale la pena
+  n.textContent='0'+m[2];
+  subirCifra(n,fin,m[2]);
+}
+
+/* ── La vista se dibuja, no se planta ───────────────────────
+   Barras, columnas y donas arrancan en cero y crecen hasta su
+   valor. No hace falta tocar el HTML de cada gráfico: se lee el
+   valor final que ya trae puesto, se pone a cero y se devuelve
+   en el siguiente cuadro, que es cuando la transición engancha. */
+function animarVista(){
+  animarHero();
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const p=document.querySelector('.page.on'); if(!p)return;
+  const vuelta=[];
+  const ceroA=(sel,prop,cero)=>p.querySelectorAll(sel).forEach(e=>{
+    const fin=e.style[prop]; if(!fin)return;
+    e.style[prop]=cero; vuelta.push(()=>{e.style[prop]=fin});
+  });
+  ceroA('.hb-fill','width','0%');
+  ceroA('.col-bar','height','0px');
+  p.querySelectorAll('.arco').forEach(e=>{
+    const fin=e.getAttribute('stroke-dasharray'); if(!fin)return;
+    const tot=fin.split(/[\s,]+/).reduce((a,b)=>a+(Number(b)||0),0);
+    e.style.strokeDasharray='0 '+tot;
+    vuelta.push(()=>{e.style.strokeDasharray=fin});
+  });
+  p.querySelectorAll('.kpi .kv').forEach(prepararCifra);
+  if(vuelta.length)requestAnimationFrame(()=>requestAnimationFrame(()=>vuelta.forEach(f=>f())));
+}
+
 function heroHtml({titulo,sub,cifra,cifraPie,cifraTono,pct,urgente,acciones}){
   const R=33, C=2*Math.PI*R;
   const off=C*(1-Math.max(0,Math.min(1,pct==null?1:pct)));
@@ -6983,7 +7129,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-03 · panel premium';
+const VERSION='2026-08-03 · app viva';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -7153,6 +7299,8 @@ function entrarAlPanel(){
   if(v){v.pause();v.muted=true;setSoundIcon(true)}
   const c=$('#cover');c.classList.add('gone');
   setTimeout(()=>{c.style.display='none'},600);
+  // primera impresión: el panel se dibuja delante del que entra
+  setTimeout(animarVista,260);
 }
 /* Recorrido de demostración: entra sin cuenta, con el perfil elegido. */
 function enterApp(){
