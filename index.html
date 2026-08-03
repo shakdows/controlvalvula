@@ -1807,6 +1807,36 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   .crumbs>b{font-size:14px}
 }
 
+/* ── PLAN ANUAL DE MANTENIMIENTO ─────────────────────────────
+   Un calendario de doce columnas tiene que caber sin apretar el
+   nombre del equipo: las columnas de mes son angostas y el punto
+   de color hace todo el trabajo. */
+.pl-pt{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 1px;vertical-align:middle}
+.pl-pt.cal{background:var(--ok)} .pl-pt.prev{background:var(--sel)} .pl-pt.insp{background:var(--due)}
+.pl-tab th.pl-m{width:58px;text-align:center;font-size:10.5px;padding:0 4px;white-space:nowrap}
+.pl-tab th.pl-m.pico{color:var(--due)}
+.pl-tab td.pl-c{text-align:center;padding:0 4px;white-space:nowrap}
+.pl-tab tfoot td{height:38px;padding:0 12px;background:var(--surface-2);
+  border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
+.pl-tab tfoot td.pl-c{text-align:center}
+
+.pl-legs{display:grid;gap:var(--sp-2)}
+.pl-leg{display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface-2)}
+.pl-leg>div:first-of-type{flex:1;min-width:0}
+.pl-leg b{display:block;font-size:13px;font-weight:600}
+.pl-leg span{font-size:11.5px;color:var(--ink-3)}
+.pl-leg-n{text-align:right;flex:0 0 auto;min-width:74px}
+.pl-leg-n b{font-size:15px;letter-spacing:-.02em}
+.pl-tar{width:82px;height:30px;padding:0 8px;text-align:right;font-size:13px}
+.pl-regla{margin-top:var(--sp-3);font-size:12px;color:var(--ink-3);line-height:1.6}
+.pl-regla b{color:var(--ink-2);font-weight:600}
+@media(max-width:640px){
+  .pl-leg{flex-wrap:wrap}
+  .pl-leg>div:first-of-type{flex:1 0 100%}
+  .pl-leg-n{text-align:left;min-width:0}
+}
+
 /* ============================================================
    §17 · APP VIVA
    Hasta aquí el portal se veía bien pero se sentía estático: las
@@ -1999,6 +2029,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <a data-p="clients"><svg viewBox="0 0 24 24"><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="9" cy="8" r="3.1"/><path d="M16 3.5a3 3 0 0 1 0 6M20 20v-1a4 4 0 0 0-3-3.8"/></svg><span class="lbl">Clientes</span><span class="ct" id="ctClients"></span></a>
       <a data-p="assets"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
       <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
+      <a data-p="plan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M7.5 14h3M13.5 14h3M7.5 17.5h3"/></svg><span class="lbl">Plan anual</span><span class="ct" id="ctPlan"></span></a>
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
       <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
@@ -2154,6 +2185,9 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="cotBtn"></div></div>
         <div id="cotList"></div>
       </div></section>
+
+      <!-- ═══ PLAN ANUAL DE MANTENIMIENTO ═══ -->
+      <section class="page" id="p-plan"><div class="view-pad" id="planView"></div></section>
 
       <!-- ═══ RECLAMOS / SNC ═══ -->
       <section class="page" id="p-snc"><div class="view-pad">
@@ -2856,7 +2890,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   /* Las páginas de un cliente solo se abren desde su espacio de
@@ -2896,10 +2930,10 @@ $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
    icono, ya traducidos en applyRole()— y añade «Más», que abre el
    cajón completo. Si mañana cambia el lateral, esta barra cambia
    sola: no hay una segunda lista que mantener. */
-const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',
+const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',plan:'Plan',
   wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Confiab.',
   cat:'Catálogo',imp:'Importar',users:'Usuarios'};
-const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',wo:'Servicios',
+const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',plan:'Plan',wo:'Servicios',
   parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Reportes'};
 function pintarTabbar(){
   const tb=$('#tabbar'); if(!tb) return;
@@ -2955,11 +2989,11 @@ function applyRole(v){
   /* Reclamos es un registro interno de calidad: el cliente devuelve la
      válvula, Adolphus la revisa y levanta el registro. El cliente no
      lo abre ni lo ve. */
-  const ocultas=c?['clients','cat','imp','users','snc']:['assets','cal','wo','req','parts','imp'];
+  const ocultas=c?['clients','cat','imp','users','snc']:['assets','cal','plan','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
-  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
+  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',plan:'Plan anual',wo:'Servicios',
     parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos',rep:'Reportes'};
   $$('#nav a').forEach(a=>{
     const l=a.querySelector('.lbl');if(!l)return;
@@ -3223,7 +3257,7 @@ function confirmarBajaClientes(){
   toast(`${ids.length} cliente${ids.length===1?'':'s'} eliminado${ids.length===1?'':'s'}`);
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 /* Cada cifra de la tarjeta lleva a lo que cuenta: si Los Andes marca
    un reclamo, un clic enseña cuál es y desde cuándo. */
@@ -3826,7 +3860,7 @@ function pintarCot(){
           <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:104px">Total</th><th style="width:38px"></th>
         </tr></thead><tbody>
         ${t.items.map((it,i)=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
-          <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}${m.s>0?` · ${m.s} en stock`:' · importación'}</small></div></td>
+          <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${it.d?esc(it.d):esc(m.d||'')+(m.s>0?` · ${m.s} en stock`:' · importación')}</small></div></td>
           <td><span class="ps-qty"><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},-1)" aria-label="Quitar una unidad">−</button><b>${it.q||1}</b><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},1)" aria-label="Agregar una unidad">+</button></span></td>
           <td class="num"><input class="inp cot-pu mono" type="number" min="0" step="1" value="${pu}" onchange="cotPrecio(${i},this.value)" aria-label="Precio unitario"></td>
           <td class="num mono">${usd(pu*(it.q||1))}</td>
@@ -3924,7 +3958,7 @@ function verCot(id){
       <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:112px">Total</th>
     </tr></thead><tbody>
       ${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
-        <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}</small></div></td>
+        <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(it.d||m.d||'')}</small></div></td>
         <td class="num mono">${it.q||1}</td><td class="num mono">${usd(pu)}</td>
         <td class="num mono">${usd(pu*(it.q||1))}</td></tr>`}).join('')}
     </tbody></table></div>
@@ -3996,12 +4030,299 @@ function imprimirCot(id){
      Emitida el ${c.f} por ${esc(c.por)} · válida hasta el ${c.valida} · Adolphus S.A.</div>
    <table><thead><tr><th>N.º de parte</th><th class="n">Cant.</th><th class="n">P. unitario</th><th class="n">Total</th></tr></thead>
    <tbody>${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);
-     return `<tr><td><span class="pn">${esc(it.n)}</span><small>${esc(m.d||'')}</small></td>
+     return `<tr><td><span class="pn">${esc(it.n)}</span><small>${esc(it.d||m.d||'')}</small></td>
      <td class="n">${it.q||1}</td><td class="n">${usd(pu)}</td><td class="n">${usd(pu*(it.q||1))}</td></tr>`}).join('')}</tbody></table>
    <div class="tot"><div><span>Subtotal</span><b>${usd(sub)}</b></div>
      <div><span>IGV 18 %</span><b>${usd(igv)}</b></div>
      <div class="g"><span>Total</span><b>${usd(tot)}</b></div></div>
    ${c.nota?`<div class="nota">${esc(c.nota)}</div>`:''}
+   </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+}
+
+/* ============================================================
+   PLAN ANUAL DE MANTENIMIENTO
+   Adolphus ya tiene, cliente por cliente, el parque completo con su
+   criticidad y su última intervención. De ahí sale solo lo que va a
+   necesitar el año que viene: no hace falta que nadie lo escriba.
+   Esta pantalla lo arma, lo reparte por mes para que la carga no se
+   apile, le pone precio referencial y —de un botón— lo convierte en
+   una cotización. El cliente lo ve y lo aprueba.
+   No inventa nada: cada intervención dice de dónde salió.
+   ============================================================ */
+const PLAN_TIPOS=[
+ ['cal', 'Calibración certificada','ok',  'Con certificado y trazabilidad al patrón.'],
+ ['prev','Mantenimiento preventivo','sel','Desmontaje, cambio de blandos y prueba en banco.'],
+ ['insp','Inspección en campo',     'due','Recorrido en planta, sin sacar la válvula de línea.']
+];
+const planTipo=k=>PLAN_TIPOS.find(t=>t[0]===k)||PLAN_TIPOS[0];
+
+/* Cuántas veces al año, según lo crítica que sea la válvula. Es la
+   regla que Adolphus defiende delante del cliente, así que se muestra
+   escrita en pantalla, no escondida en el código. */
+const PLAN_FREQ={
+ 'Crítica':{cal:1,prev:2,insp:4},
+ 'Alta'   :{cal:1,prev:1,insp:2},
+ 'Media'  :{cal:1,prev:1,insp:1},
+ 'Baja'   :{cal:1,prev:0,insp:1}
+};
+/* Tarifa referencial por intervención, en la misma moneda que el resto
+   del portal. Adolphus la ajusta en pantalla: sirve para dimensionar el
+   presupuesto del año, no para facturar. */
+let PLAN_TARIFA={cal:130,prev:240,insp:45};
+let PLAN_OK={};   // {cliente: {f, por}} — planes que el cliente aprobó
+
+const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','setiembre','octubre','noviembre','diciembre'];
+
+/* Los doce meses que vienen, empezando por el actual. */
+function planVentana(){
+  const v=[];
+  for(let i=0;i<12;i++)v.push(new Date(HOY.getFullYear(),HOY.getMonth()+i,1));
+  return v;
+}
+const planRotulo=v=>`${MESES_L[v[0].getMonth()]} ${v[0].getFullYear()} – ${MESES_L[v[11].getMonth()]} ${v[11].getFullYear()}`;
+
+/* Reparte la carga: sin esto, todo cae en el mes cero. El desfase sale
+   del propio identificador del equipo, así que siempre es el mismo. */
+const planSemilla=t=>{let n=0;for(let i=0;i<t.length;i++)n=(n*31+t.charCodeAt(i))%9973;return n};
+
+/* Todo lo que le toca a una válvula en la ventana, con el motivo. */
+function planDeActivo(a,v){
+  const out=[], cr=PLAN_FREQ[a.cr]?a.cr:'Media', f=PLAN_FREQ[cr];
+  const y0=v[0].getFullYear(), m0=v[0].getMonth();
+  const idx=d=>(d.getFullYear()-y0)*12+(d.getMonth()-m0);
+
+  // 1. Calibración: la manda la fecha que el equipo ya tiene programada
+  const tieneProg=a.cl==='seguridad'||a.prox||a.ult;
+  if(f.cal&&tieneProg){
+    let d,por;
+    if(a.prox){d=new Date(a.prox+'T00:00:00');por=`Vence el ${a.prox}`}
+    else if(a.ult){d=new Date(a.ult+'T00:00:00');d.setFullYear(d.getFullYear()+1);
+                   por=`Un año desde el último servicio (${a.ult})`}
+    else {d=v[0];por='Sin programa: se propone abrirlo este mes'}
+    let i=idx(d);
+    if(i<0){i=0;por=`Vencida desde el ${a.prox||a.ult} — entra este mes`}   // vencida: entra ya
+    if(i<12)out.push({t:'cal',mi:i,por});
+  }
+  // 2 y 3. Preventivo e inspección: por criticidad, repartidos en el año
+  [['prev',f.prev],['insp',f.insp]].forEach(([k,n])=>{
+    if(!n)return;
+    const paso=12/n, base=planSemilla(a.id+k)%Math.max(1,Math.round(paso));
+    for(let j=0;j<n;j++){
+      const mi=Math.min(11,Math.round(base+j*paso));
+      out.push({t:k,mi,por:`Criticidad ${cr}: ${n===1?'una vez al año':n+' veces al año'}`});
+    }
+  });
+  return out.sort((x,y)=>x.mi-y.mi);
+}
+
+/* El plan completo de un cliente: filas de equipo con sus marcas. */
+function planDe(cliId){
+  const v=planVentana();
+  const equipos=ACTIVOS.filter(a=>a.cli===cliId&&a.tag)
+    .sort((a,b)=>(a.ar||'').localeCompare(b.ar||'')||a.tag.localeCompare(b.tag));
+  const filas=equipos.map(a=>({a,its:planDeActivo(a,v)}));
+  const porMes=v.map((_,i)=>filas.reduce((s,f)=>s+f.its.filter(x=>x.mi===i).length,0));
+  const porTipo={};
+  PLAN_TIPOS.forEach(([k])=>porTipo[k]=filas.reduce((s,f)=>s+f.its.filter(x=>x.t===k).length,0));
+  const total=Object.values(porTipo).reduce((a,b)=>a+b,0);
+  const costo=PLAN_TIPOS.reduce((s,[k])=>s+porTipo[k]*(PLAN_TARIFA[k]||0),0);
+  return {v,filas,porMes,porTipo,total,costo,equipos:filas.filter(f=>f.its.length).length};
+}
+
+const planFoco=()=>S.cli||S.inCli||null;
+
+function renderPlan(){
+  const caja=$('#planView'); if(!caja) return;
+  const foco=planFoco();
+  const cliente=S.rol==='cliente';
+  if(!foco){
+    caja.innerHTML=`<div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>El plan se arma por cliente, con su parque y su criticidad. Entra a un cliente para verlo.</p></div></div>
+      <div class="panel"><div class="empty"><b>Elige un cliente</b>Cada plan sale del parque de esa empresa.</div></div>`;
+    return;
+  }
+  const p=planDe(foco), c=cli(foco), ok=PLAN_OK[foco];
+  const pico=Math.max(1,...p.porMes);
+  const mesN=(i)=>`${MESES_C[p.v[i].getMonth()]} ${String(p.v[i].getFullYear()).slice(2)}`;
+
+  if(!p.total){
+    caja.innerHTML=`<div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>${esc(c.n)} · ${planRotulo(p.v)}</p></div></div>
+      <div class="panel"><div class="empty"><b>Todavía no hay equipos que planificar</b>
+        Registra el parque de ${esc(c.n)} y el plan se arma solo.</div></div>`;
+    return;
+  }
+
+  const leyenda=PLAN_TIPOS.map(([k,n,tono,d])=>`
+    <div class="pl-leg">
+      <span class="pl-pt ${k}"></span>
+      <div><b>${esc(n)}</b><span>${esc(d)}</span></div>
+      <div class="pl-leg-n"><b>${p.porTipo[k]}</b><span>al año</span></div>
+      ${cliente?`<div class="pl-leg-n"><b class="mono">${usd(PLAN_TARIFA[k])}</b><span>c/u</span></div>`
+        :`<div class="pl-leg-n"><input class="inp mono pl-tar" type="number" min="0" step="10"
+             value="${PLAN_TARIFA[k]}" onchange="planTarifa('${k}',this.value)"
+             aria-label="Tarifa referencial de ${esc(n)}"><span>c/u</span></div>`}
+    </div>`).join('');
+
+  const cabezas=p.v.map((_,i)=>`<th class="num pl-m ${p.porMes[i]===pico?'pico':''}">${mesN(i)}</th>`).join('');
+  const cuerpo=p.filas.map(({a,its})=>{
+    const celdas=p.v.map((_,i)=>{
+      const hoy=its.filter(x=>x.mi===i);
+      return `<td class="pl-c">${hoy.map(x=>`<span class="pl-pt ${x.t}" title="${esc(planTipo(x.t)[1])} — ${esc(x.por)}"></span>`).join('')}</td>`;
+    }).join('');
+    return `<tr onclick="openAsset('${a.id}')">
+      <td><div class="cell-2"><b class="mono">${esc(a.tag)}</b><small>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc((c.areas||{})[a.ar]||'')}</small></div></td>
+      <td><span class="tag ${a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'ink-3'}">${esc(a.cr||'Media')}</span></td>
+      ${celdas}
+      <td class="num mono">${its.length}</td></tr>`;
+  }).join('');
+
+  const pieMes=p.v.map((_,i)=>`<td class="num mono pl-c">${p.porMes[i]||'·'}</td>`).join('');
+
+  const barras=p.v.map((_,i)=>`
+    <div class="col-i" title="${mesN(i)}: ${p.porMes[i]} intervención${p.porMes[i]===1?'':'es'}">
+      <span class="col-v">${p.porMes[i]||''}</span>
+      <span class="col-bar ${p.porMes[i]===pico?'due':''}" style="height:${Math.round(p.porMes[i]/pico*120)}px"></span>
+      <span class="col-x">${MESES_C[p.v[i].getMonth()]}</span></div>`).join('');
+
+  const acciones=cliente
+    ? (ok?`<span class="tag ok">Aprobado el ${ok.f}</span>
+           <button class="btn sec" onclick="imprimirPlan()">Imprimir</button>`
+         :`<button class="btn sec" onclick="imprimirPlan()">Imprimir</button>
+           <button class="btn" onclick="aprobarPlan()">Aprobar el plan</button>`)
+    : `${ok?`<span class="tag ok">El cliente lo aprobó el ${ok.f}</span>`:''}
+       <button class="btn sec" onclick="imprimirPlan()">Imprimir</button>
+       <button class="btn" onclick="cotizarPlan()"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/></svg>Cotizar el plan</button>`;
+
+  caja.innerHTML=`
+    <div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>${esc(c.n)} · ${planRotulo(p.v)}. Sale del parque registrado y de la criticidad de cada válvula:
+         ${cliente?'esto es lo que Adolphus propone hacer el año que viene.'
+                  :'no hay que escribirlo, ya está calculado.'}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${acciones}</div></div>
+
+    <div class="kpis">
+      <div class="kpi"><span class="kv">${p.total}</span><span class="kk">Intervenciones en el año</span>
+        <span class="kd">sobre ${p.equipos} de ${p.filas.length} equipos</span></div>
+      <div class="kpi"><span class="kv">${mesN(p.porMes.indexOf(pico))}</span><span class="kk">Mes más cargado</span>
+        <span class="kd">${pico} intervenciones${p.porMes.filter(n=>n===pico).length>1?' · empatado con otro mes':''}</span></div>
+      <div class="kpi"><span class="kv">${(p.total/12).toFixed(1)}</span><span class="kk">Promedio por mes</span>
+        <span class="kd">para dimensionar el taller</span></div>
+      <div class="kpi"><span class="kv mono" style="font-size:var(--t-5)">${usd(p.costo)}</span>
+        <span class="kk">Inversión estimada</span><span class="kd">referencial, sin IGV</span></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:var(--sp-3)">
+      <div class="panel-h"><h2>Carga de trabajo mes a mes</h2>
+        <span class="count">${p.total} en total</span></div>
+      <div class="panel-b"><div class="cols">${barras}</div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:var(--sp-3)">
+      <div class="panel-h"><h2>Qué incluye y con qué frecuencia</h2></div>
+      <div class="panel-b"><div class="pl-legs">${leyenda}</div>
+        <p class="pl-regla">La frecuencia la manda la criticidad de cada válvula:
+          <b>Crítica</b> 1 calibración, 2 preventivos y 4 inspecciones al año ·
+          <b>Alta</b> 1, 1 y 2 · <b>Media</b> 1, 1 y 1 · <b>Baja</b> 1 y 1.
+          La calibración se ancla a la fecha que el equipo ya tiene programada.</p></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h2>Calendario por equipo</h2>
+        <span class="count">${p.filas.length} equipos</span></div>
+      <div class="grid-wrap"><table class="grid pl-tab"><thead><tr>
+        <th>Equipo</th><th style="width:88px">Criticidad</th>${cabezas}<th class="num" style="width:52px">Año</th>
+      </tr></thead><tbody>${cuerpo}</tbody>
+      <tfoot><tr><td colspan="2"><b>Intervenciones del mes</b></td>${pieMes}
+        <td class="num mono"><b>${p.total}</b></td></tr></tfoot></table></div>
+    </div>`;
+}
+
+/* El lateral dice cuántas intervenciones trae el plan de este cliente. */
+function planContador(){
+  const ct=$('#ctPlan'); if(!ct)return;
+  const f=planFoco();
+  ct.textContent=f?(planDe(f).total||''):'';
+}
+function planTarifa(k,v){PLAN_TARIFA[k]=Math.max(0,+v||0);guardarLocal();renderPlan()}
+
+function aprobarPlan(){
+  const f=planFoco(); if(!f) return;
+  PLAN_OK[f]={f:HOY.toISOString().slice(0,10),por:(typeof SES!=='undefined'&&SES?SES.n:'El cliente')};
+  registrar('Plan anual',`Plan de ${cli(f).n} aprobado por el cliente`);
+  toast('Plan aprobado · Adolphus ya lo ve');
+  guardarLocal();renderAll();
+}
+
+/* El botón que justifica la pantalla: el plan se vuelve cotización.
+   Una posición por tipo de intervención, con la cuenta ya hecha. */
+function cotizarPlan(){
+  const f=planFoco(); if(!f){toast('Entra a un cliente');return}
+  const p=planDe(f);
+  if(!p.total){toast('Este cliente todavía no tiene equipos que planificar');return}
+  const val=new Date(HOY); val.setDate(val.getDate()+30);
+  COT_TMP={
+    id:'', n:'COT-2026-'+String(45+COTIZACIONES.length).padStart(4,'0'),
+    cli:f, f:HOY.toISOString().slice(0,10), valida:val.toISOString().slice(0,10),
+    est:'borrador', por:(typeof SES!=='undefined'&&SES?SES.n:'Adolphus'), act:'',
+    items:PLAN_TIPOS.filter(([k])=>p.porTipo[k]>0).map(([k,n])=>({
+      n:'PLAN-'+k.toUpperCase(), d:`${n} · plan anual ${planRotulo(p.v)}`,
+      q:p.porTipo[k], pu:PLAN_TARIFA[k]
+    })),
+    nota:`Plan anual de mantenimiento de ${cli(f).n} para ${planRotulo(p.v)}: `+
+         `${p.total} intervenciones sobre ${p.equipos} equipos, repartidas mes a mes según la criticidad de cada válvula. `+
+         `Precios por intervención, puesta en servicio en planta.`,
+    hist:[]
+  };
+  $('#mTitle').textContent='Cotización del plan anual';
+  pintarCot();
+  $('#modal').classList.add('on');
+}
+
+function imprimirPlan(){
+  const f=planFoco(); if(!f) return;
+  const p=planDe(f), c=cli(f), ok=PLAN_OK[f];
+  const mesN=i=>`${MESES_C[p.v[i].getMonth()]} ${String(p.v[i].getFullYear()).slice(2)}`;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>Plan anual ${esc(c.n)}</title><style>
+   *{box-sizing:border-box}
+   body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:26px}
+   h1{font-size:19px;margin:0 0 3px} .sub{color:#5b6470;margin-bottom:16px}
+   table{width:100%;border-collapse:collapse;margin-top:10px;font-size:10.5px}
+   th,td{border:1px solid #d7dbe0;padding:4px 5px;text-align:left}
+   th{background:#f2f4f6;font-weight:600} td.n,th.n{text-align:center}
+   .pt{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 1px}
+   .cal{background:#1a7f52}.prev{background:#2c62c4}.insp{background:#a06a10}
+   .leg{margin:12px 0 0;font-size:10.5px;color:#5b6470}
+   .leg span{margin-right:14px}
+   .res{display:flex;gap:22px;margin:12px 0;font-size:11px}
+   .res b{display:block;font-size:17px}
+   .ok{margin-top:10px;padding:7px 10px;background:#eaf6ef;border:1px solid #bfe0cd;font-size:11px}
+   .pie{margin-top:18px;font-size:10px;color:#78818c;border-top:1px solid #d7dbe0;padding-top:8px}
+   </style></head><body>
+   <h1>Plan anual de mantenimiento</h1>
+   <div class="sub">${esc(c.n)} · ${planRotulo(p.v)} · emitido por Adolphus S.A. el ${HOY.toISOString().slice(0,10)}</div>
+   <div class="res">
+     <div><b>${p.total}</b>intervenciones</div>
+     <div><b>${p.equipos}</b>equipos</div>
+     <div><b>${usd(p.costo)}</b>referencial sin IGV</div>
+   </div>
+   ${ok?`<div class="ok">Plan aprobado por el cliente el ${ok.f}.</div>`:''}
+   <div class="leg">${PLAN_TIPOS.map(([k,n])=>`<span><i class="pt ${k}"></i> ${esc(n)} — ${p.porTipo[k]} al año</span>`).join('')}</div>
+   <table><thead><tr><th>Equipo</th><th>Criticidad</th>
+     ${p.v.map((_,i)=>`<th class="n">${mesN(i)}</th>`).join('')}<th class="n">Año</th></tr></thead><tbody>
+   ${p.filas.map(({a,its})=>`<tr><td><b>${esc(a.tag)}</b> · ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}</td>
+     <td>${esc(a.cr||'Media')}</td>
+     ${p.v.map((_,i)=>`<td class="n">${its.filter(x=>x.mi===i).map(x=>`<i class="pt ${x.t}"></i>`).join('')}</td>`).join('')}
+     <td class="n">${its.length}</td></tr>`).join('')}
+   </tbody><tfoot><tr><td colspan="2"><b>Intervenciones del mes</b></td>
+     ${p.porMes.map(n=>`<td class="n"><b>${n||'·'}</b></td>`).join('')}<td class="n"><b>${p.total}</b></td></tr></tfoot></table>
+   <div class="pie">La frecuencia sale de la criticidad de cada válvula y la calibración se ancla a la fecha ya programada
+     en la ficha del equipo. Los importes son referenciales y no constituyen una oferta en firme.</div>
    </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
 }
@@ -6853,7 +7174,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderPlan();planContador();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -7006,7 +7327,7 @@ function guardarLocal(){
   try{
     localStorage.setItem(LS_KEY,JSON.stringify({
       v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,CALIBS,SERVS,DOCS,
-      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
+      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ,PLAN_TARIFA,PLAN_OK
     }));
     return true;
   }catch(e){ // p. ej. almacenamiento lleno por fotos
@@ -7023,6 +7344,7 @@ function restaurarLocal(){
   arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
+  obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
   return true;
 }
@@ -7129,7 +7451,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-03 · app viva';
+const VERSION='2026-08-03 · plan anual';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
