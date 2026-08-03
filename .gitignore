@@ -2,3 +2,4 @@ node_modules/
 _*.jpg
 _*.png
 *.b64
+__pycache__/
