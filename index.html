@@ -1986,6 +1986,10 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <label for="upRuc">RUC de tu empresa</label>
           <input class="inp" id="upRuc" inputmode="numeric" maxlength="11" placeholder="20100128056" oninput="upRucCheck()">
           <p class="pw-note" id="upRucEst" style="margin-top:-8px">Con el RUC vinculamos tu cuenta a la organización correcta.</p>
+          <label for="upCodCli">Código de invitación <span class="opc">si Adolphus te dio uno</span></label>
+          <input class="inp" id="upCodCli" placeholder="COSTANORTE-2026">
+          <p class="pw-note" style="margin-top:-8px">Con el código entras enseguida. Sólo con el RUC, tu cuenta queda
+            <b>pendiente</b> hasta que un ingeniero de Adolphus la active.</p>
         </div>
         <label for="upMail">Correo corporativo</label>
         <input class="inp" id="upMail" type="email" autocomplete="email" placeholder="nombre@empresa.pe" required>
@@ -7313,6 +7317,269 @@ function saveUploadSheet(){
 }
 
 /* ============================================================
+   12 bis · LA NUBE
+   Hasta aquí el portal guardaba en el propio equipo: perfecto para
+   trabajar en planta sin señal, inútil para abrirlo desde otra
+   computadora. Este bloque lo conecta a una base de datos real
+   (Supabase / Postgres) sin renunciar a lo anterior:
+
+     · con sesión y con señal → todo sube y baja de la nube;
+     · sin señal              → se sigue trabajando contra el equipo
+                                y lo pendiente sube solo al volver;
+     · sin sesión             → el recorrido de demostración funciona
+                                exactamente como antes, en local.
+
+   Quién ve qué no lo decide el navegador: lo decide Postgres con sus
+   políticas por fila. Adolphus ve todo; un cliente sólo lo suyo.
+   Para apuntar a otro proyecto basta cambiar estas dos líneas.
+   ============================================================ */
+const LS_NUBE='adolphus.nube.v1';
+const LS_NUBE_CFG='adolphus.nube.cfg';
+/* Por defecto apunta al proyecto de la demostración. Se puede cambiar
+   desde la propia página (chip de red → «Conectar a otra base») sin
+   tocar el archivo: queda guardado en este equipo. */
+const NUBE_POR_DEFECTO={
+  url:'https://eemhgbmjenzvngokwpof.supabase.co',
+  key:'sb_publishable_uwghjWOYxrLQaaxPaYx5Iw_kUdoblyr'
+};
+const NUBE={...NUBE_POR_DEFECTO};
+(function cargarCfgNube(){
+  try{
+    const c=JSON.parse(localStorage.getItem(LS_NUBE_CFG)||'null');
+    if(c&&typeof c.url==='string'){NUBE.url=c.url.replace(/\/+$/,'');NUBE.key=c.key||''}
+  }catch(e){}
+})();
+let NUBE_SES=null;      // {access_token, refresh_token, expira, uid}
+let NUBE_YO=null;       // fila de 'perfiles' del que entró
+let NUBE_EMP={};        // clave corta del portal -> uuid de la empresa
+let NUBE_EMP_INV={};    // uuid -> clave corta
+let ESPEJO={};          // lo último que confirmamos con la nube: 'colclave' -> {j,emp}
+let NUBE_DESDE=null;    // marca de tiempo de la última bajada
+let NUBE_TIMER=null;
+const enNube=()=>!!(NUBE_SES&&NUBE_SES.access_token);
+const SEP='';
+
+/* ── Qué se sincroniza ───────────────────────────────────────
+   Cada colección dice de qué empresa es cada fila. De ahí sale el
+   aislamiento: la fila viaja con su dueño y Postgres hace el resto. */
+const cliDeAct=id=>{const a=ACTIVOS.find(x=>x.id===id);return a?a.cli:null};
+const NUBE_COLS=[
+ {c:'CLIENTES',    arr:()=>CLIENTES,    emp:x=>x.id},
+ {c:'ACTIVOS',     arr:()=>ACTIVOS,     emp:x=>x.cli},
+ {c:'ORDENES',     arr:()=>ORDENES,     emp:x=>cliDeAct(x.act)},
+ {c:'SOLICITUDES', arr:()=>SOLICITUDES, emp:x=>x.cli},
+ {c:'RECLAMOS',    arr:()=>RECLAMOS,    emp:x=>x.cli},
+ {c:'COTIZACIONES',arr:()=>COTIZACIONES,emp:x=>x.cli},
+ {c:'CALIBS',      arr:()=>CALIBS,      emp:x=>cliDeAct(x.act)},
+ {c:'SERVS',       arr:()=>SERVS,       emp:x=>cliDeAct(x.act)},
+ {c:'DOCS',        arr:()=>DOCS,        emp:x=>cliDeAct(x.a)}
+];
+/* Los maestros son diccionarios, no listas: viajan como un documento
+   entero cada uno. Cambian poco y los toca sólo Adolphus. */
+const NUBE_MAESTROS=[
+ {k:'MODELOS',    obj:()=>MODELOS},   {k:'BOM',        obj:()=>BOM},
+ {k:'PRECIOS',    obj:()=>PRECIOS},   {k:'PART_PHOTO', obj:()=>PART_PHOTO},
+ {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA}
+];
+/* Lo único que un cliente puede escribir. Coincide con la política de
+   la base: si el navegador se equivoca, Postgres lo rechaza igual. */
+const CLI_ESCRIBE=['SOLICITUDES','COTIZACIONES','PLAN_OK'];
+
+/* Las listas que no traían identificador propio (una calibración, un
+   documento adjunto) necesitan uno para poder viajar fila a fila. */
+function sellarIds(){
+  let n=0;
+  NUBE_COLS.forEach(({arr})=>arr().forEach(x=>{
+    if(!x.id){x.id='r'+(Date.now().toString(36))+(n++).toString(36)+Math.floor(Math.random()*1296).toString(36)}
+  }));
+}
+
+/* ── Llamadas a la base ──────────────────────────────────────*/
+async function nubeFetch(ruta,{metodo='GET',cuerpo,cab={},sinAuth}={}){
+  const h={apikey:NUBE.key,'Content-Type':'application/json',...cab};
+  if(!sinAuth&&enNube())h.Authorization='Bearer '+NUBE_SES.access_token;
+  const r=await fetch(NUBE.url+ruta,{method:metodo,headers:h,
+    body:cuerpo===undefined?undefined:JSON.stringify(cuerpo)});
+  const txt=await r.text();
+  let j=null; try{j=txt?JSON.parse(txt):null}catch(e){}
+  if(!r.ok){
+    const e=new Error((j&&(j.msg||j.message||j.error_description||j.error))||('HTTP '+r.status));
+    e.status=r.status; e.cuerpo=j; throw e;
+  }
+  return j;
+}
+/* El token vive una hora; se renueva antes de que caduque. */
+async function nubeVigente(){
+  if(!NUBE_SES)return false;
+  if(Date.now()<NUBE_SES.expira-60000)return true;
+  try{
+    const d=await nubeFetch('/auth/v1/token?grant_type=refresh_token',
+      {metodo:'POST',cuerpo:{refresh_token:NUBE_SES.refresh_token},sinAuth:true});
+    guardarSesionNube(d); return true;
+  }catch(e){ NUBE_SES=null; localStorage.removeItem(LS_NUBE); return false }
+}
+function guardarSesionNube(d){
+  NUBE_SES={access_token:d.access_token,refresh_token:d.refresh_token,
+            expira:Date.now()+((d.expires_in||3600)*1000),uid:d.user&&d.user.id};
+  try{localStorage.setItem(LS_NUBE,JSON.stringify(NUBE_SES))}catch(e){}
+}
+
+/* ── Entrar y registrarse de verdad ──────────────────────────*/
+async function nubeEntrar(correo,clave){
+  const d=await nubeFetch('/auth/v1/token?grant_type=password',
+    {metodo:'POST',cuerpo:{email:correo,password:clave},sinAuth:true});
+  guardarSesionNube(d);
+  return await nubeCargarPerfil();
+}
+async function nubeRegistrar({correo,clave,nombre,cargo,telefono,codigo,ruc}){
+  const d=await nubeFetch('/auth/v1/signup',{metodo:'POST',sinAuth:true,
+    cuerpo:{email:correo,password:clave,data:{nombre,cargo,telefono,codigo,ruc}}});
+  if(d&&d.access_token){guardarSesionNube(d);return await nubeCargarPerfil()}
+  return null;              // el proyecto pide confirmar el correo
+}
+async function nubeCargarPerfil(){
+  const p=await nubeFetch('/rest/v1/perfiles?select=*&id=eq.'+encodeURIComponent(NUBE_SES.uid));
+  NUBE_YO=p&&p[0]; if(!NUBE_YO)throw new Error('No se encontró tu perfil');
+  const es=await nubeFetch('/rest/v1/empresas?select=id,clave,nombre,ruc,es_proveedor');
+  NUBE_EMP={};NUBE_EMP_INV={};
+  (es||[]).forEach(e=>{if(e.clave){NUBE_EMP[e.clave]=e.id;NUBE_EMP_INV[e.id]=e.clave}});
+  return NUBE_YO;
+}
+/* La sesión de la nube se traduce a la cuenta que el portal ya sabe
+   manejar, para no tener dos maneras de estar dentro. */
+function cuentaDeNube(){
+  const p=NUBE_YO, clave=p.empresa_id?NUBE_EMP_INV[p.empresa_id]:null;
+  const esProv=p.rol!=='cliente';
+  return {id:p.id,n:p.nombre||p.correo,m:p.correo,pw:'',
+          perfil:p.rol,cli:esProv?null:clave,cargo:p.cargo||'',tel:p.telefono||'',
+          est:p.estado,alta:(p.alta||'').slice(0,10),ult:hoyISO(),nube:true};
+}
+async function nubeSalir(){
+  try{if(enNube())await nubeFetch('/auth/v1/logout',{metodo:'POST'})}catch(e){}
+  NUBE_SES=null;NUBE_YO=null;ESPEJO={};NUBE_DESDE=null;
+  try{localStorage.removeItem(LS_NUBE)}catch(e){}
+  if(NUBE_TIMER){clearInterval(NUBE_TIMER);NUBE_TIMER=null}
+}
+
+/* ── Bajar ───────────────────────────────────────────────────
+   La primera vez baja todo y reemplaza lo que hubiera en memoria:
+   la nube manda. Después sólo pide lo que cambió desde la última vez. */
+async function nubeBajar(reemplazar){
+  const q='/rest/v1/registros?select=coleccion,clave,empresa_id,datos,borrado,actualizado'+
+          '&order=actualizado.asc'+(NUBE_DESDE?'&actualizado=gt.'+encodeURIComponent(NUBE_DESDE):'');
+  const filas=await nubeFetch(q);
+  if(!filas)return 0;
+  if(reemplazar&&filas.length){
+    NUBE_COLS.forEach(({arr})=>{const a=arr();a.length=0});
+    Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
+  }
+  filas.forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave;
+    if(f.borrado){delete ESPEJO[kk]} else {ESPEJO[kk]={j:JSON.stringify(f.datos),emp:f.empresa_id||null}}
+    if(f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+
+    if(f.coleccion==='MAESTRO'){
+      const m=NUBE_MAESTROS.find(x=>x.k===f.clave); if(!m||f.borrado)return;
+      const d=m.obj(); Object.keys(d).forEach(k=>delete d[k]); Object.assign(d,f.datos||{});
+      return;
+    }
+    if(f.coleccion==='PLAN_OK'){
+      if(f.borrado)delete PLAN_OK[f.clave]; else PLAN_OK[f.clave]=f.datos;
+      return;
+    }
+    const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
+    const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
+    if(f.borrado){if(i>=0)a.splice(i,1); return}
+    if(i>=0)a[i]=f.datos; else a.push(f.datos);
+  });
+  return filas.length;
+}
+
+/* ── Subir ───────────────────────────────────────────────────
+   No se manda todo cada vez: se compara contra el espejo de lo que la
+   nube ya tiene y sólo viaja lo que cambió. Lo que desapareció de la
+   memoria se marca como borrado, para que los demás equipos se enteren. */
+function filasLocales(){
+  const out=[];
+  NUBE_COLS.forEach(({c,arr,emp})=>arr().forEach(x=>{
+    if(!x||!x.id)return;
+    out.push({coleccion:c,clave:String(x.id),empresa_id:NUBE_EMP[emp(x)]||null,datos:x});
+  }));
+  NUBE_MAESTROS.forEach(({k,obj})=>out.push({coleccion:'MAESTRO',clave:k,empresa_id:null,datos:obj()}));
+  Object.keys(PLAN_OK).forEach(k=>out.push({coleccion:'PLAN_OK',clave:k,empresa_id:NUBE_EMP[k]||null,datos:PLAN_OK[k]}));
+  return out;
+}
+function puedoEscribir(f){
+  if(!NUBE_YO)return false;
+  if(NUBE_YO.rol!=='cliente')return true;
+  return CLI_ESCRIBE.includes(f.coleccion)&&f.empresa_id===NUBE_YO.empresa_id;
+}
+async function nubeSubir(){
+  const cambios=[], vistos=new Set();
+  filasLocales().forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
+    const j=JSON.stringify(f.datos);
+    if(!ESPEJO[kk]||ESPEJO[kk].j!==j)cambios.push({...f,borrado:false,_j:j});
+  });
+  Object.keys(ESPEJO).forEach(kk=>{
+    if(vistos.has(kk))return;
+    const [c,k]=kk.split(SEP);
+    cambios.push({coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,datos:{},borrado:true,_j:null});
+  });
+  const mios=cambios.filter(puedoEscribir);
+  if(!mios.length)return 0;
+  for(let i=0;i<mios.length;i+=100){
+    const lote=mios.slice(i,i+100);
+    /* Pedimos de vuelta la fila sellada: así sabemos la marca de tiempo
+       que puso la base y no nos volvemos a bajar lo que acabamos de
+       escribir —que llegaría con retraso y pisaría el trabajo nuevo. */
+    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
+      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
+      cuerpo:lote.map(({_j,...f})=>f)});
+    lote.forEach(f=>{
+      const kk=f.coleccion+SEP+f.clave;
+      if(f.borrado)delete ESPEJO[kk]; else ESPEJO[kk]={j:f._j,emp:f.empresa_id};
+    });
+    (eco||[]).forEach(f=>{
+      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+    });
+  }
+  return mios.length;
+}
+
+/* Una vuelta completa: primero baja (la nube manda sobre lo viejo),
+   después sube lo que este equipo tenga de nuevo. */
+/* Una vuelta completa. El orden importa:
+     · la primera vez se BAJA antes de subir, porque la nube manda
+       sobre los datos de ejemplo que trae el archivo;
+     · después se SUBE antes de bajar, porque si no, lo que bajamos
+       pisaría el cambio que este equipo acaba de hacer.
+   Entre dos equipos que tocan la misma fila a la vez, gana el último
+   que escribe. Es a nivel de fila, no de campo. */
+async function nubeVuelta(primera){
+  if(!await nubeVigente())return {bajadas:0,subidas:0,sinSesion:true};
+  let bajadas=0, subidas=0;
+  if(primera){
+    bajadas=await nubeBajar(true);
+    subidas=await nubeSubir();
+  }else{
+    subidas=await nubeSubir();
+    bajadas=await nubeBajar(false);
+  }
+  guardarLocal();
+  if(bajadas||subidas)renderAll();
+  return {bajadas,subidas};
+}
+/* Cada 45 s, y al volver a la pestaña: así dos computadoras se ven. */
+function latirNube(){
+  if(NUBE_TIMER)clearInterval(NUBE_TIMER);
+  NUBE_TIMER=setInterval(()=>{if(enNube()&&online()&&!SYNCING)nubeVuelta().catch(()=>{})},45000);
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&enNube()&&online()&&!SYNCING)nubeVuelta().catch(()=>{});
+});
+
+/* ============================================================
    13 · TRABAJO SIN CONEXIÓN
    Todo se guarda en el equipo apenas se registra. Los cambios hechos
    sin señal quedan en una cola y suben solos al recuperar conexión.
@@ -7327,7 +7594,8 @@ function guardarLocal(){
   try{
     localStorage.setItem(LS_KEY,JSON.stringify({
       v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,CALIBS,SERVS,DOCS,
-      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ,PLAN_TARIFA,PLAN_OK
+      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ,PLAN_TARIFA,PLAN_OK,
+      ESPEJO,NUBE_DESDE
     }));
     return true;
   }catch(e){ // p. ej. almacenamiento lleno por fotos
@@ -7346,6 +7614,8 @@ function restaurarLocal(){
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
   obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
+  ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
+  NUBE_DESDE=d.NUBE_DESDE||null;
   return true;
 }
 /* Registra un cambio: se guarda ya en el equipo y se encola para subir. */
@@ -7371,15 +7641,53 @@ function pintarNet(){
 }
 function sincronizar(manual){
   if(SYNCING)return;
-  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
   if(!online()){if(manual)toast('Sin conexión — los cambios ya están guardados en este equipo');return}
+  const refrescar=()=>{
+    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
+  };
+  /* Con sesión en la nube esto sube y baja de verdad. Sin sesión —el
+     recorrido de demostración— se comporta como siempre: local. */
+  if(enNube()){
+    SYNCING=true;pintarNet();
+    const n=SYNCQ.length;
+    nubeVuelta().then(r=>{
+      SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();refrescar();
+      if(manual||n)toast(r.bajadas
+        ? `Al día · ${r.subidas} subido${r.subidas===1?'':'s'}, ${r.bajadas} traído${r.bajadas===1?'':'s'} de la nube`
+        : `${r.subidas||n} cambio${(r.subidas||n)===1?'':'s'} guardado${(r.subidas||n)===1?'':'s'} en la nube`);
+    }).catch(e=>{
+      SYNCING=false;pintarNet();refrescar();
+      toast('No se pudo sincronizar: '+e.message+' · los cambios siguen guardados en este equipo');
+    });
+    return;
+  }
+  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
   SYNCING=true;pintarNet();
   const n=SYNCQ.length;
-  setTimeout(()=>{                       // subida al servidor (simulada en el prototipo)
-    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();
-    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
-    toast(`${n} cambio${n===1?'':'s'} sincronizado${n===1?'':'s'} con el servidor`);
-  },1200);
+  setTimeout(()=>{                       // sin cuenta en la nube: sólo local
+    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();refrescar();
+    toast(`${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo`);
+  },900);
+}
+/* Apuntar el portal a otra base sin abrir el archivo. */
+function guardarCfgNube(){
+  const url=($('#nbUrl').value||'').trim().replace(/\/+$/,''), key=($('#nbKey').value||'').trim();
+  if(url&&!/^https:\/\/.+/.test(url)){toast('La dirección debe empezar por https://');return}
+  try{localStorage.setItem(LS_NUBE_CFG,JSON.stringify({url,key}))}catch(e){}
+  try{localStorage.removeItem(LS_NUBE)}catch(e){}   // la sesión no sirve en otra base
+  toast('Guardado — recargando');
+  setTimeout(()=>location.reload(),700);
+}
+async function probarNube(){
+  const url=($('#nbUrl').value||'').trim().replace(/\/+$/,''), key=($('#nbKey').value||'').trim();
+  if(!url||!key){toast('Faltan la dirección y la llave');return}
+  try{
+    const r=await fetch(url+'/rest/v1/registros?select=coleccion&limit=1',{headers:{apikey:key}});
+    if(r.status===401||r.status===403)      toast('Responde, pero la llave no tiene permiso de lectura');
+    else if(r.status===404)                 toast('Responde, pero falta la tabla «registros»: corre el SQL de instalación');
+    else if(r.ok)                           toast('Conexión correcta · la tabla «registros» existe');
+    else                                    toast('Respondió con HTTP '+r.status);
+  }catch(e){ toast('No se pudo conectar: '+e.message) }
 }
 function toggleOffline(){
   OFF_SIM=!OFF_SIM;pintarNet();openSync();
@@ -7406,6 +7714,20 @@ function openSync(){
         <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
         <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
     :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
+   <div class="fld" style="margin-top:14px">
+     <label for="nbUrl">Base de datos en la nube</label>
+     <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
+     <label for="nbKey" style="margin-top:8px">Llave pública (publishable / anon)</label>
+     <input class="inp mono" id="nbKey" placeholder="sb_publishable_… o eyJhbGci…" value="${esc(NUBE.key||'')}">
+     <p class="pw-note" style="margin-top:6px">${enNube()
+       ? `Conectado como <b>${esc((NUBE_YO&&NUBE_YO.correo)||'')}</b>. Los datos se guardan en la nube y en este equipo a la vez.`
+       : `Sin sesión en la nube: todo se guarda sólo en este equipo. Entra con tu cuenta para que suba.`}
+       La llave pública es la que va en el navegador; quién ve qué lo decide la base, no esta página.</p>
+     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+       <button class="btn sec" onclick="probarNube()">Probar conexión</button>
+       <button class="btn sec" onclick="guardarCfgNube()">Guardar y recargar</button>
+     </div>
+   </div>
    <div class="callout ${SW_LISTA?'':'warn'}" style="margin-top:14px">
      <svg viewBox="0 0 24 24">${SW_LISTA?'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
      <div>${SW_LISTA
@@ -7451,7 +7773,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-03 · plan anual';
+const VERSION='2026-08-03 · nube + sin señal';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -7550,9 +7872,48 @@ function upRucCheck(){
    :'RUC válido. Como aún no es cliente de Adolphus, tu cuenta quedará <b>pendiente de aprobación</b>.';
 }
 
-function login(ev){
+async function login(ev){
   ev.preventDefault();
   const m=$('#inMail').value.trim(), pw=$('#inPw').value;
+
+  /* Primero la nube: es la cuenta de verdad y la que abre desde
+     cualquier computadora. Sólo si no hay red se cae a lo local, para
+     que el que ya entró antes pueda seguir trabajando en planta. */
+  if(NUBE.url&&online()){
+    authMsg('Comprobando…','info');
+    try{
+      await nubeEntrar(m,pw);
+      const c=cuentaDeNube();
+      if(c.est==='pendiente'){
+        await nubeSalir();
+        authMsg('Tu cuenta está <b>pendiente de aprobación</b>. Un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
+        return false;
+      }
+      if(c.est==='suspendido'){await nubeSalir();authMsg('Esta cuenta está suspendida. Escribe a soporte@adolphus.pe.');return false}
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      abrirSesion(c,$('#inRec').checked);
+      sellarIds();
+      authMsg('');
+      try{
+        const r=await nubeVuelta(true);
+        latirNube();
+        toast(r.bajadas?`Datos traídos de la nube · ${r.bajadas} registro${r.bajadas===1?'':'s'}`
+                       :'Conectado a la nube');
+      }catch(e){toast('Dentro, pero no se pudieron traer los datos: '+e.message)}
+      return false;
+    }catch(e){
+      const red=!e.status;                       // sin status = no hubo respuesta
+      if(!red){
+        authMsg(e.status===400
+          ? 'Correo o contraseña incorrectos.'
+          : 'No se pudo entrar: '+esc(e.message));
+        return false;
+      }
+      // sin red: seguimos con la copia local
+    }
+  }
+
   const c=cuentaPorMail(m);
   if(!c){authMsg('No hay ninguna cuenta con ese correo. Revísalo o crea una cuenta nueva.');return false}
   if(c.pw!==resumen(pw)){authMsg('Contraseña incorrecta.');return false}
@@ -7561,11 +7922,55 @@ function login(ev){
   abrirSesion(c,$('#inRec').checked);
   return false;
 }
-function signup(ev){
+async function signup(ev){
   ev.preventDefault();
   const n=$('#upN').value.trim(), m=$('#upMail').value.trim().toLowerCase(), pw=$('#upPw').value;
-  if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
   if(fuerzaPw(pw)<2){authMsg('La contraseña es demasiado débil: al menos 8 caracteres, con números.');return false}
+
+  /* Cuenta de verdad: el usuario nace en la base, no en este archivo.
+     Quién es y qué puede ver lo decide Postgres con el código de
+     invitación —o con el RUC, y entonces queda pendiente de que
+     Adolphus la active. */
+  if(NUBE.url&&online()){
+    const esStaff=UP_TIPO==='staff';
+    const ruc=($('#upRuc').value||'').replace(/\D/g,'');
+    if(!esStaff&&!rucValido(ruc)){authMsg('Ingresa el RUC de tu empresa (11 dígitos, con dígito verificador válido).');return false}
+    const cod=((esStaff?$('#upCod').value:$('#upCodCli').value)||'').trim().toUpperCase();
+    authMsg('Creando la cuenta…','info');
+    try{
+      const p=await nubeRegistrar({correo:m,clave:pw,nombre:n,
+        cargo:$('#upCargo').value.trim(),telefono:'',codigo:cod,ruc:esStaff?'':ruc});
+      if(!p){
+        authTab('in');$('#inMail').value=m;
+        authMsg('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.','info');
+        return false;
+      }
+      const c=cuentaDeNube();
+      if(c.est!=='activo'){
+        await nubeSalir();
+        authTab('in');$('#inMail').value=m;
+        authMsg('Cuenta creada. Queda <b>pendiente de aprobación</b>: un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
+        return false;
+      }
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
+      abrirSesion(c,true,'Cuenta creada y activada.');
+      sellarIds();authMsg('');
+      try{await nubeVuelta(true);latirNube()}catch(e){}
+      return false;
+    }catch(e){
+      if(e.status){
+        authMsg(/registered|already/i.test(e.message)
+          ? 'Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.'
+          : 'No se pudo crear la cuenta: '+esc(e.message));
+        return false;
+      }
+      // sin red: se crea en el equipo y se registra en la nube al volver
+    }
+  }
+
+  if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
   let perfil='cliente',cliId=null,est='pendiente',aviso='';
   if(UP_TIPO==='staff'){
     const cod=($('#upCod').value||'').trim().toUpperCase();
@@ -7595,7 +8000,7 @@ function signup(ev){
 }
 /* Deja la portada como recién abierta: sin contraseñas ni mensajes viejos. */
 function resetAuth(){
-  ['inPw','upPw','upN','upCargo','upMail','upCod','upRuc'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+  ['inPw','upPw','upN','upCargo','upMail','upCod','upCodCli','upRuc'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
   const t=$('#upTerm');if(t)t.checked=false;
   upTipo('staff');pwMeter();upRucCheck();authMsg('');
 }
@@ -7633,6 +8038,7 @@ function enterApp(){
 }
 function logout(){
   closeDrawer&&closeDrawer();closeAcct();
+  nubeSalir();
   SES=null;try{localStorage.removeItem(LS_SES)}catch(e){}
   resetAuth();authTab('in');pintarSesionGuardada();
   const c=$('#cover');c.style.display='';
@@ -7865,6 +8271,25 @@ function onbHtml(){
 /* ── Arranque ─────────────────────────────────────────────── */
 restaurarCuentas();
 restaurarLocal();
+/* Si la última vez se entró con cuenta de la nube, la sesión sigue
+   viva: se reanuda sin volver a pedir la contraseña. */
+(function reanudarNube(){
+  let g=null; try{g=JSON.parse(localStorage.getItem(LS_NUBE)||'null')}catch(e){}
+  if(!g||!g.refresh_token)return;
+  NUBE_SES=g;
+  nubeVigente().then(ok=>{
+    if(!ok)return;
+    return nubeCargarPerfil().then(()=>{
+      const c=cuentaDeNube();
+      if(c.est!=='activo')return nubeSalir();
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      guardarCuentas();pintarSesionGuardada();
+      sellarIds();latirNube();
+      return nubeVuelta(true).then(()=>{if(SES)renderAll()});
+    });
+  }).catch(()=>{});
+})();
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
