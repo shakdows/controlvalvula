@@ -1980,7 +1980,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <!-- ═══ RECLAMOS / SNC ═══ -->
       <section class="page" id="p-snc"><div class="view-pad">
         <div class="hd"><div><h1>Reclamos y servicio no conforme</h1>
-          <p>El formato de calidad, con el equipo y su historia ya cargados. Solo se escribe lo del hecho: hallazgo, acción inmediata, causa raíz y acción correctiva.</p></div>
+          <p>Registro interno. El cliente devuelve la válvula, Adolphus la revisa y levanta el registro con el TAG —que trae la historia del equipo—, lo dirige al área que corresponde y esa área lo trabaja.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="sncBtn"></div></div>
         <div id="sncList"></div>
       </div></section>
@@ -2431,23 +2431,43 @@ let SOLICITUDES=[
    La mitad no se escribe: sale del TAG y de la historia del equipo.
    Aquí solo viven los del hecho — hallazgo, acción inmediata, causa
    raíz y acción correctiva. */
-/* El recorrido de un reclamo. Empieza cuando el cliente lo reporta y
-   Adolphus decide si lo toma; de ahí en adelante es trabajo interno. */
+/* El recorrido de un reclamo. El cliente no lo abre: devuelve la
+   válvula y Adolphus la revisa. Quien la recibe levanta el registro,
+   lo dirige al área que corresponde y esa área lo trabaja. Es un
+   documento interno de calidad. */
 const SNC_EST=[
- ['recibido',  'Por revisar',         'due', 'Adolphus tiene que aceptarlo o rechazarlo'],
- ['abierto',   'Aceptado',            'late','Falta la acción inmediata'],
- ['analisis',  'En análisis',         'due', 'Falta la causa raíz'],
- ['correctiva','En acción correctiva','sel', 'Falta cerrar la acción correctiva'],
- ['cerrado',   'Cerrado',             'ok',  'Sin pendientes'],
- ['rechazado', 'No procede',          'ink-3','Se explicó el motivo al cliente']
+ ['borrador',  'Sin enviar',          'ink-3','Falta dirigirlo al área que corresponde'],
+ ['enviado',   'Enviado al área',     'due',  'El área todavía no lo ha tomado'],
+ ['analisis',  'En análisis',         'due',  'Falta la causa raíz'],
+ ['correctiva','En acción correctiva','sel',  'Falta cerrar la acción correctiva'],
+ ['cerrado',   'Cerrado',             'ok',   'Sin pendientes']
 ];
 const sncEst=k=>SNC_EST.find(e=>e[0]===k)||SNC_EST[0];
-const QUIEN=[['cliente','El cliente'],['adolphus','Adolphus'],['fabricante','El fabricante']];
+/* Quién detectó el servicio no conforme. */
+const QUIEN=[
+ ['cliente',  'El cliente al devolver la válvula'],
+ ['recepcion','Adolphus, al recibirla'],
+ ['taller',   'Adolphus, en el taller'],
+ ['campo',    'Adolphus, en campo'],
+ ['fabricante','El fabricante']
+];
+/* A quién le toca resolverlo. El rol es quien lo ve en sus avisos. */
+const AREAS=[
+ ['calidad',   'Calidad',                'admin'],
+ ['ingenieria','Ingeniería',             'admin'],
+ ['taller',    'Servicio técnico · taller','tec'],
+ ['campo',     'Servicio técnico · campo', 'tec'],
+ ['almacen',   'Almacén',                'tec'],
+ ['compras',   'Compras e importaciones','com'],
+ ['comercial', 'Comercial · repuestos',  'com'],
+ ['fabricante','Reclamo al fabricante',  'com']
+];
+const areaDe=k=>AREAS.find(a=>a[0]===k)||AREAS[0];
 
 let RECLAMOS=[
- {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',
+ {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',enviado:'2026-06-13',
   det:'Posicionador con deriva de señal tras el arranque de la unidad de vacío.',
-  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'cliente',
+  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',area:'taller',
   hall:'La válvula no alcanzaba el 100 % de apertura con señal de 20 mA. Deriva de 6 % respecto al lazo.',
   doma:'DOM-41005-3',
   accInm:'Recalibrar el lazo en sitio y dejar la válvula en control manual hasta el cambio del posicionador.',
@@ -2456,17 +2476,22 @@ let RECLAMOS=[
   causa:'El posicionador se montó sin purgar la línea de aire de instrumentos; el filtro reguló con humedad y la boquilla se obstruyó parcialmente.',
   accCor:'Incorporar la purga de la línea de aire y la verificación del filtro coalescente como paso obligatorio del protocolo de montaje, y capacitar a los tres técnicos de campo.',
   fIni:'2026-06-16',fFin:'2026-06-30',respCor:'Ana Quispe',
-  prov:'Masoneilan',ocProv:'PO-2026-0774'},
- {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'analisis',
+  prov:'Masoneilan',ocProv:'PO-2026-0774',
+  hist:[{f:'2026-06-12',t:'Levantado por Ana Quispe'},
+        {f:'2026-06-13',t:'Enviado a Servicio técnico · taller'},
+        {f:'2026-06-30',t:'Cerrado'}]},
+ {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'enviado',enviado:'2026-07-20',
   det:'Fuga por el manguito de la válvula pinch a los tres meses del cambio.',
-  ocCli:'OC-77123',refCli:'',ident:'cliente',
+  ocCli:'OC-77123',refCli:'',ident:'cliente',area:'fabricante',
   hall:'Manguito con desgarro longitudinal en la zona de cierre. El cliente reporta pérdida de pulpa en la celda de flotación.',
   doma:'',
   accInm:'Aislar la línea, retirar la válvula y montar la de reserva del cliente.',
   fInm:'2026-07-20',respInm:'O. Julio de la Rosa',
   obs:'Se recuperó el manguito para enviarlo al fabricante.',
   causa:'',accCor:'',fIni:'',fFin:'',respCor:'',
-  prov:'RF Valves',ocProv:''}
+  prov:'RF Valves',ocProv:'',
+  hist:[{f:'2026-07-19',t:'Levantado por Luis Ramírez al recibir la válvula'},
+        {f:'2026-07-20',t:'Enviado a Reclamo al fabricante'}]}
 ];
 
 /* ── Cotizaciones ────────────────────────────────────────────
@@ -2736,7 +2761,10 @@ function applyRole(v){
   /* Reclamos es la excepción: calidad los mira todos juntos, de todos
    los clientes, así que vive en el lateral aunque también aparezca
    dentro de la carpeta de cada cliente. */
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
+  /* Reclamos es un registro interno de calidad: el cliente devuelve la
+     válvula, Adolphus la revisa y levanta el registro. El cliente no
+     lo abre ni lo ve. */
+  const ocultas=c?['clients','cat','imp','users','snc']:['assets','cal','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
@@ -3111,7 +3139,9 @@ function openAsset(id){
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>`;})();
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
+      <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
+      <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -3802,10 +3832,8 @@ function sncProducto(a){
 }
 /* Cuánto le falta al expediente para poder mandarse al cliente. */
 function sncFalta(r){
-  /* mientras Adolphus no lo acepte, y si no procede, no hay nada que
-     completar: el expediente no ha empezado o no va a empezar */
-  if(r.est==='recibido'||r.est==='rechazado') return [];
   const f=[];
+  if(!r.area) f.push('el área que lo resuelve');
   if(!r.accInm)  f.push('acción inmediata');
   if(!r.fInm)    f.push('fecha de la acción inmediata');
   if(!r.respInm) f.push('responsable de la acción inmediata');
@@ -3825,9 +3853,8 @@ function renderSNC(){
   const caja=$('#sncList'); if(!caja) return;
   const cliente=S.rol==='cliente';
   const bot=$('#sncBtn');
-  if(bot) bot.innerHTML = cliente
-    ? `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Reportar un problema</button>`
-    : `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo reclamo</button>`;
+  if(bot) bot.innerHTML = cliente ? '' :
+    `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo registro</button>`;
 
   const lista=sncMios().slice().sort((a,b)=>b.f.localeCompare(a.f));
   const ct=$('#ctSnc'); if(ct)ct.textContent=lista.filter(r=>r.est!=='cerrado').length||'';
@@ -3835,9 +3862,7 @@ function renderSNC(){
   if(!lista.length){
     caja.innerHTML=`<div class="panel"><div class="empty">
       <svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg>
-      <b>Sin reclamos registrados</b>${cliente
-        ?'Si una válvula falló o el servicio no salió como esperabas, repórtalo aquí.'
-        :'Cuando el cliente reporte un problema o se detecte un servicio no conforme, se abre desde aquí.'}</div></div>`;
+      <b>Sin registros</b>Cuando llegue una válvula devuelta y al revisarla se encuentre algo, se levanta el registro desde aquí o desde la ficha del equipo.</div></div>`;
     return;
   }
   caja.innerHTML=`<div class="snc-l">${lista.map(r=>{
@@ -3854,9 +3879,10 @@ function renderSNC(){
         <span>${esc(sncProducto(a)||'Sin equipo asociado')}</span>
         ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
       </div>
-      ${falta.length
-        ? `<div class="snc-p"><span class="pt"></span>Falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} campo${falta.length-2>1?'s':''} más`:''}</div>`
-        : `<div class="snc-p ok"><span class="pt"></span>Expediente completo · listo para enviar al cliente</div>`}
+      <div class="snc-p ${r.est==='cerrado'?'ok':''}"><span class="pt"></span>${
+        !r.enviado ? 'Sin dirigir · todavía nadie lo tiene en sus avisos'
+        : r.est==='cerrado' ? `Cerrado · ${esc(areaDe(r.area)[1])}`
+        : `${esc(areaDe(r.area)[1])}${falta.length?` — falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} más`:''}`:' — listo para cerrar'}`}</div>
     </article>`}).join('')}</div>`;
 }
 
@@ -3864,81 +3890,43 @@ function renderSNC(){
    Arriba el TAG y lo que trae consigo; abajo, en tres bloques, lo que
    toca escribir. Los dieciséis campos del formato están todos, en el
    mismo orden en que el cliente los pide. */
-function openSNC(id){
+function openSNC(id,actId){
+  if(S.rol==='cliente'){toast('El registro de calidad lo levanta Adolphus');return}
   const r=id?RECLAMOS.find(x=>x.id===id):null;
-  /* dentro de la carpeta de un cliente solo se ofrecen sus equipos */
   const f=sncFoco();
   const opts=(f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS).filter(a=>a.tag);
-  const cliente=S.rol==='cliente';
+  const pre=r?r.act:(actId||'');
   const num=r?r.n:'SNC-2026-'+String(RECLAMOS.length+1).padStart(3,'0');
 
-  const equipo=`
-    <div class="fld">
-      <label for="sncAct">${cliente?'¿Qué válvula es? — elige el TAG':'Equipo — escribe o elige el TAG'}</label>
-      <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
-        <option value="">${cliente?'No sé cuál es':'Sin equipo asociado'}</option>
-        ${opts.map(a=>`<option value="${a.id}" ${r&&r.act===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
-      </select>
-    </div>
-    <div id="sncCtx"></div>`;
-
-  /* ── Lo que el cliente escribe ──────────────────────────────
-     Cuatro cosas y ninguna más. El resto —causa raíz, acciones,
-     proveedor, fechas— es trabajo de Adolphus y no tiene por qué
-     aparecer en su pantalla. */
-  const delCliente=`
+  $('#mTitle').textContent=r?`Editar ${r.n}`:'Nuevo registro de servicio no conforme';
+  $('#mBody').innerHTML=`
     <div class="snc-form">
-      ${equipo}
-      <h4 class="snc-sec">Cuéntanos qué pasó</h4>
-      <div class="fld"><label for="sncDet">El problema, en una línea</label>
-        <input class="inp" id="sncDet" placeholder="Fuga por la brida, no cierra, llegó golpeada…" value="${esc(r?r.det:'')}"></div>
-      <div class="fld"><label for="sncHall">Cuéntalo con detalle <span class="opc">qué viste, desde cuándo, si paró la planta</span></label>
-        <textarea class="inp" id="sncHall" rows="4" placeholder="Mientras más concreto, más rápido responde ingeniería.">${esc(r?r.hall:'')}</textarea></div>
-      <div class="two">
-        <div class="fld"><label for="sncOcCli">Tu orden de compra <span class="opc">si la tienes a mano</span></label>
-          <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
-        <div class="fld"><label for="sncRefCli">Tu n.º de reclamo <span class="opc">si tu empresa usa uno</span></label>
-          <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
+      <div class="fld">
+        <label for="sncAct">Válvula devuelta — escribe o elige el TAG</label>
+        <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
+          <option value="">Sin equipo asociado</option>
+          ${opts.map(a=>`<option value="${a.id}" ${pre===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
+        </select>
       </div>
+      <div id="sncCtx"></div>
 
-      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
-      <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
-           ondragover="event.preventDefault();this.classList.add('over')"
-           ondragleave="this.classList.remove('over')"
-           ondrop="event.preventDefault();this.classList.remove('over');evSubir(event.dataTransfer.files)"
-           tabindex="0" role="button" aria-label="Agregar fotos o video">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
-        <b>Agrega fotos o un video</b>
-        <span>Arrástralos aquí, o toca para elegirlos o tomarlos con la cámara</span>
-      </div>
-      <input type="file" id="evFile" accept="image/*,video/*" multiple capture="environment"
-             style="display:none" onchange="evSubir(this.files);this.value=''">
-      <div class="ev-grid" id="evGrid"></div>
-      <div class="snc-nota">Adolphus revisa tu reclamo y te avisa si lo toma. Si lo toma, verás aquí mismo qué se hizo, por qué pasó y cómo se corrigió.</div>
-      <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
-    </div>`;
-
-  /* ── Lo que llena Adolphus ────────────────────────────────── */
-  const deAdolphus=`
-    <div class="snc-form">
-      ${equipo}
-      <h4 class="snc-sec">1 · Qué pasó</h4>
+      <h4 class="snc-sec">1 · Qué se encontró</h4>
       <div class="fld"><label for="sncDet">Detalle de la incidencia</label>
         <textarea class="inp" id="sncDet" rows="2" placeholder="En una línea: qué ocurrió.">${esc(r?r.det:'')}</textarea></div>
+      <div class="fld"><label for="sncQuien">Quién lo detecta</label>
+        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
+        <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró al revisarla, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="two">
         <div class="fld"><label for="sncOcCli">Orden de compra del cliente</label>
           <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
         <div class="fld"><label for="sncRefCli">Referencia del cliente <span class="opc">su propio n.º de reclamo</span></label>
           <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
       </div>
-      <div class="fld"><label for="sncQuien">Quién identifica el servicio no conforme</label>
-        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
-        <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="fld"><label for="sncDoma">Código DOMA del cliente <span class="opc">si lo maneja</span></label>
         <input class="inp" id="sncDoma" placeholder="DOM-…" value="${esc(r?r.doma:'')}"></div>
 
-      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
+      <h4 class="snc-sec">Fotos o video <span class="opc">de la válvula tal como llegó</span></h4>
       <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
            ondragover="event.preventDefault();this.classList.add('over')"
            ondragleave="this.classList.remove('over')"
@@ -3952,7 +3940,15 @@ function openSNC(id){
              style="display:none" onchange="evSubir(this.files);this.value=''">
       <div class="ev-grid" id="evGrid"></div>
 
-      <h4 class="snc-sec">2 · Qué se hizo de inmediato</h4>
+      <h4 class="snc-sec">2 · A quién le toca</h4>
+      <div class="fld"><label for="sncArea">Área que lo resuelve</label>
+        <select class="inp" id="sncArea">
+          <option value="">Todavía no lo dirijo a nadie</option>
+          ${AREAS.map(([k,t])=>`<option value="${k}" ${r&&r.area===k?'selected':''}>${t}</option>`).join('')}
+        </select></div>
+      <div class="snc-nota">Al enviarlo, al área le aparece en sus avisos con la válvula, el hallazgo y las fotos. Si todavía no sabes a quién dirigirlo, guárdalo y queda en la lista sin enviar.</div>
+
+      <h4 class="snc-sec">3 · Qué se hizo de inmediato</h4>
       <div class="fld"><label for="sncAccInm">Acción inmediata <span class="opc">empieza con un verbo</span></label>
         <textarea class="inp" id="sncAccInm" rows="2" placeholder="Aislar la línea y montar la válvula de reserva…">${esc(r?r.accInm:'')}</textarea></div>
       <div class="two">
@@ -3964,7 +3960,7 @@ function openSNC(id){
       <div class="fld"><label for="sncObs">Observaciones relevantes</label>
         <textarea class="inp" id="sncObs" rows="2" placeholder="Si la planta paró, si se coordinó con alguien, si se guardó la pieza…">${esc(r?r.obs:'')}</textarea></div>
 
-      <h4 class="snc-sec">3 · Por qué pasó y cómo se corrige</h4>
+      <h4 class="snc-sec">4 · Por qué pasó y cómo se corrige</h4>
       <div class="fld"><label for="sncCausa">Causa raíz <span class="opc">por qué ocurrió el hallazgo</span></label>
         <textarea class="inp" id="sncCausa" rows="3" placeholder="No el síntoma: la razón de fondo.">${esc(r?r.causa:'')}</textarea></div>
       <div class="fld"><label for="sncAccCor">Acción correctiva <span class="opc">cómo se corrige esa causa, en verbo</span></label>
@@ -3987,11 +3983,9 @@ function openSNC(id){
         <option value="O. Julio de la Rosa"><option value="M. Ángel Torres"></datalist>
       <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
     </div>`;
-
-  $('#mTitle').textContent = r ? `Editar ${r.n}` : (cliente?'Reportar un problema':'Nuevo reclamo');
-  $('#mBody').innerHTML = cliente ? delCliente : deAdolphus;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
-    <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':(cliente?'Enviar el reclamo':'Abrir el reclamo')}</button>`;
+    <button class="btn sec" onclick="guardarSNC(false)">Guardar sin enviar</button>
+    <button class="btn" onclick="guardarSNC(true)">${r&&r.enviado?'Guardar':'Enviar al área'}</button>`;
   $('#modal').classList.add('on');
   EV_TMP = r ? (r.ev||[]).slice() : [];
   pintarCtxSNC(); pintarEv();
@@ -4090,56 +4084,48 @@ function pintarCtxSNC(){
   </div>`;
 }
 
-function guardarSNC(){
+function guardarSNC(enviar){
   const v=i=>($('#'+i)?$('#'+i).value.trim():'');
-  const cliente=S.rol==='cliente';
   const det=v('sncDet');
-  if(!det){toast(cliente?'Cuéntanos en una línea qué pasó':'Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
-  const id=v('sncId');
+  if(!det){toast('Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
+  const area=v('sncArea');
+  if(enviar&&!area){toast('Elige el área que lo resuelve, o guárdalo sin enviar');$('#sncArea').focus();return}
+  const id=v('sncId'), hoy=HOY.toISOString().slice(0,10);
+  const yo=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
   const datos={
-    act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'), hall:v('sncHall')
-  };
-  datos.ev=EV_TMP.slice();
-  if(!cliente) Object.assign(datos,{
-    ident:v('sncQuien'), doma:v('sncDoma'),
+    act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'),
+    ident:v('sncQuien'), hall:v('sncHall'), doma:v('sncDoma'), area,
     accInm:v('sncAccInm'), fInm:v('sncFInm'), respInm:v('sncRespInm'), obs:v('sncObs'),
     causa:v('sncCausa'), accCor:v('sncAccCor'), fIni:v('sncFIni'), fFin:v('sncFFin'),
-    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv')
-  });
+    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv'),
+    ev:EV_TMP.slice()
+  };
 
   if(id){
     const r=RECLAMOS.find(x=>x.id===id);
+    const areaAntes=r.area, eraEnviado=r.enviado;
     Object.assign(r,datos);
-    /* El estado lo dice lo que está lleno — pero solo una vez que
-       Adolphus lo aceptó. Un reclamo por revisar sigue por revisar. */
-    if(!['recibido','rechazado'].includes(r.est)) r.est=sncEstadoPorContenido(r);
+    r.hist=r.hist||[];
+    if(enviar&&!eraEnviado){r.enviado=hoy;r.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`})}
+    else if(enviar&&areaAntes!==area)r.hist.push({f:hoy,t:`Redirigido a ${areaDe(area)[1]}`});
+    r.est=sncEstadoPorContenido(r);
     registrar('Reclamo',`${r.n} actualizado`);
-    toast('Reclamo actualizado');
+    toast(enviar&&!eraEnviado?`Enviado a ${areaDe(area)[1]}`:'Registro actualizado');
     closeModal();renderAll();verSNC(r.id);return;
   }
 
   const a=ACTIVOS.find(x=>x.id===datos.act);
   const nuevo=Object.assign({
     id:'r'+Date.now(), n:v('sncNum'),
-    cli:sncFoco()||(a?a.cli:null)||'refi',
-    f:HOY.toISOString().slice(0,10),
-    /* Quién lo reporta: del lado del cliente vale su empresa; del
-       lado de Adolphus, la persona que lo abre. */
-    por: cliente ? cli(sncFoco()).n
-                 : ((typeof SES!=='undefined'&&SES) ? SES.n : 'Adolphus'),
-    /* Lo del cliente entra por revisar; lo que abre Adolphus ya nace
-       aceptado, porque lo abre quien lo va a atender. */
-    est: cliente ? 'recibido' : 'abierto',
-    ident: cliente ? 'cliente' : (datos.ident||'adolphus'),
-    doma:'',accInm:'',fInm:'',respInm:'',obs:'',causa:'',accCor:'',
-    fIni:'',fFin:'',respCor:'',prov:(a?(MODELOS[a.mod]||{}).m||'':''),ocProv:'',
-    hist:[]
+    cli:(a?a.cli:null)||sncFoco()||CLIENTES[0].id,
+    f:hoy, por:yo, enviado:enviar?hoy:'',
+    hist:[{f:hoy,t:`Levantado por ${yo}`}]
   },datos);
-  if(!cliente) nuevo.est=sncEstadoPorContenido(nuevo);
-  nuevo.hist=[{f:nuevo.f,t:cliente?`Reportado por ${esc(nuevo.por)}`:'Abierto por Adolphus'}];
+  if(enviar)nuevo.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`});
+  nuevo.est=sncEstadoPorContenido(nuevo);
   RECLAMOS.unshift(nuevo);
-  registrar('Reclamo',`${nuevo.n} ${cliente?'reportado':'abierto'}`);
-  toast(cliente?'Reclamo enviado a Adolphus':'Reclamo abierto');
+  registrar('Reclamo',`${nuevo.n} levantado`);
+  toast(enviar?`Enviado a ${areaDe(area)[1]}`:'Guardado sin enviar');
   closeModal();renderAll();go('snc');
 }
 
@@ -4148,133 +4134,87 @@ function sncEstadoPorContenido(r){
   return r.fFin&&r.accCor ? 'cerrado'
        : r.accCor         ? 'correctiva'
        : r.causa          ? 'analisis'
-       : 'abierto';
+       : r.enviado        ? 'enviado'
+       : 'borrador';
 }
 
-/* ── La decisión de Adolphus ─────────────────────────────────
-   Un reclamo del cliente no entra solo al circuito de calidad: alguien
-   lo acepta o dice por qué no procede. En ambos casos el cliente se
-   entera, y queda escrito quién lo decidió y cuándo. */
-function aceptarSNC(id){
+/* Mandarlo al área sin abrir el formulario entero. */
+function enviarSNCArea(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  r.est=sncEstadoPorContenido(r);
-  r.decidido=HOY.toISOString().slice(0,10);
-  r.decidioQuien=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
-  r.motivo='';
-  (r.hist=r.hist||[]).push({f:r.decidido,t:`Aceptado por ${r.decidioQuien}`});
-  registrar('Reclamo',`${r.n} aceptado`);
-  toast('Reclamo aceptado · el cliente ya lo ve en su portal');
-  renderAll();verSNC(id);
-}
-function rechazarSNC(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  $('#mTitle').textContent=`${r.n} · no procede`;
+  $('#mTitle').textContent=`${r.n} · dirigirlo`;
   $('#mBody').innerHTML=`
     <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:var(--sp-4)">
-      El cliente va a leer este motivo tal cual. Explícalo en sus términos,
-      sin tecnicismos internos.</p>
-    <div class="fld"><label for="sncMot">Por qué no procede</label>
-      <textarea class="inp" id="sncMot" rows="4"
-        placeholder="La válvula operó fuera del rango de presión especificado en la hoja de datos…">${esc(r.motivo||'')}</textarea></div>`;
+      Al área le va a aparecer en sus avisos con la válvula, el hallazgo y las fotos.</p>
+    <div class="fld"><label for="sncArea2">Área que lo resuelve</label>
+      <select class="inp" id="sncArea2">
+        ${AREAS.map(([k,t])=>`<option value="${k}" ${r.area===k?'selected':''}>${t}</option>`).join('')}
+      </select></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="verSNC('${id}')">Volver</button>
-    <button class="btn" onclick="confirmarRechazo('${id}')">Enviar al cliente</button>`;
+    <button class="btn" onclick="confirmarEnvioSNC('${id}')">Enviar</button>`;
   $('#modal').classList.add('on');
-  setTimeout(()=>$('#sncMot')&&$('#sncMot').focus(),60);
 }
-function confirmarRechazo(id){
+function confirmarEnvioSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  const m=$('#sncMot').value.trim();
-  if(!m){toast('Escribe el motivo: el cliente lo va a leer');$('#sncMot').focus();return}
-  r.est='rechazado'; r.motivo=m;
-  r.decidido=HOY.toISOString().slice(0,10);
-  r.decidioQuien=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
-  (r.hist=r.hist||[]).push({f:r.decidido,t:`No procede — ${r.decidioQuien}`});
-  registrar('Reclamo',`${r.n} rechazado`);
-  toast('Se le explicó al cliente por qué no procede');
-  renderAll();verSNC(id);
-}
-function reabrirSNC(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  r.est='recibido'; r.motivo='';
-  (r.hist=r.hist||[]).push({f:HOY.toISOString().slice(0,10),t:'Vuelto a revisión'});
-  toast('El reclamo volvió a revisión');
+  const a=$('#sncArea2').value, hoy=HOY.toISOString().slice(0,10);
+  const redirige=r.enviado&&r.area!==a;
+  r.area=a; r.enviado=r.enviado||hoy;
+  (r.hist=r.hist||[]).push({f:hoy,t:`${redirige?'Redirigido':'Enviado'} a ${areaDe(a)[1]}`});
+  r.est=sncEstadoPorContenido(r);
+  registrar('Reclamo',`${r.n} enviado a ${areaDe(a)[1]}`);
+  toast(`Enviado a ${areaDe(a)[1]}`);
   renderAll();verSNC(id);
 }
 
-/* El expediente. Para Adolphus, los dieciséis puntos del formato de
-   calidad. Para el cliente, lo suyo y la respuesta — no le sirve ver
-   dieciséis casillas vacías mientras el reclamo se está atendiendo. */
+/* El expediente: los dieciséis puntos del formato de calidad, en su
+   orden, más a quién está dirigido. Es interno; el cliente no lo ve. */
 function verSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
+  if(S.rol==='cliente'){toast('Ese registro es interno de Adolphus');return}
   const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
-  const cliente=S.rol==='cliente';
   const fila=(n,t,val,vacio)=>`<div class="snc-r${val?'':' sin'}">
       <span class="snc-i">${n}</span>
       <div><b>${t}</b><p>${val?esc(val).replace(/\n/g,'<br>'):(vacio||'Pendiente')}</p></div></div>`;
 
-  const cab=`<div class="snc-cab">
-      <span class="tag ${e[2]}">${e[1]}</span>
-      <span>Abierto el ${r.f} por ${esc(r.por)}</span>
-      ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
-    </div>`;
-
-  /* La decisión, arriba del todo: es lo primero que cualquiera de los
-     dos lados quiere saber. */
-  let aviso='';
-  if(r.est==='recibido'){
-    aviso = cliente
-      ? `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-         <div>Adolphus lo recibió y lo está revisando. Te avisamos aquí mismo en cuanto haya respuesta.</div></div>`
-      : `<div class="snc-dec"><div class="snc-dec-t">
-           <b>${esc(cli(r.cli).n)} espera respuesta</b>
-           <span>Lo reportó ${esc(r.por)} el ${r.f}. Decide si Adolphus lo toma.</span></div>
-         <div class="snc-dec-b">
-           <button class="btn sec" onclick="rechazarSNC('${r.id}')">No procede</button>
-           <button class="btn" onclick="aceptarSNC('${r.id}')">Aceptar el reclamo</button></div></div>`;
-  }else if(r.est==='rechazado'){
-    aviso = `<div class="snc-dec no"><div class="snc-dec-t">
-        <b>No procede</b>
-        <span>${esc(r.motivo||'Sin motivo registrado')}</span>
-        <span class="snc-dec-q">${esc(r.decidioQuien||'Adolphus')} · ${r.decidido||r.f}</span></div>
-      ${cliente?'':`<div class="snc-dec-b"><button class="btn sec" onclick="reabrirSNC('${r.id}')">Volver a revisarlo</button></div>`}</div>`;
-  }else if(r.decidido&&cliente){
-    aviso = `<div class="callout ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-      <div>Adolphus aceptó tu reclamo el ${r.decidido}. Abajo verás qué se hizo y en qué va.</div></div>`;
-  }
-  if(!cliente&&falta.length&&r.est!=='recibido'&&r.est!=='rechazado')
-    aviso += `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para poder responderle al cliente: ${esc(falta.join(', '))}.</div></div>`;
-
-  /* Lo que ve el cliente: su reclamo, y qué hizo Adolphus. */
-  /* Las fotos y el video van arriba del texto: se entienden antes. */
+  /* Las fotos van arriba del texto: se entienden antes. */
   const evidencia=(r.ev&&r.ev.length)?`<div class="ev-grid ver">${r.ev.map((x,i)=>`
     <figure class="ev-i" onclick="verEv('${r.id}',${i})" tabindex="0" role="button" aria-label="Ver ${esc(x.n)}">
       ${x.t==='foto'?`<img src="${x.d}" alt="${esc(x.n)}">`
                     :`<video src="${x.d}" muted playsinline></video><span class="ev-play">▶</span>`}
       <figcaption>${esc(x.n)}</figcaption></figure>`).join('')}</div>`:'';
 
-  const vistaCliente=`
-    <div class="snc-doc">
-      ${fila('·','Lo que reportaste',r.det)}
-      ${fila('·','Con detalle',r.hall,'—')}
-      ${fila('·','Equipo',[a&&a.tag,sncProducto(a)].filter(Boolean).join(' · '),'No indicado')}
-      ${evidencia?`<div class="snc-r"><span class="snc-i">·</span><div style="width:100%"><b>Fotos y video</b>${evidencia}</div></div>`:''}
-      ${r.est==='rechazado'?'':`
-        ${fila('·','Qué se hizo de inmediato',r.accInm,'Todavía no se registra')}
-        ${r.fInm?fila('·','Cuándo',r.fInm):''}
-        ${fila('·','Por qué pasó',r.causa,'En análisis')}
-        ${fila('·','Cómo se corrige',r.accCor,'Pendiente')}
-        ${r.fFin?fila('·','Corregido el',r.fFin):''}`}
-    </div>`;
+  /* A quién le toca: lo primero, porque es lo que decide si esto
+     avanza hoy o se queda quieto. */
+  let aviso='';
+  if(!r.enviado)
+    aviso=`<div class="snc-dec"><div class="snc-dec-t">
+        <b>Todavía no está dirigido</b>
+        <span>Hasta que se envíe a un área, nadie lo tiene en sus avisos.</span></div>
+      <div class="snc-dec-b"><button class="btn" onclick="enviarSNCArea('${r.id}')">Enviar al área</button></div></div>`;
+  else
+    aviso=`<div class="snc-dec ${r.est==='cerrado'?'no':''}"><div class="snc-dec-t">
+        <b>${esc(areaDe(r.area)[1])}</b>
+        <span>${r.est==='cerrado'?`Cerrado${r.fFin?' el '+r.fFin:''}.`:esc(e[3])} · enviado el ${r.enviado}</span></div>
+      <div class="snc-dec-b"><button class="btn sec" onclick="enviarSNCArea('${r.id}')">Cambiar de área</button></div></div>`;
 
-  const vistaAdolphus=`
+  if(falta.length&&r.est!=='cerrado')
+    aviso += `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para cerrarlo: ${esc(falta.join(', '))}.</div></div>`;
+
+  $('#mTitle').textContent=r.n;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${e[2]}">${e[1]}</span>
+      <span>Levantado el ${r.f} por ${esc(r.por)}</span>
+      ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
+    </div>
+    ${aviso}
     <div class="snc-doc">
       ${fila(1,'Detalle de la incidencia',r.det)}
       ${fila(2,'Orden de compra del cliente',r.ocCli,'No indicada')}
       ${fila(3,'Referencia del cliente',r.refCli,'No aplica')}
-      ${fila(4,'Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
+      ${fila(4,'Detalle del hallazgo · lo detecta '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
       ${fila(5,'Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · '))}
-      ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video adjuntos</b>${evidencia}</div></div>`:''}
+      ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video de la válvula</b>${evidencia}</div></div>`:''}
       ${fila(6,'Acción inmediata',r.accInm)}
       ${fila(7,'Fecha de la acción inmediata',r.fInm)}
       ${fila(8,'Responsable de la acción inmediata',r.respInm)}
@@ -4286,18 +4226,12 @@ function verSNC(id){
       ${fila(14,'Responsable de la acción correctiva',r.respCor)}
       ${fila(15,'Proveedor',r.prov)}
       ${fila(16,'N.º de OC / PO / PSV / SVV',r.ocProv,'No indicado')}
-    </div>`;
-
-  const bitacora=(r.hist&&r.hist.length)?`<div class="snc-bit">
-    ${r.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:'';
-
-  $('#mTitle').textContent=r.n;
-  $('#mBody').innerHTML=cab+aviso+(cliente?vistaCliente:vistaAdolphus)+bitacora;
+    </div>
+    ${(r.hist&&r.hist.length)?`<div class="snc-bit">${r.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:''}`;
   $('#mFoot').innerHTML=`
     ${a?`<button class="btn quiet" onclick="closeModal();verEquipo('${a.id}')">Ver el equipo</button>`:''}
-    ${cliente?'':`<button class="btn sec" onclick="imprimirSNC('${r.id}')">Imprimir</button>`}
-    ${cliente&&r.est==='recibido'?`<button class="btn sec" onclick="openSNC('${r.id}')">Corregir lo que escribí</button>`:''}
-    ${cliente?'':`<button class="btn" onclick="openSNC('${r.id}')">Editar</button>`}`;
+    <button class="btn sec" onclick="imprimirSNC('${r.id}')">Imprimir</button>
+    <button class="btn" onclick="openSNC('${r.id}')">Editar</button>`;
   $('#modal').classList.add('on');
 }
 
@@ -5810,40 +5744,25 @@ function buildNotif(){
   const vs=visibles(),items=[];
   /* Lo primero: un cliente que reportó algo y espera respuesta. Nada
      de lo demás depende de que alguien conteste hoy. */
+  /* Lo primero: un registro dirigido a mi área y sin terminar. Es lo
+     que de verdad espera a alguien. */
   if(S.rol!=='cliente')
-    RECLAMOS.filter(r=>r.est==='recibido').forEach(r=>{
-      const a=sncActivo(r);
-      items.push({tone:'late',ic:'⚑',t:`${cli(r.cli).n} reportó un problema`,
-        s:`${r.n} · ${a?a.tag:'sin equipo'} — acéptalo o explica por qué no procede`,rec:r.id})});
+    RECLAMOS.filter(r=>r.est!=='cerrado').forEach(r=>{
+      const a=sncActivo(r), mio=r.area&&areaDe(r.area)[2]===S.rol;
+      if(!r.enviado){
+        items.push({tone:'due',ic:'⚑',t:`${r.n} sin dirigir`,
+          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'} — falta enviarlo al área`,rec:r.id});
+      }else if(mio){
+        const f=sncFalta(r);
+        items.push({tone:'late',ic:'⚑',t:`${areaDe(r.area)[1]} · te toca ${r.n}`,
+          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
+      }});
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
   SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
     .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
       s:`${pasoDe(s.est).sig} — ${pasoDe(s.est).r}`,sol:s.id}));
-
-  /* Reclamos. A Adolphus le avisa cuál cliente reportó y sobre qué
-     válvula; al cliente, qué decidió Adolphus sobre el suyo. */
-  RECLAMOS.filter(r=>!S.cli||r.cli===S.cli).forEach(r=>{
-    const a=sncActivo(r), eq=a?a.tag:'sin equipo';
-    if(r.est==='recibido'){
-      if(S.cli)items.push({tone:'due',ic:'⚑',t:`${r.n} · en revisión`,
-        s:`Adolphus está revisando tu reclamo de ${eq}`,rec:r.id});
-      return;   // el aviso para Adolphus ya se puso arriba del todo
-    }
-    if(S.cli){
-      if(r.est==='rechazado')
-        items.push({tone:'ink-3',ic:'⚑',t:`${r.n} · no procede`,s:`${eq} — Adolphus explicó el motivo`,rec:r.id});
-      else if(r.est!=='cerrado')
-        items.push({tone:'sel',ic:'⚑',t:`${r.n} · ${sncEst(r.est)[1].toLowerCase()}`,s:`${eq} — Adolphus lo está atendiendo`,rec:r.id});
-      return;
-    }
-    if(r.est!=='cerrado'&&r.est!=='rechazado'){
-      const f=sncFalta(r);
-      items.push({tone:'due',ic:'⚑',t:`${r.n} · ${sncEst(r.est)[1].toLowerCase()}`,
-        s:`${esc(cli(r.cli).n)} · ${eq}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
-    }
-  });
 
   /* Cotizaciones: al cliente le avisa que tiene una por decidir; a
      Adolphus, cuál ya respondió el cliente y cuál sigue esperando. */
@@ -6871,7 +6790,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-07-31 · fotos en reclamos';
+const VERSION='2026-07-31 · reclamo interno';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
