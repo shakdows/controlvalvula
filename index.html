@@ -7514,7 +7514,16 @@ function puedoEscribir(f){
   if(NUBE_YO.rol!=='cliente')return true;
   return CLI_ESCRIBE.includes(f.coleccion)&&f.empresa_id===NUBE_YO.empresa_id;
 }
+/* Subir es: apuntar lo que cambió en la tabla de pendientes y
+   vaciarla contra el servidor. Así el estado de "qué falta subir"
+   vive en disco y no en una variable que se pierde al cerrar. */
 async function nubeSubir(){
+  await apuntarPendientes();
+  return await drenarPendientes();
+}
+/* Cálculo directo, sin pasar por la tabla. Se conserva para la
+   primera siembra, cuando todavía no hay nada que reintentar. */
+async function nubeSubirDirecto(){
   const cambios=[], vistos=new Set();
   filasLocales().forEach(f=>{
     const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
@@ -7561,7 +7570,8 @@ async function nubeVuelta(primera){
   let bajadas=0, subidas=0;
   if(primera){
     bajadas=await nubeBajar(true);
-    subidas=await nubeSubir();
+    subidas=await nubeSubirDirecto();
+    await bdOp('pendientes','readwrite',o=>o.clear());PEND_N=0;
   }else{
     subidas=await nubeSubir();
     bajadas=await nubeBajar(false);
@@ -7570,40 +7580,63 @@ async function nubeVuelta(primera){
   if(bajadas||subidas)renderAll();
   return {bajadas,subidas};
 }
-/* Cada 45 s, y al volver a la pestaña: así dos computadoras se ven. */
-function latirNube(){
-  if(NUBE_TIMER)clearInterval(NUBE_TIMER);
-  NUBE_TIMER=setInterval(()=>{if(enNube()&&online()&&!SYNCING)nubeVuelta().catch(()=>{})},45000);
-}
-document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&enNube()&&online()&&!SYNCING)nubeVuelta().catch(()=>{});
-});
+/* El latido y el job son lo mismo: se arranca una sola vez. */
+function latirNube(){ arrancarJob() }
 
 /* ============================================================
-   13 · TRABAJO SIN CONEXIÓN
-   Todo se guarda en el equipo apenas se registra. Los cambios hechos
-   sin señal quedan en una cola y suben solos al recuperar conexión.
-   ============================================================ */
-const LS_KEY='adolphus.datos.v1';
-let SYNCQ=[];              /* cola de cambios pendientes de subir */
-let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
-let SYNCING=false;
-const online=()=>!OFF_SIM&&navigator.onLine;
+   12 ter · LA CAJA LOCAL
+   localStorage aguanta unos 5 MB: con dos fotos de un reclamo se
+   llena y a partir de ahí el portal deja de guardar sin avisar bien.
+   IndexedDB aguanta cientos de megas, así que la caja de verdad va
+   aquí. Tiene dos cajones:
 
-function guardarLocal(){
-  try{
-    localStorage.setItem(LS_KEY,JSON.stringify({
-      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,CALIBS,SERVS,DOCS,
-      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ,PLAN_TARIFA,PLAN_OK,
-      ESPEJO,NUBE_DESDE
-    }));
-    return true;
-  }catch(e){ // p. ej. almacenamiento lleno por fotos
-    toast('No se pudo guardar en el equipo: almacenamiento lleno');return false;
-  }
+     · 'estado'     — la foto completa de los datos y el espejo de lo
+                      que la nube ya tiene;
+     · 'pendientes' — la tabla de cambios que todavía no subieron.
+                      Una fila por registro tocado. Sobrevive a cerrar
+                      el navegador, a quedarse sin batería y a que la
+                      subida falle: mientras la fila esté ahí, el
+                      cambio no se ha perdido.
+
+   localStorage se mantiene de respaldo por si IndexedDB no está.
+   ============================================================ */
+const BD_N='adolphus', BD_V=1;
+let BD=null, BD_ROTA=false;
+
+function bdAbrir(){
+  if(BD)return Promise.resolve(BD);
+  if(BD_ROTA||!('indexedDB' in window))return Promise.resolve(null);
+  return new Promise(res=>{
+    let p; try{p=indexedDB.open(BD_N,BD_V)}catch(e){BD_ROTA=true;return res(null)}
+    p.onupgradeneeded=()=>{
+      const d=p.result;
+      if(!d.objectStoreNames.contains('estado'))     d.createObjectStore('estado');
+      if(!d.objectStoreNames.contains('pendientes')) d.createObjectStore('pendientes',{keyPath:'k'});
+    };
+    p.onsuccess=()=>{BD=p.result;res(BD)};
+    p.onerror  =()=>{BD_ROTA=true;res(null)};
+  });
 }
-function restaurarLocal(){
-  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+function bdOp(cajon,modo,fn){
+  return bdAbrir().then(d=>d?new Promise((res,rej)=>{
+    const t=d.transaction(cajon,modo), r=fn(t.objectStore(cajon));
+    t.oncomplete=()=>res(r&&r.result!==undefined?r.result:r);
+    t.onerror=()=>rej(t.error);
+  }).catch(()=>null):null);
+}
+const bdPon   =(c,v,k)=>bdOp(c,'readwrite',o=>o.put(v,k));
+const bdDame  =(c,k)  =>bdOp(c,'readonly', o=>o.get(k));
+const bdQuita =(c,k)  =>bdOp(c,'readwrite',o=>o.delete(k));
+const bdTodos =(c)    =>bdOp(c,'readonly', o=>o.getAll());
+const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
+
+/* La foto de los datos, tal como se guarda y se restaura. */
+function fotoDatos(){
+  return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
+          CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
+          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE};
+}
+function aplicarFoto(d){
   if(!d||d.v!==1)return false;
   const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
   const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
@@ -7618,6 +7651,151 @@ function restaurarLocal(){
   NUBE_DESDE=d.NUBE_DESDE||null;
   return true;
 }
+
+/* ── La tabla de pendientes ──────────────────────────────────
+   Cada vez que se guarda, se compara lo que hay en memoria contra el
+   espejo de la nube y lo que no coincide se apunta aquí. Esta tabla
+   —y no la memoria— es lo que el job va a subir. */
+let PEND_N=0;                     // cuántos hay, para pintar el chip sin ir a la base
+async function apuntarPendientes(){
+  if(!enNube())return 0;
+  const vistos=new Set(), filas=[];
+  filasLocales().forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
+    const j=JSON.stringify(f.datos);
+    if(!ESPEJO[kk]||ESPEJO[kk].j!==j)
+      filas.push({k:kk,coleccion:f.coleccion,clave:f.clave,empresa_id:f.empresa_id,
+                  datos:f.datos,borrado:false,ts:Date.now(),intentos:0});
+  });
+  Object.keys(ESPEJO).forEach(kk=>{
+    if(vistos.has(kk))return;
+    const [c,k]=kk.split(SEP);
+    filas.push({k:kk,coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,
+                datos:{},borrado:true,ts:Date.now(),intentos:0});
+  });
+  const mios=filas.filter(puedoEscribir);
+  await bdOp('pendientes','readwrite',o=>{mios.forEach(f=>o.put(f))});
+  PEND_N=(await bdCuenta('pendientes'))||mios.length;
+  return mios.length;
+}
+
+/* ── El job ──────────────────────────────────────────────────
+   Vacía la tabla de pendientes contra el servidor. Lo que sube, se
+   borra de la tabla; lo que falla se queda con un intento más y se
+   reintenta más tarde, esperando cada vez un poco más para no
+   machacar una red que apenas se sostiene. */
+let JOB_ESPERA=0, JOB_T=null;
+const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
+
+async function drenarPendientes(){
+  const filas=(await bdTodos('pendientes'))||[];
+  if(!filas.length){PEND_N=0;return 0}
+  let subidas=0;
+  for(let i=0;i<filas.length;i+=100){
+    const lote=filas.slice(i,i+100);
+    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
+      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
+      cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
+                           empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
+    for(const f of lote){
+      if(f.borrado)delete ESPEJO[f.k]; else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
+      await bdQuita('pendientes',f.k);
+      subidas++;
+    }
+    (eco||[]).forEach(f=>{
+      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+    });
+  }
+  PEND_N=(await bdCuenta('pendientes'))||0;
+  return subidas;
+}
+async function marcarIntento(){
+  const filas=(await bdTodos('pendientes'))||[];
+  await bdOp('pendientes','readwrite',o=>filas.forEach(f=>o.put({...f,intentos:(f.intentos||0)+1})));
+}
+
+/* Programa el siguiente intento, esperando cada vez más. */
+function reintentar(){
+  if(JOB_T)clearTimeout(JOB_T);
+  JOB_ESPERA=JOB_ESPERA?Math.min(JOB_MAX,JOB_ESPERA*2):JOB_MIN;
+  JOB_T=setTimeout(()=>correrJob(),JOB_ESPERA);
+}
+let JOB_CORRIENDO=false;
+async function correrJob(motivo){
+  if(JOB_CORRIENDO||SYNCING)return;
+  if(!enNube()||!online())return;
+  JOB_CORRIENDO=true;
+  try{
+    if(!await nubeVigente())return;
+    await apuntarPendientes();
+    const subidas=await drenarPendientes();
+    const bajadas=await nubeBajar(false);
+    JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
+    guardarLocal();
+    if(subidas||bajadas){
+      renderAll();pintarNet();
+      if(motivo==='volvio-la-señal'&&subidas)
+        toast(`Volvió la señal · ${subidas} cambio${subidas===1?'':'s'} subido${subidas===1?'':'s'}`);
+    }else pintarNet();
+  }catch(e){
+    await marcarIntento();
+    pintarNet();
+    reintentar();
+  }finally{ JOB_CORRIENDO=false }
+}
+
+/* Los disparadores del job: el navegador avisa cuando vuelve la red,
+   y por si el aviso no llega —pasa— hay un latido de respaldo. */
+let JOB_ARMADO=false;
+function arrancarJob(){
+  if(JOB_ARMADO)return; JOB_ARMADO=true;
+  window.addEventListener('online', ()=>{pintarNet();correrJob('volvio-la-señal')});
+  window.addEventListener('offline',()=>pintarNet());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)correrJob('volviste')});
+  setInterval(()=>correrJob('latido'),45000);
+}
+
+/* ============================================================
+   13 · TRABAJO SIN CONEXIÓN
+   Todo se guarda en el equipo apenas se registra. Los cambios hechos
+   sin señal quedan en la tabla de pendientes y suben solos en cuanto
+   vuelve la señal — aunque la página se haya cerrado por el medio.
+   ============================================================ */
+const LS_KEY='adolphus.datos.v1';
+let SYNCQ=[];              /* cola de cambios pendientes de subir */
+let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
+let SYNCING=false;
+const online=()=>!OFF_SIM&&navigator.onLine;
+
+/* Guardar es lo primero que pasa tras cualquier cambio, y no puede
+   fallar. Va a IndexedDB —que aguanta las fotos— y de paso apunta el
+   cambio en la tabla de pendientes. localStorage se sigue escribiendo
+   como respaldo, y si no entra, no pasa nada: la caja buena es la otra. */
+function guardarLocal(){
+  const foto=fotoDatos();
+  bdPon('estado',foto,'datos').catch(()=>{});
+  apuntarPendientes().then(()=>pintarNet()).catch(()=>{});
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(foto)) }
+  catch(e){
+    /* respaldo lleno: sólo avisamos si tampoco tenemos IndexedDB,
+       porque entonces sí hay riesgo de perder algo */
+    if(BD_ROTA||!('indexedDB' in window))
+      toast('No se pudo guardar en el equipo: almacenamiento lleno');
+  }
+  return true;
+}
+function restaurarLocal(){
+  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+  return aplicarFoto(d);
+}
+/* Al abrir se prefiere la caja grande; si no hay nada, el respaldo. */
+async function restaurarCaja(){
+  try{
+    const d=await bdDame('estado','datos');
+    if(d&&aplicarFoto(d)){PEND_N=(await bdCuenta('pendientes'))||0;return true}
+  }catch(e){}
+  return restaurarLocal();
+}
 /* Registra un cambio: se guarda ya en el equipo y se encola para subir. */
 function registrar(tipo,desc){
   SYNCQ.push({id:'q'+Date.now()+Math.floor(Math.random()*999),ts:new Date().toISOString(),tipo,desc,off:!online()});
@@ -7626,7 +7804,9 @@ function registrar(tipo,desc){
 }
 function pintarNet(){
   const c=$('#netChip');if(!c)return;
-  const n=SYNCQ.length;
+  /* Con cuenta en la nube el número que importa es cuántos registros
+     faltan por subir, no cuántas líneas tiene la bitácora. */
+  const n=enNube()?PEND_N:SYNCQ.length;
   c.classList.toggle('off',!online());
   c.classList.toggle('sync',SYNCING);
   c.innerHTML=SYNCING
@@ -7649,7 +7829,7 @@ function sincronizar(manual){
      recorrido de demostración— se comporta como siempre: local. */
   if(enNube()){
     SYNCING=true;pintarNet();
-    const n=SYNCQ.length;
+    const n=PEND_N;
     nubeVuelta().then(r=>{
       SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();refrescar();
       if(manual||n)toast(r.bajadas
@@ -7709,11 +7889,8 @@ function openSync(){
      <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
      <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
    </div>
-   ${n?`<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
-      <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
-        <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
-        <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
-    :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
+   <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
+     :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
    <div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
@@ -7739,9 +7916,44 @@ function openSync(){
     <button class="btn sec" onclick="closeModal()">Cerrar</button>
     <button class="btn" onclick="sincronizar(true)" ${!online()||!n?'disabled style="opacity:.5;cursor:not-allowed"':''}>Sincronizar ahora</button>`;
   $('#modal').classList.add('on');
+  pintarPendientes();
 }
-window.addEventListener('online',()=>{pintarNet();toast('Señal recuperada — subiendo cambios');sincronizar()});
+window.addEventListener('online',()=>{
+  pintarNet();
+  if(enNube())correrJob('volvio-la-señal');            // el job reintenta solo
+  else{toast('Señal recuperada — subiendo cambios');sincronizar()}
+});
 window.addEventListener('offline',()=>{pintarNet();toast('Sin conexión — se seguirá guardando en este equipo')});
+
+/* La tabla de pendientes vive en disco: hay que ir a leerla. */
+const COL_N={CLIENTES:'Cliente',ACTIVOS:'Válvula',ORDENES:'Orden de trabajo',
+  SOLICITUDES:'Solicitud',RECLAMOS:'Reclamo',COTIZACIONES:'Cotización',
+  CALIBS:'Calibración',SERVS:'Parte de servicio',DOCS:'Documento',
+  MAESTRO:'Catálogo y precios',PLAN_OK:'Plan aprobado'};
+async function pintarPendientes(){
+  const caja=$('#sqLista'); if(!caja)return;
+  if(!enNube()){
+    caja.innerHTML=SYNCQ.length
+      ? `<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
+          <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
+            <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
+            <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
+      : `<div class="ps-empty" style="padding:22px">Sin cuenta en la nube: todo se guarda sólo en este equipo.</div>`;
+    return;
+  }
+  const filas=(await bdTodos('pendientes'))||[];
+  PEND_N=filas.length;pintarNet();
+  caja.innerHTML=filas.length
+    ? `<div class="sq-list">${filas.slice(0,60).map(f=>`
+        <div class="sq-i">
+          <span class="tag ${f.intentos?'due':''}"><span class="dot"></span>${esc(COL_N[f.coleccion]||f.coleccion)}</span>
+          <span class="sq-t"><b class="mono">${esc((f.datos&&(f.datos.tag||f.datos.n))||f.clave)}</b>
+            <span>${f.borrado?'se dio de baja':'se creó o se modificó'}${
+              f.intentos?` · ${f.intentos} intento${f.intentos===1?'':'s'} fallido${f.intentos===1?'':'s'}`:''}</span></span>
+          <span class="sq-d">${fmtDT(new Date(f.ts).toISOString().slice(0,16))}</span></div>`).join('')}
+       ${filas.length>60?`<div class="ps-empty" style="padding:12px">y ${filas.length-60} más</div>`:''}</div>`
+    : `<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`;
+}
 
 /* Guarda la app en el equipo (PWA): al abrirla una vez con señal, queda
    disponible aunque después entres a planta sin internet. Requiere que
@@ -7773,7 +7985,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-03 · nube conectada';
+const VERSION='2026-08-04 · app offline';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -7897,7 +8109,7 @@ async function login(ev){
       authMsg('');
       try{
         const r=await nubeVuelta(true);
-        latirNube();
+        latirNube();arrancarJob();
         toast(r.bajadas?`Datos traídos de la nube · ${r.bajadas} registro${r.bajadas===1?'':'s'}`
                        :'Conectado a la nube');
       }catch(e){toast('Dentro, pero no se pudieron traer los datos: '+e.message)}
@@ -7957,7 +8169,7 @@ async function signup(ev){
       ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
       abrirSesion(c,true,'Cuenta creada y activada.');
       sellarIds();authMsg('');
-      try{await nubeVuelta(true);latirNube()}catch(e){}
+      try{await nubeVuelta(true);latirNube();arrancarJob()}catch(e){}
       return false;
     }catch(e){
       if(e.status){
@@ -8270,7 +8482,8 @@ function onbHtml(){
 
 /* ── Arranque ─────────────────────────────────────────────── */
 restaurarCuentas();
-restaurarLocal();
+restaurarLocal();                       // respaldo inmediato, sin esperar
+restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}});
 /* Si la última vez se entró con cuenta de la nube, la sesión sigue
    viva: se reanuda sin volver a pedir la contraseña. */
 (function reanudarNube(){
@@ -8285,7 +8498,7 @@ restaurarLocal();
       const i=CUENTAS.findIndex(x=>x.id===c.id);
       if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
       guardarCuentas();pintarSesionGuardada();
-      sellarIds();latirNube();
+      sellarIds();latirNube();arrancarJob();
       return nubeVuelta(true).then(()=>{if(SES)renderAll()});
     });
   }).catch(()=>{});
