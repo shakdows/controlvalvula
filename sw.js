@@ -2,7 +2,11 @@
    Guarda la aplicación en el equipo para que abra sin señal en planta.
    Estrategia: la app se sirve desde la caché y se actualiza en segundo
    plano cuando hay internet (stale-while-revalidate). */
-const CACHE = 'adolphus-v1';
+const CACHE = 'adolphus-v2';
+/* Sólo lo imprescindible: el video y las fotos de las válvulas ya van
+   incrustados dentro del propio index.html, así que precargar los
+   archivos sueltos sería bajar 1,4 MB dos veces. En un celular con
+   3G en planta, eso se nota. */
 const APP = [
   './',
   './index.html',
@@ -10,12 +14,6 @@ const APP = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
-  './video/presentacion.mp4',
-  './img/valvulas/control.jpg',
-  './img/valvulas/seguridad.jpg',
-  './img/valvulas/mariposa.jpg',
-  './img/valvulas/cuchilla.jpg',
-  './img/valvulas/pinch.jpg',
   // librería de Excel: se guarda en la primera carga con internet para
   // que importar y exportar sigan funcionando en planta sin señal
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
