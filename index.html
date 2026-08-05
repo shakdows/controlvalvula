@@ -7408,7 +7408,15 @@ async function nubeFetch(ruta,{metodo='GET',cuerpo,cab={},sinAuth}={}){
   }
   return j;
 }
-/* El token vive una hora; se renueva antes de que caduque. */
+/* El token vive una hora; se renueva antes de que caduque.
+
+   Ojo con el caso que importa: una jornada de planta son cuatro horas
+   sin cobertura. Si al fallar la renovación borráramos la sesión, el
+   técnico quedaría fuera a la hora de haber bajado —y el contador de
+   pendientes se iría a cero, que es lo peor que puede pasar.
+   Por eso sólo se cierra la sesión cuando el servidor la rechaza de
+   verdad. Si simplemente no hubo respuesta, la sesión se conserva y
+   se reintenta al volver la señal. */
 async function nubeVigente(){
   if(!NUBE_SES)return false;
   if(Date.now()<NUBE_SES.expira-60000)return true;
@@ -7416,7 +7424,13 @@ async function nubeVigente(){
     const d=await nubeFetch('/auth/v1/token?grant_type=refresh_token',
       {metodo:'POST',cuerpo:{refresh_token:NUBE_SES.refresh_token},sinAuth:true});
     guardarSesionNube(d); return true;
-  }catch(e){ NUBE_SES=null; localStorage.removeItem(LS_NUBE); return false }
+  }catch(e){
+    if(e.status){                       // el servidor contestó: la sesión ya no vale
+      NUBE_SES=null;NUBE_YO=null;
+      try{localStorage.removeItem(LS_NUBE)}catch(_){}
+    }
+    return false;                       // sin respuesta: seguimos con la sesión guardada
+  }
 }
 function guardarSesionNube(d){
   NUBE_SES={access_token:d.access_token,refresh_token:d.refresh_token,
@@ -7658,7 +7672,7 @@ function aplicarFoto(d){
    —y no la memoria— es lo que el job va a subir. */
 let PEND_N=0;                     // cuántos hay, para pintar el chip sin ir a la base
 async function apuntarPendientes(){
-  if(!enNube())return 0;
+  if(!enNube())return 0;   // enNube() sigue en pie sin señal: la sesión no se borra
   const vistos=new Set(), filas=[];
   filasLocales().forEach(f=>{
     const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
@@ -7985,7 +7999,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · app offline';
+const VERSION='2026-08-04 · jornada sin señal';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
