@@ -1883,7 +1883,16 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 @media(max-width:760px){
   .placa-cols{grid-template-columns:1fr}
   .placa-foto{position:static}
+}
+/* En tablet los tres disparos siguen uno al lado del otro —se llenan
+   de corrido—, pero en un celular a media anchura no se puede ni
+   escribir: todo a una columna. */
+@media(max-width:560px){
+  .psv-b .two{grid-template-columns:1fr}
   .psv-tests{grid-template-columns:1fr}
+  .psv-sec>summary{padding:13px 14px;font-size:14px}
+  .psv-nums{grid-template-columns:1fr 1fr}
+  .firmas-grid{grid-template-columns:1fr}
 }
 
 /* firmas */
@@ -1891,7 +1900,10 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   background:var(--surface-2);height:170px;margin-top:6px;touch-action:none}
 .firma-lienzo{width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
 .firma-linea{position:absolute;left:22px;right:22px;bottom:34px;border-bottom:1px solid var(--line);pointer-events:none}
-.firmas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px}
+/* Son dos firmas: dos columnas. Con auto-fit quedaba una tercera
+   columna vacía y las cajas encogidas sin motivo. */
+.firmas-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fb-acc{display:flex;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--line-2)}
 .firma-box{border:1px solid var(--line-2);border-radius:var(--r-2);padding:11px;min-height:126px;
   display:flex;flex-direction:column;gap:3px;background:var(--surface-2)}
 .firma-box.ok{border-color:var(--ok);background:var(--surface)}
@@ -3444,14 +3456,17 @@ function openAsset(id){
           formato viejo no sabe leerlo, así que el botón llevaba a nada.
           Y un borrador todavía no tiene certificado que mostrar. */
        const listo=uc&&(uc.tipo!=='psv'||uc.veredicto!=='incompleto');
-       return `${listo?`<button class="btn sec" onclick="${uc.tipo==='psv'
-            ?`verPSV('${uc.id}')`
-            :`showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))`}" title="${uc.tipo==='psv'?'Certificado AXAD-088':'Certificado '+esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      ${a.cl==='seguridad'
-        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${
-             CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto')?'Seguir el ensayo':'Ensayo PSV'}</button>
-           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>`
-        : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
+       if(a.cl==='seguridad'){
+         /* En una PSV manda el formato de la empresa: el ensayo y su
+            certificado. Lo demás no desaparece —sigue en las pestañas
+            de arriba y en el menú—, pero no compite por el pulgar. */
+         const borrador=CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto');
+         return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
+           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
+           <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
+       }
+       return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
@@ -4497,11 +4512,12 @@ function psvBlowdown(c){
    Cada empresa tiene los suyos, y son varios: el gerente, el
    ingeniero, el inspector. Por eso viven en el cliente y no
    escritos a mano en cada certificado. */
+/* Dos firmas: quien lo ejecutó y quien lo revisa. Es lo que piden los
+   formatos de la empresa; cuatro columnas eran ruido en el papel y un
+   estorbo en el celular. */
 const FIRMA_ROLES=[
- ['ejec',  'Ejecutado por',            'Adolphus'],
- ['vbAdo', 'V°B° Responsable Adolphus','Adolphus'],
- ['vbInsp','V°B° Inspección',          'Cliente'],
- ['vbResp','V°B° Responsable',         'Cliente']
+ ['ejec',  'Ejecutado por', 'Adolphus'],
+ ['vbAdo', 'Revisado por',  'Adolphus']
 ];
 const firmantesDe=cliId=>{
   const c=cli(cliId);
@@ -4894,14 +4910,15 @@ function openFirma(calibId,rol){
   const def=firmantesDe(a.cli).filter(f=>f.rol===rol);
   const yo=(typeof SES!=='undefined'&&SES)?SES:null;
   const rl=FIRMA_ROLES.find(r=>r[0]===rol)||FIRMA_ROLES[0];
-  $('#mTitle').textContent=rl[1];
+  const ya=(c.firmas||[]).find(f=>f.rol===rol);      // rehacer: se parte de lo firmado
+  $('#mTitle').textContent=(ya?'Rehacer · ':'')+rl[1];
   $('#mBody').innerHTML=`
    <div class="two">
      <div class="fld"><label for="fmNom">Nombre</label>
-       <input class="inp" id="fmNom" list="fmLista" value="${esc(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:''))}" placeholder="Nombre y apellido">
+       <input class="inp" id="fmNom" list="fmLista" value="${esc(ya?ya.n:(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:'')))}" placeholder="Nombre y apellido">
        <datalist id="fmLista">${def.map(f=>`<option value="${esc(f.n)}">${esc(f.cargo||'')}</option>`).join('')}</datalist></div>
      <div class="fld"><label for="fmCargo">Cargo</label>
-       <input class="inp" id="fmCargo" value="${esc(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):''))}" placeholder="Ing. Residente"></div>
+       <input class="inp" id="fmCargo" value="${esc(ya?ya.cargo:(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):'')))}" placeholder="Coordinador de Servicios"></div>
    </div>
    <p class="pl-regla">Firmá con el dedo si estás en tablet o celular, o con el mouse si es computadora.
      La fecha se pone sola: <b>${fPE(HOY.toISOString().slice(0,10))}</b>.</p>
@@ -4942,6 +4959,16 @@ function montarFirma(){
 function limpiarFirma(){
   const cv=$('#fmCanvas'); if(!cv||!FIRMA_CTX)return;
   FIRMA_CTX.clearRect(0,0,cv.width,cv.height); FIRMA_HAY=false;
+}
+/* Equivocarse de firma pasa. Se quita la del rol y ya: el resto del
+   ensayo no se toca. */
+function quitarFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const f=(c.firmas||[]).find(x=>x.rol===rol); if(!f)return;
+  c.firmas=c.firmas.filter(x=>x.rol!==rol);
+  registrar('Firma',`Se quitó la firma de ${f.n}`);
+  toast('Firma quitada · se puede volver a firmar');
+  guardarLocal();renderAll();verPSV(calibId);
 }
 function guardarFirma(calibId,rol){
   const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
@@ -4991,7 +5018,10 @@ function verPSV(id){
         return `<div class="firma-box ${f?'ok':''}">
           <span class="fb-rol">${esc(lbl)}</span>
           ${f?`<img class="fb-img" src="${f.img}" alt="Firma de ${esc(f.n)}">
-               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>`
+               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>
+               ${cliente?'':`<div class="fb-acc">
+                 <button class="btn quiet xs" onclick="openFirma('${c.id}','${rol}')">Rehacer</button>
+                 <button class="btn quiet xs" onclick="quitarFirma('${c.id}','${rol}')">Quitar</button></div>`}`
              :`<span class="fb-vacio">Sin firmar</span>
                ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
         </div>`}).join('')}
@@ -5015,33 +5045,66 @@ function imprimirPSV(id){
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   const fila=(k,val)=>`<tr><th>${k}</th><td>${val==null||val===''?'—':esc(String(val))}</td></tr>`;
   const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  /* El logotipo va en el papel: es lo primero que mira el cliente y lo
+     que hace que el certificado se vea de la empresa y no de una hoja
+     de cálculo. Va como SVG, así que imprime nítido a cualquier tamaño. */
+  const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
   <title>AXAD-088 ${esc(a.tag||'')}</title><style>
   *{box-sizing:border-box}
-  body{font:11px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:18mm 14mm}
-  h1{font-size:15px;text-align:center;margin:0 0 2px;letter-spacing:.02em}
-  .sub{text-align:center;color:#5b6470;font-size:10px;margin-bottom:12px}
-  h2{font-size:11px;background:#eceff2;padding:4px 7px;margin:12px 0 0;border:1px solid #d7dbe0;border-bottom:0}
-  table{width:100%;border-collapse:collapse;font-size:10px}
-  th,td{border:1px solid #d7dbe0;padding:3px 6px;text-align:left;vertical-align:top}
-  th{background:#f7f8f9;font-weight:600;width:34%}
-  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-  .vd{margin:10px 0;padding:8px 10px;border:2px solid;text-align:center;font-size:14px;font-weight:700;letter-spacing:.06em}
-  .vd.aprobado{border-color:#1a7f52;color:#1a7f52;background:#eaf6ef}
-  .vd.rechazado{border-color:#c0392b;color:#c0392b;background:#fdecea}
-  .res th{width:26%}
-  .firmas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
-  .fb{border:1px solid #d7dbe0;padding:6px;min-height:104px;font-size:9px;display:flex;flex-direction:column}
-  .fb b{display:block;font-size:9.5px;border-top:1px solid #101418;padding-top:3px;margin-top:auto}
-  .fb .rol{font-weight:700;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}
-  .fb img{max-height:44px;max-width:100%;object-fit:contain;margin:4px 0}
-  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-  .fotos img{width:100%;height:86px;object-fit:cover;border:1px solid #d7dbe0}
-  .pie{margin-top:14px;padding-top:6px;border-top:1px solid #d7dbe0;display:flex;justify-content:space-between;font-size:9px;color:#78818c}
-  @page{size:A4;margin:12mm}
+  body{font:10.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm}
+  .cab{display:flex;align-items:flex-start;gap:13px;padding-bottom:11px;border-bottom:2.5px solid #102d69;margin-bottom:3px}
+  .cab .mk{flex:0 0 auto;padding-top:1px}
+  .cab .ti{flex:1;min-width:0}
+  .cab h1{font-size:13.5px;font-weight:700;letter-spacing:.055em;margin:0;color:#102d69;line-height:1.3}
+  .cab .emp{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#8a929c;margin-bottom:3px}
+  .cab .cod{flex:0 0 auto;text-align:right;font-size:8.5px;color:#8a929c;line-height:1.6}
+  .cab .cod b{display:block;font-size:10px;color:#1a1d21;letter-spacing:.05em}
+  .ident{display:flex;gap:16px;flex-wrap:wrap;padding:7px 0 12px;font-size:9.5px;color:#5b6470;
+    border-bottom:1px solid #e4e7ea;margin-bottom:13px}
+  .ident b{color:#1a1d21;font-weight:600}
+  h2{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#102d69;
+     margin:15px 0 5px;padding-bottom:3px;border-bottom:1px solid #102d69}
+  table{width:100%;border-collapse:collapse;font-size:9.5px}
+  th,td{padding:3.5px 7px;text-align:left;vertical-align:top;border-bottom:1px solid #edeff1}
+  th{font-weight:600;width:36%;color:#5b6470}
+  td{color:#1a1d21}
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+  .res th{width:28%}
+  .res thead th{background:#f4f6f8;color:#1a1d21;width:auto;font-size:8.5px;
+    letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid #cfd4d9}
+  .res tfoot th{background:#f4f6f8;font-weight:700;color:#1a1d21;width:auto}
+  .vd{margin:13px 0 4px;padding:9px;text-align:center;font-size:15px;font-weight:700;letter-spacing:.14em;border-radius:3px}
+  .vd.aprobado{color:#126b44;background:#e8f5ee;border:1px solid #a9d8be}
+  .vd.rechazado{color:#a8291c;background:#fceceb;border:1px solid #eab5b0}
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px}
+  .fb{font-size:9px;display:flex;flex-direction:column;min-height:82px}
+  .fb .rol{font-weight:700;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#8a929c;margin-bottom:2px}
+  .fb img{max-height:46px;max-width:150px;object-fit:contain;object-position:left bottom;margin-top:auto}
+  .fb .ln{border-top:1px solid #1a1d21;margin-top:3px;padding-top:3px}
+  .fb b{font-size:9.5px;display:block}
+  .fb span.cg{color:#5b6470}
+  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
+  .fotos img{width:100%;height:88px;object-fit:cover;border-radius:2px}
+  .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
+    justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
+  /* la gráfica es una ilustración, no la página: se le pone techo o
+     se estira hasta comerse un folio entero */
+  .psv-graf{display:block;max-width:340px;margin:9px auto 4px}
+  @page{size:A4;margin:11mm}
   </style></head><body>
-  <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1>
-  <div class="sub">${esc(e.n||'')} · TAG ${esc(a.tag||'')} · ${fPE(c.fecha)}${c.os?' · O.S. '+esc(c.os):''}</div>
+  <div class="cab">
+    <span class="mk">${marca}</span>
+    <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
+      <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1></div>
+    <div class="cod"><b>AXAD-088</b>Versión 2<br>${fPE(HOY.toISOString().slice(0,10))}</div>
+  </div>
+  <div class="ident">
+    <span>Cliente <b>${esc(e.n||'')}</b></span>
+    <span>TAG <b>${esc(a.tag||'')}</b></span>
+    <span>Fecha del ensayo <b>${fPE(c.fecha)}</b></span>
+    ${c.os?`<span>Orden de servicio <b>${esc(c.os)}</b></span>`:''}
+  </div>
 
   <div class="par">
     <div><h2>DATOS DEL SERVICIO</h2><table>
@@ -5123,13 +5186,14 @@ function imprimirPSV(id){
   <div class="firmas">
     ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
       return `<div class="fb"><span class="rol">${esc(lbl)}</span>
-        ${f?`<img src="${f.img}" alt="">`:''}
-        <b>${f?esc(f.n):'&nbsp;'}</b>
-        <span>${f?esc(f.cargo||''):'Cargo:'}</span>
-        <span>${f?fPE(f.f):'Fecha:'}</span></div>`}).join('')}
+        ${f?`<img src="${f.img}" alt="">`:'<span style="flex:1"></span>'}
+        <div class="ln"><b>${f?esc(f.n):'&nbsp;'}</b>
+          <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
+          <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
   </div>
 
-  <div class="pie"><span>AXAD-088 V.2</span><span>Adolphus S.A. · Control de fluidos · Lima</span>
+  <div class="pie"><span>AXAD-088 · Versión 2</span>
+    <span>Adolphus S.A. · Control de fluidos · Lima</span>
     <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
   </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
@@ -8815,7 +8879,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · ver certificado, y repetibilidad';
+const VERSION='2026-08-04 · dos firmas y certificado con logo';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
