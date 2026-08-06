@@ -143,7 +143,14 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 }
 .rail nav a:hover{background:var(--surface-2);color:var(--ink)}
 .rail nav a.on{background:var(--surface-3);color:var(--ink);font-weight:600}
+/* barrita de marca + icono en color: se ve de un vistazo dónde estás parado */
+.rail nav a.on::before{
+  content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+  width:3px;height:17px;border-radius:0 3px 3px 0;background:var(--sel)
+}
+.app.rail-min .rail nav a.on::before{display:none}
 .rail nav a svg{width:16px;height:16px;flex:0 0 auto;stroke-width:1.6;stroke:currentColor;fill:none}
+.rail nav a.on svg{stroke:var(--sel)}
 .rail nav a .ct{margin-left:auto;font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
 .rail nav a.on .ct{color:var(--ink-2)}
 .rail-foot{padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--line-2);display:flex;align-items:center;gap:8px}
@@ -1140,6 +1147,78 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 /* En el teléfono sí ocupa el ancho: es el objetivo del pulgar. */
 @media(max-width:560px){.cola-i .ac{justify-self:stretch;width:100%}}
 
+/* ============================================================
+   ENCABEZADO DE BIENVENIDA
+   Un panel no empieza con cifras: empieza diciéndote quién eres,
+   qué día es y qué es lo único urgente. La cifra grande de la
+   derecha es el estado de un vistazo; la franja de abajo, la única
+   acción que de verdad toca hoy.
+   ============================================================ */
+.hero{
+  position:relative;overflow:hidden;margin-bottom:var(--sp-4);
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);box-shadow:var(--e-2)
+}
+/* un velo de marca muy tenue: da profundidad sin ensuciar el dato */
+.hero::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 150% at 100% 0%, color-mix(in oklab,var(--sel) 9%,transparent), transparent 62%)
+}
+[data-theme="dark"] .hero::before{
+  background:radial-gradient(120% 150% at 100% 0%, color-mix(in oklab,var(--sel) 16%,transparent), transparent 64%)
+}
+.hero>*{position:relative}
+.hero-top{display:flex;align-items:flex-start;gap:var(--sp-5);padding:var(--sp-5) var(--sp-5) var(--sp-4);flex-wrap:wrap}
+.hero-txt{flex:1;min-width:min(280px,100%)}
+.hero-hi{font-size:12.5px;color:var(--ink-3);letter-spacing:.01em}
+.hero-txt h1{font-size:var(--t-5);letter-spacing:-.025em;line-height:1.15;margin:3px 0 5px}
+.hero-txt p{font-size:13px;color:var(--ink-3)}
+.hero-acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:var(--sp-3)}
+
+/* el dial: la salud del parque, o lo pendiente del día */
+.hero-dial{display:flex;align-items:center;gap:13px;flex:0 0 auto}
+.hero-ring{position:relative;width:78px;height:78px;flex:0 0 auto;display:grid;place-items:center}
+.hero-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.hero-ring circle{fill:none;stroke-width:7;stroke-linecap:round}
+.hero-ring .pista{stroke:var(--chart-track)}
+.hero-ring .val{stroke:var(--tono);transition:stroke-dashoffset var(--slow) var(--ease-out)}
+.hero-ring b{font-size:23px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+.hero-dial-t b{display:block;font-size:13.5px;font-weight:600}
+.hero-dial-t span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:2px;max-width:22ch;line-height:1.4}
+
+/* la franja: lo único urgente, con su acción */
+.hero-urg{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px var(--sp-5);border-top:1px solid var(--line-2);background:var(--surface-2)
+}
+.hero-urg .pt{width:8px;height:8px;border-radius:50%;background:var(--tono);flex:0 0 auto}
+.hero-urg p{flex:1;min-width:220px;font-size:13px;color:var(--ink-2);line-height:1.45}
+.hero-urg p b{color:var(--ink);font-weight:600}
+.hero-urg.ok p{color:var(--ink-3)}
+@media(max-width:760px){
+  .hero-top{padding:var(--sp-4) var(--sp-4) var(--sp-3);gap:var(--sp-4)}
+  .hero-urg{padding:11px var(--sp-4)}
+  .hero-urg .btn{width:100%;justify-content:center}
+}
+
+/* ── ENTRADA ESCALONADA ──────────────────────────────────────
+   Las tarjetas no aparecen todas de golpe: suben en orden, 40 ms
+   una de otra. Es lo que separa una pantalla que "carga" de una
+   que se arma. Con reduced-motion no se mueve nada. */
+@keyframes sube{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.page.on .hero,.page.on .cola,.page.on .kpis>*,.page.on .dash>*{
+  animation:sube var(--slow) var(--ease-out) both
+}
+.page.on .cola{animation-delay:40ms}
+.page.on .kpis>*:nth-child(1){animation-delay:70ms}
+.page.on .kpis>*:nth-child(2){animation-delay:100ms}
+.page.on .kpis>*:nth-child(3){animation-delay:130ms}
+.page.on .kpis>*:nth-child(4){animation-delay:160ms}
+.page.on .dash>*:nth-child(1){animation-delay:180ms}
+.page.on .dash>*:nth-child(2){animation-delay:210ms}
+.page.on .dash>*:nth-child(3){animation-delay:240ms}
+.page.on .dash>*:nth-child(4){animation-delay:270ms}
+.page.on .dash>*:nth-child(n+5){animation-delay:300ms}
+
 .greet{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .greet .wave{color:var(--ink-3);font-weight:400}
 
@@ -1150,6 +1229,18 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .kpi .kk{font-size:12px;color:var(--ink-3)}
 .kpi .kd{font-size:11.5px;color:var(--ink-3);margin-top:auto;display:flex;align-items:center;gap:5px}
 .kpi .kd.warn{color:var(--due)} .kpi .kd.bad{color:var(--late)} .kpi .kd.good{color:var(--ok)}
+/* La tarjeta es un botón: se levanta al pasar y se hunde al pulsar.
+   Sin mover a las vecinas — solo sombra y un pelo de desplazamiento. */
+button.kpi{text-align:left;font:inherit;cursor:pointer;
+  transition:box-shadow var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),border-color var(--fast)}
+button.kpi:hover{box-shadow:var(--e-3);transform:translateY(-2px);border-color:var(--ink-3)}
+button.kpi:active{transform:translateY(0);box-shadow:var(--e-1)}
+@media(prefers-reduced-motion:reduce){button.kpi:hover{transform:none}}
+
+/* Un panel vacío no tiene por qué ocupar media pantalla. */
+.panel-b>.empty{padding:26px var(--sp-4)}
+.panel-b>.empty svg{width:24px;height:24px;margin-bottom:7px}
+.panel-b>.empty b{font-size:13.5px}
 
 .dash{display:grid;grid-template-columns:repeat(12,1fr);gap:var(--sp-3);align-items:start}
 .span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
@@ -1715,6 +1806,186 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   .tabbar button{font-size:10px}
   .crumbs>b{font-size:14px}
 }
+
+/* ── PLAN ANUAL DE MANTENIMIENTO ─────────────────────────────
+   Un calendario de doce columnas tiene que caber sin apretar el
+   nombre del equipo: las columnas de mes son angostas y el punto
+   de color hace todo el trabajo. */
+.pl-pt{display:inline-block;width:9px;height:9px;border-radius:50%;margin:0 1px;vertical-align:middle}
+.pl-pt.cal{background:var(--ok)} .pl-pt.prev{background:var(--sel)} .pl-pt.insp{background:var(--due)}
+.pl-tab th.pl-m{width:58px;text-align:center;font-size:10.5px;padding:0 4px;white-space:nowrap}
+.pl-tab th.pl-m.pico{color:var(--due)}
+.pl-tab td.pl-c{text-align:center;padding:0 4px;white-space:nowrap}
+.pl-tab tfoot td{height:38px;padding:0 12px;background:var(--surface-2);
+  border-top:1px solid var(--line);font-size:12px;color:var(--ink-2)}
+.pl-tab tfoot td.pl-c{text-align:center}
+
+.pl-legs{display:grid;gap:var(--sp-2)}
+.pl-leg{display:flex;align-items:center;gap:12px;padding:10px 12px;
+  border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface-2)}
+.pl-leg>div:first-of-type{flex:1;min-width:0}
+.pl-leg b{display:block;font-size:13px;font-weight:600}
+.pl-leg span{font-size:11.5px;color:var(--ink-3)}
+.pl-leg-n{text-align:right;flex:0 0 auto;min-width:74px}
+.pl-leg-n b{font-size:15px;letter-spacing:-.02em}
+.pl-tar{width:82px;height:30px;padding:0 8px;text-align:right;font-size:13px}
+.pl-regla{margin-top:var(--sp-3);font-size:12px;color:var(--ink-3);line-height:1.6}
+.pl-regla b{color:var(--ink-2);font-weight:600}
+@media(max-width:640px){
+  .pl-leg{flex-wrap:wrap}
+  .pl-leg>div:first-of-type{flex:1 0 100%}
+  .pl-leg-n{text-align:left;min-width:0}
+}
+
+
+/* ── PSV · formato AXAD-088 ──────────────────────────────────
+   Un formato de 47 campos en un celular es un infierno si se
+   pone todo junto. Va en secciones plegables: se abre la que
+   toca y las demás no estorban. */
+.psv-secs{display:flex;flex-direction:column;gap:8px}
+.psv-sec{border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
+.psv-sec>summary{padding:11px 14px;font-size:13.5px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:9px;list-style:none;background:var(--surface-2);
+  transition:background var(--fast) var(--ease)}
+.psv-sec>summary::-webkit-details-marker{display:none}
+.psv-sec>summary::before{content:'';width:7px;height:7px;border-right:2px solid var(--ink-3);
+  border-bottom:2px solid var(--ink-3);transform:rotate(-45deg);transition:transform var(--fast) var(--ease-out);flex:0 0 auto}
+.psv-sec[open]>summary::before{transform:rotate(45deg)}
+.psv-sec>summary:hover{background:var(--surface-3)}
+.psv-req{margin-left:auto;font-size:11px;font-weight:500;color:var(--due)}
+.psv-b{padding:var(--sp-4)}
+/* los tres disparos, uno al lado del otro: se llenan de corrido */
+.psv-tests{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.psv-tests .inp{text-align:right;font-size:16px}
+
+/* el veredicto en vivo: si el tercer disparo se sale, se ve al escribirlo */
+.psv-res{margin-top:var(--sp-4);border:1px solid var(--line);border-radius:var(--r-2);padding:13px 15px;
+  background:var(--surface-2);display:flex;flex-direction:column;gap:9px}
+.psv-res.aprobado{border-color:var(--ok);background:color-mix(in oklab,var(--ok) 8%,var(--surface))}
+.psv-res.rechazado{border-color:var(--late);background:color-mix(in oklab,var(--late) 8%,var(--surface))}
+.psv-res.esp b{display:block;font-size:13.5px}
+.psv-res.esp span{font-size:12px;color:var(--ink-3)}
+.psv-vd{font-size:var(--t-5);font-weight:700;letter-spacing:.05em}
+.psv-res.aprobado .psv-vd{color:var(--ok)}
+.psv-res.rechazado .psv-vd{color:var(--late)}
+.psv-nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:11px}
+.psv-nums span{display:block;font-size:11px;color:var(--ink-3)}
+.psv-nums b{font-size:15px;letter-spacing:-.02em}
+.psv-regla{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.psv-graf{display:block;margin:var(--sp-3) 0;max-width:100%}
+
+/* datos de placa: la foto al lado, para copiar mirándola */
+.placa-cols{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
+.placa-foto{position:sticky;top:0}
+.placa-foto #plVista img{width:100%;border-radius:var(--r-2);border:1px solid var(--line);margin-top:9px}
+@media(max-width:760px){
+  .placa-cols{grid-template-columns:1fr}
+  .placa-foto{position:static}
+  .psv-tests{grid-template-columns:1fr}
+}
+
+/* firmas */
+.firma-caja{position:relative;border:1px dashed var(--ink-3);border-radius:var(--r-2);
+  background:var(--surface-2);height:170px;margin-top:6px;touch-action:none}
+.firma-lienzo{width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+.firma-linea{position:absolute;left:22px;right:22px;bottom:34px;border-bottom:1px solid var(--line);pointer-events:none}
+.firmas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px}
+.firma-box{border:1px solid var(--line-2);border-radius:var(--r-2);padding:11px;min-height:126px;
+  display:flex;flex-direction:column;gap:3px;background:var(--surface-2)}
+.firma-box.ok{border-color:var(--ok);background:var(--surface)}
+.fb-rol{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+.fb-img{max-height:44px;object-fit:contain;object-position:left;margin:5px 0}
+.firma-box b{font-size:13px}
+.firma-box span{font-size:11.5px;color:var(--ink-3)}
+.fb-f{font-family:'IBM Plex Mono';font-size:11px}
+.fb-vacio{margin:auto 0 8px;color:var(--ink-3);font-size:12px}
+
+/* ============================================================
+   §17 · APP VIVA
+   Hasta aquí el portal se veía bien pero se sentía estático: las
+   páginas aparecían de golpe y casi nada devolvía señal al tocarlo.
+   Este bloque hace que todo responda — entrar, pasar, pulsar — con
+   el mismo ritmo en todas las pantallas, no sólo en el panel.
+   Regla de oro: el movimiento explica algo (de dónde vino, qué se
+   pulsó, cuánto mide la barra). Si no explica nada, no va.
+   ============================================================ */
+
+/* ── 1. Cada página entra, no aparece ────────────────────────
+   Los bloques de la página suben en orden. El panel ya tiene su
+   propia coreografía (más específica), así que no se pisan. */
+@keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.page.on>*{animation:entra var(--med) var(--ease-out) both}
+.page.on>*:nth-child(2){animation-delay:35ms}
+.page.on>*:nth-child(3){animation-delay:70ms}
+.page.on>*:nth-child(n+4){animation-delay:95ms}
+
+/* ── 2. Las filas responden ──────────────────────────────────
+   Al pasar, la fila se marca con la barrita de selección: se ve
+   cuál vas a abrir antes de hacer clic. Al pulsar, se hunde. */
+table.grid tbody tr{transition:background var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+@media(hover:hover){
+  table.grid tbody tr:hover{background:var(--surface-2);box-shadow:inset 3px 0 0 var(--sel)}
+}
+table.grid tbody tr:active{background:var(--surface-3)}
+table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var(--sel)}
+/* el encabezado pegajoso se despega con sombra cuando hay scroll */
+.app.scrolled table.grid thead th{box-shadow:0 4px 10px -7px oklch(0 0 0 /.45)}
+
+/* ── 3. Todo lo pulsable devuelve señal ──────────────────────
+   Un toque sin respuesta se siente roto. 60 ms bastan. */
+.btn,.chip,.views button,.cbar-tabs a,.cola-i .ac .btn,.tabbar button{
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease),
+             border-color var(--fast) var(--ease),transform 60ms var(--ease),box-shadow var(--fast) var(--ease)
+}
+.chip:active,.views button:active,.cbar-tabs a:active{transform:scale(.97)}
+.icon-btn:active,.ava-btn:active{transform:scale(.93)}
+/* Las tarjetas de cliente, repuesto y familia ya se levantaban al
+   pasar; ahora también se hunden al pulsar, y la de modelo —que sólo
+   cambiaba el borde— se levanta como sus hermanas. */
+.cl-card:active,.ps-card:active,.fam:not(:disabled):active,.nm-card:active{
+  transform:translateY(0) scale(.994);box-shadow:var(--e-1)
+}
+@media(hover:hover){
+  .nm-card{transition:box-shadow var(--fast) var(--ease-out),transform var(--fast) var(--ease-out),border-color var(--fast)}
+  .nm-card:hover{box-shadow:var(--shadow-pop);transform:translateY(-2px)}
+}
+/* la foto del producto se acerca un punto: la tarjeta se siente viva */
+.ps-card .ph img,.fam-ph img{transition:transform var(--slow) var(--ease-out)}
+@media(hover:hover){
+  .ps-card:hover .ph img,.fam:not(:disabled):hover .fam-ph img{transform:scale(1.055)}
+}
+
+/* ── 4. El modal llega desde el fondo, no se planta ─────────── */
+.modal.on{animation:vela var(--med) var(--ease-out);backdrop-filter:blur(2.5px)}
+@keyframes vela{from{opacity:0;backdrop-filter:blur(0)}to{opacity:1}}
+@keyframes popup{from{opacity:0;transform:translateY(14px) scale(.975)}to{opacity:1;transform:none}}
+.modal-c{animation:popup var(--slow) var(--ease-out)}
+@media(max-width:760px){
+  /* en celular la hoja sube desde abajo, como manda el teléfono */
+  @keyframes popup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+}
+
+/* ── 5. Los gráficos se dibujan ──────────────────────────────
+   La barra crece hasta su valor y la dona se traza. Ver el número
+   crecer es lo que hace entender que es una medida y no un adorno. */
+.hb-fill{transition:width 620ms var(--ease-out),filter var(--fast)}
+.col-bar{transition:height 620ms var(--ease-out),filter var(--fast)}
+.arco{transition:stroke-dasharray 700ms var(--ease-out)}
+
+/* ── 6. La barra superior se despega al bajar ────────────────*/
+.bar{transition:box-shadow var(--med) var(--ease)}
+.app.scrolled .bar{box-shadow:0 6px 16px -12px oklch(0 0 0 /.5)}
+
+/* ── 7. Quien pidió menos movimiento, recibe menos ───────────
+   Los estados siguen (color, sombra, foco); sólo se va el baile. */
+@media(prefers-reduced-motion:reduce){
+  .page.on>*,.modal.on,.modal-c,.toast{animation:none!important}
+  .hb-fill,.col-bar,.arco{transition:none!important}
+  .chip:active,.views button:active,.cbar-tabs a:active,.icon-btn:active,.ava-btn:active{transform:none}
+  .cl-card:hover,.ps-card:hover,.fam:hover,.nm-card:hover{transform:none}
+  .ps-card:hover .ph img,.fam:hover .fam-ph img{transform:none}
+  .cl-card:active,.ps-card:active,.fam:active,.nm-card:active{transform:none}
+}
 </style>
 </head>
 <body>
@@ -1778,6 +2049,10 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
           <label for="upRuc">RUC de tu empresa</label>
           <input class="inp" id="upRuc" inputmode="numeric" maxlength="11" placeholder="20100128056" oninput="upRucCheck()">
           <p class="pw-note" id="upRucEst" style="margin-top:-8px">Con el RUC vinculamos tu cuenta a la organización correcta.</p>
+          <label for="upCodCli">Código de invitación <span class="opc">si Adolphus te dio uno</span></label>
+          <input class="inp" id="upCodCli" placeholder="COSTANORTE-2026">
+          <p class="pw-note" style="margin-top:-8px">Con el código entras enseguida. Sólo con el RUC, tu cuenta queda
+            <b>pendiente</b> hasta que un ingeniero de Adolphus la active.</p>
         </div>
         <label for="upMail">Correo corporativo</label>
         <input class="inp" id="upMail" type="email" autocomplete="email" placeholder="nombre@empresa.pe" required>
@@ -1821,6 +2096,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
       <a data-p="clients"><svg viewBox="0 0 24 24"><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/><circle cx="9" cy="8" r="3.1"/><path d="M16 3.5a3 3 0 0 1 0 6M20 20v-1a4 4 0 0 0-3-3.8"/></svg><span class="lbl">Clientes</span><span class="ct" id="ctClients"></span></a>
       <a data-p="assets"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg><span class="lbl">Activos</span><span class="ct" id="ctAssets"></span></a>
       <a data-p="cal"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">Calibraciones</span><span class="ct" id="ctCal"></span></a>
+      <a data-p="plan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M7.5 14h3M13.5 14h3M7.5 17.5h3"/></svg><span class="lbl">Plan anual</span><span class="ct" id="ctPlan"></span></a>
       <a data-p="wo"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg><span class="lbl">Órdenes de trabajo</span><span class="ct" id="ctWo"></span></a>
       <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
@@ -1977,10 +2253,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
         <div id="cotList"></div>
       </div></section>
 
+      <!-- ═══ PLAN ANUAL DE MANTENIMIENTO ═══ -->
+      <section class="page" id="p-plan"><div class="view-pad" id="planView"></div></section>
+
       <!-- ═══ RECLAMOS / SNC ═══ -->
       <section class="page" id="p-snc"><div class="view-pad">
         <div class="hd"><div><h1>Reclamos y servicio no conforme</h1>
-          <p>El formato de calidad, con el equipo y su historia ya cargados. Solo se escribe lo del hecho: hallazgo, acción inmediata, causa raíz y acción correctiva.</p></div>
+          <p>Registro interno. El cliente devuelve la válvula, Adolphus la revisa y levanta el registro con el TAG —que trae la historia del equipo—, lo dirige al área que corresponde y esa área lo trabaja.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="sncBtn"></div></div>
         <div id="sncList"></div>
       </div></section>
@@ -2290,7 +2569,15 @@ const MARCAS={
 };
 const CLIENTES=[
  {id:'minera',n:'Minera Los Andes S.A.A.',ruc:'20512217452',dir:'Av. El Derby 055 - Santiago de Surco, Lima',ind:'Minería',fac:'Concentradora C-1',areas:{mol:'Molienda',flo:'Flotación',rel:'Relaves'}},
- {id:'refi',n:'Refinería Costa Norte',ruc:'20100128056',dir:'Carretera Ventanilla Km 25 - Callao',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'}},
+ {id:'refi',n:'Refinería Costa Norte',ruc:'20100128056',dir:'Carretera Ventanilla Km 25 - Callao',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'},
+  /* Cada empresa tiene varios firmantes: el que ejecuta, el que da el
+     visto bueno por Adolphus, y por el lado del cliente el inspector y
+     el responsable del contrato. */
+  firmantes:[{rol:'ejec',n:'Junior Torres',cargo:'Asesor Técnico'},
+             {rol:'vbAdo',n:'Jose Rojas',cargo:'Supervisor Técnico'},
+             {rol:'vbAdo',n:'',cargo:'Ing. Residente'},
+             {rol:'vbInsp',n:'',cargo:'Inspector'},
+             {rol:'vbResp',n:'',cargo:'Gestor de contrato'}]},
  {id:'agro',n:'Agroindustrias del Valle',ruc:'20100190797',dir:'Av. Argentina 4793 - Callao',ind:'Industria general',fac:'Planta Sur',areas:{cal:'Calderas',evp:'Evaporación',env:'Envasado'}}
 ];
 const MODELOS={
@@ -2431,23 +2718,43 @@ let SOLICITUDES=[
    La mitad no se escribe: sale del TAG y de la historia del equipo.
    Aquí solo viven los del hecho — hallazgo, acción inmediata, causa
    raíz y acción correctiva. */
-/* El recorrido de un reclamo. Empieza cuando el cliente lo reporta y
-   Adolphus decide si lo toma; de ahí en adelante es trabajo interno. */
+/* El recorrido de un reclamo. El cliente no lo abre: devuelve la
+   válvula y Adolphus la revisa. Quien la recibe levanta el registro,
+   lo dirige al área que corresponde y esa área lo trabaja. Es un
+   documento interno de calidad. */
 const SNC_EST=[
- ['recibido',  'Por revisar',         'due', 'Adolphus tiene que aceptarlo o rechazarlo'],
- ['abierto',   'Aceptado',            'late','Falta la acción inmediata'],
- ['analisis',  'En análisis',         'due', 'Falta la causa raíz'],
- ['correctiva','En acción correctiva','sel', 'Falta cerrar la acción correctiva'],
- ['cerrado',   'Cerrado',             'ok',  'Sin pendientes'],
- ['rechazado', 'No procede',          'ink-3','Se explicó el motivo al cliente']
+ ['borrador',  'Sin enviar',          'ink-3','Falta dirigirlo al área que corresponde'],
+ ['enviado',   'Enviado al área',     'due',  'El área todavía no lo ha tomado'],
+ ['analisis',  'En análisis',         'due',  'Falta la causa raíz'],
+ ['correctiva','En acción correctiva','sel',  'Falta cerrar la acción correctiva'],
+ ['cerrado',   'Cerrado',             'ok',   'Sin pendientes']
 ];
 const sncEst=k=>SNC_EST.find(e=>e[0]===k)||SNC_EST[0];
-const QUIEN=[['cliente','El cliente'],['adolphus','Adolphus'],['fabricante','El fabricante']];
+/* Quién detectó el servicio no conforme. */
+const QUIEN=[
+ ['cliente',  'El cliente al devolver la válvula'],
+ ['recepcion','Adolphus, al recibirla'],
+ ['taller',   'Adolphus, en el taller'],
+ ['campo',    'Adolphus, en campo'],
+ ['fabricante','El fabricante']
+];
+/* A quién le toca resolverlo. El rol es quien lo ve en sus avisos. */
+const AREAS=[
+ ['calidad',   'Calidad',                'admin'],
+ ['ingenieria','Ingeniería',             'admin'],
+ ['taller',    'Servicio técnico · taller','tec'],
+ ['campo',     'Servicio técnico · campo', 'tec'],
+ ['almacen',   'Almacén',                'tec'],
+ ['compras',   'Compras e importaciones','com'],
+ ['comercial', 'Comercial · repuestos',  'com'],
+ ['fabricante','Reclamo al fabricante',  'com']
+];
+const areaDe=k=>AREAS.find(a=>a[0]===k)||AREAS[0];
 
 let RECLAMOS=[
- {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',
+ {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',enviado:'2026-06-13',
   det:'Posicionador con deriva de señal tras el arranque de la unidad de vacío.',
-  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'cliente',
+  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',area:'taller',
   hall:'La válvula no alcanzaba el 100 % de apertura con señal de 20 mA. Deriva de 6 % respecto al lazo.',
   doma:'DOM-41005-3',
   accInm:'Recalibrar el lazo en sitio y dejar la válvula en control manual hasta el cambio del posicionador.',
@@ -2456,17 +2763,22 @@ let RECLAMOS=[
   causa:'El posicionador se montó sin purgar la línea de aire de instrumentos; el filtro reguló con humedad y la boquilla se obstruyó parcialmente.',
   accCor:'Incorporar la purga de la línea de aire y la verificación del filtro coalescente como paso obligatorio del protocolo de montaje, y capacitar a los tres técnicos de campo.',
   fIni:'2026-06-16',fFin:'2026-06-30',respCor:'Ana Quispe',
-  prov:'Masoneilan',ocProv:'PO-2026-0774'},
- {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'analisis',
+  prov:'Masoneilan',ocProv:'PO-2026-0774',
+  hist:[{f:'2026-06-12',t:'Levantado por Ana Quispe'},
+        {f:'2026-06-13',t:'Enviado a Servicio técnico · taller'},
+        {f:'2026-06-30',t:'Cerrado'}]},
+ {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'enviado',enviado:'2026-07-20',
   det:'Fuga por el manguito de la válvula pinch a los tres meses del cambio.',
-  ocCli:'OC-77123',refCli:'',ident:'cliente',
+  ocCli:'OC-77123',refCli:'',ident:'cliente',area:'fabricante',
   hall:'Manguito con desgarro longitudinal en la zona de cierre. El cliente reporta pérdida de pulpa en la celda de flotación.',
   doma:'',
   accInm:'Aislar la línea, retirar la válvula y montar la de reserva del cliente.',
   fInm:'2026-07-20',respInm:'O. Julio de la Rosa',
   obs:'Se recuperó el manguito para enviarlo al fabricante.',
   causa:'',accCor:'',fIni:'',fFin:'',respCor:'',
-  prov:'RF Valves',ocProv:''}
+  prov:'RF Valves',ocProv:'',
+  hist:[{f:'2026-07-19',t:'Levantado por Luis Ramírez al recibir la válvula'},
+        {f:'2026-07-20',t:'Enviado a Reclamo al fabricante'}]}
 ];
 
 /* ── Cotizaciones ────────────────────────────────────────────
@@ -2653,7 +2965,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   /* Las páginas de un cliente solo se abren desde su espacio de
@@ -2670,8 +2982,21 @@ function go(p){
   renderCliBar();
   pintarTabbar();
   $('.view').scrollTop=0;
+  $('#app').classList.remove('scrolled');
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
+  // la página que entra se dibuja: barras, donas y cifras arrancan de cero
+  requestAnimationFrame(animarVista);
 }
+/* La barra de arriba se despega con una sombra en cuanto bajas: así
+   se entiende que hay más contenido y que ella se queda fija. */
+(function sombraAlBajar(){
+  const v=$('.view'); if(!v)return;
+  let puesta=false;
+  v.addEventListener('scroll',()=>{
+    const hay=v.scrollTop>4;
+    if(hay!==puesta){puesta=hay;$('#app').classList.toggle('scrolled',hay)}
+  },{passive:true});
+})();
 $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
 
 /* ── Barra inferior del celular ──────────────────────────────
@@ -2680,10 +3005,10 @@ $$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
    icono, ya traducidos en applyRole()— y añade «Más», que abre el
    cajón completo. Si mañana cambia el lateral, esta barra cambia
    sola: no hay una segunda lista que mantener. */
-const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',
+const TAB_CORTO={home:'Panel',clients:'Clientes',assets:'Equipos',cal:'Calibra.',plan:'Plan',
   wo:'Órdenes',parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Confiab.',
   cat:'Catálogo',imp:'Importar',users:'Usuarios'};
-const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',wo:'Servicios',
+const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',plan:'Plan',wo:'Servicios',
   parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Reportes'};
 function pintarTabbar(){
   const tb=$('#tabbar'); if(!tb) return;
@@ -2736,11 +3061,14 @@ function applyRole(v){
   /* Reclamos es la excepción: calidad los mira todos juntos, de todos
    los clientes, así que vive en el lateral aunque también aparezca
    dentro de la carpeta de cada cliente. */
-  const ocultas=c?['clients','cat','imp','users']:['assets','cal','wo','req','parts','imp'];
+  /* Reclamos es un registro interno de calidad: el cliente devuelve la
+     válvula, Adolphus la revisa y levanta el registro. El cliente no
+     lo abre ni lo ve. */
+  const ocultas=c?['clients','cat','imp','users','snc']:['assets','cal','plan','wo','req','parts','imp'];
   $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
-  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',wo:'Servicios',
+  const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',plan:'Plan anual',wo:'Servicios',
     parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos',rep:'Reportes'};
   $$('#nav a').forEach(a=>{
     const l=a.querySelector('.lbl');if(!l)return;
@@ -3004,7 +3332,7 @@ function confirmarBajaClientes(){
   toast(`${ids.length} cliente${ids.length===1?'':'s'} eliminado${ids.length===1?'':'s'}`);
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
 function openClientAssets(id){enterClient(id,'assets')}
 /* Cada cifra de la tarjeta lleva a lo que cuenta: si Los Andes marca
    un reclamo, un clic enseña cuál es y desde cuándo. */
@@ -3111,7 +3439,12 @@ function openAsset(id){
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button><button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>`;})();
+      ${a.cl==='seguridad'
+        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Ensayo PSV</button>
+           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>`
+        : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
+      <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
+      <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
@@ -3356,18 +3689,28 @@ function paneCal(){
   const a=S.cur;
   const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
   const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-     <button class="btn sec xs" onclick="openCalib('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva calibración</button>
+     <button class="btn sec xs" onclick="${a.cl==='seguridad'?`openPSV('${a.id}')`:`openCalib('${a.id}')`}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>${a.cl==='seguridad'?'Nuevo ensayo PSV':'Nueva calibración'}</button>
      <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
   if(!cs.length){
     $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
       <b>Sin calibraciones registradas</b>${a.prox?`Programada para el ${esc(a.prox)}.`:'Este equipo no tiene programa de calibración.'}</div>`;
     return;
   }
-  $('#pn-cal').innerHTML=bar+`${calibChart(cs[0])}
+  $('#pn-cal').innerHTML=bar+`${cs[0].tipo==='psv'?psvGrafica(psvVeredicto(cs[0])):calibChart(cs[0])}
     <section class="fx-blk"><div class="fx-blk-h"><h3>Todas las calibraciones</h3><span class="count">${cs.length}</span></div>
     <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
-      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">As-left</th><th>Resultado</th><th></th></tr></thead>
-      <tbody>${cs.map(c=>{const ok=Math.abs(c.devAl)<=(c.tol||3);
+      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">Final</th><th>Resultado</th><th></th></tr></thead>
+      <tbody>${cs.map(c=>{
+        /* Un ensayo PSV del formato de la empresa no tiene as-found/as-left:
+           tiene tres disparos y un promedio. Se muestra como lo que es. */
+        if(c.tipo==='psv'){const v=psvVeredicto(c),ok=v.estado==='aprobado';
+          return `<tr style="cursor:default"><td class="mono">${esc(fPE(c.fecha))}</td>
+          <td class="mono muted">AXAD-088${c.os?' · '+esc(c.os):''}</td>
+          <td class="num">${esc(c.setEsp||'')} ${esc(c.und||'')}</td><td class="num">${esc(c.asFound||'—')}</td>
+          <td class="num">${v.estado==='incompleto'?'—':n2(v.prom)}</td>
+          <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Aprobado':'Rechazado'}</span></td>
+          <td style="text-align:right"><button class="btn sec xs" onclick="verPSV('${c.id}')">Ver ensayo</button></td></tr>`}
+        const ok=Math.abs(c.devAl)<=(c.tol||3);
         return `<tr style="cursor:default"><td class="mono">${esc(c.fin||c.ini||'')}</td><td class="mono muted">${esc(c.cert||'')}</td>
         <td class="num">${c.nom} ${esc(c.uni)}</td><td class="num">${c.af}</td><td class="num">${c.al}</td>
         <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Conforme':'No conforme'}</span></td>
@@ -3605,7 +3948,7 @@ function pintarCot(){
           <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:104px">Total</th><th style="width:38px"></th>
         </tr></thead><tbody>
         ${t.items.map((it,i)=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
-          <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}${m.s>0?` · ${m.s} en stock`:' · importación'}</small></div></td>
+          <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${it.d?esc(it.d):esc(m.d||'')+(m.s>0?` · ${m.s} en stock`:' · importación')}</small></div></td>
           <td><span class="ps-qty"><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},-1)" aria-label="Quitar una unidad">−</button><b>${it.q||1}</b><button class="btn quiet xs" style="padding:0 7px" onclick="cotCant(${i},1)" aria-label="Agregar una unidad">+</button></span></td>
           <td class="num"><input class="inp cot-pu mono" type="number" min="0" step="1" value="${pu}" onchange="cotPrecio(${i},this.value)" aria-label="Precio unitario"></td>
           <td class="num mono">${usd(pu*(it.q||1))}</td>
@@ -3703,7 +4046,7 @@ function verCot(id){
       <th class="num" style="width:112px">P. unitario</th><th class="num" style="width:112px">Total</th>
     </tr></thead><tbody>
       ${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);return `<tr style="cursor:default">
-        <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(m.d||'')}</small></div></td>
+        <td><div class="cell-2"><b class="mono">${esc(it.n)}</b><small>${esc(it.d||m.d||'')}</small></div></td>
         <td class="num mono">${it.q||1}</td><td class="num mono">${usd(pu)}</td>
         <td class="num mono">${usd(pu*(it.q||1))}</td></tr>`}).join('')}
     </tbody></table></div>
@@ -3775,7 +4118,7 @@ function imprimirCot(id){
      Emitida el ${c.f} por ${esc(c.por)} · válida hasta el ${c.valida} · Adolphus S.A.</div>
    <table><thead><tr><th>N.º de parte</th><th class="n">Cant.</th><th class="n">P. unitario</th><th class="n">Total</th></tr></thead>
    <tbody>${(c.items||[]).map(it=>{const m=partMeta(it.n),pu=it.pu!=null?it.pu:precio(it.n);
-     return `<tr><td><span class="pn">${esc(it.n)}</span><small>${esc(m.d||'')}</small></td>
+     return `<tr><td><span class="pn">${esc(it.n)}</span><small>${esc(it.d||m.d||'')}</small></td>
      <td class="n">${it.q||1}</td><td class="n">${usd(pu)}</td><td class="n">${usd(pu*(it.q||1))}</td></tr>`}).join('')}</tbody></table>
    <div class="tot"><div><span>Subtotal</span><b>${usd(sub)}</b></div>
      <div><span>IGV 18 %</span><b>${usd(igv)}</b></div>
@@ -3784,6 +4127,962 @@ function imprimirCot(id){
    </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
 }
+
+/* ============================================================
+   PLAN ANUAL DE MANTENIMIENTO
+   Adolphus ya tiene, cliente por cliente, el parque completo con su
+   criticidad y su última intervención. De ahí sale solo lo que va a
+   necesitar el año que viene: no hace falta que nadie lo escriba.
+   Esta pantalla lo arma, lo reparte por mes para que la carga no se
+   apile, le pone precio referencial y —de un botón— lo convierte en
+   una cotización. El cliente lo ve y lo aprueba.
+   No inventa nada: cada intervención dice de dónde salió.
+   ============================================================ */
+const PLAN_TIPOS=[
+ ['cal', 'Calibración certificada','ok',  'Con certificado y trazabilidad al patrón.'],
+ ['prev','Mantenimiento preventivo','sel','Desmontaje, cambio de blandos y prueba en banco.'],
+ ['insp','Inspección en campo',     'due','Recorrido en planta, sin sacar la válvula de línea.']
+];
+const planTipo=k=>PLAN_TIPOS.find(t=>t[0]===k)||PLAN_TIPOS[0];
+
+/* Cuántas veces al año, según lo crítica que sea la válvula. Es la
+   regla que Adolphus defiende delante del cliente, así que se muestra
+   escrita en pantalla, no escondida en el código. */
+const PLAN_FREQ={
+ 'Crítica':{cal:1,prev:2,insp:4},
+ 'Alta'   :{cal:1,prev:1,insp:2},
+ 'Media'  :{cal:1,prev:1,insp:1},
+ 'Baja'   :{cal:1,prev:0,insp:1}
+};
+/* Tarifa referencial por intervención, en la misma moneda que el resto
+   del portal. Adolphus la ajusta en pantalla: sirve para dimensionar el
+   presupuesto del año, no para facturar. */
+let PLAN_TARIFA={cal:130,prev:240,insp:45};
+let PLAN_OK={};   // {cliente: {f, por}} — planes que el cliente aprobó
+
+const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio',
+               'agosto','setiembre','octubre','noviembre','diciembre'];
+
+/* Los doce meses que vienen, empezando por el actual. */
+function planVentana(){
+  const v=[];
+  for(let i=0;i<12;i++)v.push(new Date(HOY.getFullYear(),HOY.getMonth()+i,1));
+  return v;
+}
+const planRotulo=v=>`${MESES_L[v[0].getMonth()]} ${v[0].getFullYear()} – ${MESES_L[v[11].getMonth()]} ${v[11].getFullYear()}`;
+
+/* Reparte la carga: sin esto, todo cae en el mes cero. El desfase sale
+   del propio identificador del equipo, así que siempre es el mismo. */
+const planSemilla=t=>{let n=0;for(let i=0;i<t.length;i++)n=(n*31+t.charCodeAt(i))%9973;return n};
+
+/* Todo lo que le toca a una válvula en la ventana, con el motivo. */
+function planDeActivo(a,v){
+  const out=[], cr=PLAN_FREQ[a.cr]?a.cr:'Media', f=PLAN_FREQ[cr];
+  const y0=v[0].getFullYear(), m0=v[0].getMonth();
+  const idx=d=>(d.getFullYear()-y0)*12+(d.getMonth()-m0);
+
+  // 1. Calibración: la manda la fecha que el equipo ya tiene programada
+  const tieneProg=a.cl==='seguridad'||a.prox||a.ult;
+  if(f.cal&&tieneProg){
+    let d,por;
+    if(a.prox){d=new Date(a.prox+'T00:00:00');por=`Vence el ${a.prox}`}
+    else if(a.ult){d=new Date(a.ult+'T00:00:00');d.setFullYear(d.getFullYear()+1);
+                   por=`Un año desde el último servicio (${a.ult})`}
+    else {d=v[0];por='Sin programa: se propone abrirlo este mes'}
+    let i=idx(d);
+    if(i<0){i=0;por=`Vencida desde el ${a.prox||a.ult} — entra este mes`}   // vencida: entra ya
+    if(i<12)out.push({t:'cal',mi:i,por});
+  }
+  // 2 y 3. Preventivo e inspección: por criticidad, repartidos en el año
+  [['prev',f.prev],['insp',f.insp]].forEach(([k,n])=>{
+    if(!n)return;
+    const paso=12/n, base=planSemilla(a.id+k)%Math.max(1,Math.round(paso));
+    for(let j=0;j<n;j++){
+      const mi=Math.min(11,Math.round(base+j*paso));
+      out.push({t:k,mi,por:`Criticidad ${cr}: ${n===1?'una vez al año':n+' veces al año'}`});
+    }
+  });
+  return out.sort((x,y)=>x.mi-y.mi);
+}
+
+/* El plan completo de un cliente: filas de equipo con sus marcas. */
+function planDe(cliId){
+  const v=planVentana();
+  const equipos=ACTIVOS.filter(a=>a.cli===cliId&&a.tag)
+    .sort((a,b)=>(a.ar||'').localeCompare(b.ar||'')||a.tag.localeCompare(b.tag));
+  const filas=equipos.map(a=>({a,its:planDeActivo(a,v)}));
+  const porMes=v.map((_,i)=>filas.reduce((s,f)=>s+f.its.filter(x=>x.mi===i).length,0));
+  const porTipo={};
+  PLAN_TIPOS.forEach(([k])=>porTipo[k]=filas.reduce((s,f)=>s+f.its.filter(x=>x.t===k).length,0));
+  const total=Object.values(porTipo).reduce((a,b)=>a+b,0);
+  const costo=PLAN_TIPOS.reduce((s,[k])=>s+porTipo[k]*(PLAN_TARIFA[k]||0),0);
+  return {v,filas,porMes,porTipo,total,costo,equipos:filas.filter(f=>f.its.length).length};
+}
+
+const planFoco=()=>S.cli||S.inCli||null;
+
+function renderPlan(){
+  const caja=$('#planView'); if(!caja) return;
+  const foco=planFoco();
+  const cliente=S.rol==='cliente';
+  if(!foco){
+    caja.innerHTML=`<div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>El plan se arma por cliente, con su parque y su criticidad. Entra a un cliente para verlo.</p></div></div>
+      <div class="panel"><div class="empty"><b>Elige un cliente</b>Cada plan sale del parque de esa empresa.</div></div>`;
+    return;
+  }
+  const p=planDe(foco), c=cli(foco), ok=PLAN_OK[foco];
+  const pico=Math.max(1,...p.porMes);
+  const mesN=(i)=>`${MESES_C[p.v[i].getMonth()]} ${String(p.v[i].getFullYear()).slice(2)}`;
+
+  if(!p.total){
+    caja.innerHTML=`<div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>${esc(c.n)} · ${planRotulo(p.v)}</p></div></div>
+      <div class="panel"><div class="empty"><b>Todavía no hay equipos que planificar</b>
+        Registra el parque de ${esc(c.n)} y el plan se arma solo.</div></div>`;
+    return;
+  }
+
+  const leyenda=PLAN_TIPOS.map(([k,n,tono,d])=>`
+    <div class="pl-leg">
+      <span class="pl-pt ${k}"></span>
+      <div><b>${esc(n)}</b><span>${esc(d)}</span></div>
+      <div class="pl-leg-n"><b>${p.porTipo[k]}</b><span>al año</span></div>
+      ${cliente?`<div class="pl-leg-n"><b class="mono">${usd(PLAN_TARIFA[k])}</b><span>c/u</span></div>`
+        :`<div class="pl-leg-n"><input class="inp mono pl-tar" type="number" min="0" step="10"
+             value="${PLAN_TARIFA[k]}" onchange="planTarifa('${k}',this.value)"
+             aria-label="Tarifa referencial de ${esc(n)}"><span>c/u</span></div>`}
+    </div>`).join('');
+
+  const cabezas=p.v.map((_,i)=>`<th class="num pl-m ${p.porMes[i]===pico?'pico':''}">${mesN(i)}</th>`).join('');
+  const cuerpo=p.filas.map(({a,its})=>{
+    const celdas=p.v.map((_,i)=>{
+      const hoy=its.filter(x=>x.mi===i);
+      return `<td class="pl-c">${hoy.map(x=>`<span class="pl-pt ${x.t}" title="${esc(planTipo(x.t)[1])} — ${esc(x.por)}"></span>`).join('')}</td>`;
+    }).join('');
+    return `<tr onclick="openAsset('${a.id}')">
+      <td><div class="cell-2"><b class="mono">${esc(a.tag)}</b><small>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc((c.areas||{})[a.ar]||'')}</small></div></td>
+      <td><span class="tag ${a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'ink-3'}">${esc(a.cr||'Media')}</span></td>
+      ${celdas}
+      <td class="num mono">${its.length}</td></tr>`;
+  }).join('');
+
+  const pieMes=p.v.map((_,i)=>`<td class="num mono pl-c">${p.porMes[i]||'·'}</td>`).join('');
+
+  const barras=p.v.map((_,i)=>`
+    <div class="col-i" title="${mesN(i)}: ${p.porMes[i]} intervención${p.porMes[i]===1?'':'es'}">
+      <span class="col-v">${p.porMes[i]||''}</span>
+      <span class="col-bar ${p.porMes[i]===pico?'due':''}" style="height:${Math.round(p.porMes[i]/pico*120)}px"></span>
+      <span class="col-x">${MESES_C[p.v[i].getMonth()]}</span></div>`).join('');
+
+  const acciones=cliente
+    ? (ok?`<span class="tag ok">Aprobado el ${ok.f}</span>
+           <button class="btn sec" onclick="imprimirPlan()">Imprimir</button>`
+         :`<button class="btn sec" onclick="imprimirPlan()">Imprimir</button>
+           <button class="btn" onclick="aprobarPlan()">Aprobar el plan</button>`)
+    : `${ok?`<span class="tag ok">El cliente lo aprobó el ${ok.f}</span>`:''}
+       <button class="btn sec" onclick="imprimirPlan()">Imprimir</button>
+       <button class="btn" onclick="cotizarPlan()"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5"/></svg>Cotizar el plan</button>`;
+
+  caja.innerHTML=`
+    <div class="hd"><div><h1>Plan anual de mantenimiento</h1>
+      <p>${esc(c.n)} · ${planRotulo(p.v)}. Sale del parque registrado y de la criticidad de cada válvula:
+         ${cliente?'esto es lo que Adolphus propone hacer el año que viene.'
+                  :'no hay que escribirlo, ya está calculado.'}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${acciones}</div></div>
+
+    <div class="kpis">
+      <div class="kpi"><span class="kv">${p.total}</span><span class="kk">Intervenciones en el año</span>
+        <span class="kd">sobre ${p.equipos} de ${p.filas.length} equipos</span></div>
+      <div class="kpi"><span class="kv">${mesN(p.porMes.indexOf(pico))}</span><span class="kk">Mes más cargado</span>
+        <span class="kd">${pico} intervenciones${p.porMes.filter(n=>n===pico).length>1?' · empatado con otro mes':''}</span></div>
+      <div class="kpi"><span class="kv">${(p.total/12).toFixed(1)}</span><span class="kk">Promedio por mes</span>
+        <span class="kd">para dimensionar el taller</span></div>
+      <div class="kpi"><span class="kv mono" style="font-size:var(--t-5)">${usd(p.costo)}</span>
+        <span class="kk">Inversión estimada</span><span class="kd">referencial, sin IGV</span></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:var(--sp-3)">
+      <div class="panel-h"><h2>Carga de trabajo mes a mes</h2>
+        <span class="count">${p.total} en total</span></div>
+      <div class="panel-b"><div class="cols">${barras}</div></div>
+    </div>
+
+    <div class="panel" style="margin-bottom:var(--sp-3)">
+      <div class="panel-h"><h2>Qué incluye y con qué frecuencia</h2></div>
+      <div class="panel-b"><div class="pl-legs">${leyenda}</div>
+        <p class="pl-regla">La frecuencia la manda la criticidad de cada válvula:
+          <b>Crítica</b> 1 calibración, 2 preventivos y 4 inspecciones al año ·
+          <b>Alta</b> 1, 1 y 2 · <b>Media</b> 1, 1 y 1 · <b>Baja</b> 1 y 1.
+          La calibración se ancla a la fecha que el equipo ya tiene programada.</p></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-h"><h2>Calendario por equipo</h2>
+        <span class="count">${p.filas.length} equipos</span></div>
+      <div class="grid-wrap"><table class="grid pl-tab"><thead><tr>
+        <th>Equipo</th><th style="width:88px">Criticidad</th>${cabezas}<th class="num" style="width:52px">Año</th>
+      </tr></thead><tbody>${cuerpo}</tbody>
+      <tfoot><tr><td colspan="2"><b>Intervenciones del mes</b></td>${pieMes}
+        <td class="num mono"><b>${p.total}</b></td></tr></tfoot></table></div>
+    </div>`;
+}
+
+/* El lateral dice cuántas intervenciones trae el plan de este cliente. */
+function planContador(){
+  const ct=$('#ctPlan'); if(!ct)return;
+  const f=planFoco();
+  ct.textContent=f?(planDe(f).total||''):'';
+}
+function planTarifa(k,v){PLAN_TARIFA[k]=Math.max(0,+v||0);guardarLocal();renderPlan()}
+
+function aprobarPlan(){
+  const f=planFoco(); if(!f) return;
+  PLAN_OK[f]={f:HOY.toISOString().slice(0,10),por:(typeof SES!=='undefined'&&SES?SES.n:'El cliente')};
+  registrar('Plan anual',`Plan de ${cli(f).n} aprobado por el cliente`);
+  toast('Plan aprobado · Adolphus ya lo ve');
+  guardarLocal();renderAll();
+}
+
+/* El botón que justifica la pantalla: el plan se vuelve cotización.
+   Una posición por tipo de intervención, con la cuenta ya hecha. */
+function cotizarPlan(){
+  const f=planFoco(); if(!f){toast('Entra a un cliente');return}
+  const p=planDe(f);
+  if(!p.total){toast('Este cliente todavía no tiene equipos que planificar');return}
+  const val=new Date(HOY); val.setDate(val.getDate()+30);
+  COT_TMP={
+    id:'', n:'COT-2026-'+String(45+COTIZACIONES.length).padStart(4,'0'),
+    cli:f, f:HOY.toISOString().slice(0,10), valida:val.toISOString().slice(0,10),
+    est:'borrador', por:(typeof SES!=='undefined'&&SES?SES.n:'Adolphus'), act:'',
+    items:PLAN_TIPOS.filter(([k])=>p.porTipo[k]>0).map(([k,n])=>({
+      n:'PLAN-'+k.toUpperCase(), d:`${n} · plan anual ${planRotulo(p.v)}`,
+      q:p.porTipo[k], pu:PLAN_TARIFA[k]
+    })),
+    nota:`Plan anual de mantenimiento de ${cli(f).n} para ${planRotulo(p.v)}: `+
+         `${p.total} intervenciones sobre ${p.equipos} equipos, repartidas mes a mes según la criticidad de cada válvula. `+
+         `Precios por intervención, puesta en servicio en planta.`,
+    hist:[]
+  };
+  $('#mTitle').textContent='Cotización del plan anual';
+  pintarCot();
+  $('#modal').classList.add('on');
+}
+
+function imprimirPlan(){
+  const f=planFoco(); if(!f) return;
+  const p=planDe(f), c=cli(f), ok=PLAN_OK[f];
+  const mesN=i=>`${MESES_C[p.v[i].getMonth()]} ${String(p.v[i].getFullYear()).slice(2)}`;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>Plan anual ${esc(c.n)}</title><style>
+   *{box-sizing:border-box}
+   body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:26px}
+   h1{font-size:19px;margin:0 0 3px} .sub{color:#5b6470;margin-bottom:16px}
+   table{width:100%;border-collapse:collapse;margin-top:10px;font-size:10.5px}
+   th,td{border:1px solid #d7dbe0;padding:4px 5px;text-align:left}
+   th{background:#f2f4f6;font-weight:600} td.n,th.n{text-align:center}
+   .pt{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 1px}
+   .cal{background:#1a7f52}.prev{background:#2c62c4}.insp{background:#a06a10}
+   .leg{margin:12px 0 0;font-size:10.5px;color:#5b6470}
+   .leg span{margin-right:14px}
+   .res{display:flex;gap:22px;margin:12px 0;font-size:11px}
+   .res b{display:block;font-size:17px}
+   .ok{margin-top:10px;padding:7px 10px;background:#eaf6ef;border:1px solid #bfe0cd;font-size:11px}
+   .pie{margin-top:18px;font-size:10px;color:#78818c;border-top:1px solid #d7dbe0;padding-top:8px}
+   </style></head><body>
+   <h1>Plan anual de mantenimiento</h1>
+   <div class="sub">${esc(c.n)} · ${planRotulo(p.v)} · emitido por Adolphus S.A. el ${HOY.toISOString().slice(0,10)}</div>
+   <div class="res">
+     <div><b>${p.total}</b>intervenciones</div>
+     <div><b>${p.equipos}</b>equipos</div>
+     <div><b>${usd(p.costo)}</b>referencial sin IGV</div>
+   </div>
+   ${ok?`<div class="ok">Plan aprobado por el cliente el ${ok.f}.</div>`:''}
+   <div class="leg">${PLAN_TIPOS.map(([k,n])=>`<span><i class="pt ${k}"></i> ${esc(n)} — ${p.porTipo[k]} al año</span>`).join('')}</div>
+   <table><thead><tr><th>Equipo</th><th>Criticidad</th>
+     ${p.v.map((_,i)=>`<th class="n">${mesN(i)}</th>`).join('')}<th class="n">Año</th></tr></thead><tbody>
+   ${p.filas.map(({a,its})=>`<tr><td><b>${esc(a.tag)}</b> · ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}</td>
+     <td>${esc(a.cr||'Media')}</td>
+     ${p.v.map((_,i)=>`<td class="n">${its.filter(x=>x.mi===i).map(x=>`<i class="pt ${x.t}"></i>`).join('')}</td>`).join('')}
+     <td class="n">${its.length}</td></tr>`).join('')}
+   </tbody><tfoot><tr><td colspan="2"><b>Intervenciones del mes</b></td>
+     ${p.porMes.map(n=>`<td class="n"><b>${n||'·'}</b></td>`).join('')}<td class="n"><b>${p.total}</b></td></tr></tfoot></table>
+   <div class="pie">La frecuencia sale de la criticidad de cada válvula y la calibración se ancla a la fecha ya programada
+     en la ficha del equipo. Los importes son referenciales y no constituyen una oferta en firme.</div>
+   </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+}
+
+/* ============================================================
+   PSV · FORMATO AXAD-088 V.2
+   El formato de la empresa, tal cual, pero repartido como se
+   trabaja de verdad: lo que identifica a la válvula vive en la
+   válvula (se escribe una vez y sirve para siempre), y lo que es
+   del ensayo vive en el ensayo. En el Excel eso estaba en la
+   misma fila y por eso cada certificado tenía que ir a buscar el
+   TAG con un BUSCARV — que es justo lo que hoy está roto: la hoja
+   de certificados está llena de #N/A y #ERROR!.
+   Aquí el certificado no busca el TAG: lo tiene.
+   ============================================================ */
+
+/* Todo se calcula en psi por dentro; el técnico escribe en la
+   unidad que use su banco. */
+const A_PSI={psi:1,psig:1,bar:14.5038,barg:14.5038,'kg/cm2':14.2233,
+             'kg/cm²':14.2233,'kpa':0.145038,'mpa':145.038};
+const UNIDS=['psi','bar','kg/cm2','kPa'];
+const factorU=u=>A_PSI[String(u||'psi').toLowerCase()]||1;
+const aPsi=(v,u)=>num(v)*factorU(u);
+/* La coma decimal es lo normal en las hojas peruanas. */
+const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:NaN};
+const n2=(v,d)=>isFinite(v)?v.toLocaleString('es-PE',{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d}):'—';
+/* Fecha peruana: 19/03/2026. */
+const fPE=s=>{if(!s)return '—';const [Y,M,D]=String(s).slice(0,10).split('-');return D&&M&&Y?`${D}/${M}/${Y}`:s};
+
+/* La tolerancia la manda ASME Sección VIII, y está escrita en el
+   propio formato de la empresa. No es una regla inventada. */
+function tolPSV(setEsp,und){
+  const p=aPsi(setEsp,und);
+  if(!isFinite(p)||p<=0)return null;
+  return p<=70
+    ? {tipo:'abs', psi:2, txt:'± 2 psig', regla:'ASME Secc. VIII · presión de ajuste ≤ 70 psig'}
+    : {tipo:'pct', pct:3, txt:'± 3 %',    regla:'ASME Secc. VIII · presión de ajuste ≥ 71 psig'};
+}
+
+/* El veredicto: promedio de los tres disparos contra la tolerancia.
+   Es exactamente el paso 3 del procedimiento del formato. */
+function psvVeredicto(c){
+  const set=num(c.setEsp), u=c.und||'psi';
+  const t=[c.t1,c.t2,c.t3].map(num).filter(x=>isFinite(x)&&x>0);
+  const tol=tolPSV(set,u);
+  if(!isFinite(set)||set<=0||!t.length||!tol)
+    return {estado:'incompleto', falta:!isFinite(set)||set<=0?'la presión de ajuste requerida':'al menos un disparo'};
+  const prom=t.reduce((a,b)=>a+b,0)/t.length;
+  const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
+  const dif=prom-set, desv=set?dif/set*100:0;
+  const ok=Math.abs(dif)<=limite+1e-9;
+  return {estado:ok?'aprobado':'rechazado', prom, dif, desv, limite, tol,
+          min:set-limite, max:set+limite, disparos:t, set, und:u};
+}
+/* El blowdown: la válvula debe volver a cerrar un 8 % por debajo
+   del seteo. Informativo — el formato lo muestra, no lo veta. */
+function psvBlowdown(c){
+  const set=num(c.setEsp);
+  const pc=[c.pc1,c.pc2,c.pc3].map(num).filter(x=>isFinite(x)&&x>0);
+  if(!isFinite(set)||set<=0||!pc.length)return null;
+  const prom=pc.reduce((a,b)=>a+b,0)/pc.length;
+  return {prom, esperado:set*0.92, pct:(set-prom)/set*100, dentro:(set-prom)/set*100<=8.0001};
+}
+
+/* ── Firmantes ───────────────────────────────────────────────
+   Cada empresa tiene los suyos, y son varios: el gerente, el
+   ingeniero, el inspector. Por eso viven en el cliente y no
+   escritos a mano en cada certificado. */
+const FIRMA_ROLES=[
+ ['ejec',  'Ejecutado por',            'Adolphus'],
+ ['vbAdo', 'V°B° Responsable Adolphus','Adolphus'],
+ ['vbInsp','V°B° Inspección',          'Cliente'],
+ ['vbResp','V°B° Responsable',         'Cliente']
+];
+const firmantesDe=cliId=>{
+  const c=cli(cliId);
+  return Array.isArray(c.firmantes)?c.firmantes:[];
+};
+
+/* ── El ensayo ───────────────────────────────────────────────*/
+let PSV_TMP=null;
+
+function psvNuevo(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
+  const prev=CALIBS.filter(c=>c.act===a.id&&c.tipo==='psv')
+    .sort((x,y)=>(y.fecha||'').localeCompare(x.fecha||''))[0];
+  const h=HOY.toISOString().slice(0,10);
+  return {
+    id:'', act:a.id, tipo:'psv', cli:a.cli,
+    os:prev?prev.os:'', contacto:prev?prev.contacto:'', fecha:h,
+    // equipo patrón: casi nunca cambia, así que se hereda del anterior
+    patDesc:prev?prev.patDesc:'Manovacuómetro digital', patModelo:prev?prev.patModelo:'681',
+    patMarca:prev?prev.patMarca:'ADDITEL', patSerie:prev?prev.patSerie:'',
+    patEscala:prev?prev.patEscala:'0.1 psi', patExact:prev?prev.patExact:'0,2 % FS',
+    patFecha:prev?prev.patFecha:'', patCert:prev?prev.patCert:'',
+    // disparo
+    setEsp:a.setPress||'', und:a.setUnd||'psi', asFound:'', fluidoP:'Nitrógeno',
+    t1:'',t2:'',t3:'', pc1:'',pc2:'',pc3:'',
+    // hermeticidad API 527
+    hTiempo:'1 min', hb1:'',hb2:'',hb3:'', hConf:'Conforme',
+    // resorte
+    perpAlt:'',perpNEsp:'',perpFi:'',perpAng:'',perpDesv:'',
+    parFi:'',parAng:'',parDesv:'', metodo:'Métrico',
+    pernoIni:'',pernoFin:'',muescaSup:'',muescaInf:'',
+    altRes:'',diamEsp:'',numEsp:'',
+    discoExt:'',discoInt:'',discoH:'', tobExt:'',tobInt:'',tobH:'',
+    coment:'', fotos:[], firmas:[]
+  };
+}
+
+function openPSV(actId,edit){
+  const c=edit?CALIBS.find(x=>x.id===edit):null;
+  const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
+  if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  PSV_TMP=c?JSON.parse(JSON.stringify(c)):psvNuevo(a.id);
+  if(!PSV_TMP)return;
+  $('#mTitle').textContent=(c?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+  pintarPSV();
+  $('#modal').classList.add('on');
+}
+
+const psvCampo=(k,v)=>{PSV_TMP[k]=v; if(['t1','t2','t3','setEsp','und','pc1','pc2','pc3'].includes(k))pintarPSVResultado()};
+
+function pintarPSV(){
+  const t=PSV_TMP; if(!t)return;
+  const a=ACTIVOS.find(x=>x.id===t.act)||{}, m=MODELOS[a.mod]||{};
+  const F=(k,lbl,ph,tipo)=>`<div class="fld"><label for="pv-${k}">${lbl}</label>
+    <input class="inp" id="pv-${k}" ${tipo?`type="${tipo}"`:''} value="${esc(t[k]==null?'':t[k])}"
+      placeholder="${esc(ph||'')}" oninput="psvCampo('${k}',this.value)"></div>`;
+
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
+     <div><b>${esc(a.tag||'')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie ${esc(a.ser||'—')} ·
+       ${esc(cli(a.cli).n||'')}. Todo esto ya lo sabe el sistema: no hay que volver a escribirlo.
+       <a href="#" onclick="openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
+
+   <div class="psv-secs">
+    <details class="psv-sec" open><summary>1 · Servicio y patrón</summary><div class="psv-b">
+      <div class="two">
+        ${F('os','Orden de servicio','JA10138289')}
+        ${F('contacto','Contacto del cliente','FARID ROJAS')}
+        ${F('fecha','Fecha del ensayo','','date')}
+        <div class="fld"><label for="pv-fluidoP">Fluido de prueba</label>
+          <select class="inp" id="pv-fluidoP" onchange="psvCampo('fluidoP',this.value)">
+            ${['Nitrógeno','Aire','Agua','Vapor'].map(f=>`<option ${t.fluidoP===f?'selected':''}>${f}</option>`).join('')}</select></div>
+      </div>
+      <h4 class="snc-sec">Equipo patrón de calibración</h4>
+      <div class="two">
+        ${F('patDesc','Descripción','Manovacuómetro digital')}
+        ${F('patModelo','Modelo','681')}
+        ${F('patMarca','Marca','ADDITEL')}
+        ${F('patSerie','N.º de serie','211H15450046')}
+        ${F('patEscala','Escala','0.1 psi')}
+        ${F('patExact','Clase de exactitud','0,2 % FS')}
+        ${F('patFecha','Fecha de calibración','','date')}
+        ${F('patCert','Certificado n.º','EP-0099-2025')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec" open><summary>2 · Disparo <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
+      <div class="two">
+        <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
+          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="1500" oninput="psvCampo('setEsp',this.value)"></div>
+        <div class="fld"><label for="pv-und">Unidad</label>
+          <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
+            ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
+        ${F('asFound','Disparo inicial · AS FOUND','cómo llegó')}
+      </div>
+      <h4 class="snc-sec">Verificación final · AS LEFT (tres disparos)</h4>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-t${i}">Test ${i} <span class="req-dot">*</span></label>
+          <input class="inp mono" id="pv-t${i}" inputmode="decimal" value="${esc(t['t'+i])}"
+            placeholder="—" oninput="psvCampo('t${i}',this.value)"></div>`).join('')}
+      </div>
+      <h4 class="snc-sec">Presión de cierre · blowdown</h4>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-pc${i}">Cierre ${i}</label>
+          <input class="inp mono" id="pv-pc${i}" inputmode="decimal" value="${esc(t['pc'+i])}"
+            placeholder="—" oninput="psvCampo('pc${i}',this.value)"></div>`).join('')}
+      </div>
+      <div id="psvRes"></div>
+    </div></details>
+
+    <details class="psv-sec"><summary>3 · Hermeticidad · API 527</summary><div class="psv-b">
+      <p class="pl-regla">Se aplica el <b>90 % de la presión de ajuste</b> y se cuentan las burbujas por minuto.
+        El criterio de aceptación depende del orificio y del tipo de asiento: lo marca el técnico.</p>
+      <div class="two">
+        ${F('hTiempo','Tiempo de prueba','1 min')}
+        <div class="fld"><label for="pv-hConf">Resultado</label>
+          <select class="inp" id="pv-hConf" onchange="psvCampo('hConf',this.value)">
+            ${['Conforme','No conforme'].map(x=>`<option ${t.hConf===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-hb${i}">Burbujas/min ${i}</label>
+          <input class="inp mono" id="pv-hb${i}" inputmode="decimal" value="${esc(t['hb'+i])}"
+            placeholder="—" oninput="psvCampo('hb${i}',this.value)"></div>`).join('')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec"><summary>4 · Resorte y componentes</summary><div class="psv-b">
+      <h4 class="snc-sec">Perpendicularidad</h4>
+      <div class="two">
+        ${F('perpAlt','Altura (mm)')}${F('perpNEsp','N.º de espiras')}
+        ${F('perpFi','Ø espiral (mm)')}${F('perpAng','Ángulo (°)')}
+        ${F('perpDesv','Desviación (°)')}
+        <div class="fld"><label for="pv-metodo">Método usado</label>
+          <select class="inp" id="pv-metodo" onchange="psvCampo('metodo',this.value)">
+            ${['Métrico','Imperial'].map(x=>`<option ${t.metodo===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <h4 class="snc-sec">Paralelismo y fatiga</h4>
+      <div class="two">${F('parFi','Ø externo (mm)')}${F('parAng','Ángulo (°)')}${F('parDesv','Desviación (°)')}</div>
+      <h4 class="snc-sec">Regulación</h4>
+      <div class="two">
+        ${F('pernoIni','Perno regulación inicial (mm)')}${F('pernoFin','Perno regulación final (mm)')}
+        ${F('muescaSup','Muescas anillo superior')}${F('muescaInf','Muescas anillo inferior')}
+        ${F('altRes','Altura del resorte (mm)')}${F('diamEsp','Ø de espiras (mm)')}${F('numEsp','N.º de espiras')}
+      </div>
+      <h4 class="snc-sec">Disco y tobera</h4>
+      <div class="two">
+        ${F('discoExt','Disco · Ø ext')}${F('discoInt','Disco · Ø int')}${F('discoH','Disco · h')}
+        ${F('tobExt','Tobera · Ø ext')}${F('tobInt','Tobera · Ø int')}${F('tobH','Tobera · h')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec"><summary>5 · Registro fotográfico y comentarios</summary><div class="psv-b">
+      <div class="fld"><label for="pv-coment">Comentarios u observaciones</label>
+        <textarea class="inp" id="pv-coment" rows="3" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea></div>
+      <label class="ev-add" for="pvFoto">
+        <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        <span>Agregar fotos del ensayo</span></label>
+      <input id="pvFoto" type="file" accept="image/*" capture="environment" multiple
+        style="display:none" onchange="psvFotos(this.files);this.value=''">
+      <div class="ev-tiras" id="pvFotos"></div>
+    </div></details>
+   </div>`;
+
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
+    <button class="btn" onclick="guardarPSV(true)">Guardar y emitir certificado</button>`;
+  pintarPSVResultado(); pintarPSVFotos();
+}
+
+/* El veredicto se ve mientras se escribe: si el tercer disparo se
+   sale de tolerancia, el técnico lo sabe antes de guardar. */
+function pintarPSVResultado(){
+  const caja=$('#psvRes'); if(!caja||!PSV_TMP)return;
+  const v=psvVeredicto(PSV_TMP), b=psvBlowdown(PSV_TMP), u=PSV_TMP.und||'psi';
+  if(v.estado==='incompleto'){
+    caja.innerHTML=`<div class="psv-res esp"><b>Falta ${esc(v.falta)}</b>
+      <span>Con la presión requerida y al menos un disparo ya se calcula el resultado.</span></div>`;
+    return;
+  }
+  caja.innerHTML=`
+    <div class="psv-res ${v.estado}">
+      <div class="psv-vd">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
+      <div class="psv-nums">
+        <div><span>Promedio</span><b class="mono">${n2(v.prom)} ${esc(u)}</b></div>
+        <div><span>Requerido</span><b class="mono">${n2(v.set)} ${esc(u)}</b></div>
+        <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+        <div><span>Rango admisible</span><b class="mono">${n2(v.min)} – ${n2(v.max)}</b></div>
+      </div>
+      <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+      ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) ·
+        se espera ≤ 8 % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
+    </div>`;
+}
+
+/* Las fotos se reducen antes de guardar: en planta se sube por datos. */
+function psvFotos(files){
+  Array.from(files||[]).forEach(f=>{
+    if(!/^image\//.test(f.type))return;
+    evFoto(f).then(d=>{PSV_TMP.fotos.push(d);pintarPSVFotos()}).catch(()=>{});
+  });
+}
+function psvQuitarFoto(i){PSV_TMP.fotos.splice(i,1);pintarPSVFotos()}
+function pintarPSVFotos(){
+  const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
+  c.innerHTML=(PSV_TMP.fotos||[]).map((d,i)=>`
+    <div class="ev-tira"><img src="${d}" alt="Foto ${i+1} del ensayo">
+      <button class="ev-x" onclick="psvQuitarFoto(${i})" aria-label="Quitar la foto ${i+1}">×</button></div>`).join('');
+}
+
+function guardarPSV(emitir){
+  const t=PSV_TMP; if(!t)return;
+  const v=psvVeredicto(t);
+  if(v.estado==='incompleto'){toast('Falta '+v.falta);return}
+  const nuevo=!t.id;
+  if(nuevo)t.id='pv'+Date.now();
+  t.veredicto=v.estado;
+  t.prom=v.prom; t.desv=v.desv;
+  const i=CALIBS.findIndex(x=>x.id===t.id);
+  if(i>=0)CALIBS[i]=t; else CALIBS.unshift(t);
+  const a=ACTIVOS.find(x=>x.id===t.act)||{};
+  registrar('Ensayo PSV',`${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
+  toast(v.estado==='aprobado'?'Ensayo guardado · APROBADO':'Ensayo guardado · RECHAZADO');
+  const id=t.id; PSV_TMP=null; closeModal(); renderAll();
+  if(emitir)setTimeout(()=>imprimirPSV(id),150);
+}
+
+/* ── Datos de placa ──────────────────────────────────────────
+   El bloque de identificación del formato 1. Se escribe una vez
+   por válvula y de ahí sale solo en todos los certificados.
+   La foto de la placa queda al lado mientras se llena: es la
+   manera rápida y segura de no equivocarse en una serie. */
+const PSV_PLACA=[
+ ['ubic',  'Ubicación / servicio',        'Pulmón válvula de venteo'],
+ ['cert',  'Certificación',               'U o UV'],
+ ['orif',  'Orificio / lift',             'E'],
+ ['fluido','Fluido de operación',         'Gas'],
+ ['setPress','Presión de ajuste',         '1500'],
+ ['setUnd','Unidad',                      'psi'],
+ ['medida','Ø entrada × Ø salida',        '1/2" X 3/4"'],
+ ['clase', 'Clase / rating',              '#3000'],
+ ['capac', 'Capacidad',                   '1848'],
+ ['norma', 'Norma de prueba',             'ASME']
+];
+let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la placa
+function openPlacaPSV(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return;
+  /* Si se entra desde un ensayo sin terminar, ese ensayo no se pierde:
+     queda guardado y se devuelve al volver. */
+  if(PSV_TMP&&PSV_TMP.act===actId)PSV_GUARDADO=PSV_TMP;
+  PSV_TMP=null;
+  const m=MODELOS[a.mod]||{};
+  $('#mTitle').textContent=`Datos de placa · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+     <div>Sacá una foto de la placa y llenala mirándola: la foto se queda pegada a la válvula,
+       así que cualquiera puede comprobar después de dónde salió cada número.</div></div>
+   <div class="placa-cols">
+     <div class="placa-foto">
+       <label class="ev-add" for="plFoto">
+         <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+         <span>Foto de la placa</span></label>
+       <input id="plFoto" type="file" accept="image/*" capture="environment"
+         style="display:none" onchange="placaFoto('${a.id}',this.files[0]);this.value=''">
+       <div id="plVista">${a.fotoPlaca?`<img src="${a.fotoPlaca}" alt="Placa de ${esc(a.tag||'')}">`:''}</div>
+     </div>
+     <div class="placa-campos">
+       <div class="two">
+         <div class="fld"><label>Marca</label><input class="inp" value="${esc(m.m||'')}" disabled></div>
+         <div class="fld"><label>Modelo</label><input class="inp" value="${esc(a.mod||'')}" disabled></div>
+         <div class="fld"><label for="pl-ser">N.º de serie</label>
+           <input class="inp mono" id="pl-ser" value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)"></div>
+       </div>
+       <div class="two">
+        ${PSV_PLACA.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}</label>
+          <input class="inp" id="pl-${k}" value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}"
+            oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
+       </div>
+     </div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="volverDePlaca('${a.id}')">${PSV_GUARDADO?'Volver al ensayo':'Cerrar'}</button>
+    <button class="btn" onclick="guardarPlaca('${a.id}')">Guardar${PSV_GUARDADO?' y volver':''}</button>`;
+  $('#modal').classList.add('on');
+}
+/* Cerrar la placa devuelve a donde se estaba: al ensayo si venía de
+   ahí, o a la ficha del equipo, que sigue abierta detrás. */
+function volverDePlaca(){
+  const t=PSV_GUARDADO; PSV_GUARDADO=null;
+  if(t){
+    PSV_TMP=t;
+    const a=ACTIVOS.find(x=>x.id===t.act)||{};
+    $('#mTitle').textContent=(t.id?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+    pintarPSV(); return;
+  }
+  closeModal();
+}
+function placaCampo(id,k,v){const a=ACTIVOS.find(x=>x.id===id);if(a)a[k]=v}
+function placaFoto(id,f){
+  if(!f)return;
+  evFoto(f).then(d=>{
+    const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+    a.fotoPlaca=d;
+    const v=$('#plVista'); if(v)v.innerHTML=`<img src="${d}" alt="Placa">`;
+  }).catch(()=>{});
+}
+function guardarPlaca(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  registrar('Válvula',`Datos de placa de ${a.tag||a.ser||''}`);
+  toast('Datos de placa guardados');
+  renderAll();
+  /* Si el ensayo estaba a medio llenar, la presión de ajuste recién
+     corregida entra en él: es el dato que decide el resultado. */
+  if(PSV_GUARDADO&&!PSV_GUARDADO.setEsp&&a.setPress){
+    PSV_GUARDADO.setEsp=a.setPress; PSV_GUARDADO.und=a.setUnd||PSV_GUARDADO.und;
+  }
+  volverDePlaca(id);
+}
+
+/* ── La gráfica del ensayo ───────────────────────────────────
+   Los tres disparos contra la banda de tolerancia. De un vistazo
+   se ve si el promedio quedó dentro y con cuánto margen — que es
+   lo que el cliente mira primero. */
+function psvGrafica(v,ancho){
+  if(!v||v.estado==='incompleto')return '';
+  const W=ancho||520, H=170, L=64, R=18, T=16, B=30;
+  const gw=W-L-R, gh=H-T-B;
+  // el eje se abre un 60 % más que la banda para que la banda no llene todo
+  const margen=Math.max((v.max-v.min)*0.14, Math.abs(v.prom-v.set)*0.35, v.set*0.002);
+  const lo=Math.min(v.min,...v.disparos)-margen, hi=Math.max(v.max,...v.disparos)+margen;
+  const y=p=>T+gh-((p-lo)/(hi-lo||1))*gh;
+  const x=i=>L+gw*((i+1)/(v.disparos.length+1));
+  const yMin=y(v.min), yMax=y(v.max), ySet=y(v.set), yProm=y(v.prom);
+  const tono=v.estado==='aprobado'?'#1a7f52':'#c0392b';
+  return `<svg class="psv-graf" viewBox="0 0 ${W} ${H}" width="100%" role="img"
+    aria-label="Los tres disparos frente a la banda de tolerancia. Promedio ${n2(v.prom)}, requerido ${n2(v.set)}.">
+    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="#1a7f52" opacity=".10"/>
+    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.5"/>
+    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="2" stroke-dasharray="7 4"/>
+    ${v.disparos.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p)}" r="5.5" fill="${tono}"/>
+      <text x="${x(i)}" y="${y(p)-11}" text-anchor="middle" font-size="10.5" fill="#101418"
+        font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
+      <text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="#78818c"
+        font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`).join('')}
+    <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
+    <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="9.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
+    <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
+  </svg>`;
+}
+
+/* ── Firmas ──────────────────────────────────────────────────
+   Se dibujan con el dedo en la tablet o con el mouse en la
+   computadora. La firma queda pegada al ensayo, con el nombre,
+   el cargo y la fecha en formato peruano. */
+let FIRMA_CTX=null, FIRMA_TRAZO=false, FIRMA_HAY=false;
+
+function openFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{};
+  const def=firmantesDe(a.cli).filter(f=>f.rol===rol);
+  const yo=(typeof SES!=='undefined'&&SES)?SES:null;
+  const rl=FIRMA_ROLES.find(r=>r[0]===rol)||FIRMA_ROLES[0];
+  $('#mTitle').textContent=rl[1];
+  $('#mBody').innerHTML=`
+   <div class="two">
+     <div class="fld"><label for="fmNom">Nombre</label>
+       <input class="inp" id="fmNom" list="fmLista" value="${esc(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:''))}" placeholder="Nombre y apellido">
+       <datalist id="fmLista">${def.map(f=>`<option value="${esc(f.n)}">${esc(f.cargo||'')}</option>`).join('')}</datalist></div>
+     <div class="fld"><label for="fmCargo">Cargo</label>
+       <input class="inp" id="fmCargo" value="${esc(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):''))}" placeholder="Ing. Residente"></div>
+   </div>
+   <p class="pl-regla">Firmá con el dedo si estás en tablet o celular, o con el mouse si es computadora.
+     La fecha se pone sola: <b>${fPE(HOY.toISOString().slice(0,10))}</b>.</p>
+   <div class="firma-caja">
+     <canvas id="fmCanvas" class="firma-lienzo" aria-label="Zona para firmar"></canvas>
+     <div class="firma-linea"></div>
+   </div>
+   <div style="display:flex;gap:8px;margin-top:8px">
+     <button class="btn quiet" onclick="limpiarFirma()">Borrar y volver a firmar</button>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verPSV('${calibId}')">Volver</button>
+    <button class="btn" onclick="guardarFirma('${calibId}','${rol}')">Firmar</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>montarFirma(),60);
+}
+
+function montarFirma(){
+  const cv=$('#fmCanvas'); if(!cv)return;
+  const r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*d)); cv.height=Math.max(1,Math.round(r.height*d));
+  const ctx=cv.getContext('2d');
+  ctx.scale(d,d); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#101418';
+  FIRMA_CTX=ctx; FIRMA_HAY=false;
+  const pos=e=>{const b=cv.getBoundingClientRect();
+    const p=e.touches?e.touches[0]:e; return [p.clientX-b.left,p.clientY-b.top]};
+  const abajo=e=>{e.preventDefault();FIRMA_TRAZO=true;FIRMA_HAY=true;
+    const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)};
+  const mueve=e=>{if(!FIRMA_TRAZO)return;e.preventDefault();
+    const [x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke()};
+  const arriba=()=>{FIRMA_TRAZO=false};
+  cv.addEventListener('pointerdown',abajo); cv.addEventListener('pointermove',mueve);
+  window.addEventListener('pointerup',arriba);
+  cv.addEventListener('touchstart',abajo,{passive:false});
+  cv.addEventListener('touchmove',mueve,{passive:false});
+  cv.addEventListener('touchend',arriba);
+}
+function limpiarFirma(){
+  const cv=$('#fmCanvas'); if(!cv||!FIRMA_CTX)return;
+  FIRMA_CTX.clearRect(0,0,cv.width,cv.height); FIRMA_HAY=false;
+}
+function guardarFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const n=($('#fmNom').value||'').trim(), cargo=($('#fmCargo').value||'').trim();
+  if(!n){toast('Escribe el nombre de quien firma');$('#fmNom').focus();return}
+  if(!FIRMA_HAY){toast('Falta la firma: dibujala en el recuadro');return}
+  const img=$('#fmCanvas').toDataURL('image/png');
+  c.firmas=(c.firmas||[]).filter(f=>f.rol!==rol);
+  c.firmas.push({rol,n,cargo,f:HOY.toISOString().slice(0,10),img});
+  const a=ACTIVOS.find(x=>x.id===c.act)||{};
+  registrar('Firma',`${n} firmó el ensayo de ${a.tag||''}`);
+  toast('Firmado');
+  guardarLocal();renderAll();verPSV(calibId);
+}
+
+/* ── El certificado en pantalla ──────────────────────────────*/
+function verPSV(id){
+  const c=CALIBS.find(x=>x.id===id); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{};
+  const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
+  const cliente=S.rol==='cliente';
+  const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  $('#mTitle').textContent=`Ensayo · ${a.tag||''}`;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${v.estado==='aprobado'?'ok':v.estado==='rechazado'?'late':'ink-3'}">
+        ${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO':'Incompleto'}</span>
+      <span>${fPE(c.fecha)}</span>${c.os?`<span>· O.S. ${esc(c.os)}</span>`:''}
+      <span class="tag mono">${esc(a.tag||'')}</span>
+    </div>
+    ${v.estado!=='incompleto'?`
+    <div class="psv-res ${v.estado}" style="margin-bottom:var(--sp-4)">
+      <div class="psv-nums">
+        <div><span>Promedio de los 3 disparos</span><b class="mono">${n2(v.prom)} ${esc(u)}</b></div>
+        <div><span>Requerido</span><b class="mono">${n2(v.set)} ${esc(u)}</b></div>
+        <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+      </div>
+      <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+    </div>
+    ${psvGrafica(v)}`:''}
+    <h4 class="snc-sec">Firmas</h4>
+    <div class="firmas-grid">
+      ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
+        return `<div class="firma-box ${f?'ok':''}">
+          <span class="fb-rol">${esc(lbl)}</span>
+          ${f?`<img class="fb-img" src="${f.img}" alt="Firma de ${esc(f.n)}">
+               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>`
+             :`<span class="fb-vacio">Sin firmar</span>
+               ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
+        </div>`}).join('')}
+    </div>
+    ${c.coment?`<div class="snc-nota" style="margin-top:var(--sp-4)">${esc(c.coment)}</div>`:''}
+    ${(c.fotos&&c.fotos.length)?`<h4 class="snc-sec">Registro fotográfico</h4>
+      <div class="ev-tiras">${c.fotos.map((d,i)=>`<div class="ev-tira"><img src="${d}" alt="Foto ${i+1}"></div>`).join('')}</div>`:''}`;
+  $('#mFoot').innerHTML=`
+    <button class="btn sec" onclick="imprimirPSV('${c.id}')">Imprimir certificado</button>
+    ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
+  $('#modal').classList.add('on');
+}
+
+/* ── El certificado impreso · AXAD-088 V.2 ───────────────────
+   Mismo orden, mismos títulos y mismo pie que el formato de la
+   empresa: es lo que el auditor y el cliente esperan ver. */
+function imprimirPSV(id){
+  const c=CALIBS.find(x=>x.id===id); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  const fila=(k,val)=>`<tr><th>${k}</th><td>${val==null||val===''?'—':esc(String(val))}</td></tr>`;
+  const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  <title>AXAD-088 ${esc(a.tag||'')}</title><style>
+  *{box-sizing:border-box}
+  body{font:11px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:18mm 14mm}
+  h1{font-size:15px;text-align:center;margin:0 0 2px;letter-spacing:.02em}
+  .sub{text-align:center;color:#5b6470;font-size:10px;margin-bottom:12px}
+  h2{font-size:11px;background:#eceff2;padding:4px 7px;margin:12px 0 0;border:1px solid #d7dbe0;border-bottom:0}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th,td{border:1px solid #d7dbe0;padding:3px 6px;text-align:left;vertical-align:top}
+  th{background:#f7f8f9;font-weight:600;width:34%}
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .vd{margin:10px 0;padding:8px 10px;border:2px solid;text-align:center;font-size:14px;font-weight:700;letter-spacing:.06em}
+  .vd.aprobado{border-color:#1a7f52;color:#1a7f52;background:#eaf6ef}
+  .vd.rechazado{border-color:#c0392b;color:#c0392b;background:#fdecea}
+  .res th{width:26%}
+  .firmas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .fb{border:1px solid #d7dbe0;padding:6px;min-height:104px;font-size:9px;display:flex;flex-direction:column}
+  .fb b{display:block;font-size:9.5px;border-top:1px solid #101418;padding-top:3px;margin-top:auto}
+  .fb .rol{font-weight:700;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}
+  .fb img{max-height:44px;max-width:100%;object-fit:contain;margin:4px 0}
+  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  .fotos img{width:100%;height:86px;object-fit:cover;border:1px solid #d7dbe0}
+  .pie{margin-top:14px;padding-top:6px;border-top:1px solid #d7dbe0;display:flex;justify-content:space-between;font-size:9px;color:#78818c}
+  @page{size:A4;margin:12mm}
+  </style></head><body>
+  <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1>
+  <div class="sub">${esc(e.n||'')} · TAG ${esc(a.tag||'')} · ${fPE(c.fecha)}${c.os?' · O.S. '+esc(c.os):''}</div>
+
+  <div class="par">
+    <div><h2>DATOS DEL SERVICIO</h2><table>
+      ${fila('EMPRESA',e.n)}${fila('CONTACTO',c.contacto)}${fila('TAG N°',a.tag)}
+      ${fila('UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}${fila('FLUIDO DE OPERACIÓN',a.fluido)}
+      ${fila('FECHA',fPE(c.fecha))}</table></div>
+    <div><h2>INFORMACIÓN DE LA VÁLVULA</h2><table>
+      ${fila('MARCA',m.m)}${fila('MODELO',a.mod)}${fila('N° SERIE',a.ser)}
+      ${fila('ORIFICIO / LIFT',a.orif)}${fila('SET PRESS REQUERIDO',(c.setEsp?c.setEsp+' '+u:''))}
+      ${fila('Ø ENT × Ø SALIDA',a.medida)}${fila('CAPACIDAD',a.capac)}
+      ${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA DE PRUEBA',a.norma)}</table></div>
+  </div>
+
+  <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
+  <div class="par"><table>
+    ${fila('DESCRIPCIÓN',c.patDesc)}${fila('MODELO',c.patModelo)}${fila('MARCA',c.patMarca)}
+    ${fila('NUM. SERIE',c.patSerie)}</table>
+  <table>${fila('ESCALA',c.patEscala)}${fila('CLASE DE EXACTITUD',c.patExact)}
+    ${fila('FECHA DE CALIBRACIÓN',fPE(c.patFecha))}${fila('CERTIF. NUM',c.patCert)}</table></div>
+
+  <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
+  <table><tr><td>
+    <b>1.</b> Presión de disparo (seteo) inicial — <i>as found</i>, para verificar el punto de disparo actual de la válvula.<br>
+    <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.<br>
+    <b>3.</b> Verificación final del punto de disparo. Se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.
+  </td></tr></table>
+
+  <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
+  <table class="res">
+    ${fila('PRESIÓN DE DISPARO INICIAL (AS FOUND)',c.asFound?c.asFound+' '+u:'')}
+    ${fila('SET PRESS ESPERADO',(c.setEsp?c.setEsp+' '+u:''))}
+    ${fila('FLUIDO DE PRUEBA',c.fluidoP)}
+  </table>
+  <table class="res" style="margin-top:4px">
+    <tr><th>AS LEFT según API 527</th><th>Presión de disparo (${esc(u)})</th><th>Presión de cierre (${esc(u)})</th><th>Desviación (±%)</th></tr>
+    ${[1,2,3].map(i=>{const t=num(c['t'+i]);
+      return `<tr><td>TEST ${i}</td><td>${isFinite(t)?n2(t):'—'}</td>
+        <td>${c['pc'+i]?esc(c['pc'+i]):'—'}</td>
+        <td>${isFinite(t)&&v.set?n2((t-v.set)/v.set*100):'—'}</td></tr>`}).join('')}
+    ${v.estado!=='incompleto'?`<tr><th>PROMEDIO</th><th>${n2(v.prom)}</th>
+      <th>${b?n2(b.prom):'—'}</th><th>${n2(v.desv)}</th></tr>`:''}
+  </table>
+  ${v.estado!=='incompleto'?`
+  <table class="res" style="margin-top:4px">
+    ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
+    ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
+    ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+' %  (se espera ≤ 8 %)':'—')}
+  </table>
+  <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
+  ${psvGrafica(v,660)}`:''}
+
+  <h2>PRUEBA DE HERMETICIDAD (LEAKAGE TEST SEGÚN API 527)</h2>
+  <table class="res">
+    ${fila('PRESIÓN APLICADA',(v.estado!=='incompleto'?n2(v.set*0.9)+' '+u+'  (90 % del set press)':'—'))}
+    ${fila('FLUIDO / TIEMPO',(c.fluidoP||'')+' · '+(c.hTiempo||''))}
+    ${fila('BURBUJAS POR MINUTO',[c.hb1,c.hb2,c.hb3].filter(Boolean).join('  ·  '))}
+    ${fila('RESULTADO',c.hConf)}
+  </table>
+
+  <h2>PRUEBAS DE FUNCIONABILIDAD DEL RESORTE</h2>
+  <div class="par">
+    <table><tr><th colspan="2">PERPENDICULARIDAD</th></tr>
+      ${fila('ALTURA',c.perpAlt?c.perpAlt+' mm':'')}${fila('N° ESPIRAL',c.perpNEsp)}
+      ${fila('Ø ESPIRAL',c.perpFi)}${fila('ÁNGULO',c.perpAng?c.perpAng+' °':'')}
+      ${fila('DESVIACIÓN',c.perpDesv?c.perpDesv+' °':'')}${fila('MÉTODO USADO',c.metodo)}</table>
+    <table><tr><th colspan="2">PARALELISMO Y FATIGA</th></tr>
+      ${fila('Ø EXTERNO',c.parFi)}${fila('ÁNGULO',c.parAng?c.parAng+' °':'')}
+      ${fila('DESVIACIÓN',c.parDesv?c.parDesv+' °':'')}
+      ${fila('PERNO REGULACIÓN',(c.pernoIni||'—')+' → '+(c.pernoFin||'—'))}
+      ${fila('MUESCAS ANILLO SUP / INF',(c.muescaSup||'—')+' / '+(c.muescaInf||'—'))}</table>
+  </div>
+
+  ${c.coment?`<h2>COMENTARIOS U OBSERVACIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
+  ${(c.fotos&&c.fotos.length)?`<h2>REGISTRO FOTOGRÁFICO</h2>
+    <div class="fotos">${c.fotos.slice(0,6).map(d=>`<img src="${d}" alt="">`).join('')}</div>`:''}
+
+  <div class="firmas">
+    ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
+      return `<div class="fb"><span class="rol">${esc(lbl)}</span>
+        ${f?`<img src="${f.img}" alt="">`:''}
+        <b>${f?esc(f.n):'&nbsp;'}</b>
+        <span>${f?esc(f.cargo||''):'Cargo:'}</span>
+        <span>${f?fPE(f.f):'Fecha:'}</span></div>`}).join('')}
+  </div>
+
+  <div class="pie"><span>AXAD-088 V.2</span><span>Adolphus S.A. · Control de fluidos · Lima</span>
+    <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
+  </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+}
+
 
 /* ============================================================
    RECLAMOS / SERVICIO NO CONFORME
@@ -3802,10 +5101,8 @@ function sncProducto(a){
 }
 /* Cuánto le falta al expediente para poder mandarse al cliente. */
 function sncFalta(r){
-  /* mientras Adolphus no lo acepte, y si no procede, no hay nada que
-     completar: el expediente no ha empezado o no va a empezar */
-  if(r.est==='recibido'||r.est==='rechazado') return [];
   const f=[];
+  if(!r.area) f.push('el área que lo resuelve');
   if(!r.accInm)  f.push('acción inmediata');
   if(!r.fInm)    f.push('fecha de la acción inmediata');
   if(!r.respInm) f.push('responsable de la acción inmediata');
@@ -3825,9 +5122,8 @@ function renderSNC(){
   const caja=$('#sncList'); if(!caja) return;
   const cliente=S.rol==='cliente';
   const bot=$('#sncBtn');
-  if(bot) bot.innerHTML = cliente
-    ? `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Reportar un problema</button>`
-    : `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo reclamo</button>`;
+  if(bot) bot.innerHTML = cliente ? '' :
+    `<button class="btn" onclick="openSNC()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo registro</button>`;
 
   const lista=sncMios().slice().sort((a,b)=>b.f.localeCompare(a.f));
   const ct=$('#ctSnc'); if(ct)ct.textContent=lista.filter(r=>r.est!=='cerrado').length||'';
@@ -3835,9 +5131,7 @@ function renderSNC(){
   if(!lista.length){
     caja.innerHTML=`<div class="panel"><div class="empty">
       <svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg>
-      <b>Sin reclamos registrados</b>${cliente
-        ?'Si una válvula falló o el servicio no salió como esperabas, repórtalo aquí.'
-        :'Cuando el cliente reporte un problema o se detecte un servicio no conforme, se abre desde aquí.'}</div></div>`;
+      <b>Sin registros</b>Cuando llegue una válvula devuelta y al revisarla se encuentre algo, se levanta el registro desde aquí o desde la ficha del equipo.</div></div>`;
     return;
   }
   caja.innerHTML=`<div class="snc-l">${lista.map(r=>{
@@ -3854,9 +5148,10 @@ function renderSNC(){
         <span>${esc(sncProducto(a)||'Sin equipo asociado')}</span>
         ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
       </div>
-      ${falta.length
-        ? `<div class="snc-p"><span class="pt"></span>Falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} campo${falta.length-2>1?'s':''} más`:''}</div>`
-        : `<div class="snc-p ok"><span class="pt"></span>Expediente completo · listo para enviar al cliente</div>`}
+      <div class="snc-p ${r.est==='cerrado'?'ok':''}"><span class="pt"></span>${
+        !r.enviado ? 'Sin dirigir · todavía nadie lo tiene en sus avisos'
+        : r.est==='cerrado' ? `Cerrado · ${esc(areaDe(r.area)[1])}`
+        : `${esc(areaDe(r.area)[1])}${falta.length?` — falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} más`:''}`:' — listo para cerrar'}`}</div>
     </article>`}).join('')}</div>`;
 }
 
@@ -3864,81 +5159,43 @@ function renderSNC(){
    Arriba el TAG y lo que trae consigo; abajo, en tres bloques, lo que
    toca escribir. Los dieciséis campos del formato están todos, en el
    mismo orden en que el cliente los pide. */
-function openSNC(id){
+function openSNC(id,actId){
+  if(S.rol==='cliente'){toast('El registro de calidad lo levanta Adolphus');return}
   const r=id?RECLAMOS.find(x=>x.id===id):null;
-  /* dentro de la carpeta de un cliente solo se ofrecen sus equipos */
   const f=sncFoco();
   const opts=(f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS).filter(a=>a.tag);
-  const cliente=S.rol==='cliente';
+  const pre=r?r.act:(actId||'');
   const num=r?r.n:'SNC-2026-'+String(RECLAMOS.length+1).padStart(3,'0');
 
-  const equipo=`
-    <div class="fld">
-      <label for="sncAct">${cliente?'¿Qué válvula es? — elige el TAG':'Equipo — escribe o elige el TAG'}</label>
-      <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
-        <option value="">${cliente?'No sé cuál es':'Sin equipo asociado'}</option>
-        ${opts.map(a=>`<option value="${a.id}" ${r&&r.act===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
-      </select>
-    </div>
-    <div id="sncCtx"></div>`;
-
-  /* ── Lo que el cliente escribe ──────────────────────────────
-     Cuatro cosas y ninguna más. El resto —causa raíz, acciones,
-     proveedor, fechas— es trabajo de Adolphus y no tiene por qué
-     aparecer en su pantalla. */
-  const delCliente=`
+  $('#mTitle').textContent=r?`Editar ${r.n}`:'Nuevo registro de servicio no conforme';
+  $('#mBody').innerHTML=`
     <div class="snc-form">
-      ${equipo}
-      <h4 class="snc-sec">Cuéntanos qué pasó</h4>
-      <div class="fld"><label for="sncDet">El problema, en una línea</label>
-        <input class="inp" id="sncDet" placeholder="Fuga por la brida, no cierra, llegó golpeada…" value="${esc(r?r.det:'')}"></div>
-      <div class="fld"><label for="sncHall">Cuéntalo con detalle <span class="opc">qué viste, desde cuándo, si paró la planta</span></label>
-        <textarea class="inp" id="sncHall" rows="4" placeholder="Mientras más concreto, más rápido responde ingeniería.">${esc(r?r.hall:'')}</textarea></div>
-      <div class="two">
-        <div class="fld"><label for="sncOcCli">Tu orden de compra <span class="opc">si la tienes a mano</span></label>
-          <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
-        <div class="fld"><label for="sncRefCli">Tu n.º de reclamo <span class="opc">si tu empresa usa uno</span></label>
-          <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
+      <div class="fld">
+        <label for="sncAct">Válvula devuelta — escribe o elige el TAG</label>
+        <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
+          <option value="">Sin equipo asociado</option>
+          ${opts.map(a=>`<option value="${a.id}" ${pre===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
+        </select>
       </div>
+      <div id="sncCtx"></div>
 
-      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
-      <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
-           ondragover="event.preventDefault();this.classList.add('over')"
-           ondragleave="this.classList.remove('over')"
-           ondrop="event.preventDefault();this.classList.remove('over');evSubir(event.dataTransfer.files)"
-           tabindex="0" role="button" aria-label="Agregar fotos o video">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l5-4 4 3 3-2 4 3"/></svg>
-        <b>Agrega fotos o un video</b>
-        <span>Arrástralos aquí, o toca para elegirlos o tomarlos con la cámara</span>
-      </div>
-      <input type="file" id="evFile" accept="image/*,video/*" multiple capture="environment"
-             style="display:none" onchange="evSubir(this.files);this.value=''">
-      <div class="ev-grid" id="evGrid"></div>
-      <div class="snc-nota">Adolphus revisa tu reclamo y te avisa si lo toma. Si lo toma, verás aquí mismo qué se hizo, por qué pasó y cómo se corrigió.</div>
-      <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
-    </div>`;
-
-  /* ── Lo que llena Adolphus ────────────────────────────────── */
-  const deAdolphus=`
-    <div class="snc-form">
-      ${equipo}
-      <h4 class="snc-sec">1 · Qué pasó</h4>
+      <h4 class="snc-sec">1 · Qué se encontró</h4>
       <div class="fld"><label for="sncDet">Detalle de la incidencia</label>
         <textarea class="inp" id="sncDet" rows="2" placeholder="En una línea: qué ocurrió.">${esc(r?r.det:'')}</textarea></div>
+      <div class="fld"><label for="sncQuien">Quién lo detecta</label>
+        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
+        <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró al revisarla, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="two">
         <div class="fld"><label for="sncOcCli">Orden de compra del cliente</label>
           <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
         <div class="fld"><label for="sncRefCli">Referencia del cliente <span class="opc">su propio n.º de reclamo</span></label>
           <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
       </div>
-      <div class="fld"><label for="sncQuien">Quién identifica el servicio no conforme</label>
-        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
-        <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="fld"><label for="sncDoma">Código DOMA del cliente <span class="opc">si lo maneja</span></label>
         <input class="inp" id="sncDoma" placeholder="DOM-…" value="${esc(r?r.doma:'')}"></div>
 
-      <h4 class="snc-sec">Fotos o video <span class="opc">opcional, pero ayuda mucho</span></h4>
+      <h4 class="snc-sec">Fotos o video <span class="opc">de la válvula tal como llegó</span></h4>
       <div class="ev-drop" id="evDrop" onclick="$('#evFile').click()"
            ondragover="event.preventDefault();this.classList.add('over')"
            ondragleave="this.classList.remove('over')"
@@ -3952,7 +5209,15 @@ function openSNC(id){
              style="display:none" onchange="evSubir(this.files);this.value=''">
       <div class="ev-grid" id="evGrid"></div>
 
-      <h4 class="snc-sec">2 · Qué se hizo de inmediato</h4>
+      <h4 class="snc-sec">2 · A quién le toca</h4>
+      <div class="fld"><label for="sncArea">Área que lo resuelve</label>
+        <select class="inp" id="sncArea">
+          <option value="">Todavía no lo dirijo a nadie</option>
+          ${AREAS.map(([k,t])=>`<option value="${k}" ${r&&r.area===k?'selected':''}>${t}</option>`).join('')}
+        </select></div>
+      <div class="snc-nota">Al enviarlo, al área le aparece en sus avisos con la válvula, el hallazgo y las fotos. Si todavía no sabes a quién dirigirlo, guárdalo y queda en la lista sin enviar.</div>
+
+      <h4 class="snc-sec">3 · Qué se hizo de inmediato</h4>
       <div class="fld"><label for="sncAccInm">Acción inmediata <span class="opc">empieza con un verbo</span></label>
         <textarea class="inp" id="sncAccInm" rows="2" placeholder="Aislar la línea y montar la válvula de reserva…">${esc(r?r.accInm:'')}</textarea></div>
       <div class="two">
@@ -3964,7 +5229,7 @@ function openSNC(id){
       <div class="fld"><label for="sncObs">Observaciones relevantes</label>
         <textarea class="inp" id="sncObs" rows="2" placeholder="Si la planta paró, si se coordinó con alguien, si se guardó la pieza…">${esc(r?r.obs:'')}</textarea></div>
 
-      <h4 class="snc-sec">3 · Por qué pasó y cómo se corrige</h4>
+      <h4 class="snc-sec">4 · Por qué pasó y cómo se corrige</h4>
       <div class="fld"><label for="sncCausa">Causa raíz <span class="opc">por qué ocurrió el hallazgo</span></label>
         <textarea class="inp" id="sncCausa" rows="3" placeholder="No el síntoma: la razón de fondo.">${esc(r?r.causa:'')}</textarea></div>
       <div class="fld"><label for="sncAccCor">Acción correctiva <span class="opc">cómo se corrige esa causa, en verbo</span></label>
@@ -3987,11 +5252,9 @@ function openSNC(id){
         <option value="O. Julio de la Rosa"><option value="M. Ángel Torres"></datalist>
       <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
     </div>`;
-
-  $('#mTitle').textContent = r ? `Editar ${r.n}` : (cliente?'Reportar un problema':'Nuevo reclamo');
-  $('#mBody').innerHTML = cliente ? delCliente : deAdolphus;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
-    <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':(cliente?'Enviar el reclamo':'Abrir el reclamo')}</button>`;
+    <button class="btn sec" onclick="guardarSNC(false)">Guardar sin enviar</button>
+    <button class="btn" onclick="guardarSNC(true)">${r&&r.enviado?'Guardar':'Enviar al área'}</button>`;
   $('#modal').classList.add('on');
   EV_TMP = r ? (r.ev||[]).slice() : [];
   pintarCtxSNC(); pintarEv();
@@ -4090,56 +5353,48 @@ function pintarCtxSNC(){
   </div>`;
 }
 
-function guardarSNC(){
+function guardarSNC(enviar){
   const v=i=>($('#'+i)?$('#'+i).value.trim():'');
-  const cliente=S.rol==='cliente';
   const det=v('sncDet');
-  if(!det){toast(cliente?'Cuéntanos en una línea qué pasó':'Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
-  const id=v('sncId');
+  if(!det){toast('Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
+  const area=v('sncArea');
+  if(enviar&&!area){toast('Elige el área que lo resuelve, o guárdalo sin enviar');$('#sncArea').focus();return}
+  const id=v('sncId'), hoy=HOY.toISOString().slice(0,10);
+  const yo=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
   const datos={
-    act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'), hall:v('sncHall')
-  };
-  datos.ev=EV_TMP.slice();
-  if(!cliente) Object.assign(datos,{
-    ident:v('sncQuien'), doma:v('sncDoma'),
+    act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'),
+    ident:v('sncQuien'), hall:v('sncHall'), doma:v('sncDoma'), area,
     accInm:v('sncAccInm'), fInm:v('sncFInm'), respInm:v('sncRespInm'), obs:v('sncObs'),
     causa:v('sncCausa'), accCor:v('sncAccCor'), fIni:v('sncFIni'), fFin:v('sncFFin'),
-    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv')
-  });
+    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv'),
+    ev:EV_TMP.slice()
+  };
 
   if(id){
     const r=RECLAMOS.find(x=>x.id===id);
+    const areaAntes=r.area, eraEnviado=r.enviado;
     Object.assign(r,datos);
-    /* El estado lo dice lo que está lleno — pero solo una vez que
-       Adolphus lo aceptó. Un reclamo por revisar sigue por revisar. */
-    if(!['recibido','rechazado'].includes(r.est)) r.est=sncEstadoPorContenido(r);
+    r.hist=r.hist||[];
+    if(enviar&&!eraEnviado){r.enviado=hoy;r.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`})}
+    else if(enviar&&areaAntes!==area)r.hist.push({f:hoy,t:`Redirigido a ${areaDe(area)[1]}`});
+    r.est=sncEstadoPorContenido(r);
     registrar('Reclamo',`${r.n} actualizado`);
-    toast('Reclamo actualizado');
+    toast(enviar&&!eraEnviado?`Enviado a ${areaDe(area)[1]}`:'Registro actualizado');
     closeModal();renderAll();verSNC(r.id);return;
   }
 
   const a=ACTIVOS.find(x=>x.id===datos.act);
   const nuevo=Object.assign({
     id:'r'+Date.now(), n:v('sncNum'),
-    cli:sncFoco()||(a?a.cli:null)||'refi',
-    f:HOY.toISOString().slice(0,10),
-    /* Quién lo reporta: del lado del cliente vale su empresa; del
-       lado de Adolphus, la persona que lo abre. */
-    por: cliente ? cli(sncFoco()).n
-                 : ((typeof SES!=='undefined'&&SES) ? SES.n : 'Adolphus'),
-    /* Lo del cliente entra por revisar; lo que abre Adolphus ya nace
-       aceptado, porque lo abre quien lo va a atender. */
-    est: cliente ? 'recibido' : 'abierto',
-    ident: cliente ? 'cliente' : (datos.ident||'adolphus'),
-    doma:'',accInm:'',fInm:'',respInm:'',obs:'',causa:'',accCor:'',
-    fIni:'',fFin:'',respCor:'',prov:(a?(MODELOS[a.mod]||{}).m||'':''),ocProv:'',
-    hist:[]
+    cli:(a?a.cli:null)||sncFoco()||CLIENTES[0].id,
+    f:hoy, por:yo, enviado:enviar?hoy:'',
+    hist:[{f:hoy,t:`Levantado por ${yo}`}]
   },datos);
-  if(!cliente) nuevo.est=sncEstadoPorContenido(nuevo);
-  nuevo.hist=[{f:nuevo.f,t:cliente?`Reportado por ${esc(nuevo.por)}`:'Abierto por Adolphus'}];
+  if(enviar)nuevo.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`});
+  nuevo.est=sncEstadoPorContenido(nuevo);
   RECLAMOS.unshift(nuevo);
-  registrar('Reclamo',`${nuevo.n} ${cliente?'reportado':'abierto'}`);
-  toast(cliente?'Reclamo enviado a Adolphus':'Reclamo abierto');
+  registrar('Reclamo',`${nuevo.n} levantado`);
+  toast(enviar?`Enviado a ${areaDe(area)[1]}`:'Guardado sin enviar');
   closeModal();renderAll();go('snc');
 }
 
@@ -4148,133 +5403,87 @@ function sncEstadoPorContenido(r){
   return r.fFin&&r.accCor ? 'cerrado'
        : r.accCor         ? 'correctiva'
        : r.causa          ? 'analisis'
-       : 'abierto';
+       : r.enviado        ? 'enviado'
+       : 'borrador';
 }
 
-/* ── La decisión de Adolphus ─────────────────────────────────
-   Un reclamo del cliente no entra solo al circuito de calidad: alguien
-   lo acepta o dice por qué no procede. En ambos casos el cliente se
-   entera, y queda escrito quién lo decidió y cuándo. */
-function aceptarSNC(id){
+/* Mandarlo al área sin abrir el formulario entero. */
+function enviarSNCArea(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  r.est=sncEstadoPorContenido(r);
-  r.decidido=HOY.toISOString().slice(0,10);
-  r.decidioQuien=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
-  r.motivo='';
-  (r.hist=r.hist||[]).push({f:r.decidido,t:`Aceptado por ${r.decidioQuien}`});
-  registrar('Reclamo',`${r.n} aceptado`);
-  toast('Reclamo aceptado · el cliente ya lo ve en su portal');
-  renderAll();verSNC(id);
-}
-function rechazarSNC(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  $('#mTitle').textContent=`${r.n} · no procede`;
+  $('#mTitle').textContent=`${r.n} · dirigirlo`;
   $('#mBody').innerHTML=`
     <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:var(--sp-4)">
-      El cliente va a leer este motivo tal cual. Explícalo en sus términos,
-      sin tecnicismos internos.</p>
-    <div class="fld"><label for="sncMot">Por qué no procede</label>
-      <textarea class="inp" id="sncMot" rows="4"
-        placeholder="La válvula operó fuera del rango de presión especificado en la hoja de datos…">${esc(r.motivo||'')}</textarea></div>`;
+      Al área le va a aparecer en sus avisos con la válvula, el hallazgo y las fotos.</p>
+    <div class="fld"><label for="sncArea2">Área que lo resuelve</label>
+      <select class="inp" id="sncArea2">
+        ${AREAS.map(([k,t])=>`<option value="${k}" ${r.area===k?'selected':''}>${t}</option>`).join('')}
+      </select></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="verSNC('${id}')">Volver</button>
-    <button class="btn" onclick="confirmarRechazo('${id}')">Enviar al cliente</button>`;
+    <button class="btn" onclick="confirmarEnvioSNC('${id}')">Enviar</button>`;
   $('#modal').classList.add('on');
-  setTimeout(()=>$('#sncMot')&&$('#sncMot').focus(),60);
 }
-function confirmarRechazo(id){
+function confirmarEnvioSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  const m=$('#sncMot').value.trim();
-  if(!m){toast('Escribe el motivo: el cliente lo va a leer');$('#sncMot').focus();return}
-  r.est='rechazado'; r.motivo=m;
-  r.decidido=HOY.toISOString().slice(0,10);
-  r.decidioQuien=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
-  (r.hist=r.hist||[]).push({f:r.decidido,t:`No procede — ${r.decidioQuien}`});
-  registrar('Reclamo',`${r.n} rechazado`);
-  toast('Se le explicó al cliente por qué no procede');
-  renderAll();verSNC(id);
-}
-function reabrirSNC(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  r.est='recibido'; r.motivo='';
-  (r.hist=r.hist||[]).push({f:HOY.toISOString().slice(0,10),t:'Vuelto a revisión'});
-  toast('El reclamo volvió a revisión');
+  const a=$('#sncArea2').value, hoy=HOY.toISOString().slice(0,10);
+  const redirige=r.enviado&&r.area!==a;
+  r.area=a; r.enviado=r.enviado||hoy;
+  (r.hist=r.hist||[]).push({f:hoy,t:`${redirige?'Redirigido':'Enviado'} a ${areaDe(a)[1]}`});
+  r.est=sncEstadoPorContenido(r);
+  registrar('Reclamo',`${r.n} enviado a ${areaDe(a)[1]}`);
+  toast(`Enviado a ${areaDe(a)[1]}`);
   renderAll();verSNC(id);
 }
 
-/* El expediente. Para Adolphus, los dieciséis puntos del formato de
-   calidad. Para el cliente, lo suyo y la respuesta — no le sirve ver
-   dieciséis casillas vacías mientras el reclamo se está atendiendo. */
+/* El expediente: los dieciséis puntos del formato de calidad, en su
+   orden, más a quién está dirigido. Es interno; el cliente no lo ve. */
 function verSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
+  if(S.rol==='cliente'){toast('Ese registro es interno de Adolphus');return}
   const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
-  const cliente=S.rol==='cliente';
   const fila=(n,t,val,vacio)=>`<div class="snc-r${val?'':' sin'}">
       <span class="snc-i">${n}</span>
       <div><b>${t}</b><p>${val?esc(val).replace(/\n/g,'<br>'):(vacio||'Pendiente')}</p></div></div>`;
 
-  const cab=`<div class="snc-cab">
-      <span class="tag ${e[2]}">${e[1]}</span>
-      <span>Abierto el ${r.f} por ${esc(r.por)}</span>
-      ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
-    </div>`;
-
-  /* La decisión, arriba del todo: es lo primero que cualquiera de los
-     dos lados quiere saber. */
-  let aviso='';
-  if(r.est==='recibido'){
-    aviso = cliente
-      ? `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-         <div>Adolphus lo recibió y lo está revisando. Te avisamos aquí mismo en cuanto haya respuesta.</div></div>`
-      : `<div class="snc-dec"><div class="snc-dec-t">
-           <b>${esc(cli(r.cli).n)} espera respuesta</b>
-           <span>Lo reportó ${esc(r.por)} el ${r.f}. Decide si Adolphus lo toma.</span></div>
-         <div class="snc-dec-b">
-           <button class="btn sec" onclick="rechazarSNC('${r.id}')">No procede</button>
-           <button class="btn" onclick="aceptarSNC('${r.id}')">Aceptar el reclamo</button></div></div>`;
-  }else if(r.est==='rechazado'){
-    aviso = `<div class="snc-dec no"><div class="snc-dec-t">
-        <b>No procede</b>
-        <span>${esc(r.motivo||'Sin motivo registrado')}</span>
-        <span class="snc-dec-q">${esc(r.decidioQuien||'Adolphus')} · ${r.decidido||r.f}</span></div>
-      ${cliente?'':`<div class="snc-dec-b"><button class="btn sec" onclick="reabrirSNC('${r.id}')">Volver a revisarlo</button></div>`}</div>`;
-  }else if(r.decidido&&cliente){
-    aviso = `<div class="callout ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-      <div>Adolphus aceptó tu reclamo el ${r.decidido}. Abajo verás qué se hizo y en qué va.</div></div>`;
-  }
-  if(!cliente&&falta.length&&r.est!=='recibido'&&r.est!=='rechazado')
-    aviso += `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para poder responderle al cliente: ${esc(falta.join(', '))}.</div></div>`;
-
-  /* Lo que ve el cliente: su reclamo, y qué hizo Adolphus. */
-  /* Las fotos y el video van arriba del texto: se entienden antes. */
+  /* Las fotos van arriba del texto: se entienden antes. */
   const evidencia=(r.ev&&r.ev.length)?`<div class="ev-grid ver">${r.ev.map((x,i)=>`
     <figure class="ev-i" onclick="verEv('${r.id}',${i})" tabindex="0" role="button" aria-label="Ver ${esc(x.n)}">
       ${x.t==='foto'?`<img src="${x.d}" alt="${esc(x.n)}">`
                     :`<video src="${x.d}" muted playsinline></video><span class="ev-play">▶</span>`}
       <figcaption>${esc(x.n)}</figcaption></figure>`).join('')}</div>`:'';
 
-  const vistaCliente=`
-    <div class="snc-doc">
-      ${fila('·','Lo que reportaste',r.det)}
-      ${fila('·','Con detalle',r.hall,'—')}
-      ${fila('·','Equipo',[a&&a.tag,sncProducto(a)].filter(Boolean).join(' · '),'No indicado')}
-      ${evidencia?`<div class="snc-r"><span class="snc-i">·</span><div style="width:100%"><b>Fotos y video</b>${evidencia}</div></div>`:''}
-      ${r.est==='rechazado'?'':`
-        ${fila('·','Qué se hizo de inmediato',r.accInm,'Todavía no se registra')}
-        ${r.fInm?fila('·','Cuándo',r.fInm):''}
-        ${fila('·','Por qué pasó',r.causa,'En análisis')}
-        ${fila('·','Cómo se corrige',r.accCor,'Pendiente')}
-        ${r.fFin?fila('·','Corregido el',r.fFin):''}`}
-    </div>`;
+  /* A quién le toca: lo primero, porque es lo que decide si esto
+     avanza hoy o se queda quieto. */
+  let aviso='';
+  if(!r.enviado)
+    aviso=`<div class="snc-dec"><div class="snc-dec-t">
+        <b>Todavía no está dirigido</b>
+        <span>Hasta que se envíe a un área, nadie lo tiene en sus avisos.</span></div>
+      <div class="snc-dec-b"><button class="btn" onclick="enviarSNCArea('${r.id}')">Enviar al área</button></div></div>`;
+  else
+    aviso=`<div class="snc-dec ${r.est==='cerrado'?'no':''}"><div class="snc-dec-t">
+        <b>${esc(areaDe(r.area)[1])}</b>
+        <span>${r.est==='cerrado'?`Cerrado${r.fFin?' el '+r.fFin:''}.`:esc(e[3])} · enviado el ${r.enviado}</span></div>
+      <div class="snc-dec-b"><button class="btn sec" onclick="enviarSNCArea('${r.id}')">Cambiar de área</button></div></div>`;
 
-  const vistaAdolphus=`
+  if(falta.length&&r.est!=='cerrado')
+    aviso += `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para cerrarlo: ${esc(falta.join(', '))}.</div></div>`;
+
+  $('#mTitle').textContent=r.n;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${e[2]}">${e[1]}</span>
+      <span>Levantado el ${r.f} por ${esc(r.por)}</span>
+      ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
+    </div>
+    ${aviso}
     <div class="snc-doc">
       ${fila(1,'Detalle de la incidencia',r.det)}
       ${fila(2,'Orden de compra del cliente',r.ocCli,'No indicada')}
       ${fila(3,'Referencia del cliente',r.refCli,'No aplica')}
-      ${fila(4,'Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
+      ${fila(4,'Detalle del hallazgo · lo detecta '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
       ${fila(5,'Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · '))}
-      ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video adjuntos</b>${evidencia}</div></div>`:''}
+      ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video de la válvula</b>${evidencia}</div></div>`:''}
       ${fila(6,'Acción inmediata',r.accInm)}
       ${fila(7,'Fecha de la acción inmediata',r.fInm)}
       ${fila(8,'Responsable de la acción inmediata',r.respInm)}
@@ -4286,18 +5495,12 @@ function verSNC(id){
       ${fila(14,'Responsable de la acción correctiva',r.respCor)}
       ${fila(15,'Proveedor',r.prov)}
       ${fila(16,'N.º de OC / PO / PSV / SVV',r.ocProv,'No indicado')}
-    </div>`;
-
-  const bitacora=(r.hist&&r.hist.length)?`<div class="snc-bit">
-    ${r.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:'';
-
-  $('#mTitle').textContent=r.n;
-  $('#mBody').innerHTML=cab+aviso+(cliente?vistaCliente:vistaAdolphus)+bitacora;
+    </div>
+    ${(r.hist&&r.hist.length)?`<div class="snc-bit">${r.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:''}`;
   $('#mFoot').innerHTML=`
     ${a?`<button class="btn quiet" onclick="closeModal();verEquipo('${a.id}')">Ver el equipo</button>`:''}
-    ${cliente?'':`<button class="btn sec" onclick="imprimirSNC('${r.id}')">Imprimir</button>`}
-    ${cliente&&r.est==='recibido'?`<button class="btn sec" onclick="openSNC('${r.id}')">Corregir lo que escribí</button>`:''}
-    ${cliente?'':`<button class="btn" onclick="openSNC('${r.id}')">Editar</button>`}`;
+    <button class="btn sec" onclick="imprimirSNC('${r.id}')">Imprimir</button>
+    <button class="btn" onclick="openSNC('${r.id}')">Editar</button>`;
   $('#modal').classList.add('on');
 }
 
@@ -5511,7 +6714,7 @@ function donut(segs,center,sub){
   const use=segs.filter(s=>s.value>0),tot=use.reduce((s,x)=>s+x.value,0)||1,R=54,C=2*Math.PI*R;let off=0;
   const gap=use.length>1?2:0;
   const arcs=use.map(s=>{const len=s.value/tot*C,vis=Math.max(0.6,len-gap);
-    const seg=`<circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--${s.tone})" stroke-width="15" stroke-dasharray="${vis} ${C-vis}" stroke-dashoffset="${-off}" transform="rotate(-90 66 66)"/>`;off+=len;return seg}).join('');
+    const seg=`<circle class="arco" cx="66" cy="66" r="${R}" fill="none" stroke="var(--${s.tone})" stroke-width="15" stroke-dasharray="${vis} ${C-vis}" stroke-dashoffset="${-off}" transform="rotate(-90 66 66)"/>`;off+=len;return seg}).join('');
   return `<div class="donut-wrap"><svg class="donut" viewBox="0 0 132 132" aria-hidden="true">
     <circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--surface-3)" stroke-width="15"/>${arcs}
     <text x="66" y="62" text-anchor="middle" font-size="27" font-weight="600" fill="var(--ink)" font-family="'IBM Plex Sans',sans-serif">${center}</text>
@@ -5522,7 +6725,7 @@ function gauge(pct,label){
   const C=Math.PI*52,val=Math.max(0,Math.min(100,pct)),tone=val>=90?'ok':val>=70?'due':'late',len=val/100*C;
   return `<div class="gauge-wrap"><svg viewBox="0 0 140 84" width="168" height="100" aria-hidden="true">
     <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--surface-3)" stroke-width="13" stroke-linecap="round"/>
-    <path d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--${tone})" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/></svg>
+    <path class="arco" d="M14 74 A52 52 0 0 1 126 74" fill="none" stroke="var(--${tone})" stroke-width="13" stroke-linecap="round" stroke-dasharray="${len} ${C}"/></svg>
     <div class="gauge-v" style="color:var(--${tone})">${Math.round(val)}%</div><div class="gauge-k">${esc(label)}</div></div>`;
 }
 
@@ -5617,6 +6820,108 @@ function colaHtml(){
    Su panel responde otras preguntas — cómo están mis equipos, qué me
    toca, qué certificados tengo, qué debo comprar — y usa su idioma.
    ============================================================ */
+/* ── El encabezado de bienvenida ─────────────────────────────
+   Lo mismo para los dos paneles, con distinto contenido: quién eres,
+   la cifra que resume el estado, y lo único urgente de hoy con su
+   acción. Una sola llamada a la acción, como manda el oficio. */
+function saludoHora(){
+  const h=new Date().getHours();
+  return h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
+}
+/* El aro y la cifra no aparecen hechos: se dibujan al entrar. Es medio
+   segundo, pero es lo que separa un tablero de una hoja de cálculo. */
+function animarHero(){
+  const h=document.querySelector('.page.on .hero')||document.querySelector('.hero');
+  if(!h)return;
+  const aro=h.querySelector('.val');
+  if(aro&&aro.dataset.off!=null)requestAnimationFrame(()=>{aro.style.strokeDashoffset=aro.dataset.off});
+  const b=h.querySelector('.hero-ring b'); if(!b)return;
+  const fin=Number(b.dataset.n);
+  const quieto=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(!isFinite(fin)||quieto||fin===0){b.textContent=b.dataset.n;return}
+  const t0=performance.now(), dur=700;
+  (function paso(t){
+    const k=Math.min(1,(t-t0)/dur);
+    b.textContent=Math.round(fin*(1-Math.pow(1-k,3)));
+    if(k<1)requestAnimationFrame(paso);
+  })(t0);
+}
+/* ── Las cifras suben en lugar de aparecer ──────────────────
+   Sólo enteros y porcentajes: "4/6" o "S/ 1 250" se dejan quietos,
+   que animar un dato mal leído es peor que no animarlo. */
+function subirCifra(nodo,fin,suf){
+  const t0=performance.now(),dur=650;
+  (function paso(t){
+    const k=Math.min(1,(t-t0)/dur);
+    nodo.textContent=Math.round(fin*(1-Math.pow(1-k,3)))+suf;
+    if(k<1)requestAnimationFrame(paso);
+  })(t0);
+}
+function prepararCifra(el){
+  const n=Array.from(el.childNodes).find(x=>x.nodeType===3&&/^\s*\d+%?\s*$/.test(x.textContent));
+  if(!n)return;
+  const m=n.textContent.trim().match(/^(\d+)(%?)$/), fin=+m[1];
+  if(fin<3)return;                    // por 0, 1 o 2 no vale la pena
+  n.textContent='0'+m[2];
+  subirCifra(n,fin,m[2]);
+}
+
+/* ── La vista se dibuja, no se planta ───────────────────────
+   Barras, columnas y donas arrancan en cero y crecen hasta su
+   valor. No hace falta tocar el HTML de cada gráfico: se lee el
+   valor final que ya trae puesto, se pone a cero y se devuelve
+   en el siguiente cuadro, que es cuando la transición engancha. */
+function animarVista(){
+  animarHero();
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const p=document.querySelector('.page.on'); if(!p)return;
+  const vuelta=[];
+  const ceroA=(sel,prop,cero)=>p.querySelectorAll(sel).forEach(e=>{
+    const fin=e.style[prop]; if(!fin)return;
+    e.style[prop]=cero; vuelta.push(()=>{e.style[prop]=fin});
+  });
+  ceroA('.hb-fill','width','0%');
+  ceroA('.col-bar','height','0px');
+  p.querySelectorAll('.arco').forEach(e=>{
+    const fin=e.getAttribute('stroke-dasharray'); if(!fin)return;
+    const tot=fin.split(/[\s,]+/).reduce((a,b)=>a+(Number(b)||0),0);
+    e.style.strokeDasharray='0 '+tot;
+    vuelta.push(()=>{e.style.strokeDasharray=fin});
+  });
+  p.querySelectorAll('.kpi .kv').forEach(prepararCifra);
+  if(vuelta.length)requestAnimationFrame(()=>requestAnimationFrame(()=>vuelta.forEach(f=>f())));
+}
+
+function heroHtml({titulo,sub,cifra,cifraPie,cifraTono,pct,urgente,acciones}){
+  const R=33, C=2*Math.PI*R;
+  const off=C*(1-Math.max(0,Math.min(1,pct==null?1:pct)));
+  requestAnimationFrame(animarHero);
+  return `<section class="hero">
+    <div class="hero-top">
+      <div class="hero-txt">
+        <div class="hero-hi">${esc(saludoHora())}</div>
+        <h1>${titulo}</h1>
+        <p>${sub}</p>
+        ${acciones?`<div class="hero-acc">${acciones}</div>`:''}
+      </div>
+      <div class="hero-dial" style="--tono:var(--${cifraTono||'ok'})">
+        <div class="hero-ring">
+          <svg viewBox="0 0 78 78" aria-hidden="true">
+            <circle class="pista" cx="39" cy="39" r="${R}"></circle>
+            <circle class="val" cx="39" cy="39" r="${R}" stroke-dasharray="${C.toFixed(1)}"
+                    stroke-dashoffset="${C.toFixed(1)}" data-off="${off.toFixed(1)}"></circle>
+          </svg>
+          <b data-n="${esc(String(cifra))}">${cifra}</b>
+        </div>
+        <div class="hero-dial-t"><b>${esc(cifraPie[0])}</b><span>${esc(cifraPie[1])}</span></div>
+      </div>
+    </div>
+    ${urgente?`<div class="hero-urg ${urgente.tono==='ok'?'ok':''}" style="--tono:var(--${urgente.tono||'due'})">
+      <span class="pt"></span><p>${urgente.txt}</p>
+      ${urgente.btn||''}</div>`:''}
+  </section>`;
+}
+
 function renderHomeCliente(){
   const vs=visibles(), c=cli(S.cli);
   const op=vs.filter(a=>estado(a).k==='ok').length;
@@ -5673,10 +6978,31 @@ function renderHomeCliente(){
     {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
 
-  $('#homeView').innerHTML=`
-   <div class="hd"><div><h1>Tu planta <span class="wave">· ${esc(c.n)}</span></h1>
-     <p>${fechaLarga(HOY)} · ${vs.length} válvula${vs.length===1?'':'s'} bajo servicio de Adolphus</p></div>
-     <button class="btn sec" onclick="go('req')"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg>Mis solicitudes</button></div>
+  /* Lo único urgente: lo más vencido, o lo que está en taller. */
+  const cola=colaTrabajo();
+  const primero=cola[0];
+  let urg;
+  if(!primero){
+    urg={tono:'ok',txt:'<b>Todo al día.</b> Ninguna válvula espera calibración, servicio ni repuesto.'};
+  }else{
+    const a0=primero.id?ACTIVOS.find(x=>x.id===primero.id):null;
+    urg={tono:primero.g==='venc'?'late':'due',
+      txt:`Lo más urgente: <b>${esc(primero.tit)}</b> — ${primero.q.replace(/<[^>]+>/g,'')}.`,
+      btn:a0?`<button class="btn" onclick="verEquipo('${a0.id}')">Ver el equipo</button>`
+             :`<button class="btn" onclick="verSol('${primero.solId}')">Ver la solicitud</button>`};
+  }
+
+  $('#homeView').innerHTML=
+   heroHtml({
+     titulo:esc(c.n),
+     sub:`${fechaLarga(HOY)} · ${vs.length} válvula${vs.length===1?'':'s'} bajo servicio de Adolphus`,
+     cifra:saludMedia, pct:saludMedia/100,
+     cifraTono:saludMedia>=85?'ok':saludMedia>=65?'due':'late',
+     cifraPie:['Salud del parque',saludMedia>=85?'está en buen estado':saludMedia>=65?'hay equipos que piden atención':'hay equipos en estado crítico'],
+     urgente:urg,
+     acciones:`<button class="btn sec" onclick="go('assets')">Ver mis equipos</button>
+       <button class="btn sec" onclick="go('req')">Mis solicitudes</button>`
+   })+`
    ${colaHtml()}
    ${kpiHtml}
    <div class="dash">
@@ -5709,12 +7035,15 @@ function renderHome(){
         <span class="fam-m">${de.length?(mal?`<b>${mal}</b> requieren atención`:'todas al día'):'sin equipos registrados'}</span>
       </span></button>`}).join('')}</div>`;
   const kpis=[
-    {v:atn,k:'Requieren atención',dot:atn?'due':'ok',cls:atn?'warn':'good',d:atn?'revisar lista':'todo al día'},
-    {v:venc,k:'Calibraciones vencidas',dot:venc?'late':'ok',cls:venc?'bad':'good',d:venc?'acción inmediata':'ninguna'},
-    {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en taller`},
-    {v:cumpl+'%',k:'Cumplimiento calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',d:cumpl>=90?'en meta (≥90%)':'bajo meta'}
+    {v:atn,k:'Requieren atención',dot:atn?'due':'ok',cls:atn?'warn':'good',d:atn?'revisar lista':'todo al día',
+     go:S.cli?"setView('atencion');go('assets')":"S.cliPend=true;go('clients')"},
+    {v:venc,k:'Calibraciones vencidas',dot:venc?'late':'ok',cls:venc?'bad':'good',d:venc?'acción inmediata':'ninguna',
+     go:S.cli?"go('cal')":"go('clients')"},
+    {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en taller`,go:S.cli?"go('wo')":"go('clients')"},
+    {v:cumpl+'%',k:'Cumplimiento calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',
+     d:cumpl>=90?'en meta (≥90%)':'bajo meta',go:"go('rep')"}
   ];
-  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
     {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
@@ -5747,10 +7076,32 @@ function renderHome(){
       <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
     return `<div class="feed-i" onclick="verSol('${x.s.id}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
-  $('#homeView').innerHTML=`
-   <div class="hd"><div><h1 class="greet">Panel de control <span class="wave">· ${esc(S.cli?cli(S.cli).n:'Adolphus S.A.')}</span></h1>
-       <p>${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}</p></div>
-     ${S.rol!=='cliente'?`<button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>`:''}</div>
+  /* Lo primero del día: cuánto hay pendiente y qué encabeza la cola. */
+  const cola=colaTrabajo(), primero=cola[0];
+  const yo=(typeof SES!=='undefined'&&SES?SES.n.split(/\s+/)[0]:'');
+  let urg;
+  if(!primero){
+    urg={tono:'ok',txt:'<b>Todo al día.</b> Ninguna válvula espera calibración, orden ni repuesto.'};
+  }else{
+    const a0=primero.id?ACTIVOS.find(x=>x.id===primero.id):null;
+    urg={tono:primero.g==='venc'?'late':'due',
+      txt:`Lo primero: <b>${esc(primero.tit)}</b> — ${primero.q.replace(/<[^>]+>/g,'')}${a0?` · ${esc(cli(a0.cli).n)}`:''}.`,
+      btn:primero.ac?`<button class="btn" onclick="${primero.ac.f}">${esc(primero.ac.t)}</button>`
+         :(a0?`<button class="btn" onclick="verEquipo('${a0.id}')">Ver el equipo</button>`
+             :`<button class="btn" onclick="verSol('${primero.solId}')">Ver la solicitud</button>`)};
+  }
+
+  $('#homeView').innerHTML=
+   heroHtml({
+     titulo:esc(S.cli?cli(S.cli).n:'Adolphus S.A.')+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
+     sub:`${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}`,
+     cifra:cola.length, pct:cola.length?Math.min(1,cola.length/12):0,
+     cifraTono:cola.length?(cola.some(x=>x.g==='venc')?'late':'due'):'ok',
+     cifraPie:['Cosas pendientes',cola.length?'en orden de urgencia':'nada espera por ti'],
+     urgente:urg,
+     acciones:`<button class="btn sec" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>
+       <button class="btn sec" onclick="go('clients')">Ver clientes</button>`
+   })+`
    ${colaHtml()}
    ${onbHtml()}
    ${kpiHtml}
@@ -5810,40 +7161,25 @@ function buildNotif(){
   const vs=visibles(),items=[];
   /* Lo primero: un cliente que reportó algo y espera respuesta. Nada
      de lo demás depende de que alguien conteste hoy. */
+  /* Lo primero: un registro dirigido a mi área y sin terminar. Es lo
+     que de verdad espera a alguien. */
   if(S.rol!=='cliente')
-    RECLAMOS.filter(r=>r.est==='recibido').forEach(r=>{
-      const a=sncActivo(r);
-      items.push({tone:'late',ic:'⚑',t:`${cli(r.cli).n} reportó un problema`,
-        s:`${r.n} · ${a?a.tag:'sin equipo'} — acéptalo o explica por qué no procede`,rec:r.id})});
+    RECLAMOS.filter(r=>r.est!=='cerrado').forEach(r=>{
+      const a=sncActivo(r), mio=r.area&&areaDe(r.area)[2]===S.rol;
+      if(!r.enviado){
+        items.push({tone:'due',ic:'⚑',t:`${r.n} sin dirigir`,
+          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'} — falta enviarlo al área`,rec:r.id});
+      }else if(mio){
+        const f=sncFalta(r);
+        items.push({tone:'late',ic:'⚑',t:`${areaDe(r.area)[1]} · te toca ${r.n}`,
+          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
+      }});
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
   SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
     .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
       s:`${pasoDe(s.est).sig} — ${pasoDe(s.est).r}`,sol:s.id}));
-
-  /* Reclamos. A Adolphus le avisa cuál cliente reportó y sobre qué
-     válvula; al cliente, qué decidió Adolphus sobre el suyo. */
-  RECLAMOS.filter(r=>!S.cli||r.cli===S.cli).forEach(r=>{
-    const a=sncActivo(r), eq=a?a.tag:'sin equipo';
-    if(r.est==='recibido'){
-      if(S.cli)items.push({tone:'due',ic:'⚑',t:`${r.n} · en revisión`,
-        s:`Adolphus está revisando tu reclamo de ${eq}`,rec:r.id});
-      return;   // el aviso para Adolphus ya se puso arriba del todo
-    }
-    if(S.cli){
-      if(r.est==='rechazado')
-        items.push({tone:'ink-3',ic:'⚑',t:`${r.n} · no procede`,s:`${eq} — Adolphus explicó el motivo`,rec:r.id});
-      else if(r.est!=='cerrado')
-        items.push({tone:'sel',ic:'⚑',t:`${r.n} · ${sncEst(r.est)[1].toLowerCase()}`,s:`${eq} — Adolphus lo está atendiendo`,rec:r.id});
-      return;
-    }
-    if(r.est!=='cerrado'&&r.est!=='rechazado'){
-      const f=sncFalta(r);
-      items.push({tone:'due',ic:'⚑',t:`${r.n} · ${sncEst(r.est)[1].toLowerCase()}`,
-        s:`${esc(cli(r.cli).n)} · ${eq}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
-    }
-  });
 
   /* Cotizaciones: al cliente le avisa que tiene una por decidir; a
      Adolphus, cuál ya respondió el cliente y cuál sigue esperando. */
@@ -6595,7 +7931,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderPlan();planContador();renderWO();renderReq();renderRep();renderCat();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -6734,29 +8070,340 @@ function saveUploadSheet(){
 }
 
 /* ============================================================
-   13 · TRABAJO SIN CONEXIÓN
-   Todo se guarda en el equipo apenas se registra. Los cambios hechos
-   sin señal quedan en una cola y suben solos al recuperar conexión.
-   ============================================================ */
-const LS_KEY='adolphus.datos.v1';
-let SYNCQ=[];              /* cola de cambios pendientes de subir */
-let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
-let SYNCING=false;
-const online=()=>!OFF_SIM&&navigator.onLine;
+   12 bis · LA NUBE
+   Hasta aquí el portal guardaba en el propio equipo: perfecto para
+   trabajar en planta sin señal, inútil para abrirlo desde otra
+   computadora. Este bloque lo conecta a una base de datos real
+   (Supabase / Postgres) sin renunciar a lo anterior:
 
-function guardarLocal(){
+     · con sesión y con señal → todo sube y baja de la nube;
+     · sin señal              → se sigue trabajando contra el equipo
+                                y lo pendiente sube solo al volver;
+     · sin sesión             → el recorrido de demostración funciona
+                                exactamente como antes, en local.
+
+   Quién ve qué no lo decide el navegador: lo decide Postgres con sus
+   políticas por fila. Adolphus ve todo; un cliente sólo lo suyo.
+   Para apuntar a otro proyecto basta cambiar estas dos líneas.
+   ============================================================ */
+const LS_NUBE='adolphus.nube.v1';
+const LS_NUBE_CFG='adolphus.nube.cfg';
+/* Por defecto apunta al proyecto de la demostración. Se puede cambiar
+   desde la propia página (chip de red → «Conectar a otra base») sin
+   tocar el archivo: queda guardado en este equipo. */
+const NUBE_POR_DEFECTO={
+  url:'https://lksmfgtaftmpftbkypow.supabase.co',
+  key:'sb_publishable_foupdi94glmIl6tsHAaW3w_nj0MurwH'
+};
+const NUBE={...NUBE_POR_DEFECTO};
+(function cargarCfgNube(){
   try{
-    localStorage.setItem(LS_KEY,JSON.stringify({
-      v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,CALIBS,SERVS,DOCS,
-      CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,SYNCQ
-    }));
-    return true;
-  }catch(e){ // p. ej. almacenamiento lleno por fotos
-    toast('No se pudo guardar en el equipo: almacenamiento lleno');return false;
+    const c=JSON.parse(localStorage.getItem(LS_NUBE_CFG)||'null');
+    if(c&&typeof c.url==='string'){NUBE.url=c.url.replace(/\/+$/,'');NUBE.key=c.key||''}
+  }catch(e){}
+})();
+let NUBE_SES=null;      // {access_token, refresh_token, expira, uid}
+let NUBE_YO=null;       // fila de 'perfiles' del que entró
+let NUBE_EMP={};        // clave corta del portal -> uuid de la empresa
+let NUBE_EMP_INV={};    // uuid -> clave corta
+let ESPEJO={};          // lo último que confirmamos con la nube: 'colclave' -> {j,emp}
+let NUBE_DESDE=null;    // marca de tiempo de la última bajada
+let NUBE_TIMER=null;
+const enNube=()=>!!(NUBE_SES&&NUBE_SES.access_token);
+const SEP='';
+
+/* ── Qué se sincroniza ───────────────────────────────────────
+   Cada colección dice de qué empresa es cada fila. De ahí sale el
+   aislamiento: la fila viaja con su dueño y Postgres hace el resto. */
+const cliDeAct=id=>{const a=ACTIVOS.find(x=>x.id===id);return a?a.cli:null};
+const NUBE_COLS=[
+ {c:'CLIENTES',    arr:()=>CLIENTES,    emp:x=>x.id},
+ {c:'ACTIVOS',     arr:()=>ACTIVOS,     emp:x=>x.cli},
+ {c:'ORDENES',     arr:()=>ORDENES,     emp:x=>cliDeAct(x.act)},
+ {c:'SOLICITUDES', arr:()=>SOLICITUDES, emp:x=>x.cli},
+ {c:'RECLAMOS',    arr:()=>RECLAMOS,    emp:x=>x.cli},
+ {c:'COTIZACIONES',arr:()=>COTIZACIONES,emp:x=>x.cli},
+ {c:'CALIBS',      arr:()=>CALIBS,      emp:x=>cliDeAct(x.act)},
+ {c:'SERVS',       arr:()=>SERVS,       emp:x=>cliDeAct(x.act)},
+ {c:'DOCS',        arr:()=>DOCS,        emp:x=>cliDeAct(x.a)}
+];
+/* Los maestros son diccionarios, no listas: viajan como un documento
+   entero cada uno. Cambian poco y los toca sólo Adolphus. */
+const NUBE_MAESTROS=[
+ {k:'MODELOS',    obj:()=>MODELOS},   {k:'BOM',        obj:()=>BOM},
+ {k:'PRECIOS',    obj:()=>PRECIOS},   {k:'PART_PHOTO', obj:()=>PART_PHOTO},
+ {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA}
+];
+/* Lo único que un cliente puede escribir. Coincide con la política de
+   la base: si el navegador se equivoca, Postgres lo rechaza igual. */
+const CLI_ESCRIBE=['SOLICITUDES','COTIZACIONES','PLAN_OK'];
+
+/* Las listas que no traían identificador propio (una calibración, un
+   documento adjunto) necesitan uno para poder viajar fila a fila. */
+function sellarIds(){
+  let n=0;
+  NUBE_COLS.forEach(({arr})=>arr().forEach(x=>{
+    if(!x.id){x.id='r'+(Date.now().toString(36))+(n++).toString(36)+Math.floor(Math.random()*1296).toString(36)}
+  }));
+}
+
+/* ── Llamadas a la base ──────────────────────────────────────*/
+async function nubeFetch(ruta,{metodo='GET',cuerpo,cab={},sinAuth}={}){
+  const h={apikey:NUBE.key,'Content-Type':'application/json',...cab};
+  if(!sinAuth&&enNube())h.Authorization='Bearer '+NUBE_SES.access_token;
+  const r=await fetch(NUBE.url+ruta,{method:metodo,headers:h,
+    body:cuerpo===undefined?undefined:JSON.stringify(cuerpo)});
+  const txt=await r.text();
+  let j=null; try{j=txt?JSON.parse(txt):null}catch(e){}
+  if(!r.ok){
+    const e=new Error((j&&(j.msg||j.message||j.error_description||j.error))||('HTTP '+r.status));
+    e.status=r.status; e.cuerpo=j; throw e;
+  }
+  return j;
+}
+/* El token vive una hora; se renueva antes de que caduque.
+
+   Ojo con el caso que importa: una jornada de planta son cuatro horas
+   sin cobertura. Si al fallar la renovación borráramos la sesión, el
+   técnico quedaría fuera a la hora de haber bajado —y el contador de
+   pendientes se iría a cero, que es lo peor que puede pasar.
+   Por eso sólo se cierra la sesión cuando el servidor la rechaza de
+   verdad. Si simplemente no hubo respuesta, la sesión se conserva y
+   se reintenta al volver la señal. */
+async function nubeVigente(){
+  if(!NUBE_SES)return false;
+  if(Date.now()<NUBE_SES.expira-60000)return true;
+  try{
+    const d=await nubeFetch('/auth/v1/token?grant_type=refresh_token',
+      {metodo:'POST',cuerpo:{refresh_token:NUBE_SES.refresh_token},sinAuth:true});
+    guardarSesionNube(d); return true;
+  }catch(e){
+    if(e.status){                       // el servidor contestó: la sesión ya no vale
+      NUBE_SES=null;NUBE_YO=null;
+      try{localStorage.removeItem(LS_NUBE)}catch(_){}
+    }
+    return false;                       // sin respuesta: seguimos con la sesión guardada
   }
 }
-function restaurarLocal(){
-  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+function guardarSesionNube(d){
+  NUBE_SES={access_token:d.access_token,refresh_token:d.refresh_token,
+            expira:Date.now()+((d.expires_in||3600)*1000),uid:d.user&&d.user.id};
+  try{localStorage.setItem(LS_NUBE,JSON.stringify(NUBE_SES))}catch(e){}
+}
+
+/* ── Entrar y registrarse de verdad ──────────────────────────*/
+async function nubeEntrar(correo,clave){
+  const d=await nubeFetch('/auth/v1/token?grant_type=password',
+    {metodo:'POST',cuerpo:{email:correo,password:clave},sinAuth:true});
+  guardarSesionNube(d);
+  return await nubeCargarPerfil();
+}
+async function nubeRegistrar({correo,clave,nombre,cargo,telefono,codigo,ruc}){
+  const d=await nubeFetch('/auth/v1/signup',{metodo:'POST',sinAuth:true,
+    cuerpo:{email:correo,password:clave,data:{nombre,cargo,telefono,codigo,ruc}}});
+  if(d&&d.access_token){guardarSesionNube(d);return await nubeCargarPerfil()}
+  return null;              // el proyecto pide confirmar el correo
+}
+async function nubeCargarPerfil(){
+  const p=await nubeFetch('/rest/v1/perfiles?select=*&id=eq.'+encodeURIComponent(NUBE_SES.uid));
+  NUBE_YO=p&&p[0]; if(!NUBE_YO)throw new Error('No se encontró tu perfil');
+  const es=await nubeFetch('/rest/v1/empresas?select=id,clave,nombre,ruc,es_proveedor');
+  NUBE_EMP={};NUBE_EMP_INV={};
+  (es||[]).forEach(e=>{if(e.clave){NUBE_EMP[e.clave]=e.id;NUBE_EMP_INV[e.id]=e.clave}});
+  return NUBE_YO;
+}
+/* La sesión de la nube se traduce a la cuenta que el portal ya sabe
+   manejar, para no tener dos maneras de estar dentro. */
+function cuentaDeNube(){
+  const p=NUBE_YO, clave=p.empresa_id?NUBE_EMP_INV[p.empresa_id]:null;
+  const esProv=p.rol!=='cliente';
+  return {id:p.id,n:p.nombre||p.correo,m:p.correo,pw:'',
+          perfil:p.rol,cli:esProv?null:clave,cargo:p.cargo||'',tel:p.telefono||'',
+          est:p.estado,alta:(p.alta||'').slice(0,10),ult:hoyISO(),nube:true};
+}
+async function nubeSalir(){
+  try{if(enNube())await nubeFetch('/auth/v1/logout',{metodo:'POST'})}catch(e){}
+  NUBE_SES=null;NUBE_YO=null;ESPEJO={};NUBE_DESDE=null;
+  try{localStorage.removeItem(LS_NUBE)}catch(e){}
+  if(NUBE_TIMER){clearInterval(NUBE_TIMER);NUBE_TIMER=null}
+}
+
+/* ── Bajar ───────────────────────────────────────────────────
+   La primera vez baja todo y reemplaza lo que hubiera en memoria:
+   la nube manda. Después sólo pide lo que cambió desde la última vez. */
+async function nubeBajar(reemplazar){
+  const q='/rest/v1/registros?select=coleccion,clave,empresa_id,datos,borrado,actualizado'+
+          '&order=actualizado.asc'+(NUBE_DESDE?'&actualizado=gt.'+encodeURIComponent(NUBE_DESDE):'');
+  const filas=await nubeFetch(q);
+  if(!filas)return 0;
+  if(reemplazar&&filas.length){
+    NUBE_COLS.forEach(({arr})=>{const a=arr();a.length=0});
+    Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
+  }
+  filas.forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave;
+    if(f.borrado){delete ESPEJO[kk]} else {ESPEJO[kk]={j:JSON.stringify(f.datos),emp:f.empresa_id||null}}
+    if(f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+
+    if(f.coleccion==='MAESTRO'){
+      const m=NUBE_MAESTROS.find(x=>x.k===f.clave); if(!m||f.borrado)return;
+      const d=m.obj(); Object.keys(d).forEach(k=>delete d[k]); Object.assign(d,f.datos||{});
+      return;
+    }
+    if(f.coleccion==='PLAN_OK'){
+      if(f.borrado)delete PLAN_OK[f.clave]; else PLAN_OK[f.clave]=f.datos;
+      return;
+    }
+    const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
+    const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
+    if(f.borrado){if(i>=0)a.splice(i,1); return}
+    if(i>=0)a[i]=f.datos; else a.push(f.datos);
+  });
+  return filas.length;
+}
+
+/* ── Subir ───────────────────────────────────────────────────
+   No se manda todo cada vez: se compara contra el espejo de lo que la
+   nube ya tiene y sólo viaja lo que cambió. Lo que desapareció de la
+   memoria se marca como borrado, para que los demás equipos se enteren. */
+function filasLocales(){
+  const out=[];
+  NUBE_COLS.forEach(({c,arr,emp})=>arr().forEach(x=>{
+    if(!x||!x.id)return;
+    out.push({coleccion:c,clave:String(x.id),empresa_id:NUBE_EMP[emp(x)]||null,datos:x});
+  }));
+  NUBE_MAESTROS.forEach(({k,obj})=>out.push({coleccion:'MAESTRO',clave:k,empresa_id:null,datos:obj()}));
+  Object.keys(PLAN_OK).forEach(k=>out.push({coleccion:'PLAN_OK',clave:k,empresa_id:NUBE_EMP[k]||null,datos:PLAN_OK[k]}));
+  return out;
+}
+function puedoEscribir(f){
+  if(!NUBE_YO)return false;
+  if(NUBE_YO.rol!=='cliente')return true;
+  return CLI_ESCRIBE.includes(f.coleccion)&&f.empresa_id===NUBE_YO.empresa_id;
+}
+/* Subir es: apuntar lo que cambió en la tabla de pendientes y
+   vaciarla contra el servidor. Así el estado de "qué falta subir"
+   vive en disco y no en una variable que se pierde al cerrar. */
+async function nubeSubir(){
+  await apuntarPendientes();
+  return await drenarPendientes();
+}
+/* Cálculo directo, sin pasar por la tabla. Se conserva para la
+   primera siembra, cuando todavía no hay nada que reintentar. */
+async function nubeSubirDirecto(){
+  const cambios=[], vistos=new Set();
+  filasLocales().forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
+    const j=JSON.stringify(f.datos);
+    if(!ESPEJO[kk]||ESPEJO[kk].j!==j)cambios.push({...f,borrado:false,_j:j});
+  });
+  Object.keys(ESPEJO).forEach(kk=>{
+    if(vistos.has(kk))return;
+    const [c,k]=kk.split(SEP);
+    cambios.push({coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,datos:{},borrado:true,_j:null});
+  });
+  const mios=cambios.filter(puedoEscribir);
+  if(!mios.length)return 0;
+  for(let i=0;i<mios.length;i+=100){
+    const lote=mios.slice(i,i+100);
+    /* Pedimos de vuelta la fila sellada: así sabemos la marca de tiempo
+       que puso la base y no nos volvemos a bajar lo que acabamos de
+       escribir —que llegaría con retraso y pisaría el trabajo nuevo. */
+    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
+      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
+      cuerpo:lote.map(({_j,...f})=>f)});
+    lote.forEach(f=>{
+      const kk=f.coleccion+SEP+f.clave;
+      if(f.borrado)delete ESPEJO[kk]; else ESPEJO[kk]={j:f._j,emp:f.empresa_id};
+    });
+    (eco||[]).forEach(f=>{
+      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+    });
+  }
+  return mios.length;
+}
+
+/* Una vuelta completa: primero baja (la nube manda sobre lo viejo),
+   después sube lo que este equipo tenga de nuevo. */
+/* Una vuelta completa. El orden importa:
+     · la primera vez se BAJA antes de subir, porque la nube manda
+       sobre los datos de ejemplo que trae el archivo;
+     · después se SUBE antes de bajar, porque si no, lo que bajamos
+       pisaría el cambio que este equipo acaba de hacer.
+   Entre dos equipos que tocan la misma fila a la vez, gana el último
+   que escribe. Es a nivel de fila, no de campo. */
+async function nubeVuelta(primera){
+  if(!await nubeVigente())return {bajadas:0,subidas:0,sinSesion:true};
+  let bajadas=0, subidas=0;
+  if(primera){
+    bajadas=await nubeBajar(true);
+    subidas=await nubeSubirDirecto();
+    await bdOp('pendientes','readwrite',o=>o.clear());PEND_N=0;
+  }else{
+    subidas=await nubeSubir();
+    bajadas=await nubeBajar(false);
+  }
+  guardarLocal();
+  if(bajadas||subidas)renderAll();
+  return {bajadas,subidas};
+}
+/* El latido y el job son lo mismo: se arranca una sola vez. */
+function latirNube(){ arrancarJob() }
+
+/* ============================================================
+   12 ter · LA CAJA LOCAL
+   localStorage aguanta unos 5 MB: con dos fotos de un reclamo se
+   llena y a partir de ahí el portal deja de guardar sin avisar bien.
+   IndexedDB aguanta cientos de megas, así que la caja de verdad va
+   aquí. Tiene dos cajones:
+
+     · 'estado'     — la foto completa de los datos y el espejo de lo
+                      que la nube ya tiene;
+     · 'pendientes' — la tabla de cambios que todavía no subieron.
+                      Una fila por registro tocado. Sobrevive a cerrar
+                      el navegador, a quedarse sin batería y a que la
+                      subida falle: mientras la fila esté ahí, el
+                      cambio no se ha perdido.
+
+   localStorage se mantiene de respaldo por si IndexedDB no está.
+   ============================================================ */
+const BD_N='adolphus', BD_V=1;
+let BD=null, BD_ROTA=false;
+
+function bdAbrir(){
+  if(BD)return Promise.resolve(BD);
+  if(BD_ROTA||!('indexedDB' in window))return Promise.resolve(null);
+  return new Promise(res=>{
+    let p; try{p=indexedDB.open(BD_N,BD_V)}catch(e){BD_ROTA=true;return res(null)}
+    p.onupgradeneeded=()=>{
+      const d=p.result;
+      if(!d.objectStoreNames.contains('estado'))     d.createObjectStore('estado');
+      if(!d.objectStoreNames.contains('pendientes')) d.createObjectStore('pendientes',{keyPath:'k'});
+    };
+    p.onsuccess=()=>{BD=p.result;res(BD)};
+    p.onerror  =()=>{BD_ROTA=true;res(null)};
+  });
+}
+function bdOp(cajon,modo,fn){
+  return bdAbrir().then(d=>d?new Promise((res,rej)=>{
+    const t=d.transaction(cajon,modo), r=fn(t.objectStore(cajon));
+    t.oncomplete=()=>res(r&&r.result!==undefined?r.result:r);
+    t.onerror=()=>rej(t.error);
+  }).catch(()=>null):null);
+}
+const bdPon   =(c,v,k)=>bdOp(c,'readwrite',o=>o.put(v,k));
+const bdDame  =(c,k)  =>bdOp(c,'readonly', o=>o.get(k));
+const bdQuita =(c,k)  =>bdOp(c,'readwrite',o=>o.delete(k));
+const bdTodos =(c)    =>bdOp(c,'readonly', o=>o.getAll());
+const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
+
+/* La foto de los datos, tal como se guarda y se restaura. */
+function fotoDatos(){
+  return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
+          CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
+          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE};
+}
+function aplicarFoto(d){
   if(!d||d.v!==1)return false;
   const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
   const obj=(dst,src)=>{if(src&&typeof src==='object'){Object.keys(dst).forEach(k=>delete dst[k]);Object.assign(dst,src)}};
@@ -6765,8 +8412,156 @@ function restaurarLocal(){
   arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
+  obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
+  ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
+  NUBE_DESDE=d.NUBE_DESDE||null;
   return true;
+}
+
+/* ── La tabla de pendientes ──────────────────────────────────
+   Cada vez que se guarda, se compara lo que hay en memoria contra el
+   espejo de la nube y lo que no coincide se apunta aquí. Esta tabla
+   —y no la memoria— es lo que el job va a subir. */
+let PEND_N=0;                     // cuántos hay, para pintar el chip sin ir a la base
+async function apuntarPendientes(){
+  if(!enNube())return 0;   // enNube() sigue en pie sin señal: la sesión no se borra
+  const vistos=new Set(), filas=[];
+  filasLocales().forEach(f=>{
+    const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
+    const j=JSON.stringify(f.datos);
+    if(!ESPEJO[kk]||ESPEJO[kk].j!==j)
+      filas.push({k:kk,coleccion:f.coleccion,clave:f.clave,empresa_id:f.empresa_id,
+                  datos:f.datos,borrado:false,ts:Date.now(),intentos:0});
+  });
+  Object.keys(ESPEJO).forEach(kk=>{
+    if(vistos.has(kk))return;
+    const [c,k]=kk.split(SEP);
+    filas.push({k:kk,coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,
+                datos:{},borrado:true,ts:Date.now(),intentos:0});
+  });
+  const mios=filas.filter(puedoEscribir);
+  await bdOp('pendientes','readwrite',o=>{mios.forEach(f=>o.put(f))});
+  PEND_N=(await bdCuenta('pendientes'))||mios.length;
+  return mios.length;
+}
+
+/* ── El job ──────────────────────────────────────────────────
+   Vacía la tabla de pendientes contra el servidor. Lo que sube, se
+   borra de la tabla; lo que falla se queda con un intento más y se
+   reintenta más tarde, esperando cada vez un poco más para no
+   machacar una red que apenas se sostiene. */
+let JOB_ESPERA=0, JOB_T=null;
+const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
+
+async function drenarPendientes(){
+  const filas=(await bdTodos('pendientes'))||[];
+  if(!filas.length){PEND_N=0;return 0}
+  let subidas=0;
+  for(let i=0;i<filas.length;i+=100){
+    const lote=filas.slice(i,i+100);
+    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
+      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
+      cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
+                           empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
+    for(const f of lote){
+      if(f.borrado)delete ESPEJO[f.k]; else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
+      await bdQuita('pendientes',f.k);
+      subidas++;
+    }
+    (eco||[]).forEach(f=>{
+      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
+    });
+  }
+  PEND_N=(await bdCuenta('pendientes'))||0;
+  return subidas;
+}
+async function marcarIntento(){
+  const filas=(await bdTodos('pendientes'))||[];
+  await bdOp('pendientes','readwrite',o=>filas.forEach(f=>o.put({...f,intentos:(f.intentos||0)+1})));
+}
+
+/* Programa el siguiente intento, esperando cada vez más. */
+function reintentar(){
+  if(JOB_T)clearTimeout(JOB_T);
+  JOB_ESPERA=JOB_ESPERA?Math.min(JOB_MAX,JOB_ESPERA*2):JOB_MIN;
+  JOB_T=setTimeout(()=>correrJob(),JOB_ESPERA);
+}
+let JOB_CORRIENDO=false;
+async function correrJob(motivo){
+  if(JOB_CORRIENDO||SYNCING)return;
+  if(!enNube()||!online())return;
+  JOB_CORRIENDO=true;
+  try{
+    if(!await nubeVigente())return;
+    await apuntarPendientes();
+    const subidas=await drenarPendientes();
+    const bajadas=await nubeBajar(false);
+    JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
+    guardarLocal();
+    if(subidas||bajadas){
+      renderAll();pintarNet();
+      if(motivo==='volvio-la-señal'&&subidas)
+        toast(`Volvió la señal · ${subidas} cambio${subidas===1?'':'s'} subido${subidas===1?'':'s'}`);
+    }else pintarNet();
+  }catch(e){
+    await marcarIntento();
+    pintarNet();
+    reintentar();
+  }finally{ JOB_CORRIENDO=false }
+}
+
+/* Los disparadores del job: el navegador avisa cuando vuelve la red,
+   y por si el aviso no llega —pasa— hay un latido de respaldo. */
+let JOB_ARMADO=false;
+function arrancarJob(){
+  if(JOB_ARMADO)return; JOB_ARMADO=true;
+  window.addEventListener('online', ()=>{pintarNet();correrJob('volvio-la-señal')});
+  window.addEventListener('offline',()=>pintarNet());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)correrJob('volviste')});
+  setInterval(()=>correrJob('latido'),45000);
+}
+
+/* ============================================================
+   13 · TRABAJO SIN CONEXIÓN
+   Todo se guarda en el equipo apenas se registra. Los cambios hechos
+   sin señal quedan en la tabla de pendientes y suben solos en cuanto
+   vuelve la señal — aunque la página se haya cerrado por el medio.
+   ============================================================ */
+const LS_KEY='adolphus.datos.v1';
+let SYNCQ=[];              /* cola de cambios pendientes de subir */
+let OFF_SIM=false;         /* simulador de "sin señal" para demostrar en planta */
+let SYNCING=false;
+const online=()=>!OFF_SIM&&navigator.onLine;
+
+/* Guardar es lo primero que pasa tras cualquier cambio, y no puede
+   fallar. Va a IndexedDB —que aguanta las fotos— y de paso apunta el
+   cambio en la tabla de pendientes. localStorage se sigue escribiendo
+   como respaldo, y si no entra, no pasa nada: la caja buena es la otra. */
+function guardarLocal(){
+  const foto=fotoDatos();
+  bdPon('estado',foto,'datos').catch(()=>{});
+  apuntarPendientes().then(()=>pintarNet()).catch(()=>{});
+  try{ localStorage.setItem(LS_KEY,JSON.stringify(foto)) }
+  catch(e){
+    /* respaldo lleno: sólo avisamos si tampoco tenemos IndexedDB,
+       porque entonces sí hay riesgo de perder algo */
+    if(BD_ROTA||!('indexedDB' in window))
+      toast('No se pudo guardar en el equipo: almacenamiento lleno');
+  }
+  return true;
+}
+function restaurarLocal(){
+  let d;try{d=JSON.parse(localStorage.getItem(LS_KEY)||'null')}catch(e){return false}
+  return aplicarFoto(d);
+}
+/* Al abrir se prefiere la caja grande; si no hay nada, el respaldo. */
+async function restaurarCaja(){
+  try{
+    const d=await bdDame('estado','datos');
+    if(d&&aplicarFoto(d)){PEND_N=(await bdCuenta('pendientes'))||0;return true}
+  }catch(e){}
+  return restaurarLocal();
 }
 /* Registra un cambio: se guarda ya en el equipo y se encola para subir. */
 function registrar(tipo,desc){
@@ -6776,7 +8571,9 @@ function registrar(tipo,desc){
 }
 function pintarNet(){
   const c=$('#netChip');if(!c)return;
-  const n=SYNCQ.length;
+  /* Con cuenta en la nube el número que importa es cuántos registros
+     faltan por subir, no cuántas líneas tiene la bitácora. */
+  const n=enNube()?PEND_N:SYNCQ.length;
   c.classList.toggle('off',!online());
   c.classList.toggle('sync',SYNCING);
   c.innerHTML=SYNCING
@@ -6791,15 +8588,53 @@ function pintarNet(){
 }
 function sincronizar(manual){
   if(SYNCING)return;
-  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
   if(!online()){if(manual)toast('Sin conexión — los cambios ya están guardados en este equipo');return}
+  const refrescar=()=>{
+    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
+  };
+  /* Con sesión en la nube esto sube y baja de verdad. Sin sesión —el
+     recorrido de demostración— se comporta como siempre: local. */
+  if(enNube()){
+    SYNCING=true;pintarNet();
+    const n=PEND_N;
+    nubeVuelta().then(r=>{
+      SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();refrescar();
+      if(manual||n)toast(r.bajadas
+        ? `Al día · ${r.subidas} subido${r.subidas===1?'':'s'}, ${r.bajadas} traído${r.bajadas===1?'':'s'} de la nube`
+        : `${r.subidas||n} cambio${(r.subidas||n)===1?'':'s'} guardado${(r.subidas||n)===1?'':'s'} en la nube`);
+    }).catch(e=>{
+      SYNCING=false;pintarNet();refrescar();
+      toast('No se pudo sincronizar: '+e.message+' · los cambios siguen guardados en este equipo');
+    });
+    return;
+  }
+  if(!SYNCQ.length){if(manual)toast('No hay cambios pendientes');pintarNet();return}
   SYNCING=true;pintarNet();
   const n=SYNCQ.length;
-  setTimeout(()=>{                       // subida al servidor (simulada en el prototipo)
-    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();
-    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
-    toast(`${n} cambio${n===1?'':'s'} sincronizado${n===1?'':'s'} con el servidor`);
-  },1200);
+  setTimeout(()=>{                       // sin cuenta en la nube: sólo local
+    SYNCQ=[];SYNCING=false;guardarLocal();pintarNet();refrescar();
+    toast(`${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo`);
+  },900);
+}
+/* Apuntar el portal a otra base sin abrir el archivo. */
+function guardarCfgNube(){
+  const url=($('#nbUrl').value||'').trim().replace(/\/+$/,''), key=($('#nbKey').value||'').trim();
+  if(url&&!/^https:\/\/.+/.test(url)){toast('La dirección debe empezar por https://');return}
+  try{localStorage.setItem(LS_NUBE_CFG,JSON.stringify({url,key}))}catch(e){}
+  try{localStorage.removeItem(LS_NUBE)}catch(e){}   // la sesión no sirve en otra base
+  toast('Guardado — recargando');
+  setTimeout(()=>location.reload(),700);
+}
+async function probarNube(){
+  const url=($('#nbUrl').value||'').trim().replace(/\/+$/,''), key=($('#nbKey').value||'').trim();
+  if(!url||!key){toast('Faltan la dirección y la llave');return}
+  try{
+    const r=await fetch(url+'/rest/v1/registros?select=coleccion&limit=1',{headers:{apikey:key}});
+    if(r.status===401||r.status===403)      toast('Responde, pero la llave no tiene permiso de lectura');
+    else if(r.status===404)                 toast('Responde, pero falta la tabla «registros»: corre el SQL de instalación');
+    else if(r.ok)                           toast('Conexión correcta · la tabla «registros» existe');
+    else                                    toast('Respondió con HTTP '+r.status);
+  }catch(e){ toast('No se pudo conectar: '+e.message) }
 }
 function toggleOffline(){
   OFF_SIM=!OFF_SIM;pintarNet();openSync();
@@ -6821,11 +8656,22 @@ function openSync(){
      <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
      <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
    </div>
-   ${n?`<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
-      <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
-        <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
-        <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
-    :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}
+   <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
+     :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
+   <div class="fld" style="margin-top:14px">
+     <label for="nbUrl">Base de datos en la nube</label>
+     <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
+     <label for="nbKey" style="margin-top:8px">Llave pública (publishable / anon)</label>
+     <input class="inp mono" id="nbKey" placeholder="sb_publishable_… o eyJhbGci…" value="${esc(NUBE.key||'')}">
+     <p class="pw-note" style="margin-top:6px">${enNube()
+       ? `Conectado como <b>${esc((NUBE_YO&&NUBE_YO.correo)||'')}</b>. Los datos se guardan en la nube y en este equipo a la vez.`
+       : `Sin sesión en la nube: todo se guarda sólo en este equipo. Entra con tu cuenta para que suba.`}
+       La llave pública es la que va en el navegador; quién ve qué lo decide la base, no esta página.</p>
+     <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+       <button class="btn sec" onclick="probarNube()">Probar conexión</button>
+       <button class="btn sec" onclick="guardarCfgNube()">Guardar y recargar</button>
+     </div>
+   </div>
    <div class="callout ${SW_LISTA?'':'warn'}" style="margin-top:14px">
      <svg viewBox="0 0 24 24">${SW_LISTA?'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
      <div>${SW_LISTA
@@ -6837,9 +8683,44 @@ function openSync(){
     <button class="btn sec" onclick="closeModal()">Cerrar</button>
     <button class="btn" onclick="sincronizar(true)" ${!online()||!n?'disabled style="opacity:.5;cursor:not-allowed"':''}>Sincronizar ahora</button>`;
   $('#modal').classList.add('on');
+  pintarPendientes();
 }
-window.addEventListener('online',()=>{pintarNet();toast('Señal recuperada — subiendo cambios');sincronizar()});
+window.addEventListener('online',()=>{
+  pintarNet();
+  if(enNube())correrJob('volvio-la-señal');            // el job reintenta solo
+  else{toast('Señal recuperada — subiendo cambios');sincronizar()}
+});
 window.addEventListener('offline',()=>{pintarNet();toast('Sin conexión — se seguirá guardando en este equipo')});
+
+/* La tabla de pendientes vive en disco: hay que ir a leerla. */
+const COL_N={CLIENTES:'Cliente',ACTIVOS:'Válvula',ORDENES:'Orden de trabajo',
+  SOLICITUDES:'Solicitud',RECLAMOS:'Reclamo',COTIZACIONES:'Cotización',
+  CALIBS:'Calibración',SERVS:'Parte de servicio',DOCS:'Documento',
+  MAESTRO:'Catálogo y precios',PLAN_OK:'Plan aprobado'};
+async function pintarPendientes(){
+  const caja=$('#sqLista'); if(!caja)return;
+  if(!enNube()){
+    caja.innerHTML=SYNCQ.length
+      ? `<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
+          <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
+            <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
+            <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
+      : `<div class="ps-empty" style="padding:22px">Sin cuenta en la nube: todo se guarda sólo en este equipo.</div>`;
+    return;
+  }
+  const filas=(await bdTodos('pendientes'))||[];
+  PEND_N=filas.length;pintarNet();
+  caja.innerHTML=filas.length
+    ? `<div class="sq-list">${filas.slice(0,60).map(f=>`
+        <div class="sq-i">
+          <span class="tag ${f.intentos?'due':''}"><span class="dot"></span>${esc(COL_N[f.coleccion]||f.coleccion)}</span>
+          <span class="sq-t"><b class="mono">${esc((f.datos&&(f.datos.tag||f.datos.n))||f.clave)}</b>
+            <span>${f.borrado?'se dio de baja':'se creó o se modificó'}${
+              f.intentos?` · ${f.intentos} intento${f.intentos===1?'':'s'} fallido${f.intentos===1?'':'s'}`:''}</span></span>
+          <span class="sq-d">${fmtDT(new Date(f.ts).toISOString().slice(0,16))}</span></div>`).join('')}
+       ${filas.length>60?`<div class="ps-empty" style="padding:12px">y ${filas.length-60} más</div>`:''}</div>`
+    : `<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`;
+}
 
 /* Guarda la app en el equipo (PWA): al abrirla una vez con señal, queda
    disponible aunque después entres a planta sin internet. Requiere que
@@ -6871,7 +8752,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-07-31 · fotos en reclamos';
+const VERSION='2026-08-04 · PSV, sin perder el paso';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
@@ -6970,9 +8851,48 @@ function upRucCheck(){
    :'RUC válido. Como aún no es cliente de Adolphus, tu cuenta quedará <b>pendiente de aprobación</b>.';
 }
 
-function login(ev){
+async function login(ev){
   ev.preventDefault();
   const m=$('#inMail').value.trim(), pw=$('#inPw').value;
+
+  /* Primero la nube: es la cuenta de verdad y la que abre desde
+     cualquier computadora. Sólo si no hay red se cae a lo local, para
+     que el que ya entró antes pueda seguir trabajando en planta. */
+  if(NUBE.url&&online()){
+    authMsg('Comprobando…','info');
+    try{
+      await nubeEntrar(m,pw);
+      const c=cuentaDeNube();
+      if(c.est==='pendiente'){
+        await nubeSalir();
+        authMsg('Tu cuenta está <b>pendiente de aprobación</b>. Un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
+        return false;
+      }
+      if(c.est==='suspendido'){await nubeSalir();authMsg('Esta cuenta está suspendida. Escribe a soporte@adolphus.pe.');return false}
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      abrirSesion(c,$('#inRec').checked);
+      sellarIds();
+      authMsg('');
+      try{
+        const r=await nubeVuelta(true);
+        latirNube();arrancarJob();
+        toast(r.bajadas?`Datos traídos de la nube · ${r.bajadas} registro${r.bajadas===1?'':'s'}`
+                       :'Conectado a la nube');
+      }catch(e){toast('Dentro, pero no se pudieron traer los datos: '+e.message)}
+      return false;
+    }catch(e){
+      const red=!e.status;                       // sin status = no hubo respuesta
+      if(!red){
+        authMsg(e.status===400
+          ? 'Correo o contraseña incorrectos.'
+          : 'No se pudo entrar: '+esc(e.message));
+        return false;
+      }
+      // sin red: seguimos con la copia local
+    }
+  }
+
   const c=cuentaPorMail(m);
   if(!c){authMsg('No hay ninguna cuenta con ese correo. Revísalo o crea una cuenta nueva.');return false}
   if(c.pw!==resumen(pw)){authMsg('Contraseña incorrecta.');return false}
@@ -6981,11 +8901,55 @@ function login(ev){
   abrirSesion(c,$('#inRec').checked);
   return false;
 }
-function signup(ev){
+async function signup(ev){
   ev.preventDefault();
   const n=$('#upN').value.trim(), m=$('#upMail').value.trim().toLowerCase(), pw=$('#upPw').value;
-  if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
   if(fuerzaPw(pw)<2){authMsg('La contraseña es demasiado débil: al menos 8 caracteres, con números.');return false}
+
+  /* Cuenta de verdad: el usuario nace en la base, no en este archivo.
+     Quién es y qué puede ver lo decide Postgres con el código de
+     invitación —o con el RUC, y entonces queda pendiente de que
+     Adolphus la active. */
+  if(NUBE.url&&online()){
+    const esStaff=UP_TIPO==='staff';
+    const ruc=($('#upRuc').value||'').replace(/\D/g,'');
+    if(!esStaff&&!rucValido(ruc)){authMsg('Ingresa el RUC de tu empresa (11 dígitos, con dígito verificador válido).');return false}
+    const cod=((esStaff?$('#upCod').value:$('#upCodCli').value)||'').trim().toUpperCase();
+    authMsg('Creando la cuenta…','info');
+    try{
+      const p=await nubeRegistrar({correo:m,clave:pw,nombre:n,
+        cargo:$('#upCargo').value.trim(),telefono:'',codigo:cod,ruc:esStaff?'':ruc});
+      if(!p){
+        authTab('in');$('#inMail').value=m;
+        authMsg('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.','info');
+        return false;
+      }
+      const c=cuentaDeNube();
+      if(c.est!=='activo'){
+        await nubeSalir();
+        authTab('in');$('#inMail').value=m;
+        authMsg('Cuenta creada. Queda <b>pendiente de aprobación</b>: un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
+        return false;
+      }
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
+      abrirSesion(c,true,'Cuenta creada y activada.');
+      sellarIds();authMsg('');
+      try{await nubeVuelta(true);latirNube();arrancarJob()}catch(e){}
+      return false;
+    }catch(e){
+      if(e.status){
+        authMsg(/registered|already/i.test(e.message)
+          ? 'Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.'
+          : 'No se pudo crear la cuenta: '+esc(e.message));
+        return false;
+      }
+      // sin red: se crea en el equipo y se registra en la nube al volver
+    }
+  }
+
+  if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
   let perfil='cliente',cliId=null,est='pendiente',aviso='';
   if(UP_TIPO==='staff'){
     const cod=($('#upCod').value||'').trim().toUpperCase();
@@ -7015,7 +8979,7 @@ function signup(ev){
 }
 /* Deja la portada como recién abierta: sin contraseñas ni mensajes viejos. */
 function resetAuth(){
-  ['inPw','upPw','upN','upCargo','upMail','upCod','upRuc'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
+  ['inPw','upPw','upN','upCargo','upMail','upCod','upCodCli','upRuc'].forEach(id=>{const el=$('#'+id);if(el)el.value=''});
   const t=$('#upTerm');if(t)t.checked=false;
   upTipo('staff');pwMeter();upRucCheck();authMsg('');
 }
@@ -7041,6 +9005,8 @@ function entrarAlPanel(){
   if(v){v.pause();v.muted=true;setSoundIcon(true)}
   const c=$('#cover');c.classList.add('gone');
   setTimeout(()=>{c.style.display='none'},600);
+  // primera impresión: el panel se dibuja delante del que entra
+  setTimeout(animarVista,260);
 }
 /* Recorrido de demostración: entra sin cuenta, con el perfil elegido. */
 function enterApp(){
@@ -7051,6 +9017,7 @@ function enterApp(){
 }
 function logout(){
   closeDrawer&&closeDrawer();closeAcct();
+  nubeSalir();
   SES=null;try{localStorage.removeItem(LS_SES)}catch(e){}
   resetAuth();authTab('in');pintarSesionGuardada();
   const c=$('#cover');c.style.display='';
@@ -7282,7 +9249,27 @@ function onbHtml(){
 
 /* ── Arranque ─────────────────────────────────────────────── */
 restaurarCuentas();
-restaurarLocal();
+restaurarLocal();                       // respaldo inmediato, sin esperar
+restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}});
+/* Si la última vez se entró con cuenta de la nube, la sesión sigue
+   viva: se reanuda sin volver a pedir la contraseña. */
+(function reanudarNube(){
+  let g=null; try{g=JSON.parse(localStorage.getItem(LS_NUBE)||'null')}catch(e){}
+  if(!g||!g.refresh_token)return;
+  NUBE_SES=g;
+  nubeVigente().then(ok=>{
+    if(!ok)return;
+    return nubeCargarPerfil().then(()=>{
+      const c=cuentaDeNube();
+      if(c.est!=='activo')return nubeSalir();
+      const i=CUENTAS.findIndex(x=>x.id===c.id);
+      if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
+      guardarCuentas();pintarSesionGuardada();
+      sellarIds();latirNube();arrancarJob();
+      return nubeVuelta(true).then(()=>{if(SES)renderAll()});
+    });
+  }).catch(()=>{});
+})();
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
