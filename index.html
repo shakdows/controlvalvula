@@ -3440,7 +3440,8 @@ function openAsset(id){
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       ${a.cl==='seguridad'
-        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Ensayo PSV</button>
+        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${
+             CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto')?'Seguir el ensayo':'Ensayo PSV'}</button>
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>`
         : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
@@ -3696,20 +3697,22 @@ function paneCal(){
       <b>Sin calibraciones registradas</b>${a.prox?`Programada para el ${esc(a.prox)}.`:'Este equipo no tiene programa de calibración.'}</div>`;
     return;
   }
-  $('#pn-cal').innerHTML=bar+`${cs[0].tipo==='psv'?psvGrafica(psvVeredicto(cs[0])):calibChart(cs[0])}
+  $('#pn-cal').innerHTML=bar+`${cs[0].tipo==='psv'?psvGrafica(psvVeredicto(cs[0])):(cs[0].af!=null?calibChart(cs[0]):'')}
     <section class="fx-blk"><div class="fx-blk-h"><h3>Todas las calibraciones</h3><span class="count">${cs.length}</span></div>
     <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
       <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">Final</th><th>Resultado</th><th></th></tr></thead>
       <tbody>${cs.map(c=>{
         /* Un ensayo PSV del formato de la empresa no tiene as-found/as-left:
            tiene tres disparos y un promedio. Se muestra como lo que es. */
-        if(c.tipo==='psv'){const v=psvVeredicto(c),ok=v.estado==='aprobado';
+        if(c.tipo==='psv'){const v=psvVeredicto(c), sinTerminar=v.estado==='incompleto';
           return `<tr style="cursor:default"><td class="mono">${esc(fPE(c.fecha))}</td>
           <td class="mono muted">AXAD-088${c.os?' · '+esc(c.os):''}</td>
           <td class="num">${esc(c.setEsp||'')} ${esc(c.und||'')}</td><td class="num">${esc(c.asFound||'—')}</td>
-          <td class="num">${v.estado==='incompleto'?'—':n2(v.prom)}</td>
-          <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Aprobado':'Rechazado'}</span></td>
-          <td style="text-align:right"><button class="btn sec xs" onclick="verPSV('${c.id}')">Ver ensayo</button></td></tr>`}
+          <td class="num">${sinTerminar?'—':n2(v.prom)}</td>
+          <td><span class="tag ${v.estado==='aprobado'?'ok':sinTerminar?'due':'late'}"><span class="dot"></span>${
+            v.estado==='aprobado'?'Aprobado':sinTerminar?'Sin terminar':'Rechazado'}</span></td>
+          <td style="text-align:right"><button class="btn sec xs" onclick="${
+            sinTerminar?`openPSV(null,'${c.id}')`:`verPSV('${c.id}')`}">${sinTerminar?'Seguir':'Ver ensayo'}</button></td></tr>`}
         const ok=Math.abs(c.devAl)<=(c.tol||3);
         return `<tr style="cursor:default"><td class="mono">${esc(c.fin||c.ini||'')}</td><td class="mono muted">${esc(c.cert||'')}</td>
         <td class="num">${c.nom} ${esc(c.uni)}</td><td class="num">${c.af}</td><td class="num">${c.al}</td>
@@ -4522,10 +4525,16 @@ function psvNuevo(actId){
 }
 
 function openPSV(actId,edit){
-  const c=edit?CALIBS.find(x=>x.id===edit):null;
+  let c=edit?CALIBS.find(x=>x.id===edit):null;
+  /* Sin decir cuál, se retoma el borrador que haya quedado a medias en
+     esa válvula. Si no hay ninguno, recién ahí se empieza uno nuevo:
+     nadie quiere volver a escribir lo que ya escribió. */
+  if(!c&&actId)c=CALIBS.find(x=>x.act===actId&&x.tipo==='psv'&&x.veredicto==='incompleto');
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  const retomado=!!c&&!edit;
   PSV_TMP=c?JSON.parse(JSON.stringify(c)):psvNuevo(a.id);
+  if(retomado)setTimeout(()=>toast('Seguimos con el borrador que quedó a medias'),300);
   if(!PSV_TMP)return;
   $('#mTitle').textContent=(c?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
   pintarPSV();
@@ -4647,15 +4656,23 @@ function pintarPSV(){
     </div></details>
    </div>`;
 
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
-    <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
-    <button class="btn" onclick="guardarPSV(true)">Guardar y emitir certificado</button>`;
-  pintarPSVResultado(); pintarPSVFotos();
+  pintarPSVPie(); pintarPSVResultado(); pintarPSVFotos();
+}
+
+/* El pie dice qué falta antes de pulsar, no después. */
+function pintarPSVPie(){
+  const p=$('#mFoot'); if(!p||!PSV_TMP)return;
+  const v=psvVeredicto(PSV_TMP), listo=v.estado!=='incompleto';
+  p.innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
+    <button class="btn" onclick="guardarPSV(true)" ${listo?'':'disabled title="Falta '+esc(v.falta)+'" style="opacity:.5;cursor:not-allowed"'}>Emitir certificado</button>`;
 }
 
 /* El veredicto se ve mientras se escribe: si el tercer disparo se
    sale de tolerancia, el técnico lo sabe antes de guardar. */
 function pintarPSVResultado(){
+  pintarPSVPie();
   const caja=$('#psvRes'); if(!caja||!PSV_TMP)return;
   const v=psvVeredicto(PSV_TMP), b=psvBlowdown(PSV_TMP), u=PSV_TMP.und||'psi';
   if(v.estado==='incompleto'){
@@ -4696,16 +4713,29 @@ function pintarPSVFotos(){
 function guardarPSV(emitir){
   const t=PSV_TMP; if(!t)return;
   const v=psvVeredicto(t);
-  if(v.estado==='incompleto'){toast('Falta '+v.falta);return}
+  /* Guardar guarda, siempre. Un ensayo a medio llenar es un borrador:
+     el técnico anota lo que tiene, cierra, y sigue después. Negarse a
+     grabar porque falta un disparo es tirarle el trabajo a la basura.
+     Emitir el certificado sí exige que esté completo: eso es lo que
+     firma la empresa. */
+  if(emitir&&v.estado==='incompleto'){
+    toast('Para emitir el certificado falta '+v.falta+' · se guardó como borrador');
+    emitir=false;
+  }
   const nuevo=!t.id;
   if(nuevo)t.id='pv'+Date.now();
-  t.veredicto=v.estado;
-  t.prom=v.prom; t.desv=v.desv;
+  t.veredicto=v.estado;                       // 'aprobado' | 'rechazado' | 'incompleto'
+  t.prom=v.estado==='incompleto'?null:v.prom;
+  t.desv=v.estado==='incompleto'?null:v.desv;
   const i=CALIBS.findIndex(x=>x.id===t.id);
   if(i>=0)CALIBS[i]=t; else CALIBS.unshift(t);
   const a=ACTIVOS.find(x=>x.id===t.act)||{};
-  registrar('Ensayo PSV',`${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
-  toast(v.estado==='aprobado'?'Ensayo guardado · APROBADO':'Ensayo guardado · RECHAZADO');
+  registrar('Ensayo PSV', v.estado==='incompleto'
+    ? `${a.tag||''} · borrador guardado`
+    : `${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
+  toast(v.estado==='incompleto' ? 'Borrador guardado · podés seguir después'
+      : v.estado==='aprobado'   ? 'Ensayo guardado · APROBADO'
+      :                           'Ensayo guardado · RECHAZADO');
   const id=t.id; PSV_TMP=null; closeModal(); renderAll();
   if(emitir)setTimeout(()=>imprimirPSV(id),150);
 }
@@ -8752,7 +8782,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · PSV, sin perder el paso';
+const VERSION='2026-08-04 · el borrador se guarda';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
