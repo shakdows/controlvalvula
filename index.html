@@ -3440,8 +3440,8 @@ function openAsset(id){
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       ${a.cl==='seguridad'
-        ? `<button class="btn" onclick="closeDrawer();openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Ensayo PSV</button>
-           <button class="btn sec" onclick="closeDrawer();openPlacaPSV('${a.id}')">Datos de placa</button>`
+        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Ensayo PSV</button>
+           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>`
         : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
@@ -3689,7 +3689,7 @@ function paneCal(){
   const a=S.cur;
   const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
   const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-     <button class="btn sec xs" onclick="${a.cl==='seguridad'?`closeDrawer();openPSV('${a.id}')`:`openCalib('${a.id}')`}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>${a.cl==='seguridad'?'Nuevo ensayo PSV':'Nueva calibración'}</button>
+     <button class="btn sec xs" onclick="${a.cl==='seguridad'?`openPSV('${a.id}')`:`openCalib('${a.id}')`}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>${a.cl==='seguridad'?'Nuevo ensayo PSV':'Nueva calibración'}</button>
      <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
   if(!cs.length){
     $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -4545,7 +4545,7 @@ function pintarPSV(){
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
      <div><b>${esc(a.tag||'')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie ${esc(a.ser||'—')} ·
        ${esc(cli(a.cli).n||'')}. Todo esto ya lo sabe el sistema: no hay que volver a escribirlo.
-       <a href="#" onclick="closeModal();openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
+       <a href="#" onclick="openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
 
    <div class="psv-secs">
     <details class="psv-sec" open><summary>1 · Servicio y patrón</summary><div class="psv-b">
@@ -4727,8 +4727,12 @@ const PSV_PLACA=[
  ['capac', 'Capacidad',                   '1848'],
  ['norma', 'Norma de prueba',             'ASME']
 ];
+let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la placa
 function openPlacaPSV(actId){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return;
+  /* Si se entra desde un ensayo sin terminar, ese ensayo no se pierde:
+     queda guardado y se devuelve al volver. */
+  if(PSV_TMP&&PSV_TMP.act===actId)PSV_GUARDADO=PSV_TMP;
   PSV_TMP=null;
   const m=MODELOS[a.mod]||{};
   $('#mTitle').textContent=`Datos de placa · ${a.tag||a.ser||''}`;
@@ -4759,9 +4763,21 @@ function openPlacaPSV(actId){
        </div>
      </div>
    </div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
-    <button class="btn" onclick="guardarPlaca('${a.id}')">Guardar</button>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="volverDePlaca('${a.id}')">${PSV_GUARDADO?'Volver al ensayo':'Cerrar'}</button>
+    <button class="btn" onclick="guardarPlaca('${a.id}')">Guardar${PSV_GUARDADO?' y volver':''}</button>`;
   $('#modal').classList.add('on');
+}
+/* Cerrar la placa devuelve a donde se estaba: al ensayo si venía de
+   ahí, o a la ficha del equipo, que sigue abierta detrás. */
+function volverDePlaca(){
+  const t=PSV_GUARDADO; PSV_GUARDADO=null;
+  if(t){
+    PSV_TMP=t;
+    const a=ACTIVOS.find(x=>x.id===t.act)||{};
+    $('#mTitle').textContent=(t.id?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+    pintarPSV(); return;
+  }
+  closeModal();
 }
 function placaCampo(id,k,v){const a=ACTIVOS.find(x=>x.id===id);if(a)a[k]=v}
 function placaFoto(id,f){
@@ -4776,7 +4792,13 @@ function guardarPlaca(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
   registrar('Válvula',`Datos de placa de ${a.tag||a.ser||''}`);
   toast('Datos de placa guardados');
-  closeModal();renderAll();
+  renderAll();
+  /* Si el ensayo estaba a medio llenar, la presión de ajuste recién
+     corregida entra en él: es el dato que decide el resultado. */
+  if(PSV_GUARDADO&&!PSV_GUARDADO.setEsp&&a.setPress){
+    PSV_GUARDADO.setEsp=a.setPress; PSV_GUARDADO.und=a.setUnd||PSV_GUARDADO.und;
+  }
+  volverDePlaca(id);
 }
 
 /* ── La gráfica del ensayo ───────────────────────────────────
@@ -8730,7 +8752,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · ensayo PSV AXAD-088';
+const VERSION='2026-08-04 · PSV, sin perder el paso';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
