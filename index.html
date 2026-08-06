@@ -1872,6 +1872,8 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .psv-nums span{display:block;font-size:11px;color:var(--ink-3)}
 .psv-nums b{font-size:15px;letter-spacing:-.02em}
 .psv-regla{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.psv-aviso{font-size:11.5px;line-height:1.5;color:var(--due);font-weight:500;
+  border-top:1px dashed var(--line);padding-top:8px}
 .psv-graf{display:block;margin:var(--sp-3) 0;max-width:100%}
 
 /* datos de placa: la foto al lado, para copiar mirándola */
@@ -3438,7 +3440,13 @@ function openAsset(id){
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
-       return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+       /* Un ensayo PSV tiene su propio certificado (AXAD-088). El del
+          formato viejo no sabe leerlo, así que el botón llevaba a nada.
+          Y un borrador todavía no tiene certificado que mostrar. */
+       const listo=uc&&(uc.tipo!=='psv'||uc.veredicto!=='incompleto');
+       return `${listo?`<button class="btn sec" onclick="${uc.tipo==='psv'
+            ?`verPSV('${uc.id}')`
+            :`showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))`}" title="${uc.tipo==='psv'?'Certificado AXAD-088':'Certificado '+esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       ${a.cl==='seguridad'
         ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${
              CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto')?'Seguir el ensayo':'Ensayo PSV'}</button>
@@ -4465,8 +4473,15 @@ function psvVeredicto(c){
   const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
   const dif=prom-set, desv=set?dif/set*100:0;
   const ok=Math.abs(dif)<=limite+1e-9;
+  /* El veredicto lo decide el promedio: así lo dice el procedimiento
+     del propio formato. Pero si algún disparo suelto se salió de la
+     banda y el promedio salvó la papeleta, eso hay que decirlo — la
+     válvula está disparando disparejo aunque el número final cierre.
+     Es un aviso, no un veto: la norma no lo prohíbe. */
+  const sueltos=t.filter(x=>Math.abs(x-set)>limite+1e-9).length;
   return {estado:ok?'aprobado':'rechazado', prom, dif, desv, limite, tol,
-          min:set-limite, max:set+limite, disparos:t, set, und:u};
+          min:set-limite, max:set+limite, disparos:t, set, und:u,
+          dispersos:ok?sueltos:0};
 }
 /* El blowdown: la válvula debe volver a cerrar un 8 % por debajo
    del seteo. Informativo — el formato lo muestra, no lo veta. */
@@ -4692,6 +4707,8 @@ function pintarPSVResultado(){
       <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
       ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) ·
         se espera ≤ 8 % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
+      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
+        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad antes de cerrar.</span>`:''}
     </div>`;
 }
 
@@ -4963,6 +4980,9 @@ function verPSV(id){
         <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
       </div>
       <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+      ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) · se espera ≤ 8 %${b.dentro?' ✓':' · fuera de rango'}</span>`:''}
+      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
+        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</span>`:''}
     </div>
     ${psvGrafica(v)}`:''}
     <h4 class="snc-sec">Firmas</h4>
@@ -5069,6 +5089,8 @@ function imprimirPSV(id){
     ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
     ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
     ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+' %  (se espera ≤ 8 %)':'—')}
+    ${v.dispersos?fila('OBSERVACIÓN DE REPETIBILIDAD',
+      v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.'):''}
   </table>
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
   ${psvGrafica(v,660)}`:''}
@@ -7506,6 +7528,17 @@ function calibChart(rec){
 }
 function showCalibReport(rec){
   if(!rec)return;
+  /* Un ensayo PSV lleva el formato AXAD-088 de la empresa, que no tiene
+     as-found/as-left sino tres disparos: este certificado no sabe
+     leerlo y el botón llevaba a una pantalla vacía. Se deriva al suyo
+     desde aquí, y no en cada uno de los siete botones que lo llaman. */
+  if(rec.tipo==='psv'){
+    if(rec.veredicto==='incompleto'){
+      toast('Ese ensayo está sin terminar: todavía no hay certificado');
+      openPSV(null,rec.id); return;
+    }
+    verPSV(rec.id); return;
+  }
   const a=ACTIVOS.find(x=>x.id===rec.act)||{},sg=x=>x>=0?'+':'';
   const cot=x=>Math.abs(x)<=rec.tol?'ok':'late';
   $('#mTitle').textContent=`Certificado ${rec.cert}`;
@@ -8782,7 +8815,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · el borrador se guarda';
+const VERSION='2026-08-04 · ver certificado, y repetibilidad';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
