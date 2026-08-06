@@ -1837,6 +1837,69 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   .pl-leg-n{text-align:left;min-width:0}
 }
 
+
+/* ── PSV · formato AXAD-088 ──────────────────────────────────
+   Un formato de 47 campos en un celular es un infierno si se
+   pone todo junto. Va en secciones plegables: se abre la que
+   toca y las demás no estorban. */
+.psv-secs{display:flex;flex-direction:column;gap:8px}
+.psv-sec{border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
+.psv-sec>summary{padding:11px 14px;font-size:13.5px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:9px;list-style:none;background:var(--surface-2);
+  transition:background var(--fast) var(--ease)}
+.psv-sec>summary::-webkit-details-marker{display:none}
+.psv-sec>summary::before{content:'';width:7px;height:7px;border-right:2px solid var(--ink-3);
+  border-bottom:2px solid var(--ink-3);transform:rotate(-45deg);transition:transform var(--fast) var(--ease-out);flex:0 0 auto}
+.psv-sec[open]>summary::before{transform:rotate(45deg)}
+.psv-sec>summary:hover{background:var(--surface-3)}
+.psv-req{margin-left:auto;font-size:11px;font-weight:500;color:var(--due)}
+.psv-b{padding:var(--sp-4)}
+/* los tres disparos, uno al lado del otro: se llenan de corrido */
+.psv-tests{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.psv-tests .inp{text-align:right;font-size:16px}
+
+/* el veredicto en vivo: si el tercer disparo se sale, se ve al escribirlo */
+.psv-res{margin-top:var(--sp-4);border:1px solid var(--line);border-radius:var(--r-2);padding:13px 15px;
+  background:var(--surface-2);display:flex;flex-direction:column;gap:9px}
+.psv-res.aprobado{border-color:var(--ok);background:color-mix(in oklab,var(--ok) 8%,var(--surface))}
+.psv-res.rechazado{border-color:var(--late);background:color-mix(in oklab,var(--late) 8%,var(--surface))}
+.psv-res.esp b{display:block;font-size:13.5px}
+.psv-res.esp span{font-size:12px;color:var(--ink-3)}
+.psv-vd{font-size:var(--t-5);font-weight:700;letter-spacing:.05em}
+.psv-res.aprobado .psv-vd{color:var(--ok)}
+.psv-res.rechazado .psv-vd{color:var(--late)}
+.psv-nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));gap:11px}
+.psv-nums span{display:block;font-size:11px;color:var(--ink-3)}
+.psv-nums b{font-size:15px;letter-spacing:-.02em}
+.psv-regla{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.psv-graf{display:block;margin:var(--sp-3) 0;max-width:100%}
+
+/* datos de placa: la foto al lado, para copiar mirándola */
+.placa-cols{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
+.placa-foto{position:sticky;top:0}
+.placa-foto #plVista img{width:100%;border-radius:var(--r-2);border:1px solid var(--line);margin-top:9px}
+@media(max-width:760px){
+  .placa-cols{grid-template-columns:1fr}
+  .placa-foto{position:static}
+  .psv-tests{grid-template-columns:1fr}
+}
+
+/* firmas */
+.firma-caja{position:relative;border:1px dashed var(--ink-3);border-radius:var(--r-2);
+  background:var(--surface-2);height:170px;margin-top:6px;touch-action:none}
+.firma-lienzo{width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+.firma-linea{position:absolute;left:22px;right:22px;bottom:34px;border-bottom:1px solid var(--line);pointer-events:none}
+.firmas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px}
+.firma-box{border:1px solid var(--line-2);border-radius:var(--r-2);padding:11px;min-height:126px;
+  display:flex;flex-direction:column;gap:3px;background:var(--surface-2)}
+.firma-box.ok{border-color:var(--ok);background:var(--surface)}
+.fb-rol{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3)}
+.fb-img{max-height:44px;object-fit:contain;object-position:left;margin:5px 0}
+.firma-box b{font-size:13px}
+.firma-box span{font-size:11.5px;color:var(--ink-3)}
+.fb-f{font-family:'IBM Plex Mono';font-size:11px}
+.fb-vacio{margin:auto 0 8px;color:var(--ink-3);font-size:12px}
+
 /* ============================================================
    §17 · APP VIVA
    Hasta aquí el portal se veía bien pero se sentía estático: las
@@ -2506,7 +2569,15 @@ const MARCAS={
 };
 const CLIENTES=[
  {id:'minera',n:'Minera Los Andes S.A.A.',ruc:'20512217452',dir:'Av. El Derby 055 - Santiago de Surco, Lima',ind:'Minería',fac:'Concentradora C-1',areas:{mol:'Molienda',flo:'Flotación',rel:'Relaves'}},
- {id:'refi',n:'Refinería Costa Norte',ruc:'20100128056',dir:'Carretera Ventanilla Km 25 - Callao',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'}},
+ {id:'refi',n:'Refinería Costa Norte',ruc:'20100128056',dir:'Carretera Ventanilla Km 25 - Callao',ind:'Petróleo y gas',fac:'Planta de Procesos',areas:{crd:'Unidad de Crudo',vac:'Unidad de Vacío',alm:'Almacenamiento'},
+  /* Cada empresa tiene varios firmantes: el que ejecuta, el que da el
+     visto bueno por Adolphus, y por el lado del cliente el inspector y
+     el responsable del contrato. */
+  firmantes:[{rol:'ejec',n:'Junior Torres',cargo:'Asesor Técnico'},
+             {rol:'vbAdo',n:'Jose Rojas',cargo:'Supervisor Técnico'},
+             {rol:'vbAdo',n:'',cargo:'Ing. Residente'},
+             {rol:'vbInsp',n:'',cargo:'Inspector'},
+             {rol:'vbResp',n:'',cargo:'Gestor de contrato'}]},
  {id:'agro',n:'Agroindustrias del Valle',ruc:'20100190797',dir:'Av. Argentina 4793 - Callao',ind:'Industria general',fac:'Planta Sur',areas:{cal:'Calderas',evp:'Evaporación',env:'Envasado'}}
 ];
 const MODELOS={
@@ -3368,7 +3439,10 @@ function openAsset(id){
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
        return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
+      ${a.cl==='seguridad'
+        ? `<button class="btn" onclick="closeDrawer();openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>Ensayo PSV</button>
+           <button class="btn sec" onclick="closeDrawer();openPlacaPSV('${a.id}')">Datos de placa</button>`
+        : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
@@ -3615,18 +3689,28 @@ function paneCal(){
   const a=S.cur;
   const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
   const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-     <button class="btn sec xs" onclick="openCalib('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva calibración</button>
+     <button class="btn sec xs" onclick="${a.cl==='seguridad'?`closeDrawer();openPSV('${a.id}')`:`openCalib('${a.id}')`}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>${a.cl==='seguridad'?'Nuevo ensayo PSV':'Nueva calibración'}</button>
      <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
   if(!cs.length){
     $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
       <b>Sin calibraciones registradas</b>${a.prox?`Programada para el ${esc(a.prox)}.`:'Este equipo no tiene programa de calibración.'}</div>`;
     return;
   }
-  $('#pn-cal').innerHTML=bar+`${calibChart(cs[0])}
+  $('#pn-cal').innerHTML=bar+`${cs[0].tipo==='psv'?psvGrafica(psvVeredicto(cs[0])):calibChart(cs[0])}
     <section class="fx-blk"><div class="fx-blk-h"><h3>Todas las calibraciones</h3><span class="count">${cs.length}</span></div>
     <table class="grid" style="border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden">
-      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">As-left</th><th>Resultado</th><th></th></tr></thead>
-      <tbody>${cs.map(c=>{const ok=Math.abs(c.devAl)<=(c.tol||3);
+      <thead><tr><th>Fecha</th><th>Certificado</th><th class="num">Set</th><th class="num">As-found</th><th class="num">Final</th><th>Resultado</th><th></th></tr></thead>
+      <tbody>${cs.map(c=>{
+        /* Un ensayo PSV del formato de la empresa no tiene as-found/as-left:
+           tiene tres disparos y un promedio. Se muestra como lo que es. */
+        if(c.tipo==='psv'){const v=psvVeredicto(c),ok=v.estado==='aprobado';
+          return `<tr style="cursor:default"><td class="mono">${esc(fPE(c.fecha))}</td>
+          <td class="mono muted">AXAD-088${c.os?' · '+esc(c.os):''}</td>
+          <td class="num">${esc(c.setEsp||'')} ${esc(c.und||'')}</td><td class="num">${esc(c.asFound||'—')}</td>
+          <td class="num">${v.estado==='incompleto'?'—':n2(v.prom)}</td>
+          <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Aprobado':'Rechazado'}</span></td>
+          <td style="text-align:right"><button class="btn sec xs" onclick="verPSV('${c.id}')">Ver ensayo</button></td></tr>`}
+        const ok=Math.abs(c.devAl)<=(c.tol||3);
         return `<tr style="cursor:default"><td class="mono">${esc(c.fin||c.ini||'')}</td><td class="mono muted">${esc(c.cert||'')}</td>
         <td class="num">${c.nom} ${esc(c.uni)}</td><td class="num">${c.af}</td><td class="num">${c.al}</td>
         <td><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${ok?'Conforme':'No conforme'}</span></td>
@@ -4330,6 +4414,653 @@ function imprimirPlan(){
    </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
 }
+
+/* ============================================================
+   PSV · FORMATO AXAD-088 V.2
+   El formato de la empresa, tal cual, pero repartido como se
+   trabaja de verdad: lo que identifica a la válvula vive en la
+   válvula (se escribe una vez y sirve para siempre), y lo que es
+   del ensayo vive en el ensayo. En el Excel eso estaba en la
+   misma fila y por eso cada certificado tenía que ir a buscar el
+   TAG con un BUSCARV — que es justo lo que hoy está roto: la hoja
+   de certificados está llena de #N/A y #ERROR!.
+   Aquí el certificado no busca el TAG: lo tiene.
+   ============================================================ */
+
+/* Todo se calcula en psi por dentro; el técnico escribe en la
+   unidad que use su banco. */
+const A_PSI={psi:1,psig:1,bar:14.5038,barg:14.5038,'kg/cm2':14.2233,
+             'kg/cm²':14.2233,'kpa':0.145038,'mpa':145.038};
+const UNIDS=['psi','bar','kg/cm2','kPa'];
+const factorU=u=>A_PSI[String(u||'psi').toLowerCase()]||1;
+const aPsi=(v,u)=>num(v)*factorU(u);
+/* La coma decimal es lo normal en las hojas peruanas. */
+const num=v=>{const n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:NaN};
+const n2=(v,d)=>isFinite(v)?v.toLocaleString('es-PE',{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d}):'—';
+/* Fecha peruana: 19/03/2026. */
+const fPE=s=>{if(!s)return '—';const [Y,M,D]=String(s).slice(0,10).split('-');return D&&M&&Y?`${D}/${M}/${Y}`:s};
+
+/* La tolerancia la manda ASME Sección VIII, y está escrita en el
+   propio formato de la empresa. No es una regla inventada. */
+function tolPSV(setEsp,und){
+  const p=aPsi(setEsp,und);
+  if(!isFinite(p)||p<=0)return null;
+  return p<=70
+    ? {tipo:'abs', psi:2, txt:'± 2 psig', regla:'ASME Secc. VIII · presión de ajuste ≤ 70 psig'}
+    : {tipo:'pct', pct:3, txt:'± 3 %',    regla:'ASME Secc. VIII · presión de ajuste ≥ 71 psig'};
+}
+
+/* El veredicto: promedio de los tres disparos contra la tolerancia.
+   Es exactamente el paso 3 del procedimiento del formato. */
+function psvVeredicto(c){
+  const set=num(c.setEsp), u=c.und||'psi';
+  const t=[c.t1,c.t2,c.t3].map(num).filter(x=>isFinite(x)&&x>0);
+  const tol=tolPSV(set,u);
+  if(!isFinite(set)||set<=0||!t.length||!tol)
+    return {estado:'incompleto', falta:!isFinite(set)||set<=0?'la presión de ajuste requerida':'al menos un disparo'};
+  const prom=t.reduce((a,b)=>a+b,0)/t.length;
+  const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
+  const dif=prom-set, desv=set?dif/set*100:0;
+  const ok=Math.abs(dif)<=limite+1e-9;
+  return {estado:ok?'aprobado':'rechazado', prom, dif, desv, limite, tol,
+          min:set-limite, max:set+limite, disparos:t, set, und:u};
+}
+/* El blowdown: la válvula debe volver a cerrar un 8 % por debajo
+   del seteo. Informativo — el formato lo muestra, no lo veta. */
+function psvBlowdown(c){
+  const set=num(c.setEsp);
+  const pc=[c.pc1,c.pc2,c.pc3].map(num).filter(x=>isFinite(x)&&x>0);
+  if(!isFinite(set)||set<=0||!pc.length)return null;
+  const prom=pc.reduce((a,b)=>a+b,0)/pc.length;
+  return {prom, esperado:set*0.92, pct:(set-prom)/set*100, dentro:(set-prom)/set*100<=8.0001};
+}
+
+/* ── Firmantes ───────────────────────────────────────────────
+   Cada empresa tiene los suyos, y son varios: el gerente, el
+   ingeniero, el inspector. Por eso viven en el cliente y no
+   escritos a mano en cada certificado. */
+const FIRMA_ROLES=[
+ ['ejec',  'Ejecutado por',            'Adolphus'],
+ ['vbAdo', 'V°B° Responsable Adolphus','Adolphus'],
+ ['vbInsp','V°B° Inspección',          'Cliente'],
+ ['vbResp','V°B° Responsable',         'Cliente']
+];
+const firmantesDe=cliId=>{
+  const c=cli(cliId);
+  return Array.isArray(c.firmantes)?c.firmantes:[];
+};
+
+/* ── El ensayo ───────────────────────────────────────────────*/
+let PSV_TMP=null;
+
+function psvNuevo(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
+  const prev=CALIBS.filter(c=>c.act===a.id&&c.tipo==='psv')
+    .sort((x,y)=>(y.fecha||'').localeCompare(x.fecha||''))[0];
+  const h=HOY.toISOString().slice(0,10);
+  return {
+    id:'', act:a.id, tipo:'psv', cli:a.cli,
+    os:prev?prev.os:'', contacto:prev?prev.contacto:'', fecha:h,
+    // equipo patrón: casi nunca cambia, así que se hereda del anterior
+    patDesc:prev?prev.patDesc:'Manovacuómetro digital', patModelo:prev?prev.patModelo:'681',
+    patMarca:prev?prev.patMarca:'ADDITEL', patSerie:prev?prev.patSerie:'',
+    patEscala:prev?prev.patEscala:'0.1 psi', patExact:prev?prev.patExact:'0,2 % FS',
+    patFecha:prev?prev.patFecha:'', patCert:prev?prev.patCert:'',
+    // disparo
+    setEsp:a.setPress||'', und:a.setUnd||'psi', asFound:'', fluidoP:'Nitrógeno',
+    t1:'',t2:'',t3:'', pc1:'',pc2:'',pc3:'',
+    // hermeticidad API 527
+    hTiempo:'1 min', hb1:'',hb2:'',hb3:'', hConf:'Conforme',
+    // resorte
+    perpAlt:'',perpNEsp:'',perpFi:'',perpAng:'',perpDesv:'',
+    parFi:'',parAng:'',parDesv:'', metodo:'Métrico',
+    pernoIni:'',pernoFin:'',muescaSup:'',muescaInf:'',
+    altRes:'',diamEsp:'',numEsp:'',
+    discoExt:'',discoInt:'',discoH:'', tobExt:'',tobInt:'',tobH:'',
+    coment:'', fotos:[], firmas:[]
+  };
+}
+
+function openPSV(actId,edit){
+  const c=edit?CALIBS.find(x=>x.id===edit):null;
+  const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
+  if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  PSV_TMP=c?JSON.parse(JSON.stringify(c)):psvNuevo(a.id);
+  if(!PSV_TMP)return;
+  $('#mTitle').textContent=(c?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+  pintarPSV();
+  $('#modal').classList.add('on');
+}
+
+const psvCampo=(k,v)=>{PSV_TMP[k]=v; if(['t1','t2','t3','setEsp','und','pc1','pc2','pc3'].includes(k))pintarPSVResultado()};
+
+function pintarPSV(){
+  const t=PSV_TMP; if(!t)return;
+  const a=ACTIVOS.find(x=>x.id===t.act)||{}, m=MODELOS[a.mod]||{};
+  const F=(k,lbl,ph,tipo)=>`<div class="fld"><label for="pv-${k}">${lbl}</label>
+    <input class="inp" id="pv-${k}" ${tipo?`type="${tipo}"`:''} value="${esc(t[k]==null?'':t[k])}"
+      placeholder="${esc(ph||'')}" oninput="psvCampo('${k}',this.value)"></div>`;
+
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
+     <div><b>${esc(a.tag||'')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie ${esc(a.ser||'—')} ·
+       ${esc(cli(a.cli).n||'')}. Todo esto ya lo sabe el sistema: no hay que volver a escribirlo.
+       <a href="#" onclick="closeModal();openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
+
+   <div class="psv-secs">
+    <details class="psv-sec" open><summary>1 · Servicio y patrón</summary><div class="psv-b">
+      <div class="two">
+        ${F('os','Orden de servicio','JA10138289')}
+        ${F('contacto','Contacto del cliente','FARID ROJAS')}
+        ${F('fecha','Fecha del ensayo','','date')}
+        <div class="fld"><label for="pv-fluidoP">Fluido de prueba</label>
+          <select class="inp" id="pv-fluidoP" onchange="psvCampo('fluidoP',this.value)">
+            ${['Nitrógeno','Aire','Agua','Vapor'].map(f=>`<option ${t.fluidoP===f?'selected':''}>${f}</option>`).join('')}</select></div>
+      </div>
+      <h4 class="snc-sec">Equipo patrón de calibración</h4>
+      <div class="two">
+        ${F('patDesc','Descripción','Manovacuómetro digital')}
+        ${F('patModelo','Modelo','681')}
+        ${F('patMarca','Marca','ADDITEL')}
+        ${F('patSerie','N.º de serie','211H15450046')}
+        ${F('patEscala','Escala','0.1 psi')}
+        ${F('patExact','Clase de exactitud','0,2 % FS')}
+        ${F('patFecha','Fecha de calibración','','date')}
+        ${F('patCert','Certificado n.º','EP-0099-2025')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec" open><summary>2 · Disparo <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
+      <div class="two">
+        <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
+          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="1500" oninput="psvCampo('setEsp',this.value)"></div>
+        <div class="fld"><label for="pv-und">Unidad</label>
+          <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
+            ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
+        ${F('asFound','Disparo inicial · AS FOUND','cómo llegó')}
+      </div>
+      <h4 class="snc-sec">Verificación final · AS LEFT (tres disparos)</h4>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-t${i}">Test ${i} <span class="req-dot">*</span></label>
+          <input class="inp mono" id="pv-t${i}" inputmode="decimal" value="${esc(t['t'+i])}"
+            placeholder="—" oninput="psvCampo('t${i}',this.value)"></div>`).join('')}
+      </div>
+      <h4 class="snc-sec">Presión de cierre · blowdown</h4>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-pc${i}">Cierre ${i}</label>
+          <input class="inp mono" id="pv-pc${i}" inputmode="decimal" value="${esc(t['pc'+i])}"
+            placeholder="—" oninput="psvCampo('pc${i}',this.value)"></div>`).join('')}
+      </div>
+      <div id="psvRes"></div>
+    </div></details>
+
+    <details class="psv-sec"><summary>3 · Hermeticidad · API 527</summary><div class="psv-b">
+      <p class="pl-regla">Se aplica el <b>90 % de la presión de ajuste</b> y se cuentan las burbujas por minuto.
+        El criterio de aceptación depende del orificio y del tipo de asiento: lo marca el técnico.</p>
+      <div class="two">
+        ${F('hTiempo','Tiempo de prueba','1 min')}
+        <div class="fld"><label for="pv-hConf">Resultado</label>
+          <select class="inp" id="pv-hConf" onchange="psvCampo('hConf',this.value)">
+            ${['Conforme','No conforme'].map(x=>`<option ${t.hConf===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <div class="psv-tests">
+        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-hb${i}">Burbujas/min ${i}</label>
+          <input class="inp mono" id="pv-hb${i}" inputmode="decimal" value="${esc(t['hb'+i])}"
+            placeholder="—" oninput="psvCampo('hb${i}',this.value)"></div>`).join('')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec"><summary>4 · Resorte y componentes</summary><div class="psv-b">
+      <h4 class="snc-sec">Perpendicularidad</h4>
+      <div class="two">
+        ${F('perpAlt','Altura (mm)')}${F('perpNEsp','N.º de espiras')}
+        ${F('perpFi','Ø espiral (mm)')}${F('perpAng','Ángulo (°)')}
+        ${F('perpDesv','Desviación (°)')}
+        <div class="fld"><label for="pv-metodo">Método usado</label>
+          <select class="inp" id="pv-metodo" onchange="psvCampo('metodo',this.value)">
+            ${['Métrico','Imperial'].map(x=>`<option ${t.metodo===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      </div>
+      <h4 class="snc-sec">Paralelismo y fatiga</h4>
+      <div class="two">${F('parFi','Ø externo (mm)')}${F('parAng','Ángulo (°)')}${F('parDesv','Desviación (°)')}</div>
+      <h4 class="snc-sec">Regulación</h4>
+      <div class="two">
+        ${F('pernoIni','Perno regulación inicial (mm)')}${F('pernoFin','Perno regulación final (mm)')}
+        ${F('muescaSup','Muescas anillo superior')}${F('muescaInf','Muescas anillo inferior')}
+        ${F('altRes','Altura del resorte (mm)')}${F('diamEsp','Ø de espiras (mm)')}${F('numEsp','N.º de espiras')}
+      </div>
+      <h4 class="snc-sec">Disco y tobera</h4>
+      <div class="two">
+        ${F('discoExt','Disco · Ø ext')}${F('discoInt','Disco · Ø int')}${F('discoH','Disco · h')}
+        ${F('tobExt','Tobera · Ø ext')}${F('tobInt','Tobera · Ø int')}${F('tobH','Tobera · h')}
+      </div>
+    </div></details>
+
+    <details class="psv-sec"><summary>5 · Registro fotográfico y comentarios</summary><div class="psv-b">
+      <div class="fld"><label for="pv-coment">Comentarios u observaciones</label>
+        <textarea class="inp" id="pv-coment" rows="3" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea></div>
+      <label class="ev-add" for="pvFoto">
+        <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        <span>Agregar fotos del ensayo</span></label>
+      <input id="pvFoto" type="file" accept="image/*" capture="environment" multiple
+        style="display:none" onchange="psvFotos(this.files);this.value=''">
+      <div class="ev-tiras" id="pvFotos"></div>
+    </div></details>
+   </div>`;
+
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
+    <button class="btn" onclick="guardarPSV(true)">Guardar y emitir certificado</button>`;
+  pintarPSVResultado(); pintarPSVFotos();
+}
+
+/* El veredicto se ve mientras se escribe: si el tercer disparo se
+   sale de tolerancia, el técnico lo sabe antes de guardar. */
+function pintarPSVResultado(){
+  const caja=$('#psvRes'); if(!caja||!PSV_TMP)return;
+  const v=psvVeredicto(PSV_TMP), b=psvBlowdown(PSV_TMP), u=PSV_TMP.und||'psi';
+  if(v.estado==='incompleto'){
+    caja.innerHTML=`<div class="psv-res esp"><b>Falta ${esc(v.falta)}</b>
+      <span>Con la presión requerida y al menos un disparo ya se calcula el resultado.</span></div>`;
+    return;
+  }
+  caja.innerHTML=`
+    <div class="psv-res ${v.estado}">
+      <div class="psv-vd">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
+      <div class="psv-nums">
+        <div><span>Promedio</span><b class="mono">${n2(v.prom)} ${esc(u)}</b></div>
+        <div><span>Requerido</span><b class="mono">${n2(v.set)} ${esc(u)}</b></div>
+        <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+        <div><span>Rango admisible</span><b class="mono">${n2(v.min)} – ${n2(v.max)}</b></div>
+      </div>
+      <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+      ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) ·
+        se espera ≤ 8 % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
+    </div>`;
+}
+
+/* Las fotos se reducen antes de guardar: en planta se sube por datos. */
+function psvFotos(files){
+  Array.from(files||[]).forEach(f=>{
+    if(!/^image\//.test(f.type))return;
+    evFoto(f).then(d=>{PSV_TMP.fotos.push(d);pintarPSVFotos()}).catch(()=>{});
+  });
+}
+function psvQuitarFoto(i){PSV_TMP.fotos.splice(i,1);pintarPSVFotos()}
+function pintarPSVFotos(){
+  const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
+  c.innerHTML=(PSV_TMP.fotos||[]).map((d,i)=>`
+    <div class="ev-tira"><img src="${d}" alt="Foto ${i+1} del ensayo">
+      <button class="ev-x" onclick="psvQuitarFoto(${i})" aria-label="Quitar la foto ${i+1}">×</button></div>`).join('');
+}
+
+function guardarPSV(emitir){
+  const t=PSV_TMP; if(!t)return;
+  const v=psvVeredicto(t);
+  if(v.estado==='incompleto'){toast('Falta '+v.falta);return}
+  const nuevo=!t.id;
+  if(nuevo)t.id='pv'+Date.now();
+  t.veredicto=v.estado;
+  t.prom=v.prom; t.desv=v.desv;
+  const i=CALIBS.findIndex(x=>x.id===t.id);
+  if(i>=0)CALIBS[i]=t; else CALIBS.unshift(t);
+  const a=ACTIVOS.find(x=>x.id===t.act)||{};
+  registrar('Ensayo PSV',`${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
+  toast(v.estado==='aprobado'?'Ensayo guardado · APROBADO':'Ensayo guardado · RECHAZADO');
+  const id=t.id; PSV_TMP=null; closeModal(); renderAll();
+  if(emitir)setTimeout(()=>imprimirPSV(id),150);
+}
+
+/* ── Datos de placa ──────────────────────────────────────────
+   El bloque de identificación del formato 1. Se escribe una vez
+   por válvula y de ahí sale solo en todos los certificados.
+   La foto de la placa queda al lado mientras se llena: es la
+   manera rápida y segura de no equivocarse en una serie. */
+const PSV_PLACA=[
+ ['ubic',  'Ubicación / servicio',        'Pulmón válvula de venteo'],
+ ['cert',  'Certificación',               'U o UV'],
+ ['orif',  'Orificio / lift',             'E'],
+ ['fluido','Fluido de operación',         'Gas'],
+ ['setPress','Presión de ajuste',         '1500'],
+ ['setUnd','Unidad',                      'psi'],
+ ['medida','Ø entrada × Ø salida',        '1/2" X 3/4"'],
+ ['clase', 'Clase / rating',              '#3000'],
+ ['capac', 'Capacidad',                   '1848'],
+ ['norma', 'Norma de prueba',             'ASME']
+];
+function openPlacaPSV(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return;
+  PSV_TMP=null;
+  const m=MODELOS[a.mod]||{};
+  $('#mTitle').textContent=`Datos de placa · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+     <div>Sacá una foto de la placa y llenala mirándola: la foto se queda pegada a la válvula,
+       así que cualquiera puede comprobar después de dónde salió cada número.</div></div>
+   <div class="placa-cols">
+     <div class="placa-foto">
+       <label class="ev-add" for="plFoto">
+         <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+         <span>Foto de la placa</span></label>
+       <input id="plFoto" type="file" accept="image/*" capture="environment"
+         style="display:none" onchange="placaFoto('${a.id}',this.files[0]);this.value=''">
+       <div id="plVista">${a.fotoPlaca?`<img src="${a.fotoPlaca}" alt="Placa de ${esc(a.tag||'')}">`:''}</div>
+     </div>
+     <div class="placa-campos">
+       <div class="two">
+         <div class="fld"><label>Marca</label><input class="inp" value="${esc(m.m||'')}" disabled></div>
+         <div class="fld"><label>Modelo</label><input class="inp" value="${esc(a.mod||'')}" disabled></div>
+         <div class="fld"><label for="pl-ser">N.º de serie</label>
+           <input class="inp mono" id="pl-ser" value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)"></div>
+       </div>
+       <div class="two">
+        ${PSV_PLACA.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}</label>
+          <input class="inp" id="pl-${k}" value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}"
+            oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
+       </div>
+     </div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
+    <button class="btn" onclick="guardarPlaca('${a.id}')">Guardar</button>`;
+  $('#modal').classList.add('on');
+}
+function placaCampo(id,k,v){const a=ACTIVOS.find(x=>x.id===id);if(a)a[k]=v}
+function placaFoto(id,f){
+  if(!f)return;
+  evFoto(f).then(d=>{
+    const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+    a.fotoPlaca=d;
+    const v=$('#plVista'); if(v)v.innerHTML=`<img src="${d}" alt="Placa">`;
+  }).catch(()=>{});
+}
+function guardarPlaca(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  registrar('Válvula',`Datos de placa de ${a.tag||a.ser||''}`);
+  toast('Datos de placa guardados');
+  closeModal();renderAll();
+}
+
+/* ── La gráfica del ensayo ───────────────────────────────────
+   Los tres disparos contra la banda de tolerancia. De un vistazo
+   se ve si el promedio quedó dentro y con cuánto margen — que es
+   lo que el cliente mira primero. */
+function psvGrafica(v,ancho){
+  if(!v||v.estado==='incompleto')return '';
+  const W=ancho||520, H=170, L=64, R=18, T=16, B=30;
+  const gw=W-L-R, gh=H-T-B;
+  // el eje se abre un 60 % más que la banda para que la banda no llene todo
+  const margen=Math.max((v.max-v.min)*0.14, Math.abs(v.prom-v.set)*0.35, v.set*0.002);
+  const lo=Math.min(v.min,...v.disparos)-margen, hi=Math.max(v.max,...v.disparos)+margen;
+  const y=p=>T+gh-((p-lo)/(hi-lo||1))*gh;
+  const x=i=>L+gw*((i+1)/(v.disparos.length+1));
+  const yMin=y(v.min), yMax=y(v.max), ySet=y(v.set), yProm=y(v.prom);
+  const tono=v.estado==='aprobado'?'#1a7f52':'#c0392b';
+  return `<svg class="psv-graf" viewBox="0 0 ${W} ${H}" width="100%" role="img"
+    aria-label="Los tres disparos frente a la banda de tolerancia. Promedio ${n2(v.prom)}, requerido ${n2(v.set)}.">
+    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="#1a7f52" opacity=".10"/>
+    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.5"/>
+    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="2" stroke-dasharray="7 4"/>
+    ${v.disparos.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p)}" r="5.5" fill="${tono}"/>
+      <text x="${x(i)}" y="${y(p)-11}" text-anchor="middle" font-size="10.5" fill="#101418"
+        font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
+      <text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="#78818c"
+        font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`).join('')}
+    <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
+    <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="9.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
+    <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
+  </svg>`;
+}
+
+/* ── Firmas ──────────────────────────────────────────────────
+   Se dibujan con el dedo en la tablet o con el mouse en la
+   computadora. La firma queda pegada al ensayo, con el nombre,
+   el cargo y la fecha en formato peruano. */
+let FIRMA_CTX=null, FIRMA_TRAZO=false, FIRMA_HAY=false;
+
+function openFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{};
+  const def=firmantesDe(a.cli).filter(f=>f.rol===rol);
+  const yo=(typeof SES!=='undefined'&&SES)?SES:null;
+  const rl=FIRMA_ROLES.find(r=>r[0]===rol)||FIRMA_ROLES[0];
+  $('#mTitle').textContent=rl[1];
+  $('#mBody').innerHTML=`
+   <div class="two">
+     <div class="fld"><label for="fmNom">Nombre</label>
+       <input class="inp" id="fmNom" list="fmLista" value="${esc(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:''))}" placeholder="Nombre y apellido">
+       <datalist id="fmLista">${def.map(f=>`<option value="${esc(f.n)}">${esc(f.cargo||'')}</option>`).join('')}</datalist></div>
+     <div class="fld"><label for="fmCargo">Cargo</label>
+       <input class="inp" id="fmCargo" value="${esc(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):''))}" placeholder="Ing. Residente"></div>
+   </div>
+   <p class="pl-regla">Firmá con el dedo si estás en tablet o celular, o con el mouse si es computadora.
+     La fecha se pone sola: <b>${fPE(HOY.toISOString().slice(0,10))}</b>.</p>
+   <div class="firma-caja">
+     <canvas id="fmCanvas" class="firma-lienzo" aria-label="Zona para firmar"></canvas>
+     <div class="firma-linea"></div>
+   </div>
+   <div style="display:flex;gap:8px;margin-top:8px">
+     <button class="btn quiet" onclick="limpiarFirma()">Borrar y volver a firmar</button>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verPSV('${calibId}')">Volver</button>
+    <button class="btn" onclick="guardarFirma('${calibId}','${rol}')">Firmar</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>montarFirma(),60);
+}
+
+function montarFirma(){
+  const cv=$('#fmCanvas'); if(!cv)return;
+  const r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*d)); cv.height=Math.max(1,Math.round(r.height*d));
+  const ctx=cv.getContext('2d');
+  ctx.scale(d,d); ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#101418';
+  FIRMA_CTX=ctx; FIRMA_HAY=false;
+  const pos=e=>{const b=cv.getBoundingClientRect();
+    const p=e.touches?e.touches[0]:e; return [p.clientX-b.left,p.clientY-b.top]};
+  const abajo=e=>{e.preventDefault();FIRMA_TRAZO=true;FIRMA_HAY=true;
+    const [x,y]=pos(e);ctx.beginPath();ctx.moveTo(x,y)};
+  const mueve=e=>{if(!FIRMA_TRAZO)return;e.preventDefault();
+    const [x,y]=pos(e);ctx.lineTo(x,y);ctx.stroke()};
+  const arriba=()=>{FIRMA_TRAZO=false};
+  cv.addEventListener('pointerdown',abajo); cv.addEventListener('pointermove',mueve);
+  window.addEventListener('pointerup',arriba);
+  cv.addEventListener('touchstart',abajo,{passive:false});
+  cv.addEventListener('touchmove',mueve,{passive:false});
+  cv.addEventListener('touchend',arriba);
+}
+function limpiarFirma(){
+  const cv=$('#fmCanvas'); if(!cv||!FIRMA_CTX)return;
+  FIRMA_CTX.clearRect(0,0,cv.width,cv.height); FIRMA_HAY=false;
+}
+function guardarFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const n=($('#fmNom').value||'').trim(), cargo=($('#fmCargo').value||'').trim();
+  if(!n){toast('Escribe el nombre de quien firma');$('#fmNom').focus();return}
+  if(!FIRMA_HAY){toast('Falta la firma: dibujala en el recuadro');return}
+  const img=$('#fmCanvas').toDataURL('image/png');
+  c.firmas=(c.firmas||[]).filter(f=>f.rol!==rol);
+  c.firmas.push({rol,n,cargo,f:HOY.toISOString().slice(0,10),img});
+  const a=ACTIVOS.find(x=>x.id===c.act)||{};
+  registrar('Firma',`${n} firmó el ensayo de ${a.tag||''}`);
+  toast('Firmado');
+  guardarLocal();renderAll();verPSV(calibId);
+}
+
+/* ── El certificado en pantalla ──────────────────────────────*/
+function verPSV(id){
+  const c=CALIBS.find(x=>x.id===id); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{};
+  const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
+  const cliente=S.rol==='cliente';
+  const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  $('#mTitle').textContent=`Ensayo · ${a.tag||''}`;
+  $('#mBody').innerHTML=`
+    <div class="snc-cab">
+      <span class="tag ${v.estado==='aprobado'?'ok':v.estado==='rechazado'?'late':'ink-3'}">
+        ${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO':'Incompleto'}</span>
+      <span>${fPE(c.fecha)}</span>${c.os?`<span>· O.S. ${esc(c.os)}</span>`:''}
+      <span class="tag mono">${esc(a.tag||'')}</span>
+    </div>
+    ${v.estado!=='incompleto'?`
+    <div class="psv-res ${v.estado}" style="margin-bottom:var(--sp-4)">
+      <div class="psv-nums">
+        <div><span>Promedio de los 3 disparos</span><b class="mono">${n2(v.prom)} ${esc(u)}</b></div>
+        <div><span>Requerido</span><b class="mono">${n2(v.set)} ${esc(u)}</b></div>
+        <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+      </div>
+      <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+    </div>
+    ${psvGrafica(v)}`:''}
+    <h4 class="snc-sec">Firmas</h4>
+    <div class="firmas-grid">
+      ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
+        return `<div class="firma-box ${f?'ok':''}">
+          <span class="fb-rol">${esc(lbl)}</span>
+          ${f?`<img class="fb-img" src="${f.img}" alt="Firma de ${esc(f.n)}">
+               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>`
+             :`<span class="fb-vacio">Sin firmar</span>
+               ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
+        </div>`}).join('')}
+    </div>
+    ${c.coment?`<div class="snc-nota" style="margin-top:var(--sp-4)">${esc(c.coment)}</div>`:''}
+    ${(c.fotos&&c.fotos.length)?`<h4 class="snc-sec">Registro fotográfico</h4>
+      <div class="ev-tiras">${c.fotos.map((d,i)=>`<div class="ev-tira"><img src="${d}" alt="Foto ${i+1}"></div>`).join('')}</div>`:''}`;
+  $('#mFoot').innerHTML=`
+    <button class="btn sec" onclick="imprimirPSV('${c.id}')">Imprimir certificado</button>
+    ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
+  $('#modal').classList.add('on');
+}
+
+/* ── El certificado impreso · AXAD-088 V.2 ───────────────────
+   Mismo orden, mismos títulos y mismo pie que el formato de la
+   empresa: es lo que el auditor y el cliente esperan ver. */
+function imprimirPSV(id){
+  const c=CALIBS.find(x=>x.id===id); if(!c)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  const fila=(k,val)=>`<tr><th>${k}</th><td>${val==null||val===''?'—':esc(String(val))}</td></tr>`;
+  const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  <title>AXAD-088 ${esc(a.tag||'')}</title><style>
+  *{box-sizing:border-box}
+  body{font:11px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:18mm 14mm}
+  h1{font-size:15px;text-align:center;margin:0 0 2px;letter-spacing:.02em}
+  .sub{text-align:center;color:#5b6470;font-size:10px;margin-bottom:12px}
+  h2{font-size:11px;background:#eceff2;padding:4px 7px;margin:12px 0 0;border:1px solid #d7dbe0;border-bottom:0}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th,td{border:1px solid #d7dbe0;padding:3px 6px;text-align:left;vertical-align:top}
+  th{background:#f7f8f9;font-weight:600;width:34%}
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+  .vd{margin:10px 0;padding:8px 10px;border:2px solid;text-align:center;font-size:14px;font-weight:700;letter-spacing:.06em}
+  .vd.aprobado{border-color:#1a7f52;color:#1a7f52;background:#eaf6ef}
+  .vd.rechazado{border-color:#c0392b;color:#c0392b;background:#fdecea}
+  .res th{width:26%}
+  .firmas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .fb{border:1px solid #d7dbe0;padding:6px;min-height:104px;font-size:9px;display:flex;flex-direction:column}
+  .fb b{display:block;font-size:9.5px;border-top:1px solid #101418;padding-top:3px;margin-top:auto}
+  .fb .rol{font-weight:700;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}
+  .fb img{max-height:44px;max-width:100%;object-fit:contain;margin:4px 0}
+  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+  .fotos img{width:100%;height:86px;object-fit:cover;border:1px solid #d7dbe0}
+  .pie{margin-top:14px;padding-top:6px;border-top:1px solid #d7dbe0;display:flex;justify-content:space-between;font-size:9px;color:#78818c}
+  @page{size:A4;margin:12mm}
+  </style></head><body>
+  <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1>
+  <div class="sub">${esc(e.n||'')} · TAG ${esc(a.tag||'')} · ${fPE(c.fecha)}${c.os?' · O.S. '+esc(c.os):''}</div>
+
+  <div class="par">
+    <div><h2>DATOS DEL SERVICIO</h2><table>
+      ${fila('EMPRESA',e.n)}${fila('CONTACTO',c.contacto)}${fila('TAG N°',a.tag)}
+      ${fila('UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}${fila('FLUIDO DE OPERACIÓN',a.fluido)}
+      ${fila('FECHA',fPE(c.fecha))}</table></div>
+    <div><h2>INFORMACIÓN DE LA VÁLVULA</h2><table>
+      ${fila('MARCA',m.m)}${fila('MODELO',a.mod)}${fila('N° SERIE',a.ser)}
+      ${fila('ORIFICIO / LIFT',a.orif)}${fila('SET PRESS REQUERIDO',(c.setEsp?c.setEsp+' '+u:''))}
+      ${fila('Ø ENT × Ø SALIDA',a.medida)}${fila('CAPACIDAD',a.capac)}
+      ${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA DE PRUEBA',a.norma)}</table></div>
+  </div>
+
+  <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
+  <div class="par"><table>
+    ${fila('DESCRIPCIÓN',c.patDesc)}${fila('MODELO',c.patModelo)}${fila('MARCA',c.patMarca)}
+    ${fila('NUM. SERIE',c.patSerie)}</table>
+  <table>${fila('ESCALA',c.patEscala)}${fila('CLASE DE EXACTITUD',c.patExact)}
+    ${fila('FECHA DE CALIBRACIÓN',fPE(c.patFecha))}${fila('CERTIF. NUM',c.patCert)}</table></div>
+
+  <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
+  <table><tr><td>
+    <b>1.</b> Presión de disparo (seteo) inicial — <i>as found</i>, para verificar el punto de disparo actual de la válvula.<br>
+    <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.<br>
+    <b>3.</b> Verificación final del punto de disparo. Se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.
+  </td></tr></table>
+
+  <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
+  <table class="res">
+    ${fila('PRESIÓN DE DISPARO INICIAL (AS FOUND)',c.asFound?c.asFound+' '+u:'')}
+    ${fila('SET PRESS ESPERADO',(c.setEsp?c.setEsp+' '+u:''))}
+    ${fila('FLUIDO DE PRUEBA',c.fluidoP)}
+  </table>
+  <table class="res" style="margin-top:4px">
+    <tr><th>AS LEFT según API 527</th><th>Presión de disparo (${esc(u)})</th><th>Presión de cierre (${esc(u)})</th><th>Desviación (±%)</th></tr>
+    ${[1,2,3].map(i=>{const t=num(c['t'+i]);
+      return `<tr><td>TEST ${i}</td><td>${isFinite(t)?n2(t):'—'}</td>
+        <td>${c['pc'+i]?esc(c['pc'+i]):'—'}</td>
+        <td>${isFinite(t)&&v.set?n2((t-v.set)/v.set*100):'—'}</td></tr>`}).join('')}
+    ${v.estado!=='incompleto'?`<tr><th>PROMEDIO</th><th>${n2(v.prom)}</th>
+      <th>${b?n2(b.prom):'—'}</th><th>${n2(v.desv)}</th></tr>`:''}
+  </table>
+  ${v.estado!=='incompleto'?`
+  <table class="res" style="margin-top:4px">
+    ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
+    ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
+    ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+' %  (se espera ≤ 8 %)':'—')}
+  </table>
+  <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
+  ${psvGrafica(v,660)}`:''}
+
+  <h2>PRUEBA DE HERMETICIDAD (LEAKAGE TEST SEGÚN API 527)</h2>
+  <table class="res">
+    ${fila('PRESIÓN APLICADA',(v.estado!=='incompleto'?n2(v.set*0.9)+' '+u+'  (90 % del set press)':'—'))}
+    ${fila('FLUIDO / TIEMPO',(c.fluidoP||'')+' · '+(c.hTiempo||''))}
+    ${fila('BURBUJAS POR MINUTO',[c.hb1,c.hb2,c.hb3].filter(Boolean).join('  ·  '))}
+    ${fila('RESULTADO',c.hConf)}
+  </table>
+
+  <h2>PRUEBAS DE FUNCIONABILIDAD DEL RESORTE</h2>
+  <div class="par">
+    <table><tr><th colspan="2">PERPENDICULARIDAD</th></tr>
+      ${fila('ALTURA',c.perpAlt?c.perpAlt+' mm':'')}${fila('N° ESPIRAL',c.perpNEsp)}
+      ${fila('Ø ESPIRAL',c.perpFi)}${fila('ÁNGULO',c.perpAng?c.perpAng+' °':'')}
+      ${fila('DESVIACIÓN',c.perpDesv?c.perpDesv+' °':'')}${fila('MÉTODO USADO',c.metodo)}</table>
+    <table><tr><th colspan="2">PARALELISMO Y FATIGA</th></tr>
+      ${fila('Ø EXTERNO',c.parFi)}${fila('ÁNGULO',c.parAng?c.parAng+' °':'')}
+      ${fila('DESVIACIÓN',c.parDesv?c.parDesv+' °':'')}
+      ${fila('PERNO REGULACIÓN',(c.pernoIni||'—')+' → '+(c.pernoFin||'—'))}
+      ${fila('MUESCAS ANILLO SUP / INF',(c.muescaSup||'—')+' / '+(c.muescaInf||'—'))}</table>
+  </div>
+
+  ${c.coment?`<h2>COMENTARIOS U OBSERVACIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
+  ${(c.fotos&&c.fotos.length)?`<h2>REGISTRO FOTOGRÁFICO</h2>
+    <div class="fotos">${c.fotos.slice(0,6).map(d=>`<img src="${d}" alt="">`).join('')}</div>`:''}
+
+  <div class="firmas">
+    ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
+      return `<div class="fb"><span class="rol">${esc(lbl)}</span>
+        ${f?`<img src="${f.img}" alt="">`:''}
+        <b>${f?esc(f.n):'&nbsp;'}</b>
+        <span>${f?esc(f.cargo||''):'Cargo:'}</span>
+        <span>${f?fPE(f.f):'Fecha:'}</span></div>`}).join('')}
+  </div>
+
+  <div class="pie"><span>AXAD-088 V.2</span><span>Adolphus S.A. · Control de fluidos · Lima</span>
+    <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
+  </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+}
+
 
 /* ============================================================
    RECLAMOS / SERVICIO NO CONFORME
@@ -7999,7 +8730,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · jornada sin señal';
+const VERSION='2026-08-04 · ensayo PSV AXAD-088';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
