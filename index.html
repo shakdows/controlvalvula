@@ -890,6 +890,8 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .net-chip .nd{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:0 0 auto}
 .net-chip.off{border-color:var(--due);background:var(--due-bg);color:var(--due)}
 .net-chip.off .nd{background:var(--due);animation:netPulse 1.6s ease-in-out infinite}
+.net-chip.local{border-color:var(--ink-3);color:var(--ink-2)}
+.net-chip.local .nd{background:var(--ink-3)}
 .net-chip.sync{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
 .net-chip.sync .nd{background:var(--sel);animation:netPulse .8s linear infinite}
 .net-chip .qn{background:var(--due);color:#fff;border-radius:20px;padding:1px 6px;font-size:10.5px;line-height:1.5}
@@ -8581,16 +8583,33 @@ async function apuntarPendientes(){
 let JOB_ESPERA=0, JOB_T=null;
 const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
 
+/* Los lotes se arman por PESO, no por cantidad.
+   Un ensayo con seis fotos son unos 2 MB; cien de esos en una sola
+   petición serían 200 MB, y eso en el celular del técnico no sale
+   nunca: revienta la memoria al armar el JSON o lo rechaza el
+   servidor. Se cortan en 2 MB, y una fila que sola pase de ahí viaja
+   sola —es lo mejor que se puede hacer con ella—. */
+const LOTE_MAX=2*1024*1024;
 async function drenarPendientes(){
   const filas=(await bdTodos('pendientes'))||[];
   if(!filas.length){PEND_N=0;return 0}
-  let subidas=0;
-  for(let i=0;i<filas.length;i+=100){
-    const lote=filas.slice(i,i+100);
+  let subidas=0, i=0;
+  while(i<filas.length){
+    const lote=[]; let peso=0;
+    while(i<filas.length){
+      const f=filas[i];
+      const p=(f.datos?JSON.stringify(f.datos).length:0)+200;
+      if(lote.length&&peso+p>LOTE_MAX)break;      // el primero entra siempre
+      lote.push(f); peso+=p; i++;
+      if(peso>LOTE_MAX)break;
+    }
     const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
       cab:{Prefer:'resolution=merge-duplicates,return=representation'},
       cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
                            empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
+    /* Se descuenta lote por lote: si la señal se corta a la mitad, lo
+       que ya subió no se vuelve a subir y lo que falta sigue en la
+       tabla de pendientes. */
     for(const f of lote){
       if(f.borrado)delete ESPEJO[f.k]; else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
       await bdQuita('pendientes',f.k);
@@ -8599,6 +8618,7 @@ async function drenarPendientes(){
     (eco||[]).forEach(f=>{
       if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
     });
+    PEND_N=Math.max(0,filas.length-subidas); pintarNet();   // el contador baja mientras sube
   }
   PEND_N=(await bdCuenta('pendientes'))||0;
   return subidas;
@@ -8698,20 +8718,32 @@ function registrar(tipo,desc){
 }
 function pintarNet(){
   const c=$('#netChip');if(!c)return;
-  /* Con cuenta en la nube el número que importa es cuántos registros
-     faltan por subir, no cuántas líneas tiene la bitácora. */
-  const n=enNube()?PEND_N:SYNCQ.length;
+  const hayNube=enNube();
+  const n=hayNube?PEND_N:SYNCQ.length;
+
+  /* Sin cuenta en la nube NO se dice "Al día". Decirlo sería mentir:
+     los datos se están guardando sólo en este equipo y no los va a ver
+     nadie más. El recorrido de demostración entra por aquí, y el que
+     lo prueba tiene que saber en qué está parado. */
   c.classList.toggle('off',!online());
   c.classList.toggle('sync',SYNCING);
+  c.classList.toggle('local',hayNube===false&&online()&&!SYNCING);
+
   c.innerHTML=SYNCING
     ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
     : !online()
       ? `<span class="nd"></span><span class="nl">Sin conexión</span>${n?`<span class="qn">${n}</span>`:''}`
-      : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
-         :`<span class="nd"></span><span class="nl">Al día</span>`;
+      : !hayNube
+        ? `<span class="nd"></span><span class="nl">Solo en este equipo</span>`
+        : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
+           :`<span class="nd"></span><span class="nl">Al día</span>`;
+
   c.title=!online()
-    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirán solos al recuperar señal.`
-    : n?`${n} cambio${n===1?'':'s'} pendiente${n===1?'':'s'} de subir`:'Todo sincronizado';
+    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirá${n===1?'':'n'} solo${n===1?'':'s'} al recuperar señal.`
+    : !hayNube
+      ? 'Los datos se están guardando SOLO en este equipo. Para que suban a la nube y se vean desde otra computadora, hay que entrar con una cuenta.'
+      : n?`${n} registro${n===1?'':'s'} pendiente${n===1?'':'s'} de subir a la nube`
+         :`Todo sincronizado con la nube`;
 }
 function sincronizar(manual){
   if(SYNCING)return;
@@ -8879,7 +8911,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · dos firmas y certificado con logo';
+const VERSION='2026-08-04 · fotos que suben y chip honesto';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
