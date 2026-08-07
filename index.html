@@ -890,6 +890,8 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .net-chip .nd{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:0 0 auto}
 .net-chip.off{border-color:var(--due);background:var(--due-bg);color:var(--due)}
 .net-chip.off .nd{background:var(--due);animation:netPulse 1.6s ease-in-out infinite}
+.net-chip.local{border-color:var(--ink-3);color:var(--ink-2)}
+.net-chip.local .nd{background:var(--ink-3)}
 .net-chip.sync{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
 .net-chip.sync .nd{background:var(--sel);animation:netPulse .8s linear infinite}
 .net-chip .qn{background:var(--due);color:#fff;border-radius:20px;padding:1px 6px;font-size:10.5px;line-height:1.5}
@@ -1872,6 +1874,8 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .psv-nums span{display:block;font-size:11px;color:var(--ink-3)}
 .psv-nums b{font-size:15px;letter-spacing:-.02em}
 .psv-regla{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.psv-aviso{font-size:11.5px;line-height:1.5;color:var(--due);font-weight:500;
+  border-top:1px dashed var(--line);padding-top:8px}
 .psv-graf{display:block;margin:var(--sp-3) 0;max-width:100%}
 
 /* datos de placa: la foto al lado, para copiar mirándola */
@@ -1881,7 +1885,16 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 @media(max-width:760px){
   .placa-cols{grid-template-columns:1fr}
   .placa-foto{position:static}
+}
+/* En tablet los tres disparos siguen uno al lado del otro —se llenan
+   de corrido—, pero en un celular a media anchura no se puede ni
+   escribir: todo a una columna. */
+@media(max-width:560px){
+  .psv-b .two{grid-template-columns:1fr}
   .psv-tests{grid-template-columns:1fr}
+  .psv-sec>summary{padding:13px 14px;font-size:14px}
+  .psv-nums{grid-template-columns:1fr 1fr}
+  .firmas-grid{grid-template-columns:1fr}
 }
 
 /* firmas */
@@ -1889,7 +1902,10 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   background:var(--surface-2);height:170px;margin-top:6px;touch-action:none}
 .firma-lienzo{width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
 .firma-linea{position:absolute;left:22px;right:22px;bottom:34px;border-bottom:1px solid var(--line);pointer-events:none}
-.firmas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px}
+/* Son dos firmas: dos columnas. Con auto-fit quedaba una tercera
+   columna vacía y las cajas encogidas sin motivo. */
+.firmas-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fb-acc{display:flex;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--line-2)}
 .firma-box{border:1px solid var(--line-2);border-radius:var(--r-2);padding:11px;min-height:126px;
   display:flex;flex-direction:column;gap:3px;background:var(--surface-2)}
 .firma-box.ok{border-color:var(--ok);background:var(--surface)}
@@ -3438,12 +3454,21 @@ function openAsset(id){
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
-       return `${uc?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert)}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
-      ${a.cl==='seguridad'
-        ? `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${
-             CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto')?'Seguir el ensayo':'Ensayo PSV'}</button>
-           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>`
-        : `<button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>`}
+       /* Un ensayo PSV tiene su propio certificado (AXAD-088). El del
+          formato viejo no sabe leerlo, así que el botón llevaba a nada.
+          Y un borrador todavía no tiene certificado que mostrar. */
+       const listo=uc&&(uc.tipo!=='psv'||uc.veredicto!=='incompleto');
+       if(a.cl==='seguridad'){
+         /* En una PSV manda el formato de la empresa: el ensayo y su
+            certificado. Lo demás no desaparece —sigue en las pestañas
+            de arriba y en el menú—, pero no compite por el pulgar. */
+         const borrador=CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto');
+         return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
+           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
+           <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
+       }
+       return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
@@ -4465,8 +4490,15 @@ function psvVeredicto(c){
   const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
   const dif=prom-set, desv=set?dif/set*100:0;
   const ok=Math.abs(dif)<=limite+1e-9;
+  /* El veredicto lo decide el promedio: así lo dice el procedimiento
+     del propio formato. Pero si algún disparo suelto se salió de la
+     banda y el promedio salvó la papeleta, eso hay que decirlo — la
+     válvula está disparando disparejo aunque el número final cierre.
+     Es un aviso, no un veto: la norma no lo prohíbe. */
+  const sueltos=t.filter(x=>Math.abs(x-set)>limite+1e-9).length;
   return {estado:ok?'aprobado':'rechazado', prom, dif, desv, limite, tol,
-          min:set-limite, max:set+limite, disparos:t, set, und:u};
+          min:set-limite, max:set+limite, disparos:t, set, und:u,
+          dispersos:ok?sueltos:0};
 }
 /* El blowdown: la válvula debe volver a cerrar un 8 % por debajo
    del seteo. Informativo — el formato lo muestra, no lo veta. */
@@ -4482,11 +4514,12 @@ function psvBlowdown(c){
    Cada empresa tiene los suyos, y son varios: el gerente, el
    ingeniero, el inspector. Por eso viven en el cliente y no
    escritos a mano en cada certificado. */
+/* Dos firmas: quien lo ejecutó y quien lo revisa. Es lo que piden los
+   formatos de la empresa; cuatro columnas eran ruido en el papel y un
+   estorbo en el celular. */
 const FIRMA_ROLES=[
- ['ejec',  'Ejecutado por',            'Adolphus'],
- ['vbAdo', 'V°B° Responsable Adolphus','Adolphus'],
- ['vbInsp','V°B° Inspección',          'Cliente'],
- ['vbResp','V°B° Responsable',         'Cliente']
+ ['ejec',  'Ejecutado por', 'Adolphus'],
+ ['vbAdo', 'Revisado por',  'Adolphus']
 ];
 const firmantesDe=cliId=>{
   const c=cli(cliId);
@@ -4692,6 +4725,8 @@ function pintarPSVResultado(){
       <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
       ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) ·
         se espera ≤ 8 % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
+      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
+        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad antes de cerrar.</span>`:''}
     </div>`;
 }
 
@@ -4877,14 +4912,15 @@ function openFirma(calibId,rol){
   const def=firmantesDe(a.cli).filter(f=>f.rol===rol);
   const yo=(typeof SES!=='undefined'&&SES)?SES:null;
   const rl=FIRMA_ROLES.find(r=>r[0]===rol)||FIRMA_ROLES[0];
-  $('#mTitle').textContent=rl[1];
+  const ya=(c.firmas||[]).find(f=>f.rol===rol);      // rehacer: se parte de lo firmado
+  $('#mTitle').textContent=(ya?'Rehacer · ':'')+rl[1];
   $('#mBody').innerHTML=`
    <div class="two">
      <div class="fld"><label for="fmNom">Nombre</label>
-       <input class="inp" id="fmNom" list="fmLista" value="${esc(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:''))}" placeholder="Nombre y apellido">
+       <input class="inp" id="fmNom" list="fmLista" value="${esc(ya?ya.n:(def[0]?def[0].n:(rl[2]==='Adolphus'&&yo?yo.n:'')))}" placeholder="Nombre y apellido">
        <datalist id="fmLista">${def.map(f=>`<option value="${esc(f.n)}">${esc(f.cargo||'')}</option>`).join('')}</datalist></div>
      <div class="fld"><label for="fmCargo">Cargo</label>
-       <input class="inp" id="fmCargo" value="${esc(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):''))}" placeholder="Ing. Residente"></div>
+       <input class="inp" id="fmCargo" value="${esc(ya?ya.cargo:(def[0]?def[0].cargo:(rl[2]==='Adolphus'&&yo?(yo.cargo||''):'')))}" placeholder="Coordinador de Servicios"></div>
    </div>
    <p class="pl-regla">Firmá con el dedo si estás en tablet o celular, o con el mouse si es computadora.
      La fecha se pone sola: <b>${fPE(HOY.toISOString().slice(0,10))}</b>.</p>
@@ -4926,6 +4962,16 @@ function limpiarFirma(){
   const cv=$('#fmCanvas'); if(!cv||!FIRMA_CTX)return;
   FIRMA_CTX.clearRect(0,0,cv.width,cv.height); FIRMA_HAY=false;
 }
+/* Equivocarse de firma pasa. Se quita la del rol y ya: el resto del
+   ensayo no se toca. */
+function quitarFirma(calibId,rol){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
+  const f=(c.firmas||[]).find(x=>x.rol===rol); if(!f)return;
+  c.firmas=c.firmas.filter(x=>x.rol!==rol);
+  registrar('Firma',`Se quitó la firma de ${f.n}`);
+  toast('Firma quitada · se puede volver a firmar');
+  guardarLocal();renderAll();verPSV(calibId);
+}
 function guardarFirma(calibId,rol){
   const c=CALIBS.find(x=>x.id===calibId); if(!c)return;
   const n=($('#fmNom').value||'').trim(), cargo=($('#fmCargo').value||'').trim();
@@ -4963,6 +5009,9 @@ function verPSV(id){
         <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
       </div>
       <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
+      ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) · se espera ≤ 8 %${b.dentro?' ✓':' · fuera de rango'}</span>`:''}
+      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
+        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</span>`:''}
     </div>
     ${psvGrafica(v)}`:''}
     <h4 class="snc-sec">Firmas</h4>
@@ -4971,7 +5020,10 @@ function verPSV(id){
         return `<div class="firma-box ${f?'ok':''}">
           <span class="fb-rol">${esc(lbl)}</span>
           ${f?`<img class="fb-img" src="${f.img}" alt="Firma de ${esc(f.n)}">
-               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>`
+               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>
+               ${cliente?'':`<div class="fb-acc">
+                 <button class="btn quiet xs" onclick="openFirma('${c.id}','${rol}')">Rehacer</button>
+                 <button class="btn quiet xs" onclick="quitarFirma('${c.id}','${rol}')">Quitar</button></div>`}`
              :`<span class="fb-vacio">Sin firmar</span>
                ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
         </div>`}).join('')}
@@ -4995,33 +5047,66 @@ function imprimirPSV(id){
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   const fila=(k,val)=>`<tr><th>${k}</th><td>${val==null||val===''?'—':esc(String(val))}</td></tr>`;
   const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
+  /* El logotipo va en el papel: es lo primero que mira el cliente y lo
+     que hace que el certificado se vea de la empresa y no de una hoja
+     de cálculo. Va como SVG, así que imprime nítido a cualquier tamaño. */
+  const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
   <title>AXAD-088 ${esc(a.tag||'')}</title><style>
   *{box-sizing:border-box}
-  body{font:11px/1.4 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:18mm 14mm}
-  h1{font-size:15px;text-align:center;margin:0 0 2px;letter-spacing:.02em}
-  .sub{text-align:center;color:#5b6470;font-size:10px;margin-bottom:12px}
-  h2{font-size:11px;background:#eceff2;padding:4px 7px;margin:12px 0 0;border:1px solid #d7dbe0;border-bottom:0}
-  table{width:100%;border-collapse:collapse;font-size:10px}
-  th,td{border:1px solid #d7dbe0;padding:3px 6px;text-align:left;vertical-align:top}
-  th{background:#f7f8f9;font-weight:600;width:34%}
-  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
-  .vd{margin:10px 0;padding:8px 10px;border:2px solid;text-align:center;font-size:14px;font-weight:700;letter-spacing:.06em}
-  .vd.aprobado{border-color:#1a7f52;color:#1a7f52;background:#eaf6ef}
-  .vd.rechazado{border-color:#c0392b;color:#c0392b;background:#fdecea}
-  .res th{width:26%}
-  .firmas{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
-  .fb{border:1px solid #d7dbe0;padding:6px;min-height:104px;font-size:9px;display:flex;flex-direction:column}
-  .fb b{display:block;font-size:9.5px;border-top:1px solid #101418;padding-top:3px;margin-top:auto}
-  .fb .rol{font-weight:700;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;color:#5b6470}
-  .fb img{max-height:44px;max-width:100%;object-fit:contain;margin:4px 0}
-  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-  .fotos img{width:100%;height:86px;object-fit:cover;border:1px solid #d7dbe0}
-  .pie{margin-top:14px;padding-top:6px;border-top:1px solid #d7dbe0;display:flex;justify-content:space-between;font-size:9px;color:#78818c}
-  @page{size:A4;margin:12mm}
+  body{font:10.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm}
+  .cab{display:flex;align-items:flex-start;gap:13px;padding-bottom:11px;border-bottom:2.5px solid #102d69;margin-bottom:3px}
+  .cab .mk{flex:0 0 auto;padding-top:1px}
+  .cab .ti{flex:1;min-width:0}
+  .cab h1{font-size:13.5px;font-weight:700;letter-spacing:.055em;margin:0;color:#102d69;line-height:1.3}
+  .cab .emp{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#8a929c;margin-bottom:3px}
+  .cab .cod{flex:0 0 auto;text-align:right;font-size:8.5px;color:#8a929c;line-height:1.6}
+  .cab .cod b{display:block;font-size:10px;color:#1a1d21;letter-spacing:.05em}
+  .ident{display:flex;gap:16px;flex-wrap:wrap;padding:7px 0 12px;font-size:9.5px;color:#5b6470;
+    border-bottom:1px solid #e4e7ea;margin-bottom:13px}
+  .ident b{color:#1a1d21;font-weight:600}
+  h2{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#102d69;
+     margin:15px 0 5px;padding-bottom:3px;border-bottom:1px solid #102d69}
+  table{width:100%;border-collapse:collapse;font-size:9.5px}
+  th,td{padding:3.5px 7px;text-align:left;vertical-align:top;border-bottom:1px solid #edeff1}
+  th{font-weight:600;width:36%;color:#5b6470}
+  td{color:#1a1d21}
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+  .res th{width:28%}
+  .res thead th{background:#f4f6f8;color:#1a1d21;width:auto;font-size:8.5px;
+    letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid #cfd4d9}
+  .res tfoot th{background:#f4f6f8;font-weight:700;color:#1a1d21;width:auto}
+  .vd{margin:13px 0 4px;padding:9px;text-align:center;font-size:15px;font-weight:700;letter-spacing:.14em;border-radius:3px}
+  .vd.aprobado{color:#126b44;background:#e8f5ee;border:1px solid #a9d8be}
+  .vd.rechazado{color:#a8291c;background:#fceceb;border:1px solid #eab5b0}
+  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px}
+  .fb{font-size:9px;display:flex;flex-direction:column;min-height:82px}
+  .fb .rol{font-weight:700;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#8a929c;margin-bottom:2px}
+  .fb img{max-height:46px;max-width:150px;object-fit:contain;object-position:left bottom;margin-top:auto}
+  .fb .ln{border-top:1px solid #1a1d21;margin-top:3px;padding-top:3px}
+  .fb b{font-size:9.5px;display:block}
+  .fb span.cg{color:#5b6470}
+  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
+  .fotos img{width:100%;height:88px;object-fit:cover;border-radius:2px}
+  .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
+    justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
+  /* la gráfica es una ilustración, no la página: se le pone techo o
+     se estira hasta comerse un folio entero */
+  .psv-graf{display:block;max-width:340px;margin:9px auto 4px}
+  @page{size:A4;margin:11mm}
   </style></head><body>
-  <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1>
-  <div class="sub">${esc(e.n||'')} · TAG ${esc(a.tag||'')} · ${fPE(c.fecha)}${c.os?' · O.S. '+esc(c.os):''}</div>
+  <div class="cab">
+    <span class="mk">${marca}</span>
+    <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
+      <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1></div>
+    <div class="cod"><b>AXAD-088</b>Versión 2<br>${fPE(HOY.toISOString().slice(0,10))}</div>
+  </div>
+  <div class="ident">
+    <span>Cliente <b>${esc(e.n||'')}</b></span>
+    <span>TAG <b>${esc(a.tag||'')}</b></span>
+    <span>Fecha del ensayo <b>${fPE(c.fecha)}</b></span>
+    ${c.os?`<span>Orden de servicio <b>${esc(c.os)}</b></span>`:''}
+  </div>
 
   <div class="par">
     <div><h2>DATOS DEL SERVICIO</h2><table>
@@ -5069,6 +5154,8 @@ function imprimirPSV(id){
     ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
     ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
     ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+' %  (se espera ≤ 8 %)':'—')}
+    ${v.dispersos?fila('OBSERVACIÓN DE REPETIBILIDAD',
+      v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.'):''}
   </table>
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
   ${psvGrafica(v,660)}`:''}
@@ -5101,13 +5188,14 @@ function imprimirPSV(id){
   <div class="firmas">
     ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
       return `<div class="fb"><span class="rol">${esc(lbl)}</span>
-        ${f?`<img src="${f.img}" alt="">`:''}
-        <b>${f?esc(f.n):'&nbsp;'}</b>
-        <span>${f?esc(f.cargo||''):'Cargo:'}</span>
-        <span>${f?fPE(f.f):'Fecha:'}</span></div>`}).join('')}
+        ${f?`<img src="${f.img}" alt="">`:'<span style="flex:1"></span>'}
+        <div class="ln"><b>${f?esc(f.n):'&nbsp;'}</b>
+          <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
+          <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
   </div>
 
-  <div class="pie"><span>AXAD-088 V.2</span><span>Adolphus S.A. · Control de fluidos · Lima</span>
+  <div class="pie"><span>AXAD-088 · Versión 2</span>
+    <span>Adolphus S.A. · Control de fluidos · Lima</span>
     <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
   </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
@@ -7506,6 +7594,17 @@ function calibChart(rec){
 }
 function showCalibReport(rec){
   if(!rec)return;
+  /* Un ensayo PSV lleva el formato AXAD-088 de la empresa, que no tiene
+     as-found/as-left sino tres disparos: este certificado no sabe
+     leerlo y el botón llevaba a una pantalla vacía. Se deriva al suyo
+     desde aquí, y no en cada uno de los siete botones que lo llaman. */
+  if(rec.tipo==='psv'){
+    if(rec.veredicto==='incompleto'){
+      toast('Ese ensayo está sin terminar: todavía no hay certificado');
+      openPSV(null,rec.id); return;
+    }
+    verPSV(rec.id); return;
+  }
   const a=ACTIVOS.find(x=>x.id===rec.act)||{},sg=x=>x>=0?'+':'';
   const cot=x=>Math.abs(x)<=rec.tol?'ok':'late';
   $('#mTitle').textContent=`Certificado ${rec.cert}`;
@@ -8484,16 +8583,33 @@ async function apuntarPendientes(){
 let JOB_ESPERA=0, JOB_T=null;
 const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
 
+/* Los lotes se arman por PESO, no por cantidad.
+   Un ensayo con seis fotos son unos 2 MB; cien de esos en una sola
+   petición serían 200 MB, y eso en el celular del técnico no sale
+   nunca: revienta la memoria al armar el JSON o lo rechaza el
+   servidor. Se cortan en 2 MB, y una fila que sola pase de ahí viaja
+   sola —es lo mejor que se puede hacer con ella—. */
+const LOTE_MAX=2*1024*1024;
 async function drenarPendientes(){
   const filas=(await bdTodos('pendientes'))||[];
   if(!filas.length){PEND_N=0;return 0}
-  let subidas=0;
-  for(let i=0;i<filas.length;i+=100){
-    const lote=filas.slice(i,i+100);
+  let subidas=0, i=0;
+  while(i<filas.length){
+    const lote=[]; let peso=0;
+    while(i<filas.length){
+      const f=filas[i];
+      const p=(f.datos?JSON.stringify(f.datos).length:0)+200;
+      if(lote.length&&peso+p>LOTE_MAX)break;      // el primero entra siempre
+      lote.push(f); peso+=p; i++;
+      if(peso>LOTE_MAX)break;
+    }
     const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
       cab:{Prefer:'resolution=merge-duplicates,return=representation'},
       cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
                            empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
+    /* Se descuenta lote por lote: si la señal se corta a la mitad, lo
+       que ya subió no se vuelve a subir y lo que falta sigue en la
+       tabla de pendientes. */
     for(const f of lote){
       if(f.borrado)delete ESPEJO[f.k]; else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
       await bdQuita('pendientes',f.k);
@@ -8502,6 +8618,7 @@ async function drenarPendientes(){
     (eco||[]).forEach(f=>{
       if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
     });
+    PEND_N=Math.max(0,filas.length-subidas); pintarNet();   // el contador baja mientras sube
   }
   PEND_N=(await bdCuenta('pendientes'))||0;
   return subidas;
@@ -8601,20 +8718,32 @@ function registrar(tipo,desc){
 }
 function pintarNet(){
   const c=$('#netChip');if(!c)return;
-  /* Con cuenta en la nube el número que importa es cuántos registros
-     faltan por subir, no cuántas líneas tiene la bitácora. */
-  const n=enNube()?PEND_N:SYNCQ.length;
+  const hayNube=enNube();
+  const n=hayNube?PEND_N:SYNCQ.length;
+
+  /* Sin cuenta en la nube NO se dice "Al día". Decirlo sería mentir:
+     los datos se están guardando sólo en este equipo y no los va a ver
+     nadie más. El recorrido de demostración entra por aquí, y el que
+     lo prueba tiene que saber en qué está parado. */
   c.classList.toggle('off',!online());
   c.classList.toggle('sync',SYNCING);
+  c.classList.toggle('local',hayNube===false&&online()&&!SYNCING);
+
   c.innerHTML=SYNCING
     ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
     : !online()
       ? `<span class="nd"></span><span class="nl">Sin conexión</span>${n?`<span class="qn">${n}</span>`:''}`
-      : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
-         :`<span class="nd"></span><span class="nl">Al día</span>`;
+      : !hayNube
+        ? `<span class="nd"></span><span class="nl">Solo en este equipo</span>`
+        : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
+           :`<span class="nd"></span><span class="nl">Al día</span>`;
+
   c.title=!online()
-    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirán solos al recuperar señal.`
-    : n?`${n} cambio${n===1?'':'s'} pendiente${n===1?'':'s'} de subir`:'Todo sincronizado';
+    ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirá${n===1?'':'n'} solo${n===1?'':'s'} al recuperar señal.`
+    : !hayNube
+      ? 'Los datos se están guardando SOLO en este equipo. Para que suban a la nube y se vean desde otra computadora, hay que entrar con una cuenta.'
+      : n?`${n} registro${n===1?'':'s'} pendiente${n===1?'':'s'} de subir a la nube`
+         :`Todo sincronizado con la nube`;
 }
 function sincronizar(manual){
   if(SYNCING)return;
@@ -8782,7 +8911,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · el borrador se guarda';
+const VERSION='2026-08-04 · fotos que suben y chip honesto';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
