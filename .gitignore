@@ -1,0 +1,10 @@
+node_modules/
+_*.jpg
+_*.png
+*.b64
+__pycache__/
+
+# herramientas de desarrollo: no son parte de la web
+.agents/
+.claude/
+skills-lock.json

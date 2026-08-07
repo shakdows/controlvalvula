@@ -1840,6 +1840,47 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 }
 
 
+/* La ficha del ensayo: el veredicto arriba, grande, con el número
+   al lado. Es a lo que se entra — quien abre esto quiere saber si
+   pasó o no, y por cuánto. */
+.psv-tope{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;
+  padding:16px 18px;border-radius:var(--r-2);border:1px solid var(--line)}
+.psv-tope.aprobado{border-color:color-mix(in oklab,var(--ok) 40%,transparent);
+  background:color-mix(in oklab,var(--ok) 7%,var(--surface))}
+.psv-tope.rechazado{border-color:color-mix(in oklab,var(--late) 40%,transparent);
+  background:color-mix(in oklab,var(--late) 7%,var(--surface))}
+.psv-tope.incompleto{background:var(--surface-2)}
+.pt-e{display:block;font-size:11px;font-weight:700;letter-spacing:.13em}
+.psv-tope.aprobado .pt-e{color:var(--ok)} .psv-tope.rechazado .pt-e{color:var(--late)}
+.psv-tope.incompleto .pt-e{color:var(--ink-3)}
+.pt-vd b{display:block;font-size:34px;font-weight:700;letter-spacing:-.035em;line-height:1.08;margin-top:3px}
+.pt-vd b i{font-style:normal;font-size:17px;font-weight:500;color:var(--ink-3);letter-spacing:0}
+.pt-sub{display:block;font-size:12px;color:var(--ink-3);margin-top:4px}
+.pt-des{text-align:right}
+.pt-des span{display:block;font-size:11px;color:var(--ink-3)}
+.pt-des b{font-size:19px;letter-spacing:-.02em}
+.pt-tol{margin-top:2px}
+/* la línea de identificación, como el membrete del certificado */
+.psv-cab2{display:flex;gap:16px;flex-wrap:wrap;padding:11px 2px 0;font-size:12px;color:var(--ink-3)}
+.psv-cab2 b{color:var(--ink)}
+
+/* los bloques de detalle: lo que el técnico llenó, agrupado y legible.
+   Un bloque sin ningún dato no se dibuja: mejor que no esté a que
+   esté lleno de rayitas. */
+.pd-b{margin-top:var(--sp-5)}
+.pd-b h5{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);padding-bottom:6px;border-bottom:1px solid var(--line-2);margin-bottom:11px}
+.pd-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px 18px}
+.pd-i span{display:block;font-size:11px;color:var(--ink-3)}
+.pd-i b{font-size:13.5px;font-weight:600}
+.pd-pie{font-size:11.5px;color:var(--ink-3);line-height:1.55;margin-top:4px}
+.pd-txt{font-size:13px;color:var(--ink-2);line-height:1.6}
+@media(max-width:560px){
+  .psv-tope{flex-direction:column;align-items:flex-start;gap:12px}
+  .pt-des{text-align:left}
+  .pd-g{grid-template-columns:1fr 1fr}
+}
+
 /* ── PSV · formato AXAD-088 ──────────────────────────────────
    Un formato de 47 campos en un celular es un infierno si se
    pone todo junto. Va en secciones plegables: se abre la que
@@ -4872,7 +4913,11 @@ function guardarPlaca(id){
    lo que el cliente mira primero. */
 function psvGrafica(v,ancho){
   if(!v||v.estado==='incompleto')return '';
-  const W=ancho||520, H=170, L=64, R=18, T=16, B=30;
+  /* Más angosto de lo que parece natural, a propósito: el SVG se
+     escala al ancho del contenedor, así que en un celular de 330 px
+     un lienzo de 520 encoge la letra a 6 px y no se lee. Con 400 el
+     texto sobrevive al viaje. */
+  const W=ancho||400, H=168, L=56, R=14, T=15, B=28;
   const gw=W-L-R, gh=H-T-B;
   // el eje se abre un 60 % más que la banda para que la banda no llene todo
   const margen=Math.max((v.max-v.min)*0.14, Math.abs(v.prom-v.set)*0.35, v.set*0.002);
@@ -4889,13 +4934,13 @@ function psvGrafica(v,ancho){
     <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.5"/>
     <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="2" stroke-dasharray="7 4"/>
     ${v.disparos.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p)}" r="5.5" fill="${tono}"/>
-      <text x="${x(i)}" y="${y(p)-11}" text-anchor="middle" font-size="10.5" fill="#101418"
+      <text x="${x(i)}" y="${y(p)-11}" text-anchor="middle" font-size="12" font-weight="600" fill="#101418"
         font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
-      <text x="${x(i)}" y="${H-10}" text-anchor="middle" font-size="10" fill="#78818c"
+      <text x="${x(i)}" y="${H-9}" text-anchor="middle" font-size="11" fill="#78818c"
         font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`).join('')}
-    <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
-    <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="9.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
-    <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="9.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
+    <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
+    <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="10.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
+    <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
     <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
   </svg>`;
 }
@@ -4994,27 +5039,69 @@ function verPSV(id){
   const cliente=S.rol==='cliente';
   const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
   $('#mTitle').textContent=`Ensayo · ${a.tag||''}`;
+  /* La ficha del ensayo se lee de arriba abajo como el certificado:
+     el veredicto primero —que es a lo que se viene—, después el
+     detalle del ensayo, y las firmas al final. Antes sólo se veía el
+     disparo: hermeticidad, resorte y patrón quedaban escondidos
+     aunque el técnico los hubiera llenado. */
+  const dato=(k,val,uni)=>val==null||val===''?'':`<div class="pd-i"><span>${k}</span><b>${esc(String(val))}${uni?' '+uni:''}</b></div>`;
+  const bloque=(tit,items)=>{const c=items.filter(Boolean).join('');
+    return c?`<section class="pd-b"><h5>${tit}</h5><div class="pd-g">${c}</div></section>`:''};
+
   $('#mBody').innerHTML=`
-    <div class="snc-cab">
-      <span class="tag ${v.estado==='aprobado'?'ok':v.estado==='rechazado'?'late':'ink-3'}">
-        ${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO':'Incompleto'}</span>
-      <span>${fPE(c.fecha)}</span>${c.os?`<span>· O.S. ${esc(c.os)}</span>`:''}
-      <span class="tag mono">${esc(a.tag||'')}</span>
-    </div>
-    ${v.estado!=='incompleto'?`
-    <div class="psv-res ${v.estado}" style="margin-bottom:var(--sp-4)">
-      <div class="psv-nums">
-        <div><span>Promedio de los 3 disparos</span><b class="mono">${n2(v.prom)} ${esc(u)}</b></div>
-        <div><span>Requerido</span><b class="mono">${n2(v.set)} ${esc(u)}</b></div>
-        <div><span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+    <div class="psv-tope ${v.estado}">
+      <div class="pt-vd">
+        <span class="pt-e">${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO':'SIN TERMINAR'}</span>
+        ${v.estado!=='incompleto'?`<b class="mono">${n2(v.prom)} <i>${esc(u)}</i></b>
+          <span class="pt-sub">promedio de los 3 disparos · requerido ${n2(v.set)} ${esc(u)}</span>`
+         :`<span class="pt-sub">Falta ${esc(v.falta)}</span>`}
       </div>
-      <span class="psv-regla">${esc(v.tol.txt)} · ${esc(v.tol.regla)}</span>
-      ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} (${n2(b.pct)} %) · se espera ≤ 8 %${b.dentro?' ✓':' · fuera de rango'}</span>`:''}
-      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
-        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</span>`:''}
+      ${v.estado!=='incompleto'?`<div class="pt-des">
+        <span>Desviación</span><b class="mono">${v.desv>0?'+':''}${n2(v.desv)} %</b>
+        <span class="pt-tol">de ${esc(v.tol.txt)} admisible</span></div>`:''}
     </div>
-    ${psvGrafica(v)}`:''}
-    <h4 class="snc-sec">Firmas</h4>
+    <div class="psv-cab2">
+      <span>${fPE(c.fecha)}</span>${c.os?`<span>O.S. <b>${esc(c.os)}</b></span>`:''}
+      <span>TAG <b class="mono">${esc(a.tag||'')}</b></span>
+      <span>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}</span>
+    </div>
+
+    ${v.estado!=='incompleto'?`
+    <section class="pd-b"><h5>Pruebas de disparo</h5>
+      ${psvGrafica(v)}
+      <p class="pd-pie">${esc(v.tol.txt)} · ${esc(v.tol.regla)}
+        ${b?` · blowdown ${n2(b.pct)} % (se espera ≤ 8 %)${b.dentro?' ✓':' · fuera de rango'}`:''}</p>
+      ${v.dispersos?`<p class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
+        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</p>`:''}
+    </section>`:''}
+
+    ${bloque('Hermeticidad · API 527',[
+      dato('Presión aplicada', v.estado!=='incompleto'?n2(v.set*0.9):'', u),
+      dato('Fluido', c.fluidoP), dato('Tiempo', c.hTiempo),
+      dato('Burbujas/min', [c.hb1,c.hb2,c.hb3].filter(x=>x!==''&&x!=null).join(' · ')),
+      dato('Resultado', c.hConf)])}
+
+    ${bloque('Resorte y componentes',[
+      dato('Altura', c.perpAlt,'mm'), dato('N.º espiras', c.perpNEsp||c.numEsp),
+      dato('Ø espiral', c.perpFi), dato('Ángulo', c.perpAng,'°'),
+      dato('Desviación', c.perpDesv,'°'), dato('Ø externo', c.parFi),
+      dato('Perno regulación', (c.pernoIni||c.pernoFin)?((c.pernoIni||'—')+' → '+(c.pernoFin||'—')):''),
+      dato('Muescas sup / inf', (c.muescaSup||c.muescaInf)?((c.muescaSup||'—')+' / '+(c.muescaInf||'—')):''),
+      dato('Método', c.metodo)])}
+
+    ${bloque('Equipo patrón',[
+      dato('Descripción', c.patDesc), dato('Marca y modelo', [c.patMarca,c.patModelo].filter(Boolean).join(' ')),
+      dato('N.º de serie', c.patSerie), dato('Escala', c.patEscala),
+      dato('Exactitud', c.patExact), dato('Certificado', c.patCert),
+      dato('Calibrado el', c.patFecha?fPE(c.patFecha):'')])}
+
+    ${c.coment?`<section class="pd-b"><h5>Comentarios u observaciones</h5>
+      <p class="pd-txt">${esc(c.coment)}</p></section>`:''}
+
+    ${(c.fotos&&c.fotos.length)?`<section class="pd-b"><h5>Registro fotográfico</h5>
+      <div class="ev-tiras">${c.fotos.map((d,i)=>`<div class="ev-tira"><img src="${d}" alt="Foto ${i+1}"></div>`).join('')}</div></section>`:''}
+
+    <section class="pd-b"><h5>Firmas</h5>
     <div class="firmas-grid">
       ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
         return `<div class="firma-box ${f?'ok':''}">
@@ -5027,10 +5114,7 @@ function verPSV(id){
              :`<span class="fb-vacio">Sin firmar</span>
                ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
         </div>`}).join('')}
-    </div>
-    ${c.coment?`<div class="snc-nota" style="margin-top:var(--sp-4)">${esc(c.coment)}</div>`:''}
-    ${(c.fotos&&c.fotos.length)?`<h4 class="snc-sec">Registro fotográfico</h4>
-      <div class="ev-tiras">${c.fotos.map((d,i)=>`<div class="ev-tira"><img src="${d}" alt="Foto ${i+1}"></div>`).join('')}</div>`:''}`;
+    </div></section>`;
   $('#mFoot').innerHTML=`
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">Imprimir certificado</button>
     ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
@@ -7584,7 +7668,7 @@ function calibChart(rec){
        <circle cx="${p.x}" cy="${y(p.v)}" r="6" fill="var(--surface)" stroke="var(--${p.ok?'ok':'late'})" stroke-width="3"/>
        <text x="${p.x}" y="${y(p.v)-13}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--${p.ok?'ok':'late'})">${p.v}</text>
        <text x="${p.x}" y="${H-B+17}" text-anchor="middle" font-size="10.5" fill="var(--ink-2)">${p.l}</text>`).join('')}
-     <text x="${L-8}" y="${T-4}" text-anchor="end" font-size="9.5" fill="var(--ink-3)">${esc(rec.uni)}</text>
+     <text x="${L-8}" y="${T-4}" text-anchor="end" font-size="10.5" fill="var(--ink-3)">${esc(rec.uni)}</text>
    </svg>
    <div class="cc-lg">
      <span><i style="background:var(--sel)"></i>Presión de tarado (set)</span>
@@ -8911,7 +8995,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-04 · fotos que suben y chip honesto';
+const VERSION='2026-08-05 · ficha del ensayo completa';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
