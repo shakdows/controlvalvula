@@ -1944,6 +1944,43 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+.inf-tope{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:var(--r-2);padding:13px 15px;background:var(--surface-2)}
+.inf-tope>div:first-child span{display:block;font-size:11px;color:var(--ink-3)}
+.inf-tope>div:first-child b{display:block;font-size:30px;line-height:1.05;letter-spacing:-.03em;margin:2px 0}
+
+/* Proyectos (OC): la barra de avance que mira el gerente. */
+.py-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));
+  gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.py-card{border:1px solid var(--line);border-radius:var(--r-2);padding:13px 14px;
+  background:var(--surface);transition:border-color .16s var(--ease-out),box-shadow .16s var(--ease-out)}
+.py-card:hover{border-color:var(--line-2);box-shadow:var(--e-1)}
+.py-card.listo{border-color:color-mix(in oklch,var(--ok) 42%,var(--line))}
+.py-h{display:flex;align-items:flex-start;gap:10px}
+.py-h b{font-size:13.5px;display:block;letter-spacing:-.01em}
+.py-h span{font-size:11.5px;color:var(--ink-3);display:block;margin-top:2px;line-height:1.45}
+.py-pct{margin-left:auto;font-size:19px;font-weight:700;letter-spacing:-.02em;flex:0 0 auto}
+.py-bar{height:6px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin:10px 0 8px}
+.py-bar i{display:block;height:100%;border-radius:99px;transition:width .5s var(--ease-out)}
+.py-nums{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--ink-3)}
+.py-nums b{color:var(--ink-1);font-weight:700}
+.py-acc{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+/* la lista de válvulas al abrir la OC */
+.py-lista{max-height:280px;overflow:auto;border:1px solid var(--line-2);border-radius:var(--r-2)}
+.py-it{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;
+  border-bottom:1px solid var(--line-2);font-size:12.5px}
+.py-it:last-child{border-bottom:none}
+.py-it:hover{background:var(--surface-2)}
+.py-it.ya{opacity:.55;cursor:not-allowed}
+.py-tag{font-weight:700;flex:0 0 auto}
+.py-sub{color:var(--ink-3);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* la tarjeta del tablero */
+.wo-oc{font-size:11px;color:var(--ink-3);margin-top:6px}
+.wo-ing{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;
+  color:var(--ink-2);font-weight:600}
+.wo-ing svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}
+.wo-ing.libre{color:var(--due);font-weight:500;font-style:italic}
+
 /* Editar válvula: mientras no haya foto real se enseña la del
    catálogo, apagada, para que se entienda que es un relleno. */
 .ed-sinfoto{margin-top:9px;border:1px dashed var(--line-2);border-radius:var(--r-2);
@@ -2329,10 +2366,12 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
 
       <!-- ═══ ÓRDENES ═══ -->
       <section class="page" id="p-wo"><div class="view-pad">
-        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Cada tarjeta avanza sola con su botón: programar → ejecutar → guardar. Al cerrar, la próxima calibración del equipo se actualiza automáticamente.</p></div>
+        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Una tarjeta por válvula, con su código MAT. Avanza con su botón: entra a taller, un ingeniero la toma poniendo su nombre, y se finaliza registrando el ensayo.</p></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
+            <button class="btn sec" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM3 7l2-3h14l2 3M9 12h6"/></svg>Nueva OC</button>
             <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div></div>
+        <div id="pryPanel"></div>
         <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
       </div></section>
 
@@ -2763,15 +2802,18 @@ let ACTIVOS=[
  {id:'a17',cli:'agro',ar:'env',cl:'control',tag:'',ser:'',mod:'21000',sz:'',rt:'',cv:'',air:'',rng:'',cr:'—',ult:'',prox:''}
 ];
 let ORDENES=[
- {id:'o1',act:'a3',n:'AD-26-0430',et:'certificada',tipo:'Correctivo',f:'2026-03-08',tec:'O. Julio de la Rosa',hall:'Fuga por empaquetadura y desgaste en anillo de asiento. Trim completo y empaquetadura reemplazados. Prueba hidrostática conforme.',partes:['AD-TRM-316-A','AD-EMP-PTFE-V','AD-KIT-JUN-20']},
- {id:'o2',act:'a1',n:'AD-26-0312',et:'certificada',tipo:'Preventivo',f:'2026-02-18',tec:'K. Ortiz',hall:'Calibración de posicionador y prueba de carrera. Sin hallazgos.',partes:[]},
- {id:'o3',act:'a12',n:'AD-25-1188',et:'certificada',tipo:'Calibración',f:'2025-08-20',tec:'K. Ortiz',hall:'Prueba de banco a 120 psig. Set point conforme, precintada y certificada.',partes:['AD-SV-KIT-SEL']},
- {id:'o4',act:'a7',n:'AD-26-0511',et:'certificada',tipo:'Preventivo',f:'2026-04-02',tec:'O. Julio de la Rosa',hall:'Cambio de asiento perimetral por desgaste abrasivo. Se recomienda frecuencia de 6 meses en relaves.',partes:['AD-KG-ASI-EPDM','AD-KG-EMP-TRA']},
- {id:'o5',act:'a13',n:'AD-26-0688',et:'taller',tipo:'Calibración',f:'2026-07-14',tec:'K. Ortiz',hall:'Ingresa a banco de pruebas. Calibración vencida desde enero.',partes:[]},
- {id:'o6',act:'a8',n:'AD-26-0701',et:'programada',tipo:'Correctivo',f:'2026-07-29',tec:'Por asignar',hall:'Reemplazo de manga por adelgazamiento detectado en inspección.',partes:['AD-KG-ASI-EPDM']},
- {id:'o7',act:'a5',n:'AD-26-0712',et:'solicitada',tipo:'Calibración',f:'2026-08-05',tec:'Por asignar',hall:'Recalibración anual programada antes del vencimiento.',partes:[]}
+ {id:'o1',act:'a3',n:'AD-26-0430',et:'final',tipo:'Correctivo',f:'2026-03-08',tec:'O. Julio de la Rosa',hall:'Fuga por empaquetadura y desgaste en anillo de asiento. Trim completo y empaquetadura reemplazados. Prueba hidrostática conforme.',partes:['AD-TRM-316-A','AD-EMP-PTFE-V','AD-KIT-JUN-20']},
+ {id:'o2',act:'a1',n:'AD-26-0312',et:'final',tipo:'Preventivo',f:'2026-02-18',tec:'K. Ortiz',hall:'Calibración de posicionador y prueba de carrera. Sin hallazgos.',partes:[]},
+ {id:'o3',act:'a12',n:'AD-25-1188',et:'final',tipo:'Calibración',f:'2025-08-20',tec:'K. Ortiz',hall:'Prueba de banco a 120 psig. Set point conforme, precintada y certificada.',partes:['AD-SV-KIT-SEL']},
+ {id:'o4',act:'a7',n:'AD-26-0511',et:'final',tipo:'Preventivo',f:'2026-04-02',tec:'O. Julio de la Rosa',hall:'Cambio de asiento perimetral por desgaste abrasivo. Se recomienda frecuencia de 6 meses en relaves.',partes:['AD-KG-ASI-EPDM','AD-KG-EMP-TRA']},
+ {id:'o5',act:'a13',n:'AD-26-0688',et:'mant',tipo:'Calibración',f:'2026-07-14',tec:'K. Ortiz',hall:'Ingresa a banco de pruebas. Calibración vencida desde enero.',partes:[]},
+ {id:'o6',act:'a8',n:'AD-26-0701',et:'taller',tipo:'Correctivo',f:'2026-07-29',tec:'Por asignar',hall:'Reemplazo de manga por adelgazamiento detectado en inspección.',partes:['AD-KG-ASI-EPDM']},
+ {id:'o7',act:'a5',n:'AD-26-0712',et:'oc',tipo:'Calibración',f:'2026-08-05',tec:'Por asignar',hall:'Recalibración anual programada antes del vencimiento.',partes:[]}
 ];
-const ETAPAS=[['solicitada','Solicitada'],['programada','Programada'],['taller','En taller'],['certificada','Cerrada / certificada']];
+/* El camino de una válvula, con los nombres que usa Adolphus:
+   la OC del cliente entra, la válvula llega al taller, un ingeniero
+   la toma para mantenerla, y se finaliza con el ensayo. */
+const ETAPAS=[['oc','OC recibida'],['taller','En taller'],['mant','En mantenimiento'],['final','Finalizado']];
 const DOCS=[
  {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
  {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
@@ -2791,7 +2833,7 @@ const FLUJO=[
  {k:'revision',n:'En revisión',  r:'Adolphus · Ingeniería', sig:'Verificar compatibilidad con el equipo'},
  {k:'cotizada',n:'Cotizada',     r:'Cliente',               sig:'Aprobar o rechazar la cotización', cli:true},
  {k:'aprobada',n:'Aprobada',     r:'Adolphus · Comercial',  sig:'Reservar repuestos y programar la visita'},
- {k:'programada',n:'Programada', r:'Adolphus · Servicio',   sig:'Ejecutar el trabajo en la fecha acordada'},
+ {k:'taller',n:'Programada', r:'Adolphus · Servicio',   sig:'Ejecutar el trabajo en la fecha acordada'},
  {k:'ejecucion',n:'En ejecución',r:'Adolphus · Servicio',   sig:'Cerrar la orden y emitir el certificado'},
  {k:'cerrada', n:'Cerrada',      r:'—',                     sig:'Sin pendientes'}
 ];
@@ -2826,7 +2868,7 @@ const sncEst=k=>SNC_EST.find(e=>e[0]===k)||SNC_EST[0];
 const QUIEN=[
  ['cliente',  'El cliente al devolver la válvula'],
  ['recepcion','Adolphus, al recibirla'],
- ['taller',   'Adolphus, en el taller'],
+ ['mant',   'Adolphus, en el taller'],
  ['campo',    'Adolphus, en campo'],
  ['fabricante','El fabricante']
 ];
@@ -2834,7 +2876,7 @@ const QUIEN=[
 const AREAS=[
  ['calidad',   'Calidad',                'admin'],
  ['ingenieria','Ingeniería',             'admin'],
- ['taller',    'Servicio técnico · taller','tec'],
+ ['mant',    'Servicio técnico · taller','tec'],
  ['campo',     'Servicio técnico · campo', 'tec'],
  ['almacen',   'Almacén',                'tec'],
  ['compras',   'Compras e importaciones','com'],
@@ -2846,7 +2888,7 @@ const areaDe=k=>AREAS.find(a=>a[0]===k)||AREAS[0];
 let RECLAMOS=[
  {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',enviado:'2026-06-13',
   det:'Posicionador con deriva de señal tras el arranque de la unidad de vacío.',
-  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',area:'taller',
+  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',area:'mant',
   hall:'La válvula no alcanzaba el 100 % de apertura con señal de 20 mA. Deriva de 6 % respecto al lazo.',
   doma:'DOM-41005-3',
   accInm:'Recalibrar el lazo en sitio y dejar la válvula en control manual hasta el cambio del posicionador.',
@@ -2952,7 +2994,7 @@ function salud(a){
   const corr=ords.filter(o=>o.tipo==='Correctivo'&&(-(dias(o.f)||0))<=365).length;
   if(corr>=2) baja(12,`${corr} correctivos en los últimos 12 meses`,'hist');
   else if(corr===1) baja(5,'Un correctivo en los últimos 12 meses','hist');
-  if(ords.some(o=>o.et!=='certificada')) baja(4,'Tiene un trabajo abierto sin cerrar','hist');
+  if(ords.some(o=>o.et!=='final')) baja(4,'Tiene un trabajo abierto sin cerrar','hist');
 
   if(!a.ser) baja(10,'Sin número de serie: no hay trazabilidad','ficha');
   if(!a.tag) baja(5,'Sin tag de planta','ficha');
@@ -2988,8 +3030,8 @@ const famNombre=k=>(FAM.find(f=>f.k===k)||{}).n||CL[k]||k;
 const famLeyenda=()=>`<div class="famleg">${FAM.map(f=>`<span><i style="background:var(--${f.c})"></i>${esc(CL[f.k])}</span>`).join('')}</div>`;
 function estado(a){
   if(!a.ser||!a.tag) return {k:'incompleto',t:'Ficha incompleta',c:'due'};
-  const o=ORDENES.find(o=>o.act===a.id&&o.et!=='certificada');
-  if(o) return {k:'taller',t:o.et==='taller'?'En taller':'Trabajo abierto',c:'sel'};
+  const o=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
+  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='taller'?'En taller':'Trabajo abierto',c:'sel'};
   const d=a.prox?dias(a.prox):null;
   if(d!==null&&d<0) return {k:'vencido',t:'Calibración vencida',c:'late'};
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
@@ -3196,7 +3238,7 @@ document.addEventListener('keydown',e=>{
 const VISTAS=[
  {id:'todos',n:'Todos',f:()=>true},
  {id:'criticos',n:'Críticos',f:a=>a.cr==='Crítica'},
- {id:'atencion',n:'Requieren atención',f:a=>['vencido','porvencer','taller','incompleto'].includes(estado(a).k)},
+ {id:'atencion',n:'Requieren atención',f:a=>['vencido','porvencer','mant','incompleto'].includes(estado(a).k)},
  {id:'seguridad',n:'Seguridad',f:a=>a.cl==='seguridad'},
  {id:'incompletos',n:'Sin serie',f:a=>!a.ser}
 ];
@@ -3219,7 +3261,7 @@ function renderStats(){
   const n=k=>vs.filter(a=>estado(a).k===k).length;
   const defs=[
    {v:'todos',lbl:'Activos totales',val:vs.length,c:''},
-   {v:'atencion',lbl:'Requieren atención',val:n('vencido')+n('porvencer')+n('taller')+n('incompleto'),c:'due'},
+   {v:'atencion',lbl:'Requieren atención',val:n('vencido')+n('porvencer')+n('mant')+n('incompleto'),c:'due'},
    {v:'seguridad',lbl:'Calibración vencida',val:n('vencido'),c:'late'},
    {v:'todos',lbl:'Operativos',val:n('ok'),c:'ok'}
   ];
@@ -3317,7 +3359,7 @@ function buscarCli(v){S.qCli=v;renderClients()}
 function soloPend(){S.cliPend=!S.cliPend;renderClients()}
 function renderClients(){
   const todos=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
-  const pend=c=>ACTIVOS.filter(a=>a.cli===c.id&&['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
+  const pend=c=>ACTIVOS.filter(a=>a.cli===c.id&&['vencido','mant','porvencer','incompleto'].includes(estado(a).k)).length;
   const q=(S.qCli||'').trim().toLowerCase();
   const list=todos.filter(c=>{
     if(S.cliPend&&!pend(c))return false;
@@ -3353,7 +3395,7 @@ function renderClients(){
       <b>Ninguna empresa coincide</b>Prueba con otro nombre o quita el filtro.</div>`}
    <div class="cl-grid">${list.map(c=>{
      const eq=ACTIVOS.filter(a=>a.cli===c.id);
-     const atn=eq.filter(a=>['vencido','taller','porvencer','incompleto'].includes(estado(a).k)).length;
+     const atn=eq.filter(a=>['vencido','mant','porvencer','incompleto'].includes(estado(a).k)).length;
      const venc=eq.filter(a=>a.prox&&dias(a.prox)<0).length;
      /* reclamos que esperan algo de Adolphus: por revisar o sin cerrar */
      const rec=RECLAMOS.filter(r=>r.cli===c.id&&!['cerrado','rechazado'].includes(r.est)).length;
@@ -3460,7 +3502,7 @@ function verEquipo(id){
 }
 /* Detalle de una orden, también encima. */
 function verOrden(idOrAct,esActivo){
-  const o=esActivo?ORDENES.find(x=>x.act===idOrAct&&x.et!=='certificada'):ORDENES.find(x=>x.id===idOrAct);
+  const o=esActivo?ORDENES.find(x=>x.act===idOrAct&&x.et!=='final'):ORDENES.find(x=>x.id===idOrAct);
   if(!o){toast('Esa orden ya no está abierta');return}
   const a=ACTIVOS.find(x=>x.id===o.act)||{}, i=ETAPAS.findIndex(e=>e[0]===o.et), sig=ETAPAS[i+1];
   $('#mTitle').textContent=`${o.n} · ${esc(a.tag||'')}`;
@@ -3510,7 +3552,7 @@ function renderCliBar(){
   const n={assets:eq.length,
     parts:0,imp:0, /* sin contador */
     cal:eq.filter(a=>a.prox).length,
-    wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='certificada'}).length,
+    wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='final'}).length,
     req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
   $('#cbTabs').innerHTML=CLI_TABS.map(([p,l])=>
     `<a class="${S.page===p?'on':''}" onclick="go('${p}')">${l}${n[p]?`<span class="n">${n[p]}</span>`:''}</a>`).join('');
@@ -3671,14 +3713,14 @@ document.addEventListener('keydown',e=>{
 function paneFicha(){
   const a=S.cur,m=MODELOS[a.mod]||{};
   const row=(k,v)=>`<dt>${k}</dt><dd class="${v?'':'na'}">${v?esc(v):'por completar'}</dd>`;
-  const abiertas=ORDENES.filter(o=>o.act===a.id&&o.et!=='certificada');
+  const abiertas=ORDENES.filter(o=>o.act===a.id&&o.et!=='final');
   const st=estado(a);
   const d=a.prox?dias(a.prox):null;
   const calV=a.prox?(d<0?`Vencida`:`En ${d} d`):'No aplica';
   const calC=a.prox?(d<0?'late':d<=90?'due':'ok'):'';
   const calSub=a.prox?a.prox:'Sin programa';
   const crC=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
-  const ultOrd=ORDENES.filter(o=>o.act===a.id&&o.et==='certificada').sort((x,y)=>y.f.localeCompare(x.f))[0];
+  const ultOrd=ORDENES.filter(o=>o.act===a.id&&o.et==='final').sort((x,y)=>y.f.localeCompare(x.f))[0];
   const ultTec=ultOrd?ultOrd.tec:'';
   const tile=(k,v,c,sub)=>`<div class="fx-tile"><span class="fx-k">${k}</span><span class="fx-v" style="${c?`color:var(--${c})`:''}">${c?'<span class="dot"></span>':''}${esc(v)}</span>${sub?`<span class="fx-sub">${esc(sub)}</span>`:''}</div>`;
   // datos clave (solo los que están llenos)
@@ -3708,12 +3750,12 @@ function paneFicha(){
    necesite. */
 function queToca(a){
   const e=estado(a), d=a.prox?dias(a.prox):null, cliente=S.rol==='cliente';
-  const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
+  const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final');
   let t,txt,ac=null;
   if(e.k==='incompleto'){t='due';
     txt=`Falta ${!a.tag?'el tag de planta':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'el número de serie':''}. Sin serie no se puede pedir el repuesto correcto.`;
     if(!cliente)ac={t:'Completar la ficha',f:`showTab('tec')`};}
-  else if(e.k==='taller'){t='sel';
+  else if(e.k==='mant'){t='sel';
     txt=`Está en servicio: orden ${o.n}, etapa ${ETAPAS.find(x=>x[0]===o.et)[1].toLowerCase()}.`;
     ac={t:'Ver la orden',f:`verOrden('${o.id}')`};}
   else if(e.k==='vencido'){t='late';
@@ -3774,7 +3816,7 @@ function fichaMovimientos(a){
     `<div class="fx-mov">${os.map(o=>`<div class="fx-mov-i" onclick="showTab('hist')">
        <span class="f mono">${esc(o.f)}</span>
        <span class="t"><b>${esc(o.n)}</b><small>${esc(o.tipo)} · ${esc(o.tec)}</small></span>
-       <span class="tag ${o.et==='certificada'?'ok':'sel'}">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
+       <span class="tag ${o.et==='final'?'ok':'sel'}">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
      </div>`).join('')}</div>`);
 }
 
@@ -3914,7 +3956,7 @@ function paneHist(){
   $('#pn-hist').innerHTML=bar+(os.length?`<div class="tl">${os.map(o=>`
     <div class="tl-i ${o.tipo==='Preventivo'?'pv':o.tipo==='Correctivo'?'cor':'cal'}">
       <div class="tl-m"><span>${o.f}</span><span>·</span><span>${o.n}</span><span class="tag">${o.tipo}</span>
-        ${o.et!=='certificada'?`<span class="tag sel">${ETAPAS.find(e=>e[0]===o.et)[1]}</span>`:''}</div>
+        ${o.et!=='final'?`<span class="tag sel">${ETAPAS.find(e=>e[0]===o.et)[1]}</span>`:''}</div>
       <div class="tl-t">${esc(o.tec)}</div><div class="tl-x">${esc(o.hall)}</div>
       ${o.partes.length?`<div class="parts-inline">${o.partes.map(p=>`<span class="tag mono">${p}</span>`).join('')}</div>`:''}
       ${o.calib?`<div style="margin-top:7px"><button class="btn sec xs" onclick="showCalibReport(CALIBS.find(c=>c.id==='${o.calib}'))">Ver certificado</button></div>`:''}
@@ -6089,8 +6131,376 @@ function renderCal(){
 /* ============================================================
    8 · ÓRDENES DE TRABAJO (kanban)
    ============================================================ */
-const WO_NEXT={solicitada:['programada','Programar'],programada:['taller','Ingresar a taller'],taller:['certificada','Registrar y cerrar']};
+const WO_NEXT={oc:['taller','Ingresar a taller'],taller:['mant','Empezar el mantenimiento'],mant:['final','Registrar y finalizar']};
+/* ============================================================
+   8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
+   ------------------------------------------------------------
+   El cliente manda una orden de compra o de servicio con varias
+   válvulas. Eso es un proyecto: se abre una vez, y de él cuelga una
+   orden por válvula con su propio código MAT correlativo.
+   El código MAT es lo que el ingeniero escribe en el papel y lo que
+   busca después; el número de OC es lo que reconoce el cliente. Los
+   dos van juntos en cada tarjeta.
+   ============================================================ */
+let PROYECTOS=[];
+/* Correlativo global. Se mira lo que ya existe en vez de contar
+   registros: si se borra una orden, el número no se reutiliza. */
+function nuevoMAT(){
+  let n=0;
+  ORDENES.forEach(o=>{const m=/^MAT-(\d+)$/.exec(String(o.mat||''));if(m)n=Math.max(n,+m[1])});
+  return 'MAT-'+String(n+1).padStart(3,'0');
+}
+const pry=id=>PROYECTOS.find(p=>p.id===id)||null;
+const ordenesDe=id=>ORDENES.filter(o=>o.pry===id);
+/* El avance de un proyecto es cuántas válvulas están finalizadas.
+   No se pondera por etapa: una válvula a medio mantener no es media
+   válvula entregada, y redondear hacia arriba engaña al cliente. */
+function avanceProyecto(id){
+  const os=ordenesDe(id), total=os.length;
+  const fin=os.filter(o=>o.et==='final').length;
+  const cuenta={}; ETAPAS.forEach(([k])=>cuenta[k]=os.filter(o=>o.et===k).length);
+  return {total,fin,pct:total?Math.round(fin*100/total):0,cuenta,
+    conCert:os.filter(o=>o.calib).length, ordenes:os};
+}
+/* ── Abrir la OC ── */
+function openProyecto(){
+  if(S.rol==='cliente'){toast('Las órdenes de servicio las abre Adolphus');return}
+  const foco=S.inCli||S.cli||S.woCli||S.fCli||(CLIENTES[0]||{}).id;
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${c.id===foco?'selected':''}>${esc(c.n)}</option>`).join('');
+  $('#mTitle').textContent='Nueva OC · orden de servicio del cliente';
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Elige las válvulas que entran en esta OC. Se crea <b>una orden por válvula</b>, cada una con su
+       código <b>MAT</b> correlativo, todas en <b>OC recibida</b>. El avance del proyecto se calcula solo.</div></div>
+   <div class="two">
+     <div class="fld"><label for="pyCli">Cliente</label><select class="inp" id="pyCli" onchange="pintarPryValvulas()">${cOpts}</select></div>
+     <div class="fld"><label for="pyOC">N.º de OC / orden de servicio <span class="opc">el del cliente</span></label>
+       <input class="inp mono" id="pyOC" placeholder="OC-4500231889"></div>
+     <div class="fld"><label for="pyFec">Fecha de recepción</label><input class="inp" id="pyFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+     <div class="fld"><label for="pyTipo">Tipo de trabajo</label><select class="inp" id="pyTipo">
+       ${['Calibración','Preventivo','Correctivo','Inspección','Overhaul'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+   </div>
+   <div class="fld"><label for="pyDesc">Descripción / alcance</label>
+     <textarea class="inp" id="pyDesc" rows="2" placeholder="Qué pide el cliente en esta orden."></textarea></div>
+   <h4 class="snc-sec">Válvulas de esta OC <span class="opc" id="pyCuenta"></span></h4>
+   <div id="pyLista" class="py-lista"></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarProyecto()">Abrir la OC</button>`;
+  pintarPryValvulas();
+  $('#modal').classList.add('on');
+}
+function pintarPryValvulas(){
+  const c=$('#pyCli').value, box=$('#pyLista'); if(!box)return;
+  const libres=ACTIVOS.filter(a=>a.cli===c);
+  box.innerHTML=libres.length?libres.map(a=>{
+    const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
+    return `<label class="py-it ${abierta?'ya':''}">
+      <input type="checkbox" class="pyChk" value="${a.id}" ${abierta?'disabled':''} onchange="pryCuenta()">
+      <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+      <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(area(a)||'')}</span>
+      ${abierta?`<span class="tag sel">ya está en ${esc(abierta.mat||abierta.n)}</span>`:''}</label>`;
+  }).join(''):'<div class="empty" style="padding:20px"><b>Este cliente no tiene válvulas cargadas</b>Cárgalas primero desde Importar o con «Nueva válvula».</div>';
+  pryCuenta();
+}
+function pryCuenta(){
+  const n=document.querySelectorAll('.pyChk:checked').length, e=$('#pyCuenta');
+  if(e)e.textContent=n?`${n} seleccionada${n>1?'s':''}`:'ninguna seleccionada todavía';
+}
+function guardarProyecto(){
+  const cliId=$('#pyCli').value;
+  const oc=$('#pyOC').value.trim();
+  const sel=[...document.querySelectorAll('.pyChk:checked')].map(x=>x.value);
+  if(!oc){toast('Escribe el número de OC del cliente');return}
+  if(!sel.length){toast('Elige al menos una válvula');return}
+  const id='py'+Date.now();
+  const tipo=$('#pyTipo').value, fec=$('#pyFec').value||HOY.toISOString().slice(0,10);
+  PROYECTOS.unshift({id,oc,cli:cliId,f:fec,tipo,desc:$('#pyDesc').value.trim()});
+  /* Una orden por válvula, cada una con su MAT. El correlativo se
+     recalcula en cada vuelta para que no se repita dentro del lote. */
+  sel.forEach(actId=>{
+    ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
+      act:actId, pry:id, oc, mat:nuevoMAT(),
+      n:nuevoMAT(), et:'oc', tipo, f:fec, tec:'Por asignar',
+      hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
+  });
+  closeModal(); renderAll(); go('wo');
+  registrar('OC',`${oc} abierta con ${sel.length} válvula${sel.length>1?'s':''}`);
+  toast(`OC ${oc} abierta · ${sel.length} orden${sel.length>1?'es':''} creada${sel.length>1?'s':''}`);
+}
+/* ── El ingeniero toma la válvula ──
+   "Cada ingeniero pone su nombre al hacer el mantenimiento": sin
+   nombre no se avanza, porque el sentido de esta etapa es saber
+   quién la tiene y desde cuándo. */
+const LS_ING='adolphus.ingeniero';
+function tomarOrden(id){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  if(S.rol==='cliente'){toast('El mantenimiento lo ejecuta Adolphus');return}
+  const a=ACTIVOS.find(x=>x.id===o.act)||{};
+  let yo=''; try{yo=localStorage.getItem(LS_ING)||''}catch(e){}
+  $('#mTitle').textContent=`Tomar ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+     <div>Vas a hacerte cargo de <b>${esc(a.tag||a.ser||'')}</b> — ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}
+       de <b>${esc(cli(a.cli).n||'')}</b>${o.oc?`, OC <b class="mono">${esc(o.oc)}</b>`:''}.
+       Tu nombre queda en la tarjeta para que el resto del taller sepa que ya está tomada.</div></div>
+   <div class="two">
+     <div class="fld"><label for="toIng">Tu nombre <span class="req-dot">*</span></label>
+       <input class="inp" id="toIng" value="${esc(yo)}" placeholder="p. ej. K. Ortiz" autocomplete="name"></div>
+     <div class="fld"><label for="toFec">Fecha de inicio</label>
+       <input class="inp" id="toFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="confirmarTomar('${id}')">Tomar el trabajo</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>{const el=$('#toIng');if(el)el.focus()},80);
+}
+function confirmarTomar(id){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const ing=$('#toIng').value.trim();
+  if(!ing){toast('Escribe tu nombre: es lo que dice quién la tiene');return}
+  try{localStorage.setItem(LS_ING,ing)}catch(e){}
+  o.ing=ing; o.tec=ing; o.tomada=$('#toFec').value||HOY.toISOString().slice(0,10);
+  o.et='mant';
+  closeModal(); renderAll();
+  registrar('Orden',`${o.mat||o.n} tomada por ${ing}`);
+  toast(`${o.mat||o.n} es tuya · registra el ensayo cuando termines`);
+}
+/* ── El panel de avance ──
+   Lo que el gerente y el taller miran para saber por dónde va cada
+   OC sin abrir nada. */
+function renderProyectos(){
+  const box=$('#pryPanel'); if(!box)return;
+  const foco=S.cli||S.inCli||S.woCli||'';
+  const list=PROYECTOS.filter(p=>!foco||p.cli===foco);
+  if(!list.length){box.innerHTML='';return}
+  box.innerHTML=`<div class="py-wrap">${list.map(p=>{
+    const v=avanceProyecto(p.id), c=cli(p.cli)||{};
+    const tono=v.pct===100?'ok':v.pct?'sel':'ink-3';
+    return `<article class="py-card ${v.pct===100?'listo':''}">
+      <div class="py-h">
+        <div><b class="mono">${esc(p.oc)}</b><span>${esc(c.n||'')} · ${esc(p.tipo||'')} · ${fPE(p.f)}</span></div>
+        <span class="py-pct" style="color:var(--${tono})">${v.pct}%</span>
+      </div>
+      <div class="py-bar"><i style="width:${v.pct}%;background:var(--${tono==='ink-3'?'line':tono})"></i></div>
+      <div class="py-nums">
+        <span><b>${v.fin}</b>/${v.total} finalizadas</span>
+        ${ETAPAS.filter(([k])=>k!=='final'&&v.cuenta[k]).map(([k,l])=>`<span>${v.cuenta[k]} ${l.toLowerCase()}</span>`).join('')}
+      </div>
+      <div class="py-acc">
+        <button class="btn quiet xs" onclick="informeProyecto('${p.id}')">Ver el informe</button>
+        ${v.pct===100?'<span class="tag ok"><span class="dot"></span>Lista para entregar</span>':''}
+      </div></article>`;
+  }).join('')}</div>`;
+}
+
+/* ── Hoja 3 · el informe del proyecto ────────────────────────
+   Lo que se le manda al cliente cuando la OC termina, y lo que el
+   gerente mira mientras avanza. Sale entero de lo que el taller ya
+   registró: nadie transcribe nada.
+   Tres formatos porque sirven para tres cosas distintas: PDF para
+   firmar y archivar, Excel para que el cliente cruce los datos con
+   los suyos, Word para que su gente lo edite antes de subirlo a su
+   propio sistema. */
+function filasInforme(id){
+  return ordenesDe(id).map(o=>{
+    const a=ACTIVOS.find(x=>x.id===o.act)||{};
+    const c=o.calib?CALIBS.find(x=>x.id===o.calib):null;
+    /* Dos vocabularios conviven: el ensayo PSV dice aprobado /
+       rechazado y la calibración clásica dice Conforme, Conforme con
+       ajuste o No conforme. Para contar y para el semáforo hace falta
+       una sola respuesta; el texto original se conserva aparte. */
+    const bruto=c?(c.veredicto||c.verdict||''):'';
+    const res=/^(aprobado|conforme)/i.test(bruto)&&!/^no conforme/i.test(bruto)?'APROBADO'
+             :/^(rechazado|no conforme)/i.test(bruto)?'RECHAZADO':'';
+    return {mat:o.mat||o.n, tag:a.tag||a.ser||'', ser:a.ser||'',
+      modelo:`${(MODELOS[a.mod]||{}).m||''} ${a.mod||''}`.trim(),
+      area:area(a)||'', etapa:(ETAPAS.find(e=>e[0]===o.et)||['','—'])[1],
+      ing:o.ing||o.tec||'', fecha:o.f||'',
+      resultado:res||'—', dice:bruto||'—',
+      cert:c?(c.cert||'AXAD-088'):'—',
+      obs:c&&c.coment?c.coment:(o.hall||'')};
+  });
+}
+function informeProyecto(id){
+  const p=pry(id); if(!p){toast('No encuentro esa OC');return}
+  const v=avanceProyecto(id), c=cli(p.cli)||{}, filas=filasInforme(id);
+  const tono=v.pct===100?'ok':v.pct?'sel':'ink-3';
+  $('#mTitle').textContent=`Informe · OC ${p.oc}`;
+  $('#mBody').innerHTML=`
+   <div class="inf-tope">
+     <div><span>Avance del proyecto</span><b style="color:var(--${tono})">${v.pct}%</b>
+       <span>${v.fin} de ${v.total} válvulas finalizadas</span></div>
+     <div class="py-bar" style="flex:1;min-width:160px"><i style="width:${v.pct}%;background:var(--${tono==='ink-3'?'line':tono})"></i></div>
+   </div>
+   <div class="dt" style="margin-top:14px">
+     <div class="dt-i"><span>Cliente</span><b>${esc(c.n||'')}</b></div>
+     <div class="dt-i"><span>OC / orden de servicio</span><b class="mono">${esc(p.oc)}</b></div>
+     <div class="dt-i"><span>Tipo de trabajo</span><b>${esc(p.tipo||'')}</b></div>
+     <div class="dt-i"><span>Recepción</span><b>${fPE(p.f)}</b></div>
+     <div class="dt-i"><span>Certificados emitidos</span><b>${v.conCert} de ${v.total}</b></div>
+     <div class="dt-i"><span>Estado</span><b style="color:var(--${tono})">${v.pct===100?'Lista para entregar':'En proceso'}</b></div>
+   </div>
+   ${p.desc?`<p class="dt-nota">${esc(p.desc)}</p>`:''}
+   <div class="grid-scroll" style="max-height:320px;margin-top:12px;border:1px solid var(--line-2);border-radius:var(--r-2)">
+    <table class="grid"><thead><tr><th>MAT</th><th>Válvula</th><th>Etapa</th><th>Ingeniero</th><th>Resultado</th></tr></thead>
+    <tbody>${filas.map(f=>`<tr style="cursor:default">
+      <td class="mono"><b>${esc(f.mat)}</b></td>
+      <td><div class="cell-2"><span>${esc(f.tag)}</span><small>${esc(f.modelo)}</small></div></td>
+      <td><span class="tag ${f.etapa==='Finalizado'?'ok':'sel'}">${esc(f.etapa)}</span></td>
+      <td>${esc(f.ing)||'<span class="muted">sin asignar</span>'}</td>
+      <td>${f.resultado==='APROBADO'?`<span class="tag ok"><span class="dot"></span>${esc(f.dice)}</span>`
+        :f.resultado==='RECHAZADO'?`<span class="tag late"><span class="dot"></span>${esc(f.dice)}</span>`
+        :`<span class="muted">${esc(f.dice)}</span>`}</td></tr>`).join('')}</tbody></table></div>
+   ${v.pct<100?`<div class="callout" style="margin-top:12px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>El proyecto todavía no está completo. El informe se puede descargar igual —sirve para reportar el avance—, pero
+       queda marcado como <b>parcial</b> hasta que las ${v.total} válvulas estén finalizadas.</div></div>`:''}`;
+  $('#mFoot').innerHTML=`
+    <button class="btn sec" onclick="informeExcel('${id}')" title="Para que el cliente cruce los datos">Excel</button>
+    <button class="btn sec" onclick="informeWord('${id}')" title="Para editarlo antes de enviarlo">Word</button>
+    <button class="btn" onclick="informePDF('${id}')" title="Para firmar y archivar">PDF</button>`;
+  $('#modal').classList.add('on');
+}
+/* El cuerpo del documento, compartido por el PDF y el Word: si se
+   escribieran dos veces acabarían diciendo cosas distintas. */
+function informeHTML(id){
+  const p=pry(id), v=avanceProyecto(id), c=cli(p.cli)||{}, filas=filasInforme(id);
+  const hoyS=HOY.toISOString().slice(0,10);
+  const aprob=filas.filter(f=>f.resultado==='APROBADO').length;
+  const rech=filas.filter(f=>f.resultado==='RECHAZADO').length;
+  return `
+   <div class="cab">${LOGO.replace('<svg ','<svg width="26" height="32" ')}
+     <div><h1>Informe de servicio</h1>
+       <div class="sub">${esc(c.n||'')}${c.ruc?' · RUC '+esc(c.ruc):''} — OC ${esc(p.oc)}</div></div>
+     <div class="cod">Adolphus S.A. · Control de fluidos<br>DVAD-SER-002<br>Emitido el ${fPE(hoyS)}</div>
+   </div>
+   ${v.pct<100?`<div class="parcial">INFORME PARCIAL — ${v.fin} de ${v.total} válvulas finalizadas (${v.pct}%)</div>`:''}
+   <table class="meta"><tr>
+     <td><span>Tipo de trabajo</span><b>${esc(p.tipo||'')}</b></td>
+     <td><span>Recepción</span><b>${fPE(p.f)}</b></td>
+     <td><span>Válvulas</span><b>${v.total}</b></td>
+     <td><span>Avance</span><b>${v.pct}%</b></td>
+     <td><span>Aprobadas</span><b>${aprob}</b></td>
+     <td><span>Rechazadas</span><b>${rech}</b></td>
+   </tr></table>
+   ${p.desc?`<p class="alc"><b>Alcance:</b> ${esc(p.desc)}</p>`:''}
+   <h2>Detalle por válvula</h2>
+   <table class="det"><thead><tr>
+     <th>MAT</th><th>Tag</th><th>N.º de serie</th><th>Marca y modelo</th><th>Área</th>
+     <th>Ingeniero</th><th>Fecha</th><th>Etapa</th><th>Resultado</th><th>Certificado</th></tr></thead><tbody>
+   ${filas.map(f=>`<tr>
+     <td class="mono"><b>${esc(f.mat)}</b></td><td class="mono">${esc(f.tag)}</td>
+     <td class="mono">${esc(f.ser)||'—'}</td><td>${esc(f.modelo)}</td><td>${esc(f.area)}</td>
+     <td>${esc(f.ing)||'—'}</td><td class="mono">${f.fecha?fPE(f.fecha):'—'}</td>
+     <td>${esc(f.etapa)}</td>
+     <td class="${f.resultado==='APROBADO'?'ok':f.resultado==='RECHAZADO'?'no':''}">${esc(f.dice)}</td>
+     <td class="mono">${esc(f.cert)}</td></tr>`).join('')}
+   </tbody></table>
+   ${filas.some(f=>f.obs)?`<h2>Observaciones</h2><ul class="obs">
+     ${filas.filter(f=>f.obs).map(f=>`<li><b>${esc(f.mat)} · ${esc(f.tag)}:</b> ${esc(f.obs)}</li>`).join('')}</ul>`:''}
+   <div class="pie">Los resultados provienen de los ensayos registrados en el portal por el personal de Adolphus,
+     con los certificados individuales que acompañan a este informe. El avance se calcula sobre válvulas finalizadas.</div>
+   <div class="firma"><div>Por Adolphus S.A. — nombre, cargo y fecha</div><div>Por ${esc(c.n||'')} — nombre, cargo y fecha</div></div>`;
+}
+const INFORME_CSS=`
+   *{box-sizing:border-box}
+   body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:22px}
+   .cab{display:flex;align-items:flex-start;gap:12px;border-bottom:3px solid #16306b;padding-bottom:9px}
+   h1{font-size:18px;margin:0 0 2px;letter-spacing:-.2px}
+   .sub{color:#5b6470;font-size:11px}
+   .cod{margin-left:auto;text-align:right;font-size:10px;color:#5b6470;line-height:1.6}
+   .parcial{margin:12px 0 0;padding:7px 10px;background:#fdf3e3;border:1px solid #e8cf9f;
+     font-size:11px;font-weight:700;color:#8a5b0a;letter-spacing:.3px}
+   table.meta{width:100%;border-collapse:collapse;margin:14px 0 6px}
+   table.meta td{border:1px solid #d7dbe0;padding:6px 8px;font-size:10.5px}
+   table.meta span{display:block;color:#5b6470;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px}
+   table.meta b{font-size:14px}
+   .alc{font-size:11px;color:#3d454f;margin:8px 0}
+   h2{font-size:12px;margin:16px 0 5px;color:#16306b;text-transform:uppercase;letter-spacing:.6px}
+   table.det{width:100%;border-collapse:collapse;font-size:10px}
+   table.det th,table.det td{border:1px solid #d7dbe0;padding:4px 5px;text-align:left;vertical-align:top}
+   table.det th{background:#f2f4f6;font-weight:600;white-space:nowrap}
+   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+   td.ok{color:#1a7f52;font-weight:700}
+   td.no{color:#c0392b;font-weight:700}
+   ul.obs{font-size:10.5px;line-height:1.7;padding-left:18px;margin:4px 0}
+   .pie{margin-top:16px;font-size:9.5px;color:#78818c;border-top:1px solid #d7dbe0;padding-top:8px;line-height:1.6}
+   .firma{margin-top:26px;display:flex;gap:44px}
+   .firma div{flex:1;border-top:1px solid #101418;padding-top:5px;font-size:10px;color:#5b6470}
+   @media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}`;
+function informePDF(id){
+  const p=pry(id); if(!p)return;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>Informe OC ${esc(p.oc)}</title><style>${INFORME_CSS}</style></head><body>${informeHTML(id)}</body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+}
+/* Word abre sin problema un HTML con extensión .doc. Es lo que hace
+   media industria y evita cargar una librería de 500 KB para generar
+   un .docx que el cliente sólo va a abrir y retocar. */
+function informeWord(id){
+  const p=pry(id); if(!p)return;
+  const html=`<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="utf-8"><title>Informe OC ${esc(p.oc)}</title>
+    <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+    <style>@page{size:A4 landscape;margin:1.4cm}${INFORME_CSS}</style></head><body>${informeHTML(id)}</body></html>`;
+  const blob=new Blob(['﻿',html],{type:'application/msword'});
+  const url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=`Informe OC ${p.oc} · ${(cli(p.cli)||{}).n||''}.doc`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast('Informe descargado en Word · se puede editar');
+}
+/* Descarga sin librerías: un CSV con punto y coma, que es lo que
+   espera el Excel en español, y con BOM para que no se coma los
+   acentos. Es la salida cuando XLSX no está disponible —el técnico
+   sin señal antes de la primera carga, o el CDN caído—: prefiero un
+   CSV que abre igual en Excel a un botón que no hace nada. */
+function bajarCSV(nombre,filas){
+  const esc=v=>{const s=String(v==null?'':v);
+    return /[";\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+  const txt='﻿'+filas.map(f=>f.map(esc).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([txt],{type:'text/csv;charset=utf-8'}));
+  const a=document.createElement('a'); a.href=url; a.download=nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function informeExcel(id){
+  const p=pry(id); if(!p)return;
+  const v=avanceProyecto(id), c=cli(p.cli)||{}, filas=filasInforme(id);
+  const cab=['MAT','Tag','N.º de serie','Marca y modelo','Área','Ingeniero','Fecha','Etapa','Resultado','Certificado','Observaciones'];
+  const cuerpo=filas.map(f=>[f.mat,f.tag,f.ser,f.modelo,f.area,f.ing,f.fecha,f.etapa,f.dice,f.cert,f.obs]);
+  const resumen=[
+    ['Informe de servicio · DVAD-SER-002'],
+    ['Cliente',c.n||''],['RUC',c.ruc||''],['OC / orden de servicio',p.oc],
+    ['Tipo de trabajo',p.tipo||''],['Recepción',p.f||''],['Alcance',p.desc||''],
+    [],
+    ['Válvulas',v.total],['Finalizadas',v.fin],['Avance %',v.pct],
+    ['Aprobadas',filas.filter(f=>f.resultado==='APROBADO').length],
+    ['Rechazadas',filas.filter(f=>f.resultado==='RECHAZADO').length],
+    ['Certificados emitidos',v.conCert],
+    ['Estado',v.pct===100?'Lista para entregar':'En proceso'],
+    ['Emitido el',HOY.toISOString().slice(0,10)]
+  ];
+  if(typeof XLSX==='undefined'){
+    bajarCSV(`Informe OC ${p.oc} · ${c.n||''}.csv`,[...resumen,[],cab,...cuerpo]);
+    toast('Descargado en CSV · se abre en Excel igual (la librería no estaba disponible)');
+    return;
+  }
+  try{
+    const wb=XLSX.utils.book_new();
+    const ws1=XLSX.utils.aoa_to_sheet(resumen); ws1['!cols']=[{wch:26},{wch:44}];
+    XLSX.utils.book_append_sheet(wb,ws1,'Resumen');
+    const ws2=XLSX.utils.aoa_to_sheet([cab,...cuerpo]);
+    ws2['!cols']=cab.map((h,i)=>({wch:i===10?50:Math.max(11,h.length+4)}));
+    XLSX.utils.book_append_sheet(wb,ws2,'Detalle');
+    XLSX.writeFile(wb,`Informe OC ${p.oc} · ${c.n||''}.xlsx`);
+    toast('Informe descargado en Excel');
+  }catch(e){toast('No se pudo generar el Excel: '+e.message)}
+}
+
 function renderWO(){
+  renderProyectos();
   const sel=$('#woCli');
   if(sel&&!sel.dataset.built){
     sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
@@ -6099,17 +6509,20 @@ function renderWO(){
   if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.woCli||''}
   const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
     return (!S.cli||a?.cli===S.cli)&&(!S.woCli||a?.cli===S.woCli)});
-  $('#ctWo').textContent=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return (!S.cli||a?.cli===S.cli)&&o.et!=='certificada'}).length||'';
+  $('#ctWo').textContent=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return (!S.cli||a?.cli===S.cli)&&o.et!=='final'}).length||'';
   $('#kanban').innerHTML=ETAPAS.map(([k,l])=>{
     const cs=mias.filter(o=>o.et===k);
     return `<div class="kb-col" data-et="${k}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropWO(event,'${k}')">
-      <div class="kb-h"><span class="dot" style="color:var(--${k==='certificada'?'ok':k==='taller'?'sel':k==='programada'?'due':'ink-3'})"></span>${l}<span class="n">${cs.length}</span></div>
+      <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':k==='mant'?'sel':k==='taller'?'due':'ink-3'})"></span>${l}<span class="n">${cs.length}</span></div>
       <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act),nx=WO_NEXT[o.et];return `
         <article class="wo" draggable="true" ondragstart="dragWO(event,'${o.id}')" ondragend="this.classList.remove('drag')">
-          <div class="wo-t" onclick="openAsset('${o.act}');showTab('hist')"><b class="mono">${o.n}</b><span class="tag">${o.tipo}</span></div>
-          <div class="wo-n" onclick="openAsset('${o.act}');showTab('hist')">${esc(a?.tag||'—')}</div>
+          <div class="wo-t" onclick="openAsset('${o.act}');showTab('hist')"><b class="mono">${esc(o.mat||o.n)}</b><span class="tag">${o.tipo}</span></div>
+          <div class="wo-n" onclick="openAsset('${o.act}');showTab('hist')">${esc(a?.tag||a?.ser||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
-          ${nx&&S.rol!=='cliente'?`<button class="btn ${o.et==='taller'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();advanceWO('${o.id}')">${nx[1]}</button>`:''}
+          ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
+          ${o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
+            :o.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
+          ${nx&&S.rol!=='cliente'?`<button class="btn ${o.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();advanceWO('${o.id}')">${nx[1]}</button>`:''}
           <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
@@ -6128,7 +6541,7 @@ let ORDEN_ACTIVA=null;    // la orden que el taller está ejecutando
    permite que el taller entre por la ficha del equipo —como trabaja
    de verdad— y aun así cierre la orden que le abrieron. */
 function ordenAbiertaDe(actId){
-  return ORDENES.find(o=>o.act===actId&&o.et!=='certificada'
+  return ORDENES.find(o=>o.act===actId&&o.et!=='final'
     &&/calibra/i.test(o.tipo||'')) || null;
 }
 /* Cierra la orden con el ensayo colgado. Devuelve la orden o null. */
@@ -6140,7 +6553,7 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
   const o=apuntada||ordenAbiertaDe(actId);
   ORDEN_ACTIVA=null;
   if(!o)return null;
-  o.et='certificada'; o.calib=calibId;
+  o.et='final'; o.calib=calibId;
   if(fecha)o.f=fecha;
   if(tec&&tec!=='Por asignar')o.tec=tec;
   if(resumen)o.hall=resumen;
@@ -6153,7 +6566,11 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
 function advanceWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
   const nx=WO_NEXT[o.et];if(!nx)return;
-  if(nx[0]==='certificada'){
+  /* Pasar a mantenimiento es hacerse cargo: se pide el nombre del
+     ingeniero antes de mover la tarjeta, que es el sentido de esta
+     etapa —saber quién la tiene y desde cuándo. */
+  if(nx[0]==='mant'){tomarOrden(id);return}
+  if(nx[0]==='final'){
     /* Una orden de calibración no se cierra con el parte genérico:
        se cierra con el ensayo. Si no, la válvula quedaba con la
        próxima calibración renovada un año SIN un solo certificado
@@ -6162,8 +6579,7 @@ function advanceWO(id){
     openCloseWO(id);return;
   }
   o.et=nx[0];
-  if(nx[0]==='taller')toast(`${o.n} ingresó a taller`);
-  else toast(`${o.n} programada para ${o.f}`);
+  toast(`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   renderAll();
 }
@@ -6177,7 +6593,7 @@ function registrarEnsayoDeOrden(id){
   if(!a){toast('La válvula de esta orden ya no existe');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
   ORDEN_ACTIVA=id;
-  if(o.et!=='taller'){o.et='taller';renderAll()}
+  if(o.et!=='mant'){o.et='mant';renderAll()}
   closeModal();
   toast(`${o.n} · registra el ensayo y la orden se cierra sola`);
   if(a.cl==='seguridad')openPSV(a.id); else openCalib(a.id);
@@ -6209,7 +6625,7 @@ function saveCloseWO(id){
   const a=ACTIVOS.find(x=>x.id===o.act);
   o.f=$('#cwFec').value||o.f;o.tec=$('#cwTec').value||o.tec;o.hall=$('#cwHall').value||o.hall;
   o.partes=Array.from(document.querySelectorAll('.cwP')).filter(c=>c.checked).map(c=>c.value);
-  o.et='certificada';
+  o.et='final';
   /* La vigencia sólo se renueva si hubo un ensayo. Un parte de
      mantenimiento cuenta como intervención —cambia "último
      servicio"— pero no certifica nada: si renovara la próxima
@@ -6227,7 +6643,8 @@ function dropWO(ev,et){
   ev.preventDefault();ev.currentTarget.classList.remove('over');
   const o=ORDENES.find(x=>x.id===dragId);if(!o)return;
   const prev=o.et;
-  if(et==='certificada'&&prev!=='certificada'){
+  if(et==='mant'&&prev!=='mant'&&!o.ing){tomarOrden(o.id);return}
+  if(et==='final'&&prev!=='final'){
     /* Arrastrar hasta el final no puede certificar por sí solo: antes
        cerraba la orden, ponía una fecha fija escrita a mano y renovaba
        la vigencia un año sin ningún ensayo. Se manda al formulario que
@@ -6261,7 +6678,7 @@ function openWO(actId,tipo){
   $('#modal').classList.add('on');
 }
 function saveWO(){
-  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'solicitada',tipo:$('#woTipo').value,
+  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'oc',tipo:$('#woTipo').value,
     f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
     partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
   closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
@@ -6967,7 +7384,7 @@ function confirmarCalibraciones(){
     CALIBS.unshift(rec);
     a.ult=i.fec;a.prox=prox;
     ORDENES.unshift({id:'o'+Date.now()+n,act:a.id,n:'AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length),
-      et:'certificada',tipo:'Calibración',f:i.fec,tec:i.tec,hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${i.verdict}.`,partes:[],calib:rec.id});
+      et:'final',tipo:'Calibración',f:i.fec,tec:i.tec,hall:`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${i.verdict}.`,partes:[],calib:rec.id});
     DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:i.fec,w:'420 KB',calib:rec.id});
     detalle.push(`· ${a.tag||a.ser}: ${i.af} → ${i.al} ${i.uni} · <b style="color:var(--${i.vtone})">${i.verdict}</b>`);
     ok++;
@@ -7247,7 +7664,7 @@ function gauge(pct,label){
    ============================================================ */
 const GRUPOS=[
  {k:'venc', n:'Vencidas',        tono:'late'},
- {k:'taller',n:'En taller',      tono:'sel'},
+ {k:'mant',n:'En taller',      tono:'sel'},
  {k:'prox', n:'Vencen pronto',   tono:'due'},
  {k:'ficha',n:'Ficha incompleta',tono:'due'},
  {k:'sol',  n:'Solicitudes',     tono:'sel'}
@@ -7263,9 +7680,9 @@ function colaTrabajo(){
       out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
         ac:cliente?null:{t:'Calibrar',f:`openCalib('${a.id}')`}});
-    else if(e.k==='taller'){
-      const o=ORDENES.find(x=>x.act===a.id&&x.et!=='certificada');
-      out.push({pr,p:2,g:'taller',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+    else if(e.k==='mant'){
+      const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final');
+      out.push({pr,p:2,g:'mant',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
         ac:{t:'Ver orden',f:`verOrden('${a.id}',1)`}});
     }
@@ -7439,7 +7856,7 @@ function renderHomeCliente(){
   const conProg=vs.filter(a=>a.prox).sort((x,y)=>x.prox.localeCompare(y.prox));
   const prox=conProg[0]?dias(conProg[0].prox):null;
   const sols=SOLICITUDES.filter(x=>x.cli===S.cli&&x.est!=='cerrada');
-  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='certificada'});
+  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.cli&&o.et!=='final'});
   const st=k=>vs.filter(a=>estado(a).k===k).length;
   const saludMedia=vs.length?Math.round(vs.reduce((t,a)=>t+salud(a).n,0)/vs.length):100;
 
@@ -7485,7 +7902,7 @@ function renderHomeCliente(){
 
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
-    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'sel'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
 
   /* Lo único urgente: lo más vencido, o lo que está en taller. */
@@ -7526,17 +7943,17 @@ function renderHomeCliente(){
 function renderHome(){
   if(S.rol==='cliente') return renderHomeCliente();
   const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
-  const total=vs.length,atn=st('vencido')+st('porvencer')+st('taller')+st('incompleto'),venc=st('vencido');
+  const total=vs.length,atn=st('vencido')+st('porvencer')+st('mant')+st('incompleto'),venc=st('vencido');
   const marcas=new Set(vs.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
-  const enTaller=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).length;
-  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et!=='certificada'&&(!S.cli||a?.cli===S.cli)}).length;
+  const enTaller=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='mant'&&(!S.cli||a?.cli===S.cli)}).length;
+  const ordAb=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et!=='final'&&(!S.cli||a?.cli===S.cli)}).length;
   const conProg=vs.filter(a=>a.prox);
   const cumpl=conProg.length?Math.round(conProg.filter(a=>dias(a.prox)>=0).length/conProg.length*100):100;
   // Fila superior: una tarjeta grande por familia, con la foto real del equipo.
   // El número es el parque de esa familia; debajo, cuántas piden atención.
   const famHtml=`<div class="fams">${FAM.map(f=>{
     const de=vs.filter(a=>famDe(a)===f.k);
-    const mal=de.filter(a=>['vencido','taller','incompleto','porvencer'].includes(estado(a).k)).length;
+    const mal=de.filter(a=>['vencido','mant','incompleto','porvencer'].includes(estado(a).k)).length;
     return `<button class="fam${de.length?'':' off'}" style="--fam:var(--${f.c})" ${de.length?`onclick="gotoFamilia('${f.k}')"`:'disabled'} title="${esc(f.n)}: ${de.length} equipos${de.length?' — ver la lista':''}">
       <span class="fam-ph">${photoFor(f.mod)}</span>
       <span class="fam-t">
@@ -7556,7 +7973,7 @@ function renderHome(){
   const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
-    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('taller'),tone:'sel'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'sel'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
   // Cantidad de válvulas por tipo constructivo y por modelo.
   // El color viene de la familia del equipo (no del ranking), así una barra
@@ -7576,7 +7993,7 @@ function renderHome(){
     colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
   const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
   const porEtapa=ETAPAS.map(([k,l])=>({label:l,value:ordScope.filter(o=>o.et===k).length,
-    tone:k==='certificada'?'ok':k==='taller'?'sel':'',tip:`${l}: ${ordScope.filter(o=>o.et===k).length} órdenes`}));
+    tone:k==='final'?'ok':k==='mant'?'sel':'',tip:`${l}: ${ordScope.filter(o=>o.et===k).length} órdenes`}));
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
   const ICON={Preventivo:'⟳',Correctivo:'✚',Calibración:'◎',Inspección:'◍',Overhaul:'⚙','Puesta en marcha':'▸'};
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
@@ -7631,7 +8048,7 @@ function renderRep(){
   const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
   const conProg=vs.filter(a=>a.prox),alDia=conProg.filter(a=>dias(a.prox)>=0).length;
   const cumpl=conProg.length?Math.round(alDia/conProg.length*100):100;
-  const cert=ordScope.filter(o=>o.et==='certificada').length;
+  const cert=ordScope.filter(o=>o.et==='final').length;
   const corr=ordScope.filter(o=>o.tipo==='Correctivo').length,prev=ordScope.filter(o=>o.tipo==='Preventivo').length;
   const criticos=vs.filter(a=>a.cr==='Crítica').length;
   const marcaCount={};vs.forEach(a=>{const m=MODELOS[a.mod]?.m;if(m)marcaCount[m]=(marcaCount[m]||0)+1});
@@ -7686,7 +8103,7 @@ function buildNotif(){
       }});
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
-  ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='taller'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
+  ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='mant'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
   SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
     .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
       s:`${pasoDe(s.est).sig} — ${pasoDe(s.est).r}`,sol:s.id}));
@@ -8066,10 +8483,10 @@ function generateCalib(assetId,editId){
      no hay ninguna se crea una. Antes se creaba siempre, así que el
      trabajo salía dos veces en el tablero. */
   const oExist=ORDENES.find(o=>o.calib===rec.id);
-  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;oExist.et='certificada';}
+  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;oExist.et='final';}
   else if(!cerrarOrdenConEnsayo(a.id,rec.id,(fin||ini).slice(0,10),tec,hall)){
     const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
-    ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
+    ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'final',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
   const dExist=DOCS.find(d=>d.calib===rec.id);
   if(dExist)dExist.f=(fin||ini).slice(0,10);
   else DOCS.unshift({a:a.id,t:'CERT',n:`Certificado de calibración ${cert} · ${a.tag||a.ser}.pdf`,f:(fin||ini).slice(0,10),w:'420 KB',calib:rec.id});
@@ -8424,7 +8841,7 @@ function generateService(assetId){
   const srec={id:'sv'+Date.now(),act:a.id,num,tipo,fec,tec,est,hall,trab,partes,rec,msgs};
   SERVS.unshift(srec);
   a.ult=fec;
-  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:num,et:'certificada',tipo,f:fec,tec,
+  ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:num,et:'final',tipo,f:fec,tec,
     hall:`${hall?hall+' ':''}${trab?'Trabajos: '+trab+'. ':''}Estado final: ${est}.`,partes,serv:srec.id});
   DOCS.unshift({a:a.id,t:'INF',n:`Informe de mantenimiento ${num} · ${a.tag||a.ser}.pdf`,f:fec,w:'1.1 MB',serv:srec.id});
   renderAll();
@@ -9057,7 +9474,7 @@ const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
 function fotoDatos(){
   return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
           CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
-          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE};
+          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS};
 }
 function aplicarFoto(d){
   if(!d||d.v!==1)return false;
@@ -9069,10 +9486,30 @@ function aplicarFoto(d){
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
   obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);
+  arr(PROYECTOS,d.PROYECTOS);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
   ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
   NUBE_DESDE=d.NUBE_DESDE||null;
+  migrarEtapas();
   return true;
+}
+/* Las etapas se renombraron a las que usa Adolphus (OC recibida ·
+   En taller · En mantenimiento · Finalizado). Quien ya tenía datos
+   guardados en el equipo o en la nube los trae con los nombres
+   viejos: si no se traducen, esas órdenes desaparecen del tablero
+   porque su etapa no coincide con ninguna columna. */
+/* 'programada' era una orden aceptada cuya válvula todavía no había
+   llegado: eso es "OC recibida", no "En taller". Y el viejo 'taller'
+   significaba lo mismo que el nuevo, así que se queda igual. */
+const ETAPAS_VIEJAS={solicitada:'oc',programada:'oc',certificada:'final'};
+function migrarEtapas(){
+  let n=0;
+  ORDENES.forEach(o=>{
+    const nueva=ETAPAS_VIEJAS[o.et];
+    if(nueva){o.et=nueva;n++}
+    else if(!ETAPAS.some(([k])=>k===o.et)){o.et='oc';n++}
+  });
+  return n;
 }
 
 /* ── La tabla de pendientes ──────────────────────────────────
