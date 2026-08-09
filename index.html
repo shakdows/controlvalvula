@@ -8682,6 +8682,37 @@ const RUC_DEMO={
  '20100190797':{n:'ALICORP S.A.A.',dir:'AV. ARGENTINA 4793 - CARMEN DE LA LEGUA, CALLAO',est:'ACTIVO',cond:'HABIDO',ind:'Alimentos y bebidas'},
  '20330033313':{n:'BACKUS - UNION DE CERVECERIAS PERUANAS S.A.A.',dir:'AV. NICOLAS AYLLON 3986 - ATE, LIMA',est:'ACTIVO',cond:'HABIDO',ind:'Alimentos y bebidas'}
 };
+/* ── Comprobación mientras se escribe ────────────────────────
+   Los datos se ponen a mano, así que lo útil no es traer nada de
+   fuera: es cazar el error de tecleo en el momento. El dígito
+   verificador del RUC se calcula aquí mismo —es aritmética, no hace
+   falta internet ni servicio— y detecta el número mal copiado, que
+   es el 99 % de los problemas. Sin pulsar ningún botón. */
+function revisarRUC(v){
+  const est=$('#ncRucEst'); if(!est)return;
+  const r=String(v||'').replace(/\D/g,'');
+  const campo=$('#ncRuc'); if(campo&&campo.value!==r)campo.value=r;
+  if(!r){est.innerHTML='Al escribir los 11 dígitos se comprueba solo si el número es correcto.';return}
+  if(r.length<11){
+    est.innerHTML=`<span class="muted">${r.length} de 11 dígitos…</span>`;return;
+  }
+  if(!rucValido(r)){
+    est.innerHTML=`<span style="color:var(--late)">✕ <b>El número está mal copiado.</b> El dígito verificador no cuadra: SUNAT lo rechazaría igual. Revísalo.</span>`;
+    return;
+  }
+  /* Un mismo RUC con dos plantas es normal y la app lo permite: se
+     avisa, no se bloquea. Lo que sí impide guardar es repetir RUC Y
+     planta, y de eso se encarga saveNewClient. */
+  const ya=CLIENTES.filter(c=>c.ruc===r);
+  const base=`<span style="color:var(--ok)">✓ <b>Número correcto</b> · ${esc(RUC_TIPO(r))}</span>`;
+  if(ya.length){
+    est.innerHTML=`${base}<div style="color:var(--due);margin-top:2px">▲ Ya tienes <b>${esc(ya[0].n)}</b>
+      con este RUC${ya[0].fac?` (planta ${esc(ya[0].fac)})`:''}. Si es otra planta de la misma empresa, sigue;
+      si no, es un duplicado.</div>${btnSunat(r)}`;
+    return;
+  }
+  est.innerHTML=`${base}<span class="muted"> — escribe la razón social abajo.</span>${btnSunat(r)}`;
+}
 /* Consulta el RUC. Con backend configurado va a SUNAT; sin él, usa el padrón
    de demostración y lo dice claramente. */
 async function consultarRUC(){
@@ -8852,12 +8883,13 @@ function openNewClient(){
   $('#mBody').innerHTML=`
    <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
      <div style="display:flex;gap:8px">
-       <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1">
-       <button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>
+       <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1"
+         oninput="revisarRUC(this.value)">
+       ${RUC_API?`<button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto" id="ncBuscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>`:''}
      </div>
-     <div id="ncRucEst" style="font-size:11.5px;margin-top:5px;line-height:1.5">Escribe el RUC y pulsa <b>Buscar datos</b>: se traen la razón social y el domicilio fiscal.</div></div>
+     <div id="ncRucEst" style="font-size:11.5px;margin-top:5px;line-height:1.5">Al escribir los 11 dígitos se comprueba solo si el número es correcto.</div></div>
    <div class="two">
-     <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" placeholder="se completa con el RUC"></div>
+     <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" placeholder="${RUC_API?'se completa con el RUC':'p. ej. REFINERIA LA PAMPILLA S.A.A.'}"></div>
      <div class="fld"><label>Industria</label><select class="inp" id="ncI">
        <!-- Sin esta primera opción vacía, el desplegable arranca en
             "Minería" y un cliente cuyo rubro nadie eligió queda
@@ -8865,7 +8897,7 @@ function openNewClient(){
        <option value="">— sin especificar —</option>
        ${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
    </div>
-   <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="se completa con el RUC"></div>
+   <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="${RUC_API?'se completa con el RUC':'p. ej. Carretera Ventanilla Km 25 - Callao'}"></div>
    <div class="two">
      <div class="fld"><label>Instalación / planta <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
      <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
@@ -8883,13 +8915,11 @@ function openNewClient(){
      <div>El <b>RUC identifica a la empresa</b> y evita clientes duplicados; el usuario del portal se vincula a él. Si el mismo RUC tiene <b>varias plantas</b>, créalas como clientes distintos con el mismo RUC y distinto nombre de planta.</div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewClient()">Crear cliente</button>`;
   const r=$('#ncRuc');
-  r.oninput=()=>{r.value=r.value.replace(/\D/g,'').slice(0,11);ncVerif=false;
-    const e=$('#ncRucEst');
-    if(r.value.length===11)e.innerHTML=rucValido(r.value)
-      ? `<span style="color:var(--due)">▲ Formato correcto. Pulsa <b>Buscar datos</b> para traer la razón social.</span>`
-      : '<span style="color:var(--late)">✕ El dígito verificador no cuadra</span>';
-    else e.innerHTML='Escribe el RUC y pulsa <b>Buscar datos</b>: se traen la razón social y el domicilio fiscal.';};
-  r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();consultarRUC()}};
+  r.oninput=()=>{ncVerif=false;revisarRUC(r.value)};
+  /* Enter sólo consulta si hay servicio; si no, no hay nada que
+     consultar y perseguir un botón que no existe confunde. */
+  r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();if(RUC_API)consultarRUC();else $('#ncN').focus()}};
+  revisarRUC(r.value);
   $('#modal').classList.add('on');
   setTimeout(()=>r.focus(),80);
 }
@@ -10386,10 +10416,12 @@ function renderSettings(){
           <button class="btn quiet xs" onclick="exportCSV()">Descargar</button></div>`)}
       ${panel('Consulta de RUC',`
         <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-          <div>SUNAT no tiene una consulta abierta que el navegador pueda llamar directamente, así que hace falta un
-            pequeño servicio intermedio. Cuando esté puesto, «Buscar datos» trae la razón social y el domicilio fiscal
-            de verdad. Mientras tanto funciona con un padrón de ejemplo de seis empresas y lo dice en pantalla.
-            El archivo para montarlo está en <b class="mono">supabase/ruc.ts</b> del repositorio.</div></div>
+          <div><b>Opcional, y de pago.</b> Hoy la razón social se escribe a mano, que para dar de alta un cliente son
+            veinte segundos. Al escribir el RUC el portal ya comprueba solo que el número esté bien copiado, que es
+            donde de verdad se falla.<br>
+            Si algún día vais a cargar muchos clientes de golpe, se puede conectar un servicio que traiga la razón
+            social y el domicilio desde el padrón de SUNAT. Los proveedores que lo ofrecen cobran. El archivo para
+            montarlo está en <b class="mono">supabase/ruc.ts</b> del repositorio, con las instrucciones dentro.</div></div>
         <div class="fld"><label for="setRuc">Dirección del servicio</label>
           <input class="inp mono" id="setRuc" value="${esc(RUC_API||'')}"
             placeholder="https://TU-PROYECTO.supabase.co/functions/v1/ruc"></div>
