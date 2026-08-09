@@ -1944,6 +1944,14 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+/* Editar válvula: mientras no haya foto real se enseña la del
+   catálogo, apagada, para que se entienda que es un relleno. */
+.ed-sinfoto{margin-top:9px;border:1px dashed var(--line-2);border-radius:var(--r-2);
+  padding:10px;text-align:center;background:var(--surface-2)}
+.ed-sinfoto svg,.ed-sinfoto img{width:100%;max-width:170px;height:auto;opacity:.45;margin:0 auto}
+.ed-sinfoto span{display:block;margin-top:8px;font-size:11.5px;line-height:1.5;color:var(--ink-3)}
+#edVista img{width:100%;border-radius:var(--r-2);border:1px solid var(--line);margin-top:9px}
+
 /* datos de placa: la foto al lado, para copiar mirándola */
 .placa-cols{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
 .placa-foto{position:sticky;top:0}
@@ -2270,6 +2278,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <section class="page" id="p-assets"><div class="view-pad">
         <div class="hd"><div><h1>Activos instalados</h1><p id="assetsSub"></p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn sec" id="btnValvulario" onclick="valvulario()" title="Inventario de válvulas del cliente, listo para imprimir o firmar"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>Valvulario</button>
             <button class="btn sec" onclick="exportCSV()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar</button>
             <button class="btn sec" onclick="go('imp')"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Cargar Excel</button>
             <button class="btn" onclick="openNewAsset(S.fCli)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva válvula</button>
@@ -2414,6 +2423,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
     <div class="dr-top">
       <button class="icon-btn" onclick="closeDrawer()" title="Volver a la lista"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div style="flex:1;min-width:0"><h2 id="drTitle"></h2><div class="sub" id="drSub"></div></div>
+      <button class="icon-btn" onclick="editarActivo(S.cur&&S.cur.id)" title="Editar los datos de esta válvula" id="edBtn"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       <button class="icon-btn" onclick="toggleWide()" title="Ampliar" id="wideBtn"><svg viewBox="0 0 24 24"><path d="M9 4H4v5M15 20h5v-5"/></svg></button>
       <button class="icon-btn" onclick="closeDrawer()" title="Cerrar (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
@@ -3296,7 +3306,13 @@ function pickAll(on){on?filtrados().forEach(a=>S.picked.add(a.id)):S.picked.clea
 function clearPick(){S.picked.clear();paintBulk();renderGrid()}
 function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
 function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
-function renderAssets(){renderStats();renderFilters();renderGrid();paintBulk()}
+function renderAssets(){
+  renderStats();renderFilters();renderGrid();paintBulk();
+  /* El valvulario es de UN cliente: sin cliente elegido no significa
+     nada, así que el botón no está. */
+  const bv=$('#btnValvulario');
+  if(bv)bv.style.display=(S.inCli||S.cli||S.fCli)&&S.rol!=='cliente'?'':'none';
+}
 function buscarCli(v){S.qCli=v;renderClients()}
 function soloPend(){S.cliPend=!S.cliPend;renderClients()}
 function renderClients(){
@@ -3513,6 +3529,7 @@ function openAsset(id){
     ${a.sinId?`<span class="tag due" title="Se dio de alta sin la placa a mano" onclick="openPlacaPSV('${a.id}')" style="cursor:pointer">Falta identificar</span>`:''}
     ${a.cr?`<span class="tag ${cr}">Criticidad ${esc(a.cr.toLowerCase())}</span>`:''}
     <span class="tag">${CL[a.cl]}</span><span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
+  const eb=$('#edBtn'); if(eb)eb.style.display=S.rol==='cliente'?'none':'';
   const sa=salud(a);
   $('#drSalud').innerHTML=`<button class="sal" onclick="verSalud('${a.id}')" title="Cómo se calcula esta salud">
     <span class="sal-n" style="background:var(--${sa.c})">${sa.n}</span>
@@ -3669,7 +3686,7 @@ function paneFicha(){
   $('#pn-ficha').innerHTML=`
    ${queToca(a)}
    <div class="ficha-hero">
-     <div class="photo-frame">${photoFor(a.mod)}</div>
+     <div class="photo-frame">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
      <div class="ficha-cap">
        ${key.length?`<div class="fx-keyspecs">${key.map(([k,v])=>`<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
        <div class="fx-ult"><span>Último servicio</span><b>${esc(a.ult||'sin registro')}</b>${ultTec?`<span>· ${esc(ultTec)}</span>`:''}</div>
@@ -3779,8 +3796,10 @@ function paneTec(){
    ${faltan.length?`<div class="dt-falta">
      <div><b>Faltan ${faltan.length} ${faltan.length===1?'dato':'datos'}</b>
        <span>${faltan.map(([k])=>esc(k)).join(' · ')}</span></div>
-     ${cliente?'':`<button class="btn sec xs" onclick="toast('El levantamiento en planta o la carga de Excel completan estos campos');showTab('ficha')">Cómo completarlos</button>`}
+     ${cliente?'':`<button class="btn sec xs" onclick="editarActivo('${a.id}')">Completarlos ahora</button>`}
    </div>`:''}
+   ${cliente?'':`<div style="display:flex;justify-content:flex-end;margin-top:12px">
+     <button class="btn sec xs" onclick="editarActivo('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Editar estos datos</button></div>`}
    <p class="dt-nota">${esc(m.d||'')}${m.m?` — línea ${esc(MARCAS[m.m]||'')}, representada por Adolphus en Perú.`:''}</p>`;
 }
 function paneCal(){
@@ -4513,6 +4532,80 @@ function imprimirPlan(){
      en la ficha del equipo. Los importes son referenciales y no constituyen una oferta en firme.</div>
    </body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+}
+
+/* ── Valvulario ──────────────────────────────────────────────
+   El inventario de válvulas de un cliente en una hoja: lo que se
+   entrega al firmar el contrato y lo que se lleva el ingeniero a
+   planta para el levantamiento.
+   Sale del parque que ya está cargado, así que nadie lo transcribe.
+   Los datos que faltan salen en rojo: la hoja sirve de lista de
+   tareas del levantamiento, no sólo de constancia. */
+function valvulario(cliId){
+  const f=cliId||S.inCli||S.cli||S.fCli;
+  if(!f){toast('Entra a un cliente para generar su valvulario');return}
+  const c=cli(f); const eq=ACTIVOS.filter(a=>a.cli===f);
+  if(!eq.length){toast(`${c.n} todavía no tiene válvulas cargadas`);return}
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  const nd=v=>v&&String(v).trim()&&v!=='—'?esc(v):'<span class="f">—</span>';
+  const porFam={}; eq.forEach(a=>{const k=CL[a.cl]||'Otras';(porFam[k]=porFam[k]||[]).push(a)});
+  const faltan=eq.filter(a=>a.sinId||!a.ser||!a.sz||!a.rt).length;
+  const hoyS=HOY.toISOString().slice(0,10);
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+   <title>Valvulario ${esc(c.n)}</title><style>
+   *{box-sizing:border-box}
+   body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:22px}
+   .cab{display:flex;align-items:flex-start;gap:12px;border-bottom:3px solid #16306b;padding-bottom:9px}
+   h1{font-size:18px;margin:0 0 2px;letter-spacing:-.2px}
+   .sub{color:#5b6470;font-size:11px}
+   .cod{margin-left:auto;text-align:right;font-size:10px;color:#5b6470;line-height:1.6}
+   .res{display:flex;gap:24px;margin:14px 0 4px;font-size:11px;color:#5b6470}
+   .res b{display:block;font-size:17px;color:#101418}
+   h2{font-size:12px;margin:16px 0 5px;color:#16306b;text-transform:uppercase;letter-spacing:.6px}
+   table{width:100%;border-collapse:collapse;font-size:10px}
+   th,td{border:1px solid #d7dbe0;padding:4px 5px;text-align:left;vertical-align:top}
+   th{background:#f2f4f6;font-weight:600;white-space:nowrap}
+   .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+   .f{color:#c0392b;font-weight:600}
+   .prov{color:#a06a10;font-weight:600}
+   .pie{margin-top:16px;font-size:9.5px;color:#78818c;border-top:1px solid #d7dbe0;padding-top:8px;line-height:1.6}
+   .firma{margin-top:26px;display:flex;gap:44px}
+   .firma div{flex:1;border-top:1px solid #101418;padding-top:5px;font-size:10px;color:#5b6470}
+   @media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}
+   </style></head><body>
+   <div class="cab">${LOGO.replace('<svg ','<svg width="26" height="32" ')}
+     <div><h1>Valvulario</h1><div class="sub">${esc(c.n)}${c.ruc?' · RUC '+esc(c.ruc):''} · ${esc(c.fac||'')}</div></div>
+     <div class="cod">Adolphus S.A. · Control de fluidos<br>Emitido el ${fPE(hoyS)}</div>
+   </div>
+   <div class="res">
+     <div><b>${eq.length}</b>válvulas</div>
+     <div><b>${Object.keys(porFam).length}</b>familias</div>
+     <div><b>${eq.filter(a=>a.prox).length}</b>con programa de calibración</div>
+     <div><b class="${faltan?'f':''}">${faltan}</b>con datos por completar</div>
+   </div>
+   ${Object.entries(porFam).map(([fam,list])=>`
+     <h2>${esc(fam)} · ${list.length}</h2>
+     <table><thead><tr>
+       <th>Tag</th><th>N.º de serie</th><th>Marca y modelo</th><th>Área</th>
+       <th>Tamaño</th><th>Clase</th><th>Rango / set</th><th>Criticidad</th>
+       <th>Últ. servicio</th><th>Próx. calibración</th></tr></thead><tbody>
+     ${list.map(a=>`<tr>
+       <td class="mono ${esProv(a.tag)?'prov':''}"><b>${a.tag?esc(a.tag):'<span class="f">sin tag</span>'}</b></td>
+       <td class="mono">${nd(a.ser)}</td>
+       <td>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}</td>
+       <td>${esc(area(a)||'')}</td>
+       <td>${nd(a.sz)}</td><td>${nd(a.rt)}</td><td>${nd(a.rng)}</td>
+       <td>${esc(a.cr||'Media')}</td>
+       <td class="mono">${a.ult?fPE(a.ult):'<span class="f">—</span>'}</td>
+       <td class="mono">${a.prox?fPE(a.prox):'no aplica'}</td></tr>`).join('')}
+     </tbody></table>`).join('')}
+   <div class="pie">Los campos en rojo están pendientes de levantamiento en planta.
+     Un tag en ámbar con el formato S/T-000 es un código provisional que Adolphus asignó
+     para poder trabajar con el equipo: se reemplaza por el tag de planta en cuanto se lee la placa.
+     Documento generado desde el parque instalado registrado en el portal; refleja el estado al ${fPE(hoyS)}.</div>
+   <div class="firma"><div>Por Adolphus S.A. — nombre, cargo y fecha</div><div>Por ${esc(c.n)} — nombre, cargo y fecha</div></div>
+   </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
 }
 
 /* ============================================================
@@ -5453,7 +5546,10 @@ function openSNC(id,actId){
   if(S.rol==='cliente'){toast('El registro de calidad lo levanta Adolphus');return}
   const r=id?RECLAMOS.find(x=>x.id===id):null;
   const f=sncFoco();
-  const opts=(f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS).filter(a=>a.tag);
+  /* Antes pedía tag: una válvula identificada sólo por su número de
+     serie no se podía reclamar, que es justo cuando más falta hace. */
+  const opts=f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS.slice();
+  const etiq=a=>[a.tag,a.ser].filter(Boolean).join(' · ')||'(sin identificar)';
   const pre=r?r.act:(actId||'');
   const num=r?r.n:'SNC-2026-'+String(RECLAMOS.length+1).padStart(3,'0');
 
@@ -5464,7 +5560,7 @@ function openSNC(id,actId){
         <label for="sncAct">Válvula devuelta — escribe o elige el TAG</label>
         <select class="inp" id="sncAct" onchange="pintarCtxSNC()">
           <option value="">Sin equipo asociado</option>
-          ${opts.map(a=>`<option value="${a.id}" ${pre===a.id?'selected':''}>${esc(a.tag)}${a.ser?' · '+esc(a.ser):''}</option>`).join('')}
+          ${opts.map(a=>`<option value="${a.id}" ${pre===a.id?'selected':''}>${esc(etiq(a))}</option>`).join('')}
         </select>
       </div>
       <div id="sncCtx"></div>
@@ -7720,6 +7816,115 @@ function saveNewAsset(){
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
   closeModal();renderAll();gotoAsset(id);registrar('Alta',`Válvula ${tag||ser} · ${cli($('#naCli').value).n||''}`);
   toast(sinId?`Creada como ${tag} — falta identificarla`:`Válvula ${tag||ser} creada`);
+}
+
+/* ── Editar la válvula ───────────────────────────────────────
+   Hasta aquí una válvula se creaba y ya: la ficha técnica era de
+   sólo lectura y el botón de "faltan datos" se limitaba a decir que
+   los completara un levantamiento en planta. En la práctica el dato
+   llega después —de una foto, de una llamada, del propio técnico— y
+   tiene que poder entrar sin dar un rodeo.
+   Este formulario abre todo: la foto real del equipo, dónde está,
+   qué es y sus fechas. */
+function editarActivo(id){
+  const a=ACTIVOS.find(x=>x.id===id)||S.cur; if(!a)return;
+  if(S.rol==='cliente'){toast('Los datos del equipo los mantiene Adolphus');return}
+  const m=MODELOS[a.mod]||{};
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${c.id===a.cli?'selected':''}>${esc(c.n)}</option>`).join('');
+  const mOpts=Object.entries(MODELOS).map(([k,x])=>`<option value="${k}" ${k===a.mod?'selected':''}>${esc(x.m)} ${esc(k)} — ${esc(x.t)}</option>`).join('');
+  const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}" ${k===a.cl?'selected':''}>${l}</option>`).join('');
+  const crOpts=['Baja','Media','Alta','Crítica'].map(c=>`<option ${c===a.cr?'selected':''}>${c}</option>`).join('');
+  const airOpts=['','OPEN','CLOSE'].map(c=>`<option value="${c}" ${c===(a.air||'')?'selected':''}>${c||'—'}</option>`).join('');
+  $('#mTitle').textContent=`Editar · ${a.tag||a.ser||'válvula'}`;
+  $('#mBody').innerHTML=`
+   ${a.sinId?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Esta válvula anda con el código provisional <b class="mono">${esc(a.tag||'')}</b>. En cuanto escribas el tag o la serie de verdad, deja de estar pendiente.</div></div>`:''}
+   <div class="placa-cols">
+     <div class="placa-foto">
+       <label class="ev-add" for="edFoto">
+         <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+         <span>${a.foto?'Cambiar la foto':'Foto de la válvula'}</span></label>
+       <input id="edFoto" type="file" accept="image/*" capture="environment"
+         style="display:none" onchange="activoFoto('${a.id}',this.files[0]);this.value=''">
+       <div id="edVista">${a.foto
+         ?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}"><button class="btn quiet xs" style="width:100%;justify-content:center;margin-top:6px;color:var(--late)" onclick="quitarFotoActivo('${a.id}')">Quitar la foto</button>`
+         :`<div class="ed-sinfoto">${photoFor(a.mod)}<span>Ahora se ve la foto de catálogo del modelo. Sube una y se usa la del equipo real.</span></div>`}</div>
+     </div>
+     <div class="placa-campos">
+       <h4 class="snc-sec">Identificación</h4>
+       <div class="two">
+         <div class="fld"><label for="edTag">Tag <span class="opc">opcional</span></label>
+           <input class="inp mono" id="edTag" value="${esProv(a.tag)?'':esc(a.tag||'')}" placeholder="${esProv(a.tag)?esc(a.tag):'p. ej. PSV-1300'}"></div>
+         <div class="fld"><label for="edSer">N.º de serie <span class="opc">opcional</span></label>
+           <input class="inp mono" id="edSer" value="${esc(a.ser||'')}" placeholder="p. ej. C-90-1123"></div>
+       </div>
+       <h4 class="snc-sec">Dónde está</h4>
+       <div class="two">
+         <div class="fld"><label for="edCli">Cliente</label><select class="inp" id="edCli">${cOpts}</select></div>
+         <div class="fld"><label for="edAr">Área / unidad</label><select class="inp" id="edAr"></select></div>
+       </div>
+       <h4 class="snc-sec">Qué es</h4>
+       <div class="two">
+         <div class="fld" style="grid-column:1/-1"><label for="edMod">Modelo <span class="opc">cambiarlo rehereda marca, tipo y despiece</span></label>
+           <select class="inp" id="edMod">${mOpts}</select></div>
+         <div class="fld"><label for="edCl">Familia</label><select class="inp" id="edCl">${clOpts}</select></div>
+         <div class="fld"><label for="edCr">Criticidad</label><select class="inp" id="edCr">${crOpts}</select></div>
+         <div class="fld"><label for="edSz">Tamaño</label><input class="inp" id="edSz" value="${esc(a.sz||'')}" placeholder='2"x3"'></div>
+         <div class="fld"><label for="edRt">Rating / clase</label><input class="inp" id="edRt" value="${esc(a.rt||'')}" placeholder="300"></div>
+         <div class="fld"><label for="edRng">Rango / set</label><input class="inp" id="edRng" value="${esc(a.rng||'')}" placeholder="150 psig"></div>
+         <div class="fld"><label for="edCv">Cv</label><input class="inp" id="edCv" value="${esc(a.cv||'')}" placeholder="—"></div>
+         <div class="fld"><label for="edAir">Falla a (aire)</label><select class="inp" id="edAir">${airOpts}</select></div>
+       </div>
+       <h4 class="snc-sec">Fechas</h4>
+       <div class="two">
+         <div class="fld"><label for="edUlt">Último servicio</label><input class="inp" id="edUlt" type="date" value="${esc(a.ult||'')}"></div>
+         <div class="fld"><label for="edProx">Próxima calibración <span class="opc">en blanco = sin programa</span></label>
+           <input class="inp" id="edProx" type="date" value="${esc(a.prox||'')}"></div>
+       </div>
+       <div class="fld"><label for="edNota">Detalles y observaciones</label>
+         <textarea class="inp" id="edNota" rows="3" placeholder="Servicio que cumple, particularidades del montaje, lo que haga falta recordar.">${esc(a.nota||'')}</textarea></div>
+     </div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarActivo('${a.id}')">Guardar cambios</button>`;
+  const fillAr=()=>{const c=cli($('#edCli').value)||{areas:{}};
+    $('#edAr').innerHTML=Object.entries(c.areas||{}).map(([k,v])=>`<option value="${k}" ${k===a.ar?'selected':''}>${esc(v)}</option>`).join('')};
+  $('#edCli').onchange=fillAr; fillAr();
+  $('#modal').classList.add('on');
+}
+function activoFoto(id,f){
+  if(!f)return;
+  comprimirFoto(f).then(d=>{
+    const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+    a.foto=d; guardarLocal();
+    const v=$('#edVista');
+    if(v)v.innerHTML=`<img src="${d}" alt="Foto de ${esc(a.tag||'')}"><button class="btn quiet xs" style="width:100%;justify-content:center;margin-top:6px;color:var(--late)" onclick="quitarFotoActivo('${a.id}')">Quitar la foto</button>`;
+    toast('Foto guardada');
+  }).catch(()=>toast('No se pudo leer la foto'));
+}
+function quitarFotoActivo(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  delete a.foto; guardarLocal(); renderAll();
+  const v=$('#edVista');
+  if(v)v.innerHTML=`<div class="ed-sinfoto">${photoFor(a.mod)}<span>Ahora se ve la foto de catálogo del modelo. Sube una y se usa la del equipo real.</span></div>`;
+  toast('Foto quitada · vuelve la del catálogo');
+}
+function guardarActivo(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  const V=i=>{const el=$(i);return el?el.value.trim():''};
+  const tag=V('#edTag'), ser=V('#edSer');
+  /* Igual que al dar de alta: sin tag ni serie la válvula no puede
+     quedarse sin nombre. Vuelve al provisional y sigue marcada. */
+  if(!tag&&!ser){ a.tag=a.tagProv||(a.tagProv=tagProvisional()); a.ser=''; a.sinId=true; }
+  else { a.tag=tag; a.ser=ser; a.sinId=(!ser&&esProv(tag))||undefined; }
+  a.cli=V('#edCli')||a.cli; a.ar=V('#edAr')||a.ar;
+  a.mod=V('#edMod')||a.mod; a.cl=V('#edCl')||a.cl; a.cr=V('#edCr')||a.cr;
+  a.sz=V('#edSz'); a.rt=V('#edRt'); a.rng=V('#edRng'); a.cv=V('#edCv');
+  a.air=V('#edAir'); a.ult=V('#edUlt'); a.prox=V('#edProx'); a.nota=V('#edNota');
+  closeModal(); renderAll();
+  if(S.cur&&S.cur.id===a.id)openAsset(a.id);
+  registrar('Válvula',`Datos de ${a.tag||a.ser||''} actualizados`);
+  toast('Cambios guardados');
 }
 
 /* ============================================================
