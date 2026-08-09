@@ -6973,7 +6973,9 @@ function confirmarCalibraciones(){
     ok++;
   });
   renderAll();
-  if(ok)registrar('Calibración',`${ok} calibraciones importadas${altas?` y ${altas} válvulas dadas de alta`:''}`);
+  /* También si sólo hubo altas: registrar() es lo que guarda, y unas
+     válvulas nuevas sin ninguna calibración se perdían al recargar. */
+  if(ok||altas)registrar('Calibración',`${ok} calibraciones importadas${altas?` y ${altas} válvulas dadas de alta`:''}`);
   CAL_PREVIEW=null;
   $('#imp3').innerHTML=`<div class="panel"><div class="empty" style="text-align:left;padding:26px">
     <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
@@ -7046,21 +7048,42 @@ function validar(){
 }
 function consolidar(c,arDef){
   const cl_=cli(c);
+  let sinId=0;
   pend.forEach((p,i)=>{
     let ar=arDef;
     Object.entries(cl_.areas).forEach(([k,v])=>{if(p.arRaw&&v.toLowerCase().includes(p.arRaw.toLowerCase()))ar=k});
-    ACTIVOS.push({id:'imp'+Date.now()+i,cli:c,ar,cl:p.cl,tag:p.falta.includes('tag')?'':p.tag,ser:p.ser,
+    let tag=p.falta.includes('tag')?'':p.tag;
+    const ser=p.ser||'';
+    /* Una fila sin tag ni serie entraba sin nombre: no salía en
+       ninguna lista y no había forma de encontrarla otra vez. Se le
+       da el mismo código provisional que al alta manual y queda
+       marcada para completar en planta. */
+    const falta=!tag&&!ser;
+    if(falta){tag=tagProvisional();sinId++}
+    ACTIVOS.push({id:'imp'+Date.now()+i,cli:c,ar,cl:p.cl,tag,ser,
+      sinId:falta||undefined, tagProv:falta?tag:undefined,
       mod:MODELOS[p.mod]?p.mod:'21000',sz:p.sz,rt:p.rt,cv:p.cv,air:p.air,rng:p.rng,
-      cr:p.falta.length?'—':'Media',ult:'',prox:''});
+      cr:'Media',ult:'',prox:''});
   });
   paso(4);
   $('#imp3').innerHTML=`<div class="panel"><div class="empty">
     <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
     <b>${pend.length} equipos consolidados en ${cl_.n}</b>Ya heredan el despiece de su modelo y aparecen en la grilla.
-    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+    ${sinId?`<div class="callout" style="margin:14px auto 0;max-width:520px;text-align:left"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div><b>${sinId} ${sinId===1?'equipo llegó':'equipos llegaron'} sin tag ni número de serie.</b>
+      ${sinId===1?'Entró':'Entraron'} con un código provisional (S/T-000) y ${sinId===1?'aparece':'aparecen'} marcados como <b>falta identificar</b>.
+      Sácalos en el valvulario y complétalos en planta.</div></div>`:''}
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <button class="btn" onclick="(S.inCli||S.cli)?go('assets'):go('clients')">Ver en activos</button>
+      <button class="btn sec" onclick="valvulario('${c}')">Sacar el valvulario</button>
       <button class="btn sec" onclick="paso(1);document.getElementById('imp3').innerHTML=''">Importar otro archivo</button></div></div></div>`;
-  renderAll();toast(`${pend.length} equipos consolidados`);
+  renderAll();
+  /* registrar() es lo que guarda en el equipo. Sin esta línea la
+     importación se veía en pantalla y se perdía entera al recargar:
+     cargar el parque de un cliente y que no quedara nada era el peor
+     fallo que podía tener esta pantalla. */
+  registrar('Importación',`${pend.length} equipos cargados en ${cl_.n}`);
+  toast(`${pend.length} equipos consolidados y guardados`);
 }
 function demoImport(){
   headers=['ITEM','TIPO DE VÁLVULA','TAG','SERIAL','MARCA','MODELO DE VÁLVULA','TAMAÑO DEL CUERPO','RANGE','CV','AIR TO','RATING','ÁREA'];
