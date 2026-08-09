@@ -8723,14 +8723,69 @@ function abrirSunat(r){
   window.open('https://e-consultaruc.sunat.gob.pe/cl-ti-itmrconsruc/FrameCriterioBusquedaWeb.jsp','_blank','noopener');
   toast(`RUC ${r} copiado — pégalo en la página de SUNAT para comprobarlo`);
 }
+/* ── De dónde salen los datos del RUC ────────────────────────
+   SUNAT no publica una consulta que el navegador pueda llamar: la
+   suya es una página web con sesión, y ninguna de las APIs de
+   terceros permite que la llame una página directamente (el
+   navegador lo bloquea por CORS) ni regala el acceso sin una clave
+   —que, puesta en este archivo, quedaría a la vista de cualquiera.
+   Por eso hace falta un servicio intermedio. Se guarda su dirección
+   aquí, no dentro del código, para que se pueda cambiar sin volver a
+   tocar el HTML. El archivo para montarlo va en supabase/ruc.ts. */
+const LS_RUCAPI='adolphus.rucapi';
+let RUC_API=''; try{RUC_API=localStorage.getItem(LS_RUCAPI)||window.SUNAT_API||''}catch(e){}
+function guardarRucApi(){
+  const v=($('#setRuc').value||'').trim().replace(/\/+$/,'');
+  if(v&&!/^https:\/\//i.test(v)){toast('La dirección tiene que empezar por https://');return}
+  RUC_API=v; try{localStorage.setItem(LS_RUCAPI,v)}catch(e){}
+  const est=$('#setRucEst');
+  if(est)est.innerHTML=v?'<span style="color:var(--ok)">✓ Guardado. Pulsa «Probar la conexión» para comprobar que responde.</span>'
+                       :'Sin servicio: «Buscar datos» usa el padrón de ejemplo.';
+  toast(v?'Servicio de RUC guardado':'Servicio de RUC quitado');
+}
+async function probarRucApi(){
+  const est=$('#setRucEst'); if(!est)return;
+  const v=($('#setRuc').value||'').trim().replace(/\/+$/,'');
+  if(!v){est.innerHTML='<span style="color:var(--due)">▲ Escribe primero la dirección del servicio</span>';return}
+  est.innerHTML='<span class="muted">Probando con el RUC de Petroperú…</span>';
+  const guardado=RUC_API; RUC_API=v;
+  try{
+    const d=await pedirRuc('20131312955');
+    est.innerHTML=d&&d.n
+      ? `<span style="color:var(--ok)">✓ Responde correctamente — devolvió <b>${esc(d.n)}</b>. Pulsa Guardar.</span>`
+      : '<span style="color:var(--due)">▲ Contestó, pero sin razón social. Revisa que el servicio devuelva un JSON con <b class="mono">razonSocial</b>.</span>';
+  }catch(e){
+    est.innerHTML=`<span style="color:var(--late)">✕ No respondió: ${esc(e.message)}.<br>
+      Suele ser una de tres: la dirección está mal escrita, el servicio no permite llamadas desde esta página
+      (le faltan las cabeceras CORS), o el proveedor rechazó la clave.</span>`;
+  }
+  RUC_API=guardado;
+}
+/* La llamada, aparte, para que la use tanto la consulta real como el
+   botón de probar. Con tiempo límite: sin él, un servicio caído deja
+   el formulario diciendo "Consultando…" para siempre. */
+async function pedirRuc(ruc){
+  const ctrl=new AbortController();
+  const corte=setTimeout(()=>ctrl.abort(),9000);
+  try{
+    const res=await fetch(`${RUC_API}?ruc=${encodeURIComponent(ruc)}`,
+      {headers:{'Accept':'application/json'},signal:ctrl.signal});
+    if(!res.ok)throw new Error('el servicio contestó '+res.status);
+    const j=await res.json();
+    if(j&&j.error)throw new Error(j.error);
+    return {n:j.razonSocial||j.nombre||j.nombre_o_razon_social||'',
+            dir:j.direccion||j.domicilioFiscal||j.direccion_completa||'',
+            est:j.estado||j.estado_del_contribuyente||'',
+            cond:j.condicion||j.condicion_de_domicilio||'', ind:null};
+  }catch(e){
+    throw new Error(e.name==='AbortError'?'tardó más de 9 segundos':e.message);
+  }finally{clearTimeout(corte)}
+}
 async function buscarSunat(ruc){
-  // 1) Backend propio (cuando exista): devuelve los datos oficiales de SUNAT.
-  if(window.SUNAT_API){
-    try{
-      const res=await fetch(`${window.SUNAT_API}?ruc=${ruc}`,{headers:{'Accept':'application/json'}});
-      if(res.ok){const j=await res.json();
-        return {n:j.razonSocial||j.nombre,dir:j.direccion||j.domicilioFiscal,est:j.estado,cond:j.condicion,ind:null};}
-    }catch(e){/* sin conexión o sin backend: se usa el padrón local */}
+  // 1) El servicio configurado: devuelve los datos oficiales de SUNAT.
+  if(RUC_API){
+    try{ const d=await pedirRuc(ruc); if(d&&d.n)return d; }
+    catch(e){ /* sin señal o servicio caído: se cae al padrón local */ }
   }
   // 2) Padrón de demostración local
   const d=RUC_DEMO[ruc];
@@ -10267,6 +10322,21 @@ function renderSettings(){
           <button class="btn quiet xs" onclick="copiarCodigo()">Copiar</button></div>
         <div class="set-row"><div class="t"><b>Exportar todos los datos</b><span>Excel con activos, calibraciones y órdenes.</span></div>
           <button class="btn quiet xs" onclick="exportCSV()">Descargar</button></div>`)}
+      ${panel('Consulta de RUC',`
+        <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div>SUNAT no tiene una consulta abierta que el navegador pueda llamar directamente, así que hace falta un
+            pequeño servicio intermedio. Cuando esté puesto, «Buscar datos» trae la razón social y el domicilio fiscal
+            de verdad. Mientras tanto funciona con un padrón de ejemplo de seis empresas y lo dice en pantalla.
+            El archivo para montarlo está en <b class="mono">supabase/ruc.ts</b> del repositorio.</div></div>
+        <div class="fld"><label for="setRuc">Dirección del servicio</label>
+          <input class="inp mono" id="setRuc" value="${esc(RUC_API||'')}"
+            placeholder="https://TU-PROYECTO.supabase.co/functions/v1/ruc"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn sec" onclick="probarRucApi()">Probar la conexión</button>
+          <button class="btn" onclick="guardarRucApi()">Guardar</button></div>
+        <div id="setRucEst" style="font-size:11.5px;margin-top:9px;line-height:1.5;color:var(--ink-3)">
+          ${RUC_API?'Servicio configurado. Pulsa «Probar la conexión» para comprobar que responde.'
+                   :'Sin servicio: «Buscar datos» usa el padrón de ejemplo.'}</div>`)}
     </div>`;
   }
 
