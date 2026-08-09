@@ -8696,6 +8696,18 @@ async function consultarRUC(){
   }
   est.innerHTML='<span class="muted">Consultando…</span>';
   const d=await buscarSunat(r);
+  /* SUNAT miró y dijo que no. No es lo mismo que "no lo pude
+     comprobar": el número está bien formado pero no corresponde a
+     ninguna empresa, casi siempre porque hay un dígito cambiado. */
+  if(d&&d.noExiste){
+    ncVerif=false;
+    /* El motivo sólo se añade si aporta algo: el 404 genérico dice lo
+       mismo que la primera frase y repetirlo suena a máquina. */
+    const extra=/no figura en el padr|no existe/i.test(d.motivo||'')?'':` ${esc(d.motivo||'')}`;
+    est.innerHTML=`<span style="color:var(--late)">✕ <b>Ese RUC no existe en el padrón de SUNAT.</b>${extra}<br>
+      El número está bien formado, así que lo más probable es un dígito cambiado. Revísalo.</span>${btnSunat(r)}`;
+    return;
+  }
   if(!d){
     ncVerif=false;
     est.innerHTML=`<span style="color:var(--due)">▲ <b>Formato correcto, pero sin verificar.</b> No se encontró en el padrón; escribe la razón social a mano y confírmalo en SUNAT.</span>
@@ -8709,7 +8721,13 @@ async function consultarRUC(){
   const activo=(d.est||'').toUpperCase().includes('ACTIVO'),habido=(d.cond||'').toUpperCase().includes('HABIDO')&&!(d.cond||'').toUpperCase().includes('NO HABIDO');
   const alerta=(!activo||!habido)?`<div class="callout bad" style="margin:6px 0 0"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
      <div><b>Atención:</b> esta empresa figura como <b>${esc(d.est||'')} · ${esc(d.cond||'')}</b>. Antes de facturarle, consúltalo con administración.</div></div>`:'';
-  est.innerHTML=`<span style="color:var(--${activo&&habido?'ok':'due'})">✓ ${esc(RUC_TIPO(r))} · ${esc(d.est||'')} · ${esc(d.cond||'')}${d.demo?' <span class="muted">(padrón de demostración — confírmalo en SUNAT)</span>':''}</span>${btnSunat(r)}${alerta}`;
+  /* El padrón dice el tipo societario exacto ("SOCIEDAD ANONIMA
+     CERRADA"); los dos primeros dígitos del RUC sólo dan la
+     categoría. Se prefiere el dato del padrón cuando viene. */
+  const tipoTxt=d.tipo||RUC_TIPO(r);
+  est.innerHTML=`<span style="color:var(--${activo&&habido?'ok':'due'})">✓ ${esc(tipoTxt)} · ${esc(d.est||'')} · ${esc(d.cond||'')}${d.demo?' <span class="muted">(padrón de demostración — confírmalo en SUNAT)</span>':''}</span>
+    ${d.act?`<div class="muted" style="margin-top:3px">Actividad: ${esc(d.act)}${d.ind?` → se marcó como <b>${esc(d.ind)}</b>`:' — elige la industria a mano, no encaja en ninguna de la lista'}</div>`:''}
+    ${btnSunat(r)}${alerta}`;
   toast(`Datos traídos: ${d.n}`);
 }
 /* Comprobación manual en SUNAT: copia el RUC y abre la consulta oficial. */
@@ -8761,6 +8779,25 @@ async function probarRucApi(){
   }
   RUC_API=guardado;
 }
+/* El padrón trae la actividad económica en el lenguaje de la CIIU
+   ("EXTRACCION DE MINERALES METALIFEROS NO FERROSOS"), que no es
+   ninguna de las opciones del formulario. Se traduce a la que sí
+   está, y si no cuadra con ninguna se deja sin tocar para que lo
+   elija la persona: adivinar mal es peor que no adivinar. */
+const IND_CLAVES=[
+  [/mineral|miner[íi]a|metalifer|concentrad/i,'Minería'],
+  [/petr[óo]leo|petrol|hidrocarbur|gas natural|refinaci[óo]n|combustible/i,'Petróleo y gas'],
+  [/agr[íi]col|agroindustr|cultivo|agropecuar|pesca|conserva/i,'Agroindustria'],
+  [/energ[íi]a|electricidad|generaci[óo]n el[ée]ctrica|hidroel/i,'Energía / generación'],
+  [/aliment|bebida|cerve|l[áa]cteo|molino|az[úu]car|harina/i,'Alimentos y bebidas'],
+  [/papel|celulosa|cart[óo]n/i,'Papel y celulosa'],
+  [/fabricaci[óo]n|manufactur|industri|qu[íi]mic|cemento|siderur|textil|plástic/i,'Industria general']
+];
+function industriaDe(act){
+  if(!act)return null;
+  const f=IND_CLAVES.find(([re])=>re.test(act));
+  return f?f[1]:null;
+}
 /* La llamada, aparte, para que la use tanto la consulta real como el
    botón de probar. Con tiempo límite: sin él, un servicio caído deja
    el formulario diciendo "Consultando…" para siempre. */
@@ -8770,22 +8807,39 @@ async function pedirRuc(ruc){
   try{
     const res=await fetch(`${RUC_API}?ruc=${encodeURIComponent(ruc)}`,
       {headers:{'Accept':'application/json'},signal:ctrl.signal});
-    if(!res.ok)throw new Error('el servicio contestó '+res.status);
-    const j=await res.json();
+    let j=null; try{j=await res.json()}catch(_){}
+    if(!res.ok){
+      const err=new Error((j&&j.error)||('el servicio contestó '+res.status));
+      /* 400 y 404 son respuestas, no averías: el servicio miró y dijo
+         que ese RUC no está o está mal escrito. Eso es palabra final y
+         NO se debe tapar con el padrón de ejemplo — enseñar un ✓ verde
+         sobre un RUC que SUNAT no reconoce es peor que no enseñar nada. */
+      err.definitivo=(res.status===404||res.status===400);
+      throw err;
+    }
     if(j&&j.error)throw new Error(j.error);
     return {n:j.razonSocial||j.nombre||j.nombre_o_razon_social||'',
             dir:j.direccion||j.domicilioFiscal||j.direccion_completa||'',
             est:j.estado||j.estado_del_contribuyente||'',
-            cond:j.condicion||j.condicion_de_domicilio||'', ind:null};
+            cond:j.condicion||j.condicion_de_domicilio||'',
+            tipo:j.tipo||'', act:j.actividadEconomica||'',
+            ind:industriaDe(j.actividadEconomica)};
   }catch(e){
-    throw new Error(e.name==='AbortError'?'tardó más de 9 segundos':e.message);
+    const err=new Error(e.name==='AbortError'?'tardó más de 9 segundos':e.message);
+    err.definitivo=!!e.definitivo;
+    throw err;
   }finally{clearTimeout(corte)}
 }
 async function buscarSunat(ruc){
   // 1) El servicio configurado: devuelve los datos oficiales de SUNAT.
   if(RUC_API){
     try{ const d=await pedirRuc(ruc); if(d&&d.n)return d; }
-    catch(e){ /* sin señal o servicio caído: se cae al padrón local */ }
+    catch(e){
+      // El servicio contestó que ese RUC no existe: se respeta.
+      if(e.definitivo)return {noExiste:true,motivo:e.message};
+      // Cualquier otra cosa —sin señal, servicio caído— sí puede
+      // caer al padrón local, que es mejor que nada.
+    }
   }
   // 2) Padrón de demostración local
   const d=RUC_DEMO[ruc];
@@ -8804,7 +8858,12 @@ function openNewClient(){
      <div id="ncRucEst" style="font-size:11.5px;margin-top:5px;line-height:1.5">Escribe el RUC y pulsa <b>Buscar datos</b>: se traen la razón social y el domicilio fiscal.</div></div>
    <div class="two">
      <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" placeholder="se completa con el RUC"></div>
-     <div class="fld"><label>Industria</label><select class="inp" id="ncI">${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+     <div class="fld"><label>Industria</label><select class="inp" id="ncI">
+       <!-- Sin esta primera opción vacía, el desplegable arranca en
+            "Minería" y un cliente cuyo rubro nadie eligió queda
+            grabado como minero. -->
+       <option value="">— sin especificar —</option>
+       ${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
    </div>
    <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="se completa con el RUC"></div>
    <div class="two">
@@ -8845,7 +8904,10 @@ function saveNewClient(){
   const id='cli'+Date.now();
   const areasArr=($('#ncA').value||'').split(',').map(s=>s.trim()).filter(Boolean);
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
-  CLIENTES.push({id,n,ruc,verif:ncVerif,dir:$('#ncDir').value.trim(),ind:$('#ncI').value,fac:plantaNueva,areas});
+  /* Vacío no: quedaría un hueco en las tarjetas y en los filtros.
+     Se dice que no se especificó, que es la verdad. */
+  CLIENTES.push({id,n,ruc,verif:ncVerif,dir:$('#ncDir').value.trim(),
+    ind:$('#ncI').value||'Sin especificar',fac:plantaNueva,areas});
   $('#fCli').dataset.built='';
   closeModal();renderAll();go('clients');registrar('Cliente',`${n} (RUC ${ruc}) dado de alta`);toast(`Cliente ${n} creado`);
 }
