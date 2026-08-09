@@ -1919,6 +1919,31 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   border-top:1px dashed var(--line);padding-top:8px}
 .psv-graf{display:block;margin:var(--sp-3) 0;max-width:100%}
 
+/* Subir fotos: el botón y las miniaturas.
+   Estas tres clases se usaban en el ensayo PSV y en los datos de
+   placa pero nunca se habían escrito, así que el ícono de la cámara
+   salía a tamaño natural y relleno de negro, y las miniaturas a su
+   tamaño real. Parecía roto, y con razón nadie subía fotos. */
+.ev-add{display:flex;align-items:center;justify-content:center;gap:9px;
+  width:100%;min-height:48px;padding:12px 14px;margin-top:4px;cursor:pointer;
+  border:1.5px dashed var(--line-2);border-radius:var(--r-2);
+  background:var(--surface-2);color:var(--ink-2);
+  font-size:13.5px;font-weight:600;text-align:center;
+  transition:border-color .16s var(--ease-out),color .16s var(--ease-out),background .16s var(--ease-out)}
+.ev-add:hover,.ev-add:focus-within{border-color:var(--sel);color:var(--sel);background:var(--surface-3)}
+.ev-add:active{transform:scale(.99)}
+.ev-add svg{width:20px;height:20px;flex:0 0 20px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;stroke-linejoin:round}
+.ev-tiras{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ev-tira{position:relative;width:96px;height:96px;border-radius:var(--r-2);overflow:hidden;
+  border:1px solid var(--line);background:var(--surface-2)}
+.ev-tira img{width:100%;height:100%;object-fit:cover;display:block}
+.ev-tira button{position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0;
+  display:grid;place-items:center;border:none;border-radius:50%;cursor:pointer;
+  background:rgba(0,0,0,.62);color:#fff;font-size:13px;line-height:1}
+.ev-tira button:hover{background:var(--late)}
+@media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
+
 /* datos de placa: la foto al lado, para copiar mirándola */
 .placa-cols{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:var(--sp-4);align-items:start}
 .placa-foto{position:sticky;top:0}
@@ -3255,7 +3280,7 @@ function renderGrid(){
      const m=MODELOS[a.mod]||{},e=estado(a),full=a.cr==='Crítica'?3:a.cr==='Alta'?2:a.cr==='Media'?1:0;
      return `<tr data-id="${a.id}" class="${i===S.focus?'focus':''} ${S.picked.has(a.id)?'picked':''} ${S.cur&&S.cur.id===a.id?'open':''}" onclick="rowClick(event,'${a.id}',${i})">
       <td onclick="event.stopPropagation()"><input type="checkbox" class="ck" ${S.picked.has(a.id)?'checked':''} onclick="pick('${a.id}',this.checked)"></td>
-      <td>${a.tag?`<b>${esc(a.tag)}</b>`:'<span style="color:var(--due)">— sin tag —</span>'}</td>
+      <td>${a.tag?(esProv(a.tag)?`<b class="mono" style="color:var(--due)" title="Código provisional — falta identificar">${esc(a.tag)}</b>`:`<b>${esc(a.tag)}</b>`):'<span style="color:var(--due)">— sin tag —</span>'}</td>
       <td class="mono" style="color:var(--ink-2)">${a.ser?esc(a.ser):'<span style="color:var(--due)">— sin serie —</span>'}</td>
       <td><div class="cell-2"><span>${esc(m.m||'—')}</span><small class="mono">${esc(a.mod)}</small></div></td>
       <td><div class="cell-2"><span>${esc(cli(a.cli).n)}</span><small>${esc(area(a))}</small></div></td>
@@ -3485,6 +3510,7 @@ function openAsset(id){
   $('#drSub').textContent=`${cli(a.cli).n} · ${cli(a.cli).fac} · ${area(a)}`;
   const cr=a.cr==='Crítica'?'late':a.cr==='Alta'?'due':'';
   $('#drTags').innerHTML=`<span class="tag ${e.c}"><span class="dot"></span>${e.t}</span>
+    ${a.sinId?`<span class="tag due" title="Se dio de alta sin la placa a mano" onclick="openPlacaPSV('${a.id}')" style="cursor:pointer">Falta identificar</span>`:''}
     ${a.cr?`<span class="tag ${cr}">Criticidad ${esc(a.cr.toLowerCase())}</span>`:''}
     <span class="tag">${CL[a.cl]}</span><span class="tag mono">${esc(a.mod)}</span>${a.ser?`<span class="tag mono">${esc(a.ser)}</span>`:''}`;
   const sa=salud(a);
@@ -3508,7 +3534,12 @@ function openAsset(id){
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
            <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
        }
+       /* Corregir los datos identificatorios tiene que estar a mano en
+          CUALQUIER válvula, no solo en las de seguridad: una mariposa
+          dada de alta sin la placa a mano no tenía por dónde
+          arreglarse. */
        return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+      <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
       <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
       <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
@@ -4773,9 +4804,17 @@ function pintarPSVResultado(){
 
 /* Las fotos se reducen antes de guardar: en planta se sube por datos. */
 function psvFotos(files){
-  Array.from(files||[]).forEach(f=>{
-    if(!/^image\//.test(f.type))return;
-    evFoto(f).then(d=>{PSV_TMP.fotos.push(d);pintarPSVFotos()}).catch(()=>{});
+  const lista=Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
+  if(!lista.length){toast('Elige una foto');return}
+  let fallos=0;
+  Promise.all(lista.map(f=>comprimirFoto(f)
+    .then(d=>{if(PSV_TMP){(PSV_TMP.fotos=PSV_TMP.fotos||[]).push(d)}})
+    .catch(()=>{fallos++})
+  )).then(()=>{
+    pintarPSVFotos();
+    const ok=lista.length-fallos;
+    if(fallos)toast(ok?`${ok} foto${ok>1?'s':''} agregada${ok>1?'s':''} · ${fallos} no se pudo leer`:'No se pudo leer la foto');
+    else toast(`${ok} foto${ok>1?'s':''} agregada${ok>1?'s':''}`);
   });
 }
 function psvQuitarFoto(i){PSV_TMP.fotos.splice(i,1);pintarPSVFotos()}
@@ -4841,10 +4880,16 @@ function openPlacaPSV(actId){
   if(PSV_TMP&&PSV_TMP.act===actId)PSV_GUARDADO=PSV_TMP;
   PSV_TMP=null;
   const m=MODELOS[a.mod]||{};
+  /* Media placa es propia de una válvula de seguridad: el sello U/UV,
+     el orificio API, la presión de ajuste, la capacidad certificada.
+     En una mariposa esos campos no existen y pedirlos sería inventar
+     datos. Se muestran los que la válvula tiene de verdad. */
+  const soloPSV=['cert','orif','setPress','setUnd','capac','norma'];
+  const campos=a.cl==='seguridad'?PSV_PLACA:PSV_PLACA.filter(([k])=>!soloPSV.includes(k));
   $('#mTitle').textContent=`Datos de placa · ${a.tag||a.ser||''}`;
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-     <div>Sacá una foto de la placa y llenala mirándola: la foto se queda pegada a la válvula,
+     <div>Saca una foto de la placa y llénala mirándola: la foto se queda pegada a la válvula,
        así que cualquiera puede comprobar después de dónde salió cada número.</div></div>
    <div class="placa-cols">
      <div class="placa-foto">
@@ -4856,14 +4901,19 @@ function openPlacaPSV(actId){
        <div id="plVista">${a.fotoPlaca?`<img src="${a.fotoPlaca}" alt="Placa de ${esc(a.tag||'')}">`:''}</div>
      </div>
      <div class="placa-campos">
+       ${a.sinId?`<div class="callout" style="margin-bottom:10px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+         <div>Esta válvula se dio de alta sin la placa a mano y anda con el código provisional <b class="mono">${esc(a.tag||'')}</b>.
+           Escribe aquí el <b>tag</b> o el <b>n.º de serie</b> de verdad y deja de estar pendiente.</div></div>`:''}
        <div class="two">
          <div class="fld"><label>Marca</label><input class="inp" value="${esc(m.m||'')}" disabled></div>
          <div class="fld"><label>Modelo</label><input class="inp" value="${esc(a.mod||'')}" disabled></div>
+         <div class="fld"><label for="pl-tag">Tag</label>
+           <input class="inp mono" id="pl-tag" value="${esProv(a.tag)?'':esc(a.tag||'')}" placeholder="${esProv(a.tag)?esc(a.tag):'p. ej. PSV-1300'}" oninput="placaCampo('${a.id}','tag',this.value)"></div>
          <div class="fld"><label for="pl-ser">N.º de serie</label>
            <input class="inp mono" id="pl-ser" value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)"></div>
        </div>
        <div class="two">
-        ${PSV_PLACA.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}</label>
+        ${campos.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}</label>
           <input class="inp" id="pl-${k}" value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}"
             oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
        </div>
@@ -4876,6 +4926,11 @@ function openPlacaPSV(actId){
 /* Cerrar la placa devuelve a donde se estaba: al ensayo si venía de
    ahí, o a la ficha del equipo, que sigue abierta detrás. */
 function volverDePlaca(){
+  /* Los campos de la placa se aplican mientras se escriben, no al
+     pulsar Guardar. Así que salir por "Cerrar" también tiene que
+     dejarlos en el disco: si no, el cambio se veía en pantalla y se
+     perdía al recargar. */
+  guardarLocal(); renderAll();
   const t=PSV_GUARDADO; PSV_GUARDADO=null;
   if(t){
     PSV_TMP=t;
@@ -4885,14 +4940,26 @@ function volverDePlaca(){
   }
   closeModal();
 }
-function placaCampo(id,k,v){const a=ACTIVOS.find(x=>x.id===id);if(a)a[k]=v}
+function placaCampo(id,k,v){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  a[k]=v;
+  if(k!=='tag'&&k!=='ser')return;
+  /* El tag o la serie de verdad cierran el pendiente de
+     identificación. Y si se borran los dos, la válvula no puede
+     quedarse sin nombre: vuelve al código provisional. */
+  const t=String(a.tag||'').trim(), s=String(a.ser||'').trim();
+  if(!t&&!s){ a.tag=a.tagProv||(a.tagProv=tagProvisional()); a.sinId=true; return }
+  a.sinId=(!s&&esProv(t))||undefined;
+}
 function placaFoto(id,f){
   if(!f)return;
-  evFoto(f).then(d=>{
+  comprimirFoto(f).then(d=>{
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
     a.fotoPlaca=d;
-    const v=$('#plVista'); if(v)v.innerHTML=`<img src="${d}" alt="Placa">`;
-  }).catch(()=>{});
+    const v=$('#plVista'); if(v)v.innerHTML=`<img src="${d}" alt="Placa de ${esc(a.tag||a.ser||'')}">`;
+    guardarLocal();
+    toast('Foto de la placa guardada');
+  }).catch(()=>toast('No se pudo leer la foto'));
 }
 function guardarPlaca(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
@@ -5471,7 +5538,9 @@ let EV_TMP=[];
 const EV_MAX_VIDEO=8*1024*1024;   // 8 MB
 function evSubir(files){
   [...(files||[])].forEach(f=>{
-    if(f.type.startsWith('image/')) return evFoto(f);
+    // el aviso al usuario ya lo da evFoto; aquí solo evitamos que la
+    // promesa rechazada quede suelta en la consola
+    if(f.type.startsWith('image/')){evFoto(f).catch(()=>{});return}
     if(f.type.startsWith('video/')){
       if(f.size>EV_MAX_VIDEO){toast(`${f.name} pesa demasiado · máximo 8 MB de video`);return}
       const rd=new FileReader();
@@ -5483,22 +5552,48 @@ function evSubir(files){
 }
 /* Una foto de celular son 4000 px que nadie va a mirar: se reduce al
    lado largo de 1400 y se guarda en JPEG. */
-function evFoto(f){
-  const rd=new FileReader();
-  rd.onload=e=>{
-    const im=new Image();
-    im.onload=()=>{
-      const k=Math.min(1,1400/Math.max(im.width,im.height));
-      const c=document.createElement('canvas');
-      c.width=Math.round(im.width*k); c.height=Math.round(im.height*k);
-      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-      EV_TMP.push({t:'foto',n:f.name,d:c.toDataURL('image/jpeg',0.82)});
-      pintarEv();
+/* ── Fotos ───────────────────────────────────────────────────
+   Achica la foto a 1400 px por el lado largo y la devuelve como
+   data-URI. Una foto de celular son 4 MB; así baja a ~250 KB, que
+   es lo que hace viable subir una jornada entera desde planta.
+
+   Devuelve una PROMESA. Antes esto no devolvía nada y el ensayo
+   PSV y los datos de placa la llamaban con .then(): reventaba en
+   el acto y por eso no se podía subir ninguna foto. Peor: la
+   función guardaba siempre en EV_TMP, que es el borrador de
+   reclamos, así que la foto de un ensayo terminaba en otro
+   formulario. Ahora comprimir y guardar son dos cosas distintas:
+   ésta comprime, y cada pantalla guarda donde le corresponde. */
+function comprimirFoto(f){
+  return new Promise((listo,falla)=>{
+    if(!f||!/^image\//.test(f.type||'')){falla(new Error('no es una imagen'));return}
+    const rd=new FileReader();
+    rd.onerror=()=>falla(new Error('no se pudo leer el archivo'));
+    rd.onload=e=>{
+      const im=new Image();
+      im.onerror=()=>falla(new Error('no se pudo abrir la imagen'));
+      im.onload=()=>{
+        try{
+          const k=Math.min(1,1400/Math.max(im.width,im.height));
+          const c=document.createElement('canvas');
+          c.width=Math.max(1,Math.round(im.width*k));
+          c.height=Math.max(1,Math.round(im.height*k));
+          c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+          listo(c.toDataURL('image/jpeg',0.82));
+        }catch(err){falla(err)}
+      };
+      im.src=e.target.result;
     };
-    im.onerror=()=>toast('No se pudo leer '+f.name);
-    im.src=e.target.result;
-  };
-  rd.readAsDataURL(f);
+    rd.readAsDataURL(f);
+  });
+}
+/* La de reclamos: comprime y la deja en el borrador del reclamo. */
+function evFoto(f){
+  return comprimirFoto(f).then(d=>{
+    EV_TMP.push({t:'foto',n:f.name,d});
+    pintarEv();
+    return d;
+  }).catch(e=>{toast('No se pudo leer '+((f&&f.name)||'la foto'));throw e});
 }
 function evQuitar(i){EV_TMP.splice(i,1);pintarEv()}
 function pintarEv(){
@@ -5962,10 +6057,16 @@ function dropWO(ev,et){
   renderAll();
 }
 function openWO(actId,tipo){
-  const opts=visibles().filter(a=>a.ser);
+  /* Antes esta lista dejaba fuera a toda válvula sin número de serie.
+     La serie está en la placa y la placa no siempre se tiene: esas
+     válvulas existían en el parque pero no se les podía abrir una
+     orden, que es justo lo que hay que hacer para ir a leerles la
+     placa. Entran todas; se identifican con lo que tengan. */
+  const eti=a=>[a.tag,a.ser].filter(Boolean).join(' · ')||'(sin identificar)';
+  const opts=visibles();
   $('#mTitle').textContent='Nueva orden de trabajo';
   $('#mBody').innerHTML=`<div class="two">
-     <div class="fld"><label>Activo</label><select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(a.tag)} · ${esc(a.ser)}</option>`).join('')}</select></div>
+     <div class="fld"><label>Activo</label><select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(eti(a))}</option>`).join('')}</select></div>
      <div class="fld"><label>N.º de orden</label><input class="inp" id="woNum" value="AD-26-0${Math.floor(700+Math.random()*299)}"></div>
      <div class="fld"><label>Tipo</label><select class="inp" id="woTipo">${['Preventivo','Correctivo','Calibración','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option ${t===tipo?'selected':''}>${t}</option>`).join('')}</select></div>
      <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
@@ -7447,11 +7548,12 @@ function openNewAsset(preCli){
      <button class="btn quiet xs" id="naClear" style="display:none;float:right" onclick="clearNaMod()">✕ Quitar selección</button></label>
    <div class="nm-grid">${gallery}</div>
    <div id="naHint" class="callout" style="display:none;margin-bottom:14px"></div>
-   <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— lo único propio de esta válvula</span></label>
+   <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— opcional: si no tienes la placa a mano, déjalo en blanco y lo completas después</span></label>
    <div class="two">
-     <div class="fld"><label>Tag</label><input class="inp" id="naTag" placeholder="p. ej. PSV-1300"></div>
-     <div class="fld"><label>N.º de serie</label><input class="inp" id="naSer" placeholder="p. ej. C-90-1123"></div>
+     <div class="fld"><label>Tag <span style="color:var(--ink-3);font-weight:400">(opcional)</span></label><input class="inp" id="naTag" placeholder="p. ej. PSV-1300"></div>
+     <div class="fld"><label>N.º de serie <span style="color:var(--ink-3);font-weight:400">(opcional)</span></label><input class="inp" id="naSer" placeholder="p. ej. C-90-1123"></div>
    </div>
+   <div class="muted" style="font-size:12px;margin:-4px 0 12px">Si dejas los dos en blanco, la válvula se crea con un código provisional (S/T-001) y queda marcada como <b>falta identificar</b>. La completas desde <b>Datos de placa</b> cuando tengas la foto.</div>
    <details class="fx-more" id="naSpecs"><summary>Ficha técnica — <span id="naSpecsLbl">se completa al elegir el modelo</span></summary>
      <div class="two" style="margin-top:10px">
        <div class="fld"><label>Tamaño</label><input class="inp" id="naSz" placeholder='2&quot;x3&quot;'></div>
@@ -7495,21 +7597,41 @@ function selNaMod(k){
   if(m.c==='seguridad'){
     const p=new Date(HOY);p.setFullYear(p.getFullYear()+1);const ps=p.toISOString().slice(0,10);
     set('#naProx',ps);
-    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). Es válvula de seguridad: <b>requiere calibración</b>, programé la próxima para <b>${ps}</b>.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). Es válvula de seguridad: <b>requiere calibración</b>, programé la próxima para <b>${ps}</b>.<br>Si tienes el <b>tag</b> o el <b>n.º de serie</b> a mano, ponlos abajo; si no, se completan después.</div>`;
   }else{
     set('#naProx','');
-    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). No requiere calibración periódica.<br>Solo falta el <b>tag</b> y el <b>n.º de serie</b>, que son propios de este equipo.</div>`;
+    hint.style.display='';hint.innerHTML=`${ic}<div><b>${esc(m.m)} ${esc(k)}</b> · ${esc(m.t)} — ficha técnica autocompletada${resumen?` (${esc(resumen)})`:''} y despiece heredado (${nBom} posiciones). No requiere calibración periódica.<br>Si tienes el <b>tag</b> o el <b>n.º de serie</b> a mano, ponlos abajo; si no, se completan después.</div>`;
   }
+}
+/* ── Alta sin la placa a mano ────────────────────────────────
+   El tag y el número de serie están en la placa, y la placa no
+   siempre se tiene delante cuando se da de alta el equipo: a veces
+   la válvula está montada en altura, con la placa oxidada, o el
+   ingeniero la carga desde la oficina con una foto pendiente.
+   Así que los dos son opcionales.
+   Lo que NO puede pasar es que la válvula se quede sin nombre: sin
+   tag ni serie no aparece en ninguna lista, no se puede buscar y
+   sale en blanco en el certificado. Se le pone un código
+   provisional —S/T-001, "sin tag"— y queda marcada como pendiente
+   de identificar hasta que alguien escriba el dato real. */
+const esProv=t=>/^S\/T-\d+$/.test(String(t||'').trim());
+function tagProvisional(){
+  let n=0;
+  ACTIVOS.forEach(a=>{const m=/^S\/T-(\d+)$/.exec(String(a.tag||'').trim());if(m)n=Math.max(n,+m[1])});
+  return 'S/T-'+String(n+1).padStart(3,'0');
 }
 function saveNewAsset(){
   if(!naSel){toast('Elige el modelo de válvula (paso 1)');return}
-  const tag=$('#naTag').value.trim(),ser=$('#naSer').value.trim();
-  if(!tag&&!ser){toast('Indica al menos el tag o el número de serie');return}
+  let tag=$('#naTag').value.trim();const ser=$('#naSer').value.trim();
+  const sinId=!tag&&!ser;
+  if(sinId)tag=tagProvisional();
   const m=MODELOS[naSel]||{},id='new'+Date.now();
   ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
+    sinId:sinId||undefined, tagProv:sinId?tag:undefined,
     sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
-  closeModal();renderAll();gotoAsset(id);registrar('Alta',`Válvula ${tag||ser} · ${cli($('#naCli').value).n||''}`);toast(`Válvula ${tag||ser} creada`);
+  closeModal();renderAll();gotoAsset(id);registrar('Alta',`Válvula ${tag||ser} · ${cli($('#naCli').value).n||''}`);
+  toast(sinId?`Creada como ${tag} — falta identificarla`:`Válvula ${tag||ser} creada`);
 }
 
 /* ============================================================
