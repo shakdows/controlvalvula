@@ -4845,12 +4845,33 @@ function guardarPSV(emitir){
   const i=CALIBS.findIndex(x=>x.id===t.id);
   if(i>=0)CALIBS[i]=t; else CALIBS.unshift(t);
   const a=ACTIVOS.find(x=>x.id===t.act)||{};
+
+  /* Un ensayo terminado no es sólo un papel: es el hecho que mueve la
+     válvula. Un borrador no mueve nada.
+     Aprobado → renueva la vigencia un año.
+     Rechazado → deja constancia de la intervención pero NO renueva la
+     próxima calibración: la válvula no está conforme y tiene que
+     seguir apareciendo como pendiente. */
+  let orden=null;
+  if(v.estado!=='incompleto'&&a.id){
+    const fec=(t.fecha||HOY.toISOString().slice(0,10)).slice(0,10);
+    a.ult=fec;
+    if(v.estado==='aprobado'){
+      const d=new Date(fec+'T00:00:00'); d.setFullYear(d.getFullYear()+1);
+      a.prox=d.toISOString().slice(0,10);
+    }
+    const resumen=`Ensayo AXAD-088${t.os?' · O.S. '+t.os:''}. Promedio ${n2(v.prom)} ${t.und} sobre ${n2(v.set)} ${t.und} (${v.desv>0?'+':''}${n2(v.desv)} %). Resultado: ${v.estado}.`;
+    const quien=((t.firmas||[]).find(f=>f.rol==='ejec')||{}).n||'';
+    orden=cerrarOrdenConEnsayo(a.id,t.id,fec,quien,resumen);
+    if(!DOCS.some(d=>d.calib===t.id))
+      DOCS.unshift({a:a.id,t:'CERT',n:`Certificado AXAD-088 · ${a.tag||a.ser||''} · ${fPE(fec)}.pdf`,f:fec,w:'420 KB',calib:t.id});
+  }
+
   registrar('Ensayo PSV', v.estado==='incompleto'
     ? `${a.tag||''} · borrador guardado`
     : `${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
-  toast(v.estado==='incompleto' ? 'Borrador guardado · podés seguir después'
-      : v.estado==='aprobado'   ? 'Ensayo guardado · APROBADO'
-      :                           'Ensayo guardado · RECHAZADO');
+  toast(v.estado==='incompleto' ? 'Borrador guardado · puedes seguir después'
+      : `Ensayo ${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}${orden?` · orden ${orden.n} cerrada`:''}`);
   const id=t.id; PSV_TMP=null; closeModal(); renderAll();
   if(emitir)setTimeout(()=>imprimirPSV(id),150);
 }
@@ -5997,17 +6018,73 @@ function renderWO(){
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
 }
+/* ── La orden y el ensayo son la misma cosa ──────────────────
+   El gerente abre la orden; el taller ejecuta y registra. Antes eran
+   dos caminos que no se encontraban: registrar una calibración creaba
+   SU PROPIA orden ya cerrada, y la orden del gerente se quedaba
+   abierta para siempre. Un trabajo, dos órdenes, y el tablero
+   mintiendo.
+   Ahora el ensayo se lanza desde la orden y, al guardarlo, esa misma
+   orden se cierra con el certificado colgado. */
+let ORDEN_ACTIVA=null;    // la orden que el taller está ejecutando
+
+/* Orden de calibración todavía abierta para esta válvula. Es lo que
+   permite que el taller entre por la ficha del equipo —como trabaja
+   de verdad— y aun así cierre la orden que le abrieron. */
+function ordenAbiertaDe(actId){
+  return ORDENES.find(o=>o.act===actId&&o.et!=='certificada'
+    &&/calibra/i.test(o.tipo||'')) || null;
+}
+/* Cierra la orden con el ensayo colgado. Devuelve la orden o null. */
+function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
+  /* La orden apuntada sólo vale si es de ESTA válvula: si el técnico
+     abrió una orden, la dejó, y después ensayó otra válvula, cerrar la
+     primera sería falsear dos cosas de un golpe. */
+  const apuntada=ORDENES.find(x=>x.id===ORDEN_ACTIVA&&x.act===actId);
+  const o=apuntada||ordenAbiertaDe(actId);
+  ORDEN_ACTIVA=null;
+  if(!o)return null;
+  o.et='certificada'; o.calib=calibId;
+  if(fecha)o.f=fecha;
+  if(tec&&tec!=='Por asignar')o.tec=tec;
+  if(resumen)o.hall=resumen;
+  registrar('Orden',`${o.n} cerrada con el ensayo`);
+  return o;
+}
+
 /* Avance automático de etapa. En la última se abre el parte de cierre y,
    al guardar, la orden pasa sola a "Cerrada / certificada". */
 function advanceWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
   const nx=WO_NEXT[o.et];if(!nx)return;
-  if(nx[0]==='certificada'){openCloseWO(id);return}
+  if(nx[0]==='certificada'){
+    /* Una orden de calibración no se cierra con el parte genérico:
+       se cierra con el ensayo. Si no, la válvula quedaba con la
+       próxima calibración renovada un año SIN un solo certificado
+       detrás, que es la mentira más cara que puede contar esto. */
+    if(/calibra/i.test(o.tipo||'')){registrarEnsayoDeOrden(id);return}
+    openCloseWO(id);return;
+  }
   o.et=nx[0];
   if(nx[0]==='taller')toast(`${o.n} ingresó a taller`);
   else toast(`${o.n} programada para ${o.f}`);
   registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   renderAll();
+}
+/* Lanza el formulario que corresponde según la válvula: el formato
+   AXAD-088 de la empresa si es de seguridad, la calibración normal si
+   no. En los dos casos la orden queda apuntada para cerrarla al
+   guardar. */
+function registrarEnsayoDeOrden(id){
+  const o=ORDENES.find(x=>x.id===id);if(!o)return;
+  const a=ACTIVOS.find(x=>x.id===o.act);
+  if(!a){toast('La válvula de esta orden ya no existe');return}
+  if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  ORDEN_ACTIVA=id;
+  if(o.et!=='taller'){o.et='taller';renderAll()}
+  closeModal();
+  toast(`${o.n} · registra el ensayo y la orden se cierra sola`);
+  if(a.cl==='seguridad')openPSV(a.id); else openCalib(a.id);
 }
 function openCloseWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
@@ -6037,8 +6114,13 @@ function saveCloseWO(id){
   o.f=$('#cwFec').value||o.f;o.tec=$('#cwTec').value||o.tec;o.hall=$('#cwHall').value||o.hall;
   o.partes=Array.from(document.querySelectorAll('.cwP')).filter(c=>c.checked).map(c=>c.value);
   o.et='certificada';
+  /* La vigencia sólo se renueva si hubo un ensayo. Un parte de
+     mantenimiento cuenta como intervención —cambia "último
+     servicio"— pero no certifica nada: si renovara la próxima
+     calibración, la válvula aparecería al día durante un año sin un
+     solo certificado que lo respalde. */
   if(a){a.ult=o.f;
-    if(a.prox){const d=new Date(o.f+'T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
+    if(a.prox&&o.calib){const d=new Date(o.f+'T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
   closeModal();renderAll();go('wo');
   registrar('Orden',`${o.n} cerrada · ${a?a.tag||a.ser:''}`);
   toast(`${o.n} cerrada${a&&a.prox?` · próxima calibración ${a.prox}`:''}`);
@@ -6048,12 +6130,18 @@ function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataT
 function dropWO(ev,et){
   ev.preventDefault();ev.currentTarget.classList.remove('over');
   const o=ORDENES.find(x=>x.id===dragId);if(!o)return;
-  const prev=o.et;o.et=et;
+  const prev=o.et;
   if(et==='certificada'&&prev!=='certificada'){
-    const a=ACTIVOS.find(x=>x.id===o.act);
-    if(a){a.ult='2026-07-23';if(a.prox){const d=new Date('2026-07-23T00:00:00');d.setFullYear(d.getFullYear()+1);a.prox=d.toISOString().slice(0,10);}}
-    toast(`${o.n} certificada · vigencia del equipo actualizada`);
-  } else toast(`${o.n} → ${ETAPAS.find(e=>e[0]===et)[1]}`);
+    /* Arrastrar hasta el final no puede certificar por sí solo: antes
+       cerraba la orden, ponía una fecha fija escrita a mano y renovaba
+       la vigencia un año sin ningún ensayo. Se manda al formulario que
+       corresponde y la orden se cierra al guardarlo. */
+    if(/calibra/i.test(o.tipo||'')){registrarEnsayoDeOrden(o.id);return}
+    openCloseWO(o.id);return;
+  }
+  o.et=et;
+  toast(`${o.n} → ${ETAPAS.find(e=>e[0]===et)[1]}`);
+  registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===et)[1]}`);
   renderAll();
 }
 function openWO(actId,tipo){
@@ -7745,9 +7833,14 @@ function generateCalib(assetId,editId){
   if(prev)CALIBS[CALIBS.indexOf(prev)]=rec;else CALIBS.unshift(rec);
   a.ult=(fin||ini).slice(0,10);a.prox=prox;
   const hall=`Certificado ${cert}. ${msgs[2]} ${msgs[3]} Resultado: ${verdict}.`;
+  /* Orden: primero la que ya está colgada de este certificado (si se
+     está editando), después la que el gerente dejó abierta, y sólo si
+     no hay ninguna se crea una. Antes se creaba siempre, así que el
+     trabajo salía dos veces en el tablero. */
   const oExist=ORDENES.find(o=>o.calib===rec.id);
-  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;}
-  else{const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
+  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;oExist.et='certificada';}
+  else if(!cerrarOrdenConEnsayo(a.id,rec.id,(fin||ini).slice(0,10),tec,hall)){
+    const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
     ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'certificada',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
   const dExist=DOCS.find(d=>d.calib===rec.id);
   if(dExist)dExist.f=(fin||ini).slice(0,10);
