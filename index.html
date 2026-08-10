@@ -1944,6 +1944,29 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+.sub-nav{margin:2px 0 6px;padding:6px 0 6px 10px;border-left:2px solid var(--line-2);
+  margin-left:16px;display:flex;flex-direction:column;gap:1px}
+.sub-cab{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);
+  padding:0 8px 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-nav a{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--r-1);
+  font-size:12.5px;color:var(--ink-2);cursor:pointer;line-height:1.3;
+  transition:background .12s var(--ease-out),color .12s var(--ease-out)}
+.sub-nav a:hover{background:var(--surface-2);color:var(--ink-1)}
+.sub-nav a.on{background:var(--surface-3);color:var(--ink-1);font-weight:650}
+.sub-nav a .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sub-nav a .ct{flex:0 0 auto;min-width:18px;height:17px;padding:0 5px;border-radius:99px;
+  background:var(--surface-3);color:var(--ink-2);font-size:10.5px;font-weight:700;
+  display:grid;place-items:center}
+.sub-nav a.on .ct{background:var(--sel);color:#fff}
+.sub-salir{display:flex;align-items:center;gap:5px;margin-top:4px;padding:5px 8px;
+  border:none;background:none;cursor:pointer;color:var(--ink-3);font-size:11.5px;
+  font-family:inherit;border-radius:var(--r-1)}
+.sub-salir:hover{background:var(--surface-2);color:var(--ink-1)}
+.sub-salir svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+/* con la barra contraída no cabe el submenú: se esconde y se navega
+   por la barra de arriba, que sigue ahí */
+.app.rail-min .sub-nav{display:none}
+
 .conf-cap{position:fixed;inset:0;z-index:120;display:grid;place-items:center;
   background:rgba(12,16,22,.5);backdrop-filter:blur(2px);padding:20px;
   animation:confIn .14s var(--ease-out)}
@@ -3141,7 +3164,7 @@ function go(p){
   if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
-  $$('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
+  $$('#nav > a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
   const base=S.cli?esc(cli(S.cli).n):'Adolphus';
   const dentro=S.inCli&&CLI_TABS.some(([x])=>x===p)?esc(cli(S.inCli).n):null;
   // un cliente mirando su propio espacio no necesita su nombre dos veces
@@ -3165,7 +3188,7 @@ function go(p){
     if(hay!==puesta){puesta=hay;$('#app').classList.toggle('scrolled',hay)}
   },{passive:true});
 })();
-$$('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+$$('#nav > a').forEach(a=>a.onclick=()=>go(a.dataset.p));
 
 /* ── Barra inferior del celular ──────────────────────────────
    No es un menú aparte: es un espejo del lateral. Toma los cuatro
@@ -3180,7 +3203,7 @@ const TAB_CORTO_CLI={home:'Inicio',assets:'Equipos',cal:'Calibra.',plan:'Plan',w
   parts:'Repuestos',req:'Solicitudes',cot:'Cotizac.',snc:'Reclamos',rep:'Reportes'};
 function pintarTabbar(){
   const tb=$('#tabbar'); if(!tb) return;
-  const links=$$('#nav a').filter(a=>a.style.display!=='none');
+  const links=$$('#nav > a').filter(a=>a.style.display!=='none');
   // el orden del lateral ya es el orden de importancia; los cuatro primeros
   const dest=links.slice(0,4);
   const cli=S.rol==='cliente';
@@ -3233,12 +3256,12 @@ function applyRole(v){
      válvula, Adolphus la revisa y levanta el registro. El cliente no
      lo abre ni lo ve. */
   const ocultas=c?['clients','cat','imp','users','snc','stk']:['assets','cal','plan','wo','req','parts','imp'];
-  $$('#nav a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
+  $$('#nav > a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
   const ETIQ_CLI={home:'Inicio',assets:'Mis equipos',cal:'Calibraciones',plan:'Plan anual',wo:'Servicios',
     parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos',rep:'Reportes'};
-  $$('#nav a').forEach(a=>{
+  $$('#nav > a').forEach(a=>{
     const l=a.querySelector('.lbl');if(!l)return;
     if(!l.dataset.base)l.dataset.base=l.textContent;
     l.textContent=(c&&ETIQ_CLI[a.dataset.p])||l.dataset.base;
@@ -3525,6 +3548,7 @@ function resetImport(){
   if(typeof paso==='function'&&$('#steps'))paso(1);
 }
 function exitClient(){
+  const sn=document.getElementById('subNav'); if(sn)sn.remove();
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   closeDrawer();renderAll();go('clients');
 }
@@ -3571,6 +3595,29 @@ function gotoAsset(id,tab){
 function gotoClientPage(page,cliId){
   if(!S.cli&&cliId&&S.inCli!==cliId)enterClient(cliId,page);else go(page);
 }
+/* ── Las secciones del cliente, colgando de "Clientes" ───────
+   Estaban en una barra horizontal arriba que en una laptop se
+   quedaba sin sitio y había que desplazar de lado para llegar a
+   "Importar". Colgadas del menú lateral se ven todas de una vez, y
+   se entiende de qué cuelgan: son las secciones DE ESE cliente, no
+   otro sitio del programa. */
+function pintarSubNav(n){
+  const enlace=document.querySelector('#nav > a[data-p="clients"]');
+  if(!enlace)return;
+  let caja=$('#subNav');
+  if(!S.inCli||S.rol==='cliente'){ if(caja)caja.remove(); return }
+  if(!caja){
+    caja=document.createElement('div');
+    caja.id='subNav'; caja.className='sub-nav';
+    enlace.insertAdjacentElement('afterend',caja);
+  }
+  const c=cli(S.inCli)||{};
+  caja.innerHTML=`<div class="sub-cab" title="${esc(c.n||'')}">${esc(c.n||'')}</div>`+
+    CLI_TABS.map(([p,l])=>`<a class="${S.page===p?'on':''}" onclick="go('${p}')">
+      <span class="lbl">${l}</span>${n&&n[p]?`<span class="ct">${n[p]}</span>`:''}</a>`).join('')+
+    `<button class="sub-salir" onclick="exitClient()">
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Todos los clientes</button>`;
+}
 function renderCliBar(){
   const t=$('#impTitle');
   if(t)t.textContent=(S.inCli||S.cli)?`Importar a ${cli(S.inCli||S.cli).n}`:'Importar levantamiento de campo';
@@ -3588,8 +3635,8 @@ function renderCliBar(){
     cal:eq.filter(a=>a.prox).length,
     wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='final'}).length,
     req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
-  $('#cbTabs').innerHTML=CLI_TABS.map(([p,l])=>
-    `<a class="${S.page===p?'on':''}" onclick="go('${p}')">${l}${n[p]?`<span class="n">${n[p]}</span>`:''}</a>`).join('');
+  $('#cbTabs').innerHTML='';
+  pintarSubNav(n);
 }
 
 /* ============================================================
@@ -3861,16 +3908,34 @@ function fichaCalib(a){
 }
 function fichaRepuestos(a){
   const m=MODELOS[a.mod]||{},lista=BOM[m.b||'globo']||[];
-  const kit=lista.filter(p=>p.k),stock=kit.filter(p=>p.s>0).length;
+  const kit=lista.filter(p=>p.k);
   const total=kit.reduce((s,p)=>s+precio(p.n),0);
   if(!lista.length) return '';
+  /* "3 de 4" no se entendía, con razón: eran las piezas del kit de
+     overhaul que tenían stock, pero ni el rótulo ni el número lo
+     decían. Ahora se dice la frase entera y, si hay hoja de almacén
+     cargada, se cuenta contra ELLA en vez de contra el número de
+     ejemplo que trae el catálogo — que es un dato inventado y no
+     debería decidir si se promete una entrega. */
+  const conHoja=STOCK.length>0;
+  const hay=p=>{const s=hayStock(p.n);return s==null?(conHoja?null:p.s>0):s>0};
+  const listos=kit.filter(p=>hay(p)===true).length;
+  const nose=kit.filter(p=>hay(p)===null).length;
+  const tono=listos===kit.length?'ok':listos?'due':'late';
+  const faltan=kit.length-listos-nose;
   return fxBloque('Repuestos de este equipo',
     `<button class="btn sec xs" onclick="showTab('bom')">Ver el despiece</button>`,
     `<div class="fx-cal">
-       <div class="fx-cal-n"><span>Posiciones del despiece</span><b>${lista.length}</b></div>
+       <div class="fx-cal-n"><span>Piezas del despiece</span><b>${lista.length}</b></div>
        <div class="fx-cal-n"><span>Kit de overhaul</span><b>${kit.length} piezas</b></div>
-       <div class="fx-cal-n"><span>Disponibles en Lima</span><b style="color:var(--${stock===kit.length?'ok':stock?'due':'late'})">${stock} de ${kit.length}</b></div>
-       <div class="fx-cal-n"><span>Kit completo desde</span><b>${usd(total)}</b></div>
+       <div class="fx-cal-n"><span>Hay en almacén</span>
+         <b style="color:var(--${tono})">${listos} de las ${kit.length} del kit</b>
+         <small style="display:block;font-size:11px;color:var(--ink-3);font-weight:500;margin-top:2px">${
+           conHoja
+             ? (faltan?`faltan ${faltan} por comprar`:'el kit está completo')+(nose?` · ${nose} sin registrar en la hoja`:'')
+             : 'del catálogo · carga la hoja de almacén para el dato real'}</small></div>
+       <div class="fx-cal-n"><span>Kit completo desde</span><b>${usd(total)}</b>
+         <small style="display:block;font-size:11px;color:var(--ink-3);font-weight:500;margin-top:2px">precio de lista, sin IGV</small></div>
      </div>`);
 }
 function fichaMovimientos(a){
@@ -8783,7 +8848,9 @@ function mandarAMantenimiento(id){
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
      <div>Se crea una orden con su código <b>MAT</b> y aparece al instante en el tablero del taller,
-       en <b>OC recibida</b>. Un ingeniero la toma poniendo su nombre y la finaliza registrando el ensayo.</div></div>
+       en <b>OC recibida</b>. Un ingeniero la toma poniendo su nombre y la finaliza registrando el ensayo.<br>
+       <span class="muted">Esto no abre ninguna orden de compra. Si el cliente mandó una OC con varias válvulas,
+       se abre en <b>Órdenes de trabajo → Nueva OC</b> y se marcan todas de una vez.</span></div></div>
    <div class="dt">
      <div class="dt-i"><span>Válvula</span><b>${esc(a.tag||a.ser||'')}</b></div>
      <div class="dt-i"><span>Cliente</span><b>${esc(c.n||'')}</b></div>
@@ -8796,8 +8863,6 @@ function mandarAMantenimiento(id){
        ${['Calibración','Preventivo','Correctivo','Inspección','Overhaul'].map(t=>`<option ${t===sug?'selected':''}>${t}</option>`).join('')}</select></div>
      <div class="fld"><label for="mmFec">Fecha prevista</label><input class="inp" id="mmFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>
-   <div class="fld"><label for="mmOC">N.º de OC del cliente <span class="opc">si la hay</span></label>
-     <input class="inp mono" id="mmOC" placeholder="OC-4500…"></div>
    <div class="fld"><label for="mmMot">Motivo / qué hay que hacerle</label>
      <textarea class="inp" id="mmMot" rows="3" placeholder="Lo que el taller necesita saber antes de abrirla.">${venc!==null&&venc<0?`Calibración vencida hace ${-venc} días.`:''}</textarea></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="editarActivo('${id}')">Volver</button>
@@ -8806,8 +8871,12 @@ function mandarAMantenimiento(id){
 }
 function confirmarMandar(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
-  const mat=nuevoMAT(), oc=($('#mmOC').value||'').trim();
-  ORDENES.unshift({id:'o'+Date.now(),act:id,mat,n:mat,oc:oc||undefined,
+  /* Sin número de OC: esta ventana manda la válvula al taller, y ya.
+     La OC del cliente se abre en su propia pantalla —Órdenes de
+     trabajo → Nueva OC—, que además reparte varias válvulas de una
+     vez. Mezclarlas aquí invitaba a escribir un número a ojo. */
+  const mat=nuevoMAT();
+  ORDENES.unshift({id:'o'+Date.now(),act:id,mat,n:mat,
     et:'oc',tipo:$('#mmTipo').value,f:$('#mmFec').value||HOY.toISOString().slice(0,10),
     tec:'Por asignar',hall:($('#mmMot').value||'').trim()||'Sin observaciones.',partes:[]});
   closeModal(); renderAll(); go('wo');
