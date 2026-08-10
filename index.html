@@ -3957,9 +3957,199 @@ function verOrden(idOrAct,esActivo){
   const cliente=S.rol==='cliente';
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
     <button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>
+    ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     ${!cliente&&sig?`<button class="btn" onclick="closeModal();advanceWO('${o.id}')">Pasar a ${esc(sig[1].toLowerCase())}</button>`:''}`;
   $('#modal').classList.add('on');
 }
+
+/* ════════════════════════════════════════════════════════════
+   ETIQUETA PARA PEGAR EN LA VÁLVULA
+   ------------------------------------------------------------
+   Lo que el taller pega en el equipo al terminar. En planta nadie
+   abre el portal para saber si una válvula está vigente: mira la
+   etiqueta. Así que lo que tiene que leerse desde dos metros es el
+   TAG y la PRÓXIMA CALIBRACIÓN, y el resto va pequeño.
+   Los datos salen del ensayo guardado —fecha, resultado, set— y no
+   se teclean: una etiqueta escrita a mano es una etiqueta que se
+   contradice con el certificado.
+   Se imprime en pliego A4 de etiquetas adhesivas: se terminan ocho
+   válvulas y se saca una hoja, no ocho impresiones.
+   ════════════════════════════════════════════════════════════ */
+const ETIQ_TAM=[
+ ['g','90 × 50 mm','una etiqueta grande, se lee de lejos'],
+ ['m','70 × 40 mm','la de siempre, 8 por hoja'],
+ ['p','50 × 25 mm','pequeña, para válvulas de línea']
+];
+/* Lo que va impreso, sacado de lo que hay guardado. */
+function datosEtiqueta(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
+  const m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  /* El ensayo terminado más reciente: el borrador todavía no dice nada. */
+  const c=CALIBS.filter(x=>x.act===a.id&&(x.tipo==='psv'
+      ? (x.veredicto&&x.veredicto!=='incompleto') : !!x.verdict))
+    .sort((x,y)=>fechaCalib(y).localeCompare(fechaCalib(x)))[0];
+  const p=proximaCalibDe(a.id);
+  const prox=p?p.f:(a.prox||'');
+  const dice=c?(c.tipo==='psv'?(c.veredicto||''):(c.verdict||'')):'';
+  const ok=/^(aprobado|conforme)/i.test(dice)&&!/^no conforme/i.test(dice);
+  const set=c&&c.tipo==='psv'&&c.setEsp?`${c.setEsp} ${c.und||''}`.trim():(a.rng||'');
+  const quien=c?(((c.firmas||[]).find(f=>f.rol==='ejec')||{}).n||c.tec||''):'';
+  const orden=ORDENES.filter(o=>o.act===a.id).sort((x,y)=>String(y.f||'').localeCompare(String(x.f||'')))[0];
+  const fecha=c?fechaCalib(c):(a.ult||'');
+  /* El sello de arriba y la fecha de abajo tienen que decir lo mismo.
+     Con un ensayo detrás, el sello es su resultado. Sin ensayo pero con
+     un historial cargado, no se puede afirmar «aprobada» —eso lo firma
+     un certificado—, pero sí decir si está en fecha, que es justo para
+     lo que alguien mira la etiqueta en planta. Y sin nada, no se
+     inventa: SIN REGISTRO y sin fechas. */
+  const d=prox?dias(prox):null;
+  let sello, tono;
+  if(c){ sello=ok?'APROBADA':'NO CONFORME'; tono=ok?'ok':'no'; }
+  else if(prox||fecha){ sello=d!=null&&d<0?'VENCIDA':'VIGENTE'; tono=d!=null&&d<0?'no':'reg'; }
+  else { sello='SIN REGISTRO'; tono='sin'; }
+  return {a,m,e,c,prox,dice,ok,set,quien,fecha,sello,tono,dRest:d,
+    certificado:!!c,
+    mat:orden?(orden.mat||orden.n||''):''};
+}
+/* Una etiqueta. El mismo trozo se repite tantas veces como copias se
+   pidan y se enmaqueta en la hoja. */
+function etiquetaHTML(actId,tam){
+  const D=datosEtiqueta(actId); if(!D)return '';
+  const {a,m,prox,set,quien,fecha,mat,sello,tono,certificado}=D;
+  const marca=LOGO.replace('<svg ','<svg class="et-lg" ');
+  const chico=tam==='p', grande=tam==='g';
+  /* Cada tamaño lleva lo que le cabe entero. Una etiqueta con el texto
+     cortado a la mitad no sirve para nada, así que en vez de encoger la
+     letra hasta lo ilegible se quitan filas: la pequeña se queda con lo
+     único que se mira de lejos —tag y próxima fecha—. */
+  const pie=[['Calibrada',fecha?fPE(fecha):'—']];
+  if(set)pie.push(['Set',set]);
+  if(!chico&&quien)pie.push(['Ejecutó',quien]);
+  if(grande&&mat)pie.push(['Orden',mat]);
+  return `<div class="et et-${tam} ${tono}">
+    <div class="et-cab">${marca}<span class="et-emp">ADOLPHUS S.A.</span>
+      <span class="et-vd">${sello}</span></div>
+    <div class="et-tag">${esc(a.tag||a.ser||'—')}</div>
+    ${chico?'':`<div class="et-eq">${esc(m.m||'')} ${esc(a.mod||'')}${grande&&a.ser?` · S/N ${esc(a.ser)}`:''}</div>`}
+    <div class="et-prox"><span>PRÓXIMA${chico?'':' CALIBRACIÓN'}</span><b>${prox?fPE(prox):'no aplica'}</b></div>
+    <div class="et-pie">${pie.slice(0,chico?2:4).map(([k,v])=>
+      `<div><span>${esc(k)}</span><b>${esc(String(v))}</b></div>`).join('')}</div>
+    ${grande?`<div class="et-nota">${certificado?'Con certificado':'Según registro'}</div>`:''}
+  </div>`;
+}
+let ETIQ={act:null, tam:'m', copias:1, extra:[]};
+function imprimirEtiqueta(actId){
+  const D=datosEtiqueta(actId);
+  if(!D){toast('No encuentro la válvula');return}
+  ETIQ={act:actId, tam:ETIQ.tam||'m', copias:1, extra:[]};
+  /* Las demás válvulas del mismo cliente que ya tienen ensayo: si el
+     taller cerró ocho, las ocho salen en la misma hoja. */
+  ETIQ.hermanas=ACTIVOS.filter(x=>x.cli===D.a.cli&&x.id!==actId&&datosEtiqueta(x.id)&&datosEtiqueta(x.id).c);
+  $('#mTitle').textContent=`Etiqueta de ${D.a.tag||D.a.ser||'la válvula'}`;
+  pintarEtiqueta();
+  $('#modal').classList.add('on');
+}
+function etiqCampo(k,v){ETIQ[k]=v;pintarEtiqueta()}
+function etiqHermana(id,on){
+  ETIQ.extra=on?ETIQ.extra.concat([id]):ETIQ.extra.filter(x=>x!==id);
+  pintarEtiqueta();
+}
+function pintarEtiqueta(){
+  const D=datosEtiqueta(ETIQ.act); if(!D)return;
+  /* La hoja de estilo de la etiqueta se mete una vez en la página, la
+     misma que se manda a imprimir: lo que se ve es lo que sale. */
+  if(!document.getElementById('etiqCSS')){
+    const st=document.createElement('style'); st.id='etiqCSS'; st.textContent=ETIQUETA_CSS;
+    document.head.appendChild(st);
+  }
+  const total=(1+ETIQ.extra.length)*ETIQ.copias;
+  const porHoja={g:6,m:8,p:24}[ETIQ.tam];
+  $('#mBody').innerHTML=`
+    ${D.c?'':`<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Esta válvula <b>todavía no tiene un ensayo terminado</b>. La etiqueta sale sin fecha ni resultado —
+        pégala sólo si es para identificar el equipo, no para certificarlo.</div></div>`}
+    <div class="fld"><label>Tamaño</label>
+      <div class="ps-quick" style="margin:0">${ETIQ_TAM.map(([k,l,x])=>
+        `<span class="ps-chip ${ETIQ.tam===k?'on':''}" onclick="etiqCampo('tam','${k}')" title="${esc(x)}">${esc(l)}</span>`).join('')}</div>
+      <span class="hint">${esc((ETIQ_TAM.find(t=>t[0]===ETIQ.tam)||[])[2]||'')} · ${porHoja} por hoja A4</span></div>
+    <div class="fld"><label for="etCop">Copias de cada una</label>
+      <input class="inp" id="etCop" type="number" min="1" max="24" value="${ETIQ.copias}"
+             style="max-width:110px" onchange="etiqCampo('copias',Math.max(1,Math.min(24,+this.value||1)))"></div>
+    ${ETIQ.hermanas&&ETIQ.hermanas.length?`
+    <h4 class="snc-sec">Aprovechar la hoja <span class="opc">otras válvulas de ${esc(D.e.n||'')} con ensayo</span></h4>
+    <div class="py-lista">${ETIQ.hermanas.map(x=>`<label class="py-it">
+      <input type="checkbox" ${ETIQ.extra.includes(x.id)?'checked':''} onchange="etiqHermana('${x.id}',this.checked)">
+      <span class="py-tag mono">${esc(x.tag||x.ser||'')}</span>
+      <span class="py-sub">${esc((MODELOS[x.mod]||{}).m||'')} ${esc(x.mod||'')}</span></label>`).join('')}</div>`:''}
+    <h4 class="snc-sec">Así queda</h4>
+    <div class="et-prev">${etiquetaHTML(ETIQ.act,ETIQ.tam)}</div>
+    <p class="hint">${total} etiqueta${total===1?'':'s'} · ${Math.ceil(total/porHoja)} hoja${Math.ceil(total/porHoja)===1?'':'s'} A4.
+      Imprime al <b>100 %</b>, sin «ajustar a la página», o el tamaño no sale.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cerrar</button>
+    <span style="flex:1"></span>
+    <button class="btn" onclick="etiquetasAImprimir()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Imprimir ${total}</button>`;
+}
+function etiquetasAImprimir(){
+  const ids=[ETIQ.act].concat(ETIQ.extra);
+  const trozos=[];
+  ids.forEach(id=>{for(let k=0;k<ETIQ.copias;k++)trozos.push(etiquetaHTML(id,ETIQ.tam))});
+  if(!trozos.length){toast('No hay nada que imprimir');return}
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Etiquetas Adolphus</title><style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;padding:8mm;font-family:'Helvetica Neue',Segoe UI,Roboto,sans-serif;
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:4mm}
+${ETIQUETA_CSS}
+@page{size:A4;margin:6mm}
+</style></head><body>${trozos.join('')}</body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),350);
+  registrar('Etiqueta',`${trozos.length} etiquetas impresas`);
+}
+/* El mismo CSS en pantalla y en el papel: si se escribiera dos veces,
+   la vista previa acabaría enseñando algo que no es lo que sale. */
+const ETIQUETA_CSS=`
+.et{border:1.6px solid #1a1d21;border-radius:2.5mm;padding:2.4mm 3mm;display:flex;flex-direction:column;
+  gap:1mm;background:#fff;color:#1a1d21;overflow:hidden;page-break-inside:avoid;position:relative}
+.et::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2.4mm;background:#5b6470}
+.et.ok::before{background:#1a7f52} .et.no::before{background:#c0392b}
+.et.reg::before{background:#102d69} .et.sin::before{background:#8a929c}
+.et-g{width:90mm;height:50mm} .et-m{width:70mm;height:40mm} .et-p{width:50mm;height:25mm}
+.et-cab{display:flex;align-items:center;gap:1.6mm;padding-left:2mm}
+.et-cab .et-lg{width:3.6mm;height:4.4mm;flex:0 0 auto}
+.et-emp{font-size:2.3mm;letter-spacing:.09em;font-weight:700;color:#8a929c}
+.et-vd{margin-left:auto;font-size:2.4mm;font-weight:800;letter-spacing:.06em;padding:.5mm 1.4mm;border-radius:1mm}
+.et.ok .et-vd{color:#126b44;background:#e8f5ee} .et.no .et-vd{color:#a8291c;background:#fceceb}
+.et.reg .et-vd{color:#102d69;background:#e9eef7} .et.sin .et-vd{color:#5b6470;background:#f0f2f4}
+.et-tag{font-size:7.4mm;font-weight:800;letter-spacing:-.02em;line-height:1;padding-left:2mm;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.et-eq{font-size:2.6mm;color:#5b6470;padding-left:2mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.et-prox{margin:.6mm 0 0 2mm;padding:1.2mm 2mm;border:1.2px solid #1a1d21;border-radius:1.5mm;
+  display:flex;align-items:baseline;gap:2mm}
+.et-prox span{font-size:2.1mm;letter-spacing:.07em;font-weight:700;color:#5b6470}
+.et-prox b{font-size:5mm;font-weight:800;letter-spacing:-.01em;margin-left:auto;font-variant-numeric:tabular-nums}
+.et-pie{display:flex;flex-wrap:wrap;gap:0 3mm;padding-left:2mm;margin-top:auto}
+.et-pie div{display:flex;flex-direction:column;line-height:1.2}
+.et-pie span{font-size:1.9mm;letter-spacing:.05em;color:#8a929c}
+.et-pie b{font-size:2.6mm;font-weight:600;font-variant-numeric:tabular-nums}
+.et-nota{position:absolute;right:2.2mm;bottom:2mm;font-size:2.1mm;font-weight:700;color:#8a929c}
+/* La pequeña no cabe con todo: se queda con lo que se mira de lejos */
+/* Mediana: entra todo justo, así que se recortan huecos y letra. */
+.et-m{gap:.7mm;padding:2mm 2.6mm}
+.et-m .et-tag{font-size:6.4mm} .et-m .et-eq{font-size:2.4mm}
+.et-m .et-prox{padding:1mm 1.6mm;margin-top:.3mm} .et-m .et-prox b{font-size:4.4mm}
+.et-m .et-pie b{font-size:2.4mm}
+/* Pequeña: sólo lo que se mira de lejos. */
+.et-p{gap:.5mm;padding:1.6mm 2mm}
+.et-p .et-tag{font-size:5.2mm} .et-p .et-prox b{font-size:3.6mm}
+.et-p .et-prox{padding:.7mm 1.2mm;margin:.2mm 0 0 2mm}
+.et-p .et-prox span{font-size:1.7mm} .et-p .et-emp{font-size:1.8mm} .et-p .et-vd{font-size:1.9mm}
+.et-p .et-cab .et-lg{width:2.8mm;height:3.4mm}
+.et-p .et-pie span{font-size:1.7mm} .et-p .et-pie b{font-size:2.2mm}
+/* Grande: sitio de sobra */
+.et-g .et-tag{font-size:9mm} .et-g .et-prox b{font-size:6mm}
+`;
 
 /* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
 function gotoAsset(id,tab){
@@ -4068,7 +4258,7 @@ function openAsset(id){
          return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
            ${abierta?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
-           <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
+           <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
            <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
        }
        /* Corregir los datos identificatorios tiene que estar a mano en
@@ -4079,6 +4269,7 @@ function openAsset(id){
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
       <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
       ${ORDENES.some(o=>o.act===a.id&&o.et!=='final')?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
+      <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
       <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
@@ -6080,6 +6271,7 @@ function verPSV(id){
         </div>`}).join('')}
     </div></section>`;
   $('#mFoot').innerHTML=`
+    ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
     ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
