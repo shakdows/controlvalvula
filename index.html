@@ -2865,39 +2865,25 @@ let SOLICITUDES=[
    válvula y Adolphus la revisa. Quien la recibe levanta el registro,
    lo dirige al área que corresponde y esa área lo trabaja. Es un
    documento interno de calidad. */
+/* Dos estados y basta. Antes había cinco, uno por cada tramo del
+   análisis de calidad; ese análisis se quitó porque no se usaba, y
+   dejar los estados habría sido tener cuatro nombres para lo mismo.
+   Un reclamo está abierto —el taller tiene que hacer algo con esa
+   válvula— o está cerrado. */
 const SNC_EST=[
- ['borrador',  'Sin enviar',          'ink-3','Falta dirigirlo al área que corresponde'],
- ['enviado',   'Enviado al área',     'due',  'El área todavía no lo ha tomado'],
- ['analisis',  'En análisis',         'due',  'Falta la causa raíz'],
- ['correctiva','En acción correctiva','sel',  'Falta cerrar la acción correctiva'],
- ['cerrado',   'Cerrado',             'ok',   'Sin pendientes']
+ ['abierto', 'Abierto', 'due', 'Pendiente de resolver'],
+ ['cerrado', 'Cerrado', 'ok',  'Resuelto']
 ];
 const sncEst=k=>SNC_EST.find(e=>e[0]===k)||SNC_EST[0];
-/* Quién detectó el servicio no conforme. */
-const QUIEN=[
- ['cliente',  'El cliente al devolver la válvula'],
- ['recepcion','Adolphus, al recibirla'],
- ['mant',   'Adolphus, en el taller'],
- ['campo',    'Adolphus, en campo'],
- ['fabricante','El fabricante']
-];
-/* A quién le toca resolverlo. El rol es quien lo ve en sus avisos. */
-const AREAS=[
- ['calidad',   'Calidad',                'admin'],
- ['ingenieria','Ingeniería',             'admin'],
- ['mant',    'Servicio técnico · taller','tec'],
- ['campo',     'Servicio técnico · campo', 'tec'],
- ['almacen',   'Almacén',                'tec'],
- ['compras',   'Compras e importaciones','com'],
- ['comercial', 'Comercial · repuestos',  'com'],
- ['fabricante','Reclamo al fabricante',  'com']
-];
-const areaDe=k=>AREAS.find(a=>a[0]===k)||AREAS[0];
+/* Ya no se dirige a un área: un reclamo lo ve TODO el personal de
+   Adolphus. La razón es la de siempre en un taller — cualquiera que
+   entre tiene que poder saber qué válvula hay que trabajar, sin
+   depender de que alguien la haya asignado primero. */
 
 let RECLAMOS=[
- {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',enviado:'2026-06-13',
+ {id:'r1',n:'SNC-2026-001',cli:'refi',act:'a3',f:'2026-06-12',por:'Ana Quispe',est:'cerrado',
   det:'Posicionador con deriva de señal tras el arranque de la unidad de vacío.',
-  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',area:'mant',
+  ocCli:'OC-4500231889',refCli:'RCL-CN-2026-014',ident:'recepcion',
   hall:'La válvula no alcanzaba el 100 % de apertura con señal de 20 mA. Deriva de 6 % respecto al lazo.',
   doma:'DOM-41005-3',
   accInm:'Recalibrar el lazo en sitio y dejar la válvula en control manual hasta el cambio del posicionador.',
@@ -2910,9 +2896,9 @@ let RECLAMOS=[
   hist:[{f:'2026-06-12',t:'Levantado por Ana Quispe'},
         {f:'2026-06-13',t:'Enviado a Servicio técnico · taller'},
         {f:'2026-06-30',t:'Cerrado'}]},
- {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'enviado',enviado:'2026-07-20',
+ {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'abierto',
   det:'Fuga por el manguito de la válvula pinch a los tres meses del cambio.',
-  ocCli:'OC-77123',refCli:'',ident:'cliente',area:'fabricante',
+  ocCli:'OC-77123',refCli:'',ident:'cliente',
   hall:'Manguito con desgarro longitudinal en la zona de cierre. El cliente reporta pérdida de pulpa en la celda de flotación.',
   doma:'',
   accInm:'Aislar la línea, retirar la válvula y montar la de reserva del cliente.',
@@ -5537,19 +5523,17 @@ function sncProducto(a){
   const m=MODELOS[a.mod]||{};
   return [m.m,a.mod,a.ser&&('s/n '+a.ser)].filter(Boolean).join(' ');
 }
-/* Cuánto le falta al expediente para poder mandarse al cliente. */
-function sncFalta(r){
-  const f=[];
-  if(!r.area) f.push('el área que lo resuelve');
-  if(!r.accInm)  f.push('acción inmediata');
-  if(!r.fInm)    f.push('fecha de la acción inmediata');
-  if(!r.respInm) f.push('responsable de la acción inmediata');
-  if(!r.causa)   f.push('causa raíz');
-  if(!r.accCor)  f.push('acción correctiva');
-  if(!r.fIni)    f.push('fecha de inicio de la correctiva');
-  if(!r.fFin)    f.push('fecha de fin de la correctiva');
-  if(!r.respCor) f.push('responsable de la correctiva');
-  return f;
+/* El correlativo de referencia. Se genera al crear el registro y no
+   se escribe a mano: si se teclea, se repite. Mira los que ya hay en
+   vez de contar, para que borrar uno no reutilice su número. */
+function nuevaRefSNC(){
+  const anio=HOY.getFullYear();
+  let n=0;
+  RECLAMOS.forEach(r=>{
+    const m=new RegExp('^REF-'+anio+'-(\\d+)$').exec(String(r.refCli||''));
+    if(m)n=Math.max(n,+m[1]);
+  });
+  return 'REF-'+anio+'-'+String(n+1).padStart(3,'0');
 }
 /* El cliente ve los suyos por su rol; el personal de Adolphus, los de
    la empresa en cuya carpeta está parado. */
@@ -5573,7 +5557,7 @@ function renderSNC(){
     return;
   }
   caja.innerHTML=`<div class="snc-l">${lista.map(r=>{
-    const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
+    const a=sncActivo(r), e=sncEst(r.est);
     return `<article class="snc-c" onclick="verSNC('${r.id}')">
       <div class="snc-h">
         <span class="mono snc-n">${esc(r.n)}</span>
@@ -5587,9 +5571,8 @@ function renderSNC(){
         ${!sncFoco()?`<span>· ${esc(cli(r.cli).n)}</span>`:''}
       </div>
       <div class="snc-p ${r.est==='cerrado'?'ok':''}"><span class="pt"></span>${
-        !r.enviado ? 'Sin dirigir · todavía nadie lo tiene en sus avisos'
-        : r.est==='cerrado' ? `Cerrado · ${esc(areaDe(r.area)[1])}`
-        : `${esc(areaDe(r.area)[1])}${falta.length?` — falta ${esc(falta.slice(0,2).join(' y '))}${falta.length>2?` y ${falta.length-2} más`:''}`:' — listo para cerrar'}`}</div>
+        r.est==='cerrado' ? `Cerrado${r.fCierre?' el '+fPE(r.fCierre):''}`
+        : `Abierto${r.refCli?` · ${esc(r.refCli)}`:''} — pendiente de resolver`}</div>
     </article>`}).join('')}</div>`;
 }
 
@@ -5606,7 +5589,8 @@ function openSNC(id,actId){
   const opts=f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS.slice();
   const etiq=a=>[a.tag,a.ser].filter(Boolean).join(' · ')||'(sin identificar)';
   const pre=r?r.act:(actId||'');
-  const num=r?r.n:'SNC-2026-'+String(RECLAMOS.length+1).padStart(3,'0');
+  const num=r?r.n:'SNC-'+HOY.getFullYear()+'-'+String(RECLAMOS.length+1).padStart(3,'0');
+  const ref=r&&r.refCli?r.refCli:nuevaRefSNC();
 
   $('#mTitle').textContent=r?`Editar ${r.n}`:'Nuevo registro de servicio no conforme';
   $('#mBody').innerHTML=`
@@ -5623,15 +5607,14 @@ function openSNC(id,actId){
       <h4 class="snc-sec">1 · Qué se encontró</h4>
       <div class="fld"><label for="sncDet">Detalle de la incidencia</label>
         <textarea class="inp" id="sncDet" rows="2" placeholder="En una línea: qué ocurrió.">${esc(r?r.det:'')}</textarea></div>
-      <div class="fld"><label for="sncQuien">Quién lo detecta</label>
-        <select class="inp" id="sncQuien">${QUIEN.map(([k,t])=>`<option value="${k}" ${r&&r.ident===k?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="fld"><label for="sncHall">Detalle del hallazgo</label>
         <textarea class="inp" id="sncHall" rows="3" placeholder="Qué se encontró al revisarla, con la medida o la evidencia.">${esc(r?r.hall:'')}</textarea></div>
       <div class="two">
         <div class="fld"><label for="sncOcCli">Orden de compra del cliente</label>
           <input class="inp" id="sncOcCli" placeholder="OC-4500…" value="${esc(r?r.ocCli:'')}"></div>
-        <div class="fld"><label for="sncRefCli">Referencia del cliente <span class="opc">su propio n.º de reclamo</span></label>
-          <input class="inp" id="sncRefCli" placeholder="RCL-…" value="${esc(r?r.refCli:'')}"></div>
+        <div class="fld"><label for="sncRefCli">Referencia <span class="opc">se genera sola</span></label>
+          <input class="inp mono" id="sncRefCli" value="${esc(r&&r.refCli?r.refCli:ref)}" readonly
+            title="Correlativo automático: no se escribe a mano"></div>
       </div>
       <div class="fld"><label for="sncDoma">Código DOMA del cliente <span class="opc">si lo maneja</span></label>
         <input class="inp" id="sncDoma" placeholder="DOM-…" value="${esc(r?r.doma:'')}"></div>
@@ -5650,52 +5633,10 @@ function openSNC(id,actId){
              style="display:none" onchange="evSubir(this.files);this.value=''">
       <div class="ev-grid" id="evGrid"></div>
 
-      <h4 class="snc-sec">2 · A quién le toca</h4>
-      <div class="fld"><label for="sncArea">Área que lo resuelve</label>
-        <select class="inp" id="sncArea">
-          <option value="">Todavía no lo dirijo a nadie</option>
-          ${AREAS.map(([k,t])=>`<option value="${k}" ${r&&r.area===k?'selected':''}>${t}</option>`).join('')}
-        </select></div>
-      <div class="snc-nota">Al enviarlo, al área le aparece en sus avisos con la válvula, el hallazgo y las fotos. Si todavía no sabes a quién dirigirlo, guárdalo y queda en la lista sin enviar.</div>
-
-      <h4 class="snc-sec">3 · Qué se hizo de inmediato</h4>
-      <div class="fld"><label for="sncAccInm">Acción inmediata <span class="opc">empieza con un verbo</span></label>
-        <textarea class="inp" id="sncAccInm" rows="2" placeholder="Aislar la línea y montar la válvula de reserva…">${esc(r?r.accInm:'')}</textarea></div>
-      <div class="two">
-        <div class="fld"><label for="sncFInm">Fecha</label>
-          <input class="inp" id="sncFInm" type="date" value="${r?r.fInm:''}"></div>
-        <div class="fld"><label for="sncRespInm">Responsable</label>
-          <input class="inp" id="sncRespInm" list="sncGente" value="${esc(r?r.respInm:'')}"></div>
-      </div>
-      <div class="fld"><label for="sncObs">Observaciones relevantes</label>
-        <textarea class="inp" id="sncObs" rows="2" placeholder="Si la planta paró, si se coordinó con alguien, si se guardó la pieza…">${esc(r?r.obs:'')}</textarea></div>
-
-      <h4 class="snc-sec">4 · Por qué pasó y cómo se corrige</h4>
-      <div class="fld"><label for="sncCausa">Causa raíz <span class="opc">por qué ocurrió el hallazgo</span></label>
-        <textarea class="inp" id="sncCausa" rows="3" placeholder="No el síntoma: la razón de fondo.">${esc(r?r.causa:'')}</textarea></div>
-      <div class="fld"><label for="sncAccCor">Acción correctiva <span class="opc">cómo se corrige esa causa, en verbo</span></label>
-        <textarea class="inp" id="sncAccCor" rows="3" placeholder="Incorporar…, capacitar…, cambiar el procedimiento…">${esc(r?r.accCor:'')}</textarea></div>
-      <div class="three">
-        <div class="fld"><label for="sncFIni">Inicio</label>
-          <input class="inp" id="sncFIni" type="date" value="${r?r.fIni:''}"></div>
-        <div class="fld"><label for="sncFFin">Fin</label>
-          <input class="inp" id="sncFFin" type="date" value="${r?r.fFin:''}"></div>
-        <div class="fld"><label for="sncRespCor">Responsable</label>
-          <input class="inp" id="sncRespCor" list="sncGente" value="${esc(r?r.respCor:'')}"></div>
-      </div>
-      <div class="two">
-        <div class="fld"><label for="sncProv">Proveedor</label>
-          <input class="inp" id="sncProv" value="${esc(r?r.prov:'')}"></div>
-        <div class="fld"><label for="sncOcProv">N.º de OC / PO / PSV / SVV</label>
-          <input class="inp" id="sncOcProv" placeholder="PO-2026-…" value="${esc(r?r.ocProv:'')}"></div>
-      </div>
-      <datalist id="sncGente">${(typeof CUENTAS!=='undefined'?CUENTAS:[]).filter(c=>c.perfil!=='cliente').map(c=>`<option value="${esc(c.n)}">`).join('')}
-        <option value="O. Julio de la Rosa"><option value="M. Ángel Torres"></datalist>
       <input type="hidden" id="sncId" value="${r?r.id:''}"><input type="hidden" id="sncNum" value="${num}">
     </div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
-    <button class="btn sec" onclick="guardarSNC(false)">Guardar sin enviar</button>
-    <button class="btn" onclick="guardarSNC(true)">${r&&r.enviado?'Guardar':'Enviar al área'}</button>`;
+    <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':'Registrar'}</button>`;
   $('#modal').classList.add('on');
   EV_TMP = r ? (r.ev||[]).slice() : [];
   pintarCtxSNC(); pintarEv();
@@ -5822,33 +5763,24 @@ function pintarCtxSNC(){
   </div>`;
 }
 
-function guardarSNC(enviar){
+function guardarSNC(){
   const v=i=>($('#'+i)?$('#'+i).value.trim():'');
   const det=v('sncDet');
   if(!det){toast('Escribe al menos el detalle de la incidencia');$('#sncDet').focus();return}
-  const area=v('sncArea');
-  if(enviar&&!area){toast('Elige el área que lo resuelve, o guárdalo sin enviar');$('#sncArea').focus();return}
   const id=v('sncId'), hoy=HOY.toISOString().slice(0,10);
   const yo=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
   const datos={
     act:v('sncAct')||null, det, ocCli:v('sncOcCli'), refCli:v('sncRefCli'),
-    ident:v('sncQuien'), hall:v('sncHall'), doma:v('sncDoma'), area,
-    accInm:v('sncAccInm'), fInm:v('sncFInm'), respInm:v('sncRespInm'), obs:v('sncObs'),
-    causa:v('sncCausa'), accCor:v('sncAccCor'), fIni:v('sncFIni'), fFin:v('sncFFin'),
-    respCor:v('sncRespCor'), prov:v('sncProv'), ocProv:v('sncOcProv'),
-    ev:EV_TMP.slice()
+    hall:v('sncHall'), doma:v('sncDoma'), ev:EV_TMP.slice()
   };
 
   if(id){
     const r=RECLAMOS.find(x=>x.id===id);
-    const areaAntes=r.area, eraEnviado=r.enviado;
     Object.assign(r,datos);
     r.hist=r.hist||[];
-    if(enviar&&!eraEnviado){r.enviado=hoy;r.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`})}
-    else if(enviar&&areaAntes!==area)r.hist.push({f:hoy,t:`Redirigido a ${areaDe(area)[1]}`});
-    r.est=sncEstadoPorContenido(r);
+    r.hist.push({f:hoy,t:`Actualizado por ${yo}`});
     registrar('Reclamo',`${r.n} actualizado`);
-    toast(enviar&&!eraEnviado?`Enviado a ${areaDe(area)[1]}`:'Registro actualizado');
+    toast('Registro actualizado');
     closeModal();renderAll();verSNC(r.id);return;
   }
 
@@ -5856,50 +5788,26 @@ function guardarSNC(enviar){
   const nuevo=Object.assign({
     id:'r'+Date.now(), n:v('sncNum'),
     cli:(a?a.cli:null)||sncFoco()||CLIENTES[0].id,
-    f:hoy, por:yo, enviado:enviar?hoy:'',
+    f:hoy, por:yo, est:'abierto',
     hist:[{f:hoy,t:`Levantado por ${yo}`}]
   },datos);
-  if(enviar)nuevo.hist.push({f:hoy,t:`Enviado a ${areaDe(area)[1]}`});
-  nuevo.est=sncEstadoPorContenido(nuevo);
   RECLAMOS.unshift(nuevo);
-  registrar('Reclamo',`${nuevo.n} levantado`);
-  toast(enviar?`Enviado a ${areaDe(area)[1]}`:'Guardado sin enviar');
+  registrar('Reclamo',`${nuevo.n} levantado · ${nuevo.refCli}`);
+  toast(`${nuevo.refCli} registrado — todo el personal lo ve`);
   closeModal();renderAll();go('snc');
 }
-
-/* El estado sale de lo que está lleno, no de un desplegable. */
-function sncEstadoPorContenido(r){
-  return r.fFin&&r.accCor ? 'cerrado'
-       : r.accCor         ? 'correctiva'
-       : r.causa          ? 'analisis'
-       : r.enviado        ? 'enviado'
-       : 'borrador';
-}
-
-/* Mandarlo al área sin abrir el formulario entero. */
-function enviarSNCArea(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  $('#mTitle').textContent=`${r.n} · dirigirlo`;
-  $('#mBody').innerHTML=`
-    <p style="font-size:13.5px;color:var(--ink-2);line-height:1.55;margin-bottom:var(--sp-4)">
-      Al área le va a aparecer en sus avisos con la válvula, el hallazgo y las fotos.</p>
-    <div class="fld"><label for="sncArea2">Área que lo resuelve</label>
-      <select class="inp" id="sncArea2">
-        ${AREAS.map(([k,t])=>`<option value="${k}" ${r.area===k?'selected':''}>${t}</option>`).join('')}
-      </select></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verSNC('${id}')">Volver</button>
-    <button class="btn" onclick="confirmarEnvioSNC('${id}')">Enviar</button>`;
-  $('#modal').classList.add('on');
-}
-function confirmarEnvioSNC(id){
-  const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
-  const a=$('#sncArea2').value, hoy=HOY.toISOString().slice(0,10);
-  const redirige=r.enviado&&r.area!==a;
-  r.area=a; r.enviado=r.enviado||hoy;
-  (r.hist=r.hist||[]).push({f:hoy,t:`${redirige?'Redirigido':'Enviado'} a ${areaDe(a)[1]}`});
-  r.est=sncEstadoPorContenido(r);
-  registrar('Reclamo',`${r.n} enviado a ${areaDe(a)[1]}`);
-  toast(`Enviado a ${areaDe(a)[1]}`);
+/* Cerrar y reabrir: es lo único que le pasa a un reclamo después de
+   levantarlo, ahora que no hay análisis de calidad que rellenar. */
+function cerrarSNC(id){
+  const r=RECLAMOS.find(x=>x.id===id); if(!r)return;
+  const hoy=HOY.toISOString().slice(0,10);
+  const yo=(typeof SES!=='undefined'&&SES?SES.n:'Adolphus');
+  const abre=r.est==='cerrado';
+  r.est=abre?'abierto':'cerrado';
+  r.fCierre=abre?'':hoy;
+  (r.hist=r.hist||[]).push({f:hoy,t:`${abre?'Reabierto':'Cerrado'} por ${yo}`});
+  registrar('Reclamo',`${r.n} ${abre?'reabierto':'cerrado'}`);
+  toast(abre?'Reabierto':'Cerrado');
   renderAll();verSNC(id);
 }
 
@@ -5908,7 +5816,7 @@ function confirmarEnvioSNC(id){
 function verSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
   if(S.rol==='cliente'){toast('Ese registro es interno de Adolphus');return}
-  const a=sncActivo(r), e=sncEst(r.est), falta=sncFalta(r);
+  const a=sncActivo(r), e=sncEst(r.est);
   const fila=(n,t,val,vacio)=>`<div class="snc-r${val?'':' sin'}">
       <span class="snc-i">${n}</span>
       <div><b>${t}</b><p>${val?esc(val).replace(/\n/g,'<br>'):(vacio||'Pendiente')}</p></div></div>`;
@@ -5920,23 +5828,14 @@ function verSNC(id){
                     :`<video src="${x.d}" muted playsinline></video><span class="ev-play">▶</span>`}
       <figcaption>${esc(x.n)}</figcaption></figure>`).join('')}</div>`:'';
 
-  /* A quién le toca: lo primero, porque es lo que decide si esto
-     avanza hoy o se queda quieto. */
-  let aviso='';
-  if(!r.enviado)
-    aviso=`<div class="snc-dec"><div class="snc-dec-t">
-        <b>Todavía no está dirigido</b>
-        <span>Hasta que se envíe a un área, nadie lo tiene en sus avisos.</span></div>
-      <div class="snc-dec-b"><button class="btn" onclick="enviarSNCArea('${r.id}')">Enviar al área</button></div></div>`;
-  else
-    aviso=`<div class="snc-dec ${r.est==='cerrado'?'no':''}"><div class="snc-dec-t">
-        <b>${esc(areaDe(r.area)[1])}</b>
-        <span>${r.est==='cerrado'?`Cerrado${r.fFin?' el '+r.fFin:''}.`:esc(e[3])} · enviado el ${r.enviado}</span></div>
-      <div class="snc-dec-b"><button class="btn sec" onclick="enviarSNCArea('${r.id}')">Cambiar de área</button></div></div>`;
-
-  if(falta.length&&r.est!=='cerrado')
-    aviso += `<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div>Faltan ${falta.length} campo${falta.length>1?'s':''} para cerrarlo: ${esc(falta.join(', '))}.</div></div>`;
+  /* Un reclamo abierto es trabajo que espera. Se dice arriba, con el
+     botón para cerrarlo al lado: es lo único que hay que decidir. */
+  const aviso=`<div class="snc-dec ${r.est==='cerrado'?'no':''}">
+      <div class="snc-dec-t"><b>${r.est==='cerrado'?'Cerrado':'Abierto — pendiente de resolver'}</b>
+        <span>${r.est==='cerrado'
+          ? `Cerrado${r.fCierre?' el '+fPE(r.fCierre):''}.`
+          : 'Todo el personal de Adolphus lo ve en sus avisos.'}</span></div>
+      <div class="snc-dec-b"><button class="btn ${r.est==='cerrado'?'sec':''}" onclick="cerrarSNC('${r.id}')">${r.est==='cerrado'?'Reabrir':'Cerrar el registro'}</button></div></div>`;
 
   $('#mTitle').textContent=r.n;
   $('#mBody').innerHTML=`
@@ -5949,21 +5848,10 @@ function verSNC(id){
     <div class="snc-doc">
       ${fila(1,'Detalle de la incidencia',r.det)}
       ${fila(2,'Orden de compra del cliente',r.ocCli,'No indicada')}
-      ${fila(3,'Referencia del cliente',r.refCli,'No aplica')}
-      ${fila(4,'Detalle del hallazgo · lo detecta '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall)}
+      ${fila(3,'Referencia',r.refCli,'—')}
+      ${fila(4,'Detalle del hallazgo',r.hall)}
       ${fila(5,'Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · '))}
       ${evidencia?`<div class="snc-r"><span class="snc-i">✳</span><div style="width:100%"><b>Fotos y video de la válvula</b>${evidencia}</div></div>`:''}
-      ${fila(6,'Acción inmediata',r.accInm)}
-      ${fila(7,'Fecha de la acción inmediata',r.fInm)}
-      ${fila(8,'Responsable de la acción inmediata',r.respInm)}
-      ${fila(9,'Observaciones relevantes',r.obs,'Ninguna')}
-      ${fila(10,'Causa raíz',r.causa)}
-      ${fila(11,'Acción correctiva',r.accCor)}
-      ${fila(12,'Fecha de inicio de la acción correctiva',r.fIni)}
-      ${fila(13,'Fecha de fin de la acción correctiva',r.fFin)}
-      ${fila(14,'Responsable de la acción correctiva',r.respCor)}
-      ${fila(15,'Proveedor',r.prov)}
-      ${fila(16,'N.º de OC / PO / PSV / SVV',r.ocProv,'No indicado')}
     </div>
     ${(r.hist&&r.hist.length)?`<div class="snc-bit">${r.hist.map(h=>`<div><span>${h.f}</span>${esc(h.t)}</div>`).join('')}</div>`:''}`;
   $('#mFoot').innerHTML=`
@@ -5977,16 +5865,12 @@ function imprimirSNC(id){
   const r=RECLAMOS.find(x=>x.id===id); if(!r) return;
   const a=sncActivo(r);
   const campos=[
-   ['Detalle de la incidencia',r.det],['Orden de compra del cliente',r.ocCli],
-   ['Referencia del cliente',r.refCli],
-   ['Detalle del hallazgo · lo identifica '+((QUIEN.find(q=>q[0]===r.ident)||QUIEN[0])[1].toLowerCase()),r.hall],
+   ['Detalle de la incidencia',r.det],
+   ['Orden de compra del cliente',r.ocCli],
+   ['Referencia',r.refCli],
+   ['Detalle del hallazgo',r.hall],
    ['Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · ')],
-   ['Acción inmediata',r.accInm],['Fecha de la acción inmediata',r.fInm],
-   ['Responsable de la acción inmediata',r.respInm],['Observaciones relevantes',r.obs],
-   ['Causa raíz',r.causa],['Acción correctiva',r.accCor],
-   ['Fecha de inicio de la acción correctiva',r.fIni],['Fecha de fin de la acción correctiva',r.fFin],
-   ['Responsable de la acción correctiva',r.respCor],['Proveedor',r.prov],
-   ['N.º de OC / PO / PSV / SVV',r.ocProv]
+   ['Estado',r.est==='cerrado'?`Cerrado${r.fCierre?' el '+fPE(r.fCierre):''}`:'Abierto']
   ];
   const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana de impresión');return}
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -8101,19 +7985,15 @@ function buildNotif(){
   const vs=visibles(),items=[];
   /* Lo primero: un cliente que reportó algo y espera respuesta. Nada
      de lo demás depende de que alguien conteste hoy. */
-  /* Lo primero: un registro dirigido a mi área y sin terminar. Es lo
-     que de verdad espera a alguien. */
+  /* Los reclamos abiertos los ve TODO el personal, sin dirigir. En un
+     taller, quien entra tiene que poder saber qué válvula hay que
+     trabajar sin depender de que alguien se la haya asignado. */
   if(S.rol!=='cliente')
     RECLAMOS.filter(r=>r.est!=='cerrado').forEach(r=>{
-      const a=sncActivo(r), mio=r.area&&areaDe(r.area)[2]===S.rol;
-      if(!r.enviado){
-        items.push({tone:'due',ic:'⚑',t:`${r.n} sin dirigir`,
-          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'} — falta enviarlo al área`,rec:r.id});
-      }else if(mio){
-        const f=sncFalta(r);
-        items.push({tone:'late',ic:'⚑',t:`${areaDe(r.area)[1]} · te toca ${r.n}`,
-          s:`${cli(r.cli).n} · ${a?a.tag:'sin equipo'}${f.length?` — falta ${f[0]}`:''}`,rec:r.id});
-      }});
+      const a=sncActivo(r);
+      items.push({tone:'late',ic:'⚑',t:`${r.n} abierto · ${a?(a.tag||a.ser):'sin equipo'}`,
+        s:`${cli(r.cli).n}${r.refCli?' · '+r.refCli:''} — ${String(r.det||'').slice(0,70)}`,rec:r.id});
+    });
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='mant'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
@@ -9785,6 +9665,16 @@ function migrarEtapas(){
     if(nueva){o.et=nueva;n++}
     else if(!ETAPAS.some(([k])=>k===o.et)){o.et='oc';n++}
   });
+  /* Los reclamos pasaron de cinco estados a dos. Sin traducir, uno
+     guardado como "analisis" no coincide con ninguno y sncEst le
+     devolvería el primero de la lista —"Abierto"— por casualidad, no
+     por criterio. Se traduce a propósito: cerrado se queda cerrado,
+     todo lo demás es trabajo pendiente. Y a los que no tengan
+     referencia se les pone una, porque ahora se cuenta con ella. */
+  RECLAMOS.forEach(r=>{
+    if(r.est!=='cerrado'&&r.est!=='abierto')r.est=r.fFin&&r.accCor?'cerrado':'abierto';
+    if(!r.refCli)r.refCli=nuevaRefSNC();
+  });
   return n;
 }
 
@@ -10666,6 +10556,12 @@ function onbHtml(){
 /* ── Arranque ─────────────────────────────────────────────── */
 restaurarCuentas();
 restaurarLocal();                       // respaldo inmediato, sin esperar
+/* También con los datos de ejemplo: la traducción de estados y el
+   relleno de referencias tiene que correr aunque no haya nada
+   guardado, o los reclamos de demostración arrancan con estados que
+   ya no existen. Es idempotente, así que llamarla dos veces no
+   estorba. */
+migrarEtapas();
 restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}});
 /* Si la última vez se entró con cuenta de la nube, la sesión sigue
    viva: se reanuda sin volver a pedir la contraseña. */
