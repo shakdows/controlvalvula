@@ -1944,6 +1944,15 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+.fx-derivado{border:1px solid var(--line);border-radius:var(--r-2);
+  background:var(--surface-2);padding:12px 14px;margin-bottom:12px}
+.fx-derivado>div{display:inline-block;vertical-align:top;min-width:170px;margin:0 22px 8px 0}
+.fx-derivado span{display:block;font-size:11px;color:var(--ink-3)}
+.fx-derivado b{display:block;font-size:15px;letter-spacing:-.01em;margin-top:1px}
+.fx-derivado small{display:block;font-size:11px;color:var(--ink-3);margin-top:2px;line-height:1.45}
+.fx-derivado p{margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--ink-2);
+  border-top:1px dashed var(--line-2);padding-top:8px}
+
 .inf-tope{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   border:1px solid var(--line);border-radius:var(--r-2);padding:13px 15px;background:var(--surface-2)}
 .inf-tope>div:first-child span{display:block;font-size:11px;color:var(--ink-3)}
@@ -3589,7 +3598,11 @@ function openAsset(id){
             certificado. Lo demás no desaparece —sigue en las pestañas
             de arriba y en el menú—, pero no compite por el pulgar. */
          const borrador=CALIBS.some(x=>x.act===a.id&&x.tipo==='psv'&&x.veredicto==='incompleto');
+         /* Una PSV también hay que poder mandarla al taller desde su
+            ficha; antes sólo lo tenían las demás clases. */
+         const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
          return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
+           ${abierta?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
            <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
        }
@@ -3600,7 +3613,7 @@ function openAsset(id){
        return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
       <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
-      <button class="btn sec" onclick="openWO('${a.id}')">Crear orden</button>
+      ${ORDENES.some(o=>o.act===a.id&&o.et!=='final')?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
@@ -8258,6 +8271,46 @@ function saveNewAsset(){
   toast(sinId?`Creada como ${tag} — falta identificarla`:`Válvula ${tag||ser} creada`);
 }
 
+/* ── De dónde salen las fechas de la válvula ─────────────────
+   "Último servicio" y "Próxima calibración" no son opinión de nadie:
+   salen de lo que el taller registró. Escribirlas a mano encima de
+   un ensayo real es cómo una válvula acaba figurando al día sin que
+   nadie la haya tocado.
+   Así que se calculan, y el campo editable sólo aparece cuando NO
+   hay ningún registro detrás — el caso de una válvula cargada de un
+   Excel con su historia anterior al sistema. */
+function ultimoServicioDe(actId){
+  const hitos=[];
+  CALIBS.filter(c=>c.act===actId).forEach(c=>{
+    if(c.veredicto==='incompleto')return;              // un borrador no es un servicio
+    const f=(c.fecha||c.fin||c.ini||'').slice(0,10);
+    if(f)hitos.push({f,que:c.tipo==='psv'?'Ensayo AXAD-088':'Calibración',
+      ref:c.cert||'', id:c.id, cal:true,
+      ok:/^(aprobado|conforme)/i.test(c.veredicto||c.verdict||'')&&!/^no conforme/i.test(c.verdict||'')});
+  });
+  ORDENES.filter(o=>o.act===actId&&o.et==='final'&&!o.calib).forEach(o=>{
+    if(o.f)hitos.push({f:o.f.slice(0,10),que:o.tipo||'Intervención',ref:o.mat||o.n||'',id:o.id});
+  });
+  SERVS.filter(s=>s.act===actId).forEach(s=>{
+    const f=(s.fec||s.f||'').slice(0,10);
+    if(f)hitos.push({f,que:'Parte de servicio',ref:s.num||'',id:s.id});
+  });
+  hitos.sort((x,y)=>y.f.localeCompare(x.f));
+  return hitos[0]||null;
+}
+/* La próxima calibración se ancla al último ensayo APROBADO: uno
+   rechazado no renueva nada, la válvula sigue debiendo. */
+function proximaCalibDe(actId){
+  const ok=CALIBS.filter(c=>c.act===actId&&c.veredicto!=='incompleto'
+      &&/^(aprobado|conforme)/i.test(c.veredicto||c.verdict||'')
+      &&!/^no conforme/i.test(c.verdict||''))
+    .map(c=>(c.fecha||c.fin||c.ini||'').slice(0,10)).filter(Boolean).sort();
+  if(!ok.length)return null;
+  const d=new Date(ok[ok.length-1]+'T00:00:00');
+  d.setFullYear(d.getFullYear()+1);
+  return {f:d.toISOString().slice(0,10),desde:ok[ok.length-1]};
+}
+
 /* ── Editar la válvula ───────────────────────────────────────
    Hasta aquí una válvula se creaba y ya: la ficha técnica era de
    sólo lectura y el botón de "faltan datos" se limitaba a decir que
@@ -8316,16 +8369,39 @@ function editarActivo(id){
          <div class="fld"><label for="edAir">Falla a (aire)</label><select class="inp" id="edAir">${airOpts}</select></div>
        </div>
        <h4 class="snc-sec">Fechas</h4>
-       <div class="two">
-         <div class="fld"><label for="edUlt">Último servicio</label><input class="inp" id="edUlt" type="date" value="${esc(a.ult||'')}"></div>
-         <div class="fld"><label for="edProx">Próxima calibración <span class="opc">en blanco = sin programa</span></label>
-           <input class="inp" id="edProx" type="date" value="${esc(a.prox||'')}"></div>
-       </div>
+       ${(()=>{
+         const u=ultimoServicioDe(a.id), p=proximaCalibDe(a.id);
+         if(!u&&!p)return `<div class="two">
+           <div class="fld"><label for="edUlt">Último servicio <span class="opc">anterior al sistema</span></label>
+             <input class="inp" id="edUlt" type="date" value="${esc(a.ult||'')}"></div>
+           <div class="fld"><label for="edProx">Próxima calibración <span class="opc">en blanco = sin programa</span></label>
+             <input class="inp" id="edProx" type="date" value="${esc(a.prox||'')}"></div>
+         </div>
+         <div class="muted" style="font-size:11.5px;margin:-4px 0 10px">Esta válvula todavía no tiene ningún trabajo registrado,
+           así que las fechas se ponen a mano. En cuanto el taller registre el primero, pasan a salir de ahí solas.</div>`;
+         return `<div class="fx-derivado">
+           <div><span>Último servicio</span><b>${u?fPE(u.f):'sin registro'}</b>
+             ${u?`<small>${esc(u.que)}${u.ref?' · '+esc(u.ref):''}</small>`:''}</div>
+           <div><span>Próxima calibración</span><b>${p?fPE(p.f):(a.prox?fPE(a.prox):'no aplica')}</b>
+             ${p?`<small>un año desde el ensayo aprobado del ${fPE(p.desde)}</small>`
+                :`<small>ningún ensayo aprobado todavía</small>`}</div>
+           <p>Estas dos fechas <b>las pone el taller al registrar el trabajo</b>, no se escriben aquí.
+             Si algo no cuadra, se corrige en el ensayo y estas se actualizan solas.
+             <button class="btn quiet xs" onclick="showTab('hist');closeModal();openAsset('${a.id}')">Ver el historial</button></p>
+         </div>`;
+       })()}
        <div class="fld"><label for="edNota">Detalles y observaciones</label>
          <textarea class="inp" id="edNota" rows="3" placeholder="Servicio que cumple, particularidades del montaje, lo que haga falta recordar.">${esc(a.nota||'')}</textarea></div>
      </div>
    </div>`;
+  /* Desde aquí se manda a mantenimiento sin dar el rodeo de cerrar,
+     buscar la válvula otra vez y crear la orden: es lo que se quiere
+     hacer justo después de revisar sus datos. */
+  const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    ${abierta
+      ? `<button class="btn sec" onclick="closeModal();go('wo')" title="Ya tiene un trabajo abierto">Ya está en ${esc(abierta.mat||abierta.n)}</button>`
+      : `<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3M5 7v13h14V7M9 12h6"/></svg>Mandar a mantenimiento</button>`}
     <button class="btn" onclick="guardarActivo('${a.id}')">Guardar cambios</button>`;
   const fillAr=()=>{const c=cli($('#edCli').value)||{areas:{}};
     $('#edAr').innerHTML=Object.entries(c.areas||{}).map(([k,v])=>`<option value="${k}" ${k===a.ar?'selected':''}>${esc(v)}</option>`).join('')};
@@ -8349,6 +8425,55 @@ function quitarFotoActivo(id){
   if(v)v.innerHTML=`<div class="ed-sinfoto">${photoFor(a.mod)}<span>Ahora se ve la foto de catálogo del modelo. Sube una y se usa la del equipo real.</span></div>`;
   toast('Foto quitada · vuelve la del catálogo');
 }
+/* ── Mandar una válvula a mantenimiento ──────────────────────
+   Un botón, y el taller la ve en su tablero. Crea la orden con su
+   código MAT en "OC recibida", igual que si viniera de una OC: para
+   el taller es el mismo trabajo, sólo que lo pidió Adolphus en vez
+   del cliente. */
+function mandarAMantenimiento(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  if(S.rol==='cliente'){toast('El servicio lo programa Adolphus');return}
+  const ya=ORDENES.find(o=>o.act===id&&o.et!=='final');
+  if(ya){toast(`Ya tiene ${ya.mat||ya.n} abierta`);closeModal();go('wo');return}
+  const c=cli(a.cli)||{};
+  const sug=a.cl==='seguridad'?'Calibración':'Preventivo';
+  const u=ultimoServicioDe(id), p=proximaCalibDe(id);
+  const venc=(p||a.prox)?dias((p&&p.f)||a.prox):null;
+  $('#mTitle').textContent=`Mandar a mantenimiento · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+     <div>Se crea una orden con su código <b>MAT</b> y aparece al instante en el tablero del taller,
+       en <b>OC recibida</b>. Un ingeniero la toma poniendo su nombre y la finaliza registrando el ensayo.</div></div>
+   <div class="dt">
+     <div class="dt-i"><span>Válvula</span><b>${esc(a.tag||a.ser||'')}</b></div>
+     <div class="dt-i"><span>Cliente</span><b>${esc(c.n||'')}</b></div>
+     <div class="dt-i"><span>Ubicación</span><b>${esc(area(a)||'')}</b></div>
+     <div class="dt-i"><span>Último servicio</span><b>${u?fPE(u.f):(a.ult?fPE(a.ult):'sin registro')}</b></div>
+     ${venc!==null?`<div class="dt-i"><span>Calibración</span><b style="color:var(--${venc<0?'late':venc<=90?'due':'ok'})">${venc<0?`vencida hace ${-venc} días`:`vence en ${venc} días`}</b></div>`:''}
+   </div>
+   <div class="two" style="margin-top:12px">
+     <div class="fld"><label for="mmTipo">Tipo de trabajo</label><select class="inp" id="mmTipo">
+       ${['Calibración','Preventivo','Correctivo','Inspección','Overhaul'].map(t=>`<option ${t===sug?'selected':''}>${t}</option>`).join('')}</select></div>
+     <div class="fld"><label for="mmFec">Fecha prevista</label><input class="inp" id="mmFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+   </div>
+   <div class="fld"><label for="mmOC">N.º de OC del cliente <span class="opc">si la hay</span></label>
+     <input class="inp mono" id="mmOC" placeholder="OC-4500…"></div>
+   <div class="fld"><label for="mmMot">Motivo / qué hay que hacerle</label>
+     <textarea class="inp" id="mmMot" rows="3" placeholder="Lo que el taller necesita saber antes de abrirla.">${venc!==null&&venc<0?`Calibración vencida hace ${-venc} días.`:''}</textarea></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="editarActivo('${id}')">Volver</button>
+    <button class="btn" onclick="confirmarMandar('${id}')">Mandar al taller</button>`;
+  $('#modal').classList.add('on');
+}
+function confirmarMandar(id){
+  const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+  const mat=nuevoMAT(), oc=($('#mmOC').value||'').trim();
+  ORDENES.unshift({id:'o'+Date.now(),act:id,mat,n:mat,oc:oc||undefined,
+    et:'oc',tipo:$('#mmTipo').value,f:$('#mmFec').value||HOY.toISOString().slice(0,10),
+    tec:'Por asignar',hall:($('#mmMot').value||'').trim()||'Sin observaciones.',partes:[]});
+  closeModal(); renderAll(); go('wo');
+  registrar('Orden',`${mat} · ${a.tag||a.ser||''} mandada a mantenimiento`);
+  toast(`${mat} creada — el taller ya la ve en su tablero`);
+}
 function guardarActivo(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
   const V=i=>{const el=$(i);return el?el.value.trim():''};
@@ -8360,7 +8485,11 @@ function guardarActivo(id){
   a.cli=V('#edCli')||a.cli; a.ar=V('#edAr')||a.ar;
   a.mod=V('#edMod')||a.mod; a.cl=V('#edCl')||a.cl; a.cr=V('#edCr')||a.cr;
   a.sz=V('#edSz'); a.rt=V('#edRt'); a.rng=V('#edRng'); a.cv=V('#edCv');
-  a.air=V('#edAir'); a.ult=V('#edUlt'); a.prox=V('#edProx'); a.nota=V('#edNota');
+  a.air=V('#edAir'); a.nota=V('#edNota');
+  /* Los campos de fecha sólo existen cuando la válvula no tiene
+     ningún trabajo registrado. Si no están en pantalla, es que las
+     fechas las manda el taller: no se tocan. */
+  if($('#edUlt')){a.ult=V('#edUlt'); a.prox=V('#edProx');}
   closeModal(); renderAll();
   if(S.cur&&S.cur.id===a.id)openAsset(a.id);
   registrar('Válvula',`Datos de ${a.tag||a.ser||''} actualizados`);
