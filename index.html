@@ -1024,6 +1024,12 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cat-thumb{width:58px;height:44px;border-radius:var(--r-1);border:1px solid var(--line-2);overflow:hidden;display:grid;place-items:center;padding:3px;
   background:radial-gradient(circle at 50% 34%, oklch(1 0 0), oklch(0.945 0.004 250))}
 [data-theme="dark"] .cat-thumb{background:radial-gradient(circle at 50% 34%, oklch(0.31 0.012 250), oklch(0.24 0.011 252))}
+/* La foto propia de la pieza, cuando alguien la subió; si no, se cae a
+   la foto del modelo de la válvula donde va. */
+.cat-thumb-img{width:58px;height:44px;border-radius:var(--r-1);border:1px solid var(--line-2);
+  object-fit:contain;background:var(--surface-2);display:block}
+.cat-pie{padding:11px var(--sp-4);border-top:1px solid var(--line-2);background:var(--surface-2);
+  font-size:12.5px;color:var(--ink-2)}
 
 @media(max-width:820px){
   .cover{grid-template-columns:1fr}
@@ -1301,6 +1307,41 @@ button.kpi:active{transform:translateY(0);box-shadow:var(--e-1)}
 .feed-m b{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .feed-m p{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .feed-t{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono';flex:0 0 auto;white-space:nowrap}
+
+/* ── Panel del taller ──────────────────────────────────────── */
+.tw{display:flex;flex-direction:column}
+.tw-i{display:flex;gap:12px;align-items:center;padding:10px var(--sp-4);border-bottom:1px solid var(--line-2);
+  cursor:pointer;transition:background var(--fast)}
+.tw-i:last-child{border-bottom:0}.tw-i:hover{background:var(--surface-2)}
+.tw-m{flex:1;min-width:0}
+.tw-m b{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-m p{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-r{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.tw-r small{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono'}
+.tw-mas{padding:9px var(--sp-4);font-size:12px;color:var(--ink-3)}
+/* Lo que le falta a cada válvula: la lista se lee de un vistazo, y la
+   que ya está completa se marca en verde para que salte a la vista. */
+.fal{display:flex;flex-direction:column}
+.fal-i{padding:12px var(--sp-4);border-bottom:1px solid var(--line-2);cursor:pointer;
+  border-left:3px solid var(--due);transition:background var(--fast)}
+.fal-i:last-child{border-bottom:0}
+.fal-i:hover{background:var(--surface-2)}
+.fal-i.ok{border-left-color:var(--ok)}
+.fal-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.fal-h b{font-size:13.5px}
+.fal-h .mono{font-size:11.5px;color:var(--ink-3)}
+.fal-l{margin:7px 0 0;padding-left:17px;display:flex;flex-direction:column;gap:2px}
+.fal-l li{font-size:12.5px;color:var(--ink-2)}
+.fal-i.ok .fal-l li{color:var(--ok)}
+/* Avance de cada OC del cliente */
+.pry-av{display:flex;flex-direction:column}
+.pry-r{padding:12px var(--sp-4);border-bottom:1px solid var(--line-2);cursor:pointer;transition:background var(--fast)}
+.pry-r:last-child{border-bottom:0}.pry-r:hover{background:var(--surface-2)}
+.pry-t{display:flex;align-items:center;gap:9px;font-size:13px}
+.pry-t span{color:var(--ink-3);font-size:12px}
+.pry-b{height:7px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin:7px 0 5px}
+.pry-b i{display:block;height:100%;border-radius:99px;background:var(--ok);transition:width var(--med) var(--ease)}
+.pry-s{font-size:11.5px;color:var(--ink-3)}
 
 .notif-wrap{position:relative}
 .notif-dot{position:absolute;top:5px;right:5px;width:8px;height:8px;border-radius:50%;background:var(--late);border:1.5px solid var(--surface)}
@@ -1987,6 +2028,43 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira .pv-mom{position:absolute;left:4px;bottom:4px;right:4px;height:20px;padding:0 4px;
   border:none;border-radius:5px;background:rgba(0,0,0,.66);color:#fff;font-size:10px;cursor:pointer}
 
+/* ── Antes y después, emparejados ────────────────────────────
+   Los dos huecos siempre se ven, aunque uno esté vacío: así se sabe
+   de un vistazo qué comparación está a medias. */
+.pv-pares{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.pv-par{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2);padding:11px 12px}
+.pv-par-h{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.pv-par-h b{font-size:12.5px}
+.pv-par-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.pv-par-g{grid-template-columns:1fr}}
+.pv-hueco{position:relative;border:1px dashed var(--line);border-radius:var(--r-1);
+  background:var(--surface);padding:8px;min-height:126px;display:flex;flex-direction:column;gap:6px}
+.pv-hueco.con{border-style:solid}
+.pv-hueco-t{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.pv-hueco img{width:100%;height:104px;object-fit:cover;border-radius:var(--r-1);display:block}
+.pv-hueco-b{display:flex;gap:6px;justify-content:flex-end}
+.pv-hueco-v{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  cursor:pointer;color:var(--ink-3);font-size:11.5px;border-radius:var(--r-1);transition:background var(--fast)}
+.pv-hueco-v:hover{background:var(--surface-2);color:var(--ink-2)}
+.pv-hueco-v svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6}
+.pv-par-n{margin-top:9px;font-size:12.5px}
+.pv-par-vacio,.pv-par-pie{margin-top:11px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
+/* El mismo par, ya en el certificado en pantalla */
+.pf-pares{display:flex;flex-direction:column;gap:14px}
+.pf-par{margin:0}
+.pf-par figcaption{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.pf-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pf-c span{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
+.pf-c img{width:100%;height:150px;object-fit:cover;border-radius:var(--r-1);border:1px solid var(--line-2);display:block}
+.pf-sin{height:150px;border:1px dashed var(--line);border-radius:var(--r-1);display:grid;place-items:center;
+  font-size:11.5px;color:var(--ink-3)}
+/* La gráfica dentro del formulario, mientras se escriben los disparos */
+.psv-graf-caja{margin-top:var(--sp-3);border:1px solid var(--line);border-radius:var(--r-2);
+  background:var(--surface-2);padding:11px 12px 4px}
+.psv-graf-h{display:flex;flex-direction:column;gap:2px;margin-bottom:2px}
+.psv-graf-h b{font-size:12.5px}
+.psv-graf-h span{font-size:11.5px;color:var(--ink-3);line-height:1.45}
+
 .fx-derivado{border:1px solid var(--line);border-radius:var(--r-2);
   background:var(--surface-2);padding:12px 14px;margin-bottom:12px}
 .fx-derivado>div{display:inline-block;vertical-align:top;min-width:170px;margin:0 22px 8px 0}
@@ -2433,6 +2511,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <section class="page" id="p-cot"><div class="view-pad">
         <div class="hd"><div><h1 id="cotH1">Cotizaciones</h1><p id="cotSub"></p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap" id="cotBtn"></div></div>
+        <div id="cotResumen"></div>
         <div id="cotList"></div>
       </div></section>
 
@@ -2457,7 +2536,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
 
       <!-- ═══ CATÁLOGO ═══ -->
       <section class="page" id="p-cat"><div class="view-pad">
-        <div class="hd"><div><h1>Catálogo y despieces</h1><p>El despiece se carga una vez por modelo. Todos los equipos de ese modelo lo heredan, en todos los clientes.</p></div></div>
+        <div class="hd"><div><h1 id="catTit">Catálogo y despieces</h1><p id="catSub"></p></div></div>
+        <div id="catTools"></div>
         <div class="panel"><div id="catList"></div></div>
       </div></section>
 
@@ -3255,7 +3335,17 @@ function applyRole(v){
   /* Reclamos es un registro interno de calidad: el cliente devuelve la
      válvula, Adolphus la revisa y levanta el registro. El cliente no
      lo abre ni lo ve. */
-  const ocultas=c?['clients','cat','imp','users','snc','stk']:['assets','cal','plan','wo','req','parts','imp'];
+  /* Lo que cuelga del lateral cambia con el rol. Las secciones de un
+     cliente (válvulas, órdenes, calibraciones…) no van sueltas en el
+     menú: se entra por Clientes y salen como sub-opciones.
+     Encima de eso, cada rol pierde lo que no es suyo: el taller no
+     cotiza ni da de alta usuarios, y los reportes de confiabilidad y
+     los accesos son cosa de gerencia. */
+  const FUERA_DE_CLIENTE=['assets','cal','plan','wo','req','parts','imp'];
+  const POR_ROL={tec:['cot','rep','users'], com:['rep','users']};
+  const ocultas=c
+    ? ['clients','cat','imp','users','snc','stk']
+    : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
   $$('#nav > a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
@@ -3530,6 +3620,21 @@ function confirmarBajaClientes(){
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
 const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
+/* Las nueve secciones existen para todos, pero no todos entran a un
+   cliente a hacer lo mismo. El taller entra a ver qué válvulas de esa
+   empresa hay que trabajar; el comercial entra a cotizar. Enseñarle al
+   técnico "Cotizaciones" y al vendedor "Plan anual" es ruido, y el
+   ruido hace que la que sí importa se encuentre más tarde.
+   Se ordena por lo que cada uno abre primero. */
+const CLI_TABS_ROL={
+  tec:['wo','assets','cal','parts','snc','plan'],
+  com:['cot','req','parts','assets','snc']
+};
+function cliTabs(){
+  const orden=CLI_TABS_ROL[S.rol];
+  if(!orden)return CLI_TABS;
+  return orden.map(k=>CLI_TABS.find(([p])=>p===k)).filter(Boolean);
+}
 function openClientAssets(id){enterClient(id,'assets')}
 /* Cada cifra de la tarjeta lleva a lo que cuenta: si Los Andes marca
    un reclamo, un clic enseña cuál es y desde cuándo. */
@@ -3537,7 +3642,11 @@ function irCli(id,pag,vista){enterClient(id,pag);if(vista){S.view=vista;renderAs
 function enterClient(id,page){
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
-  renderAll();go(page||'assets');$('.view').scrollTop=0;
+  /* Cada rol entra por donde trabaja: el taller a las órdenes de ese
+     cliente —qué falta y qué se está haciendo—, el comercial a lo que
+     le cotizó, y el resto al parque de válvulas. */
+  const entrada={tec:'wo',com:'cot'}[S.rol]||'assets';
+  renderAll();go(page||entrada);$('.view').scrollTop=0;
 }
 /* Deja el importador limpio (paso 1) para no mostrar resultados viejos. */
 function resetImport(){
@@ -3613,7 +3722,7 @@ function pintarSubNav(n){
   }
   const c=cli(S.inCli)||{};
   caja.innerHTML=`<div class="sub-cab" title="${esc(c.n||'')}">${esc(c.n||'')}</div>`+
-    CLI_TABS.map(([p,l])=>`<a class="${S.page===p?'on':''}" onclick="go('${p}')">
+    cliTabs().map(([p,l])=>`<a class="${S.page===p?'on':''}" onclick="go('${p}')">
       <span class="lbl">${l}</span>${n&&n[p]?`<span class="ct">${n[p]}</span>`:''}</a>`).join('')+
     `<button class="sub-salir" onclick="exitClient()">
       <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Todos los clientes</button>`;
@@ -3622,19 +3731,30 @@ function renderCliBar(){
   const t=$('#impTitle');
   if(t)t.textContent=(S.inCli||S.cli)?`Importar a ${cli(S.inCli||S.cli).n}`:'Importar levantamiento de campo';
   const bar=$('#cliBar');
-  const inside=!!S.inCli&&CLI_TABS.some(([p])=>p===S.page);
+  const dentro=!!S.inCli&&!!cli(S.inCli);
+  /* La barra de arriba sólo sale en las páginas del cliente; el
+     sub-menú lateral depende de otra cosa —de si hay un cliente
+     abierto—, y por eso se pinta SIEMPRE, aunque la barra no salga.
+     Antes se salía aquí antes de tiempo y el sub-menú se quedaba
+     colgado: cambiabas de rol o te ibas a Catálogo y seguías viendo
+     las sub-opciones del cliente anterior, con las del rol anterior. */
+  const inside=dentro&&CLI_TABS.some(([p])=>p===S.page);
   bar.style.display=inside?'':'none';
-  if(!inside)return;
-  const c=cli(S.inCli);
-  const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-  $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;
-  $('#cbSub').textContent=`${c.ruc?'RUC '+c.ruc+' · ':''}${c.ind} · ${c.fac}`;
-  const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
-  const n={assets:eq.length,
-    parts:0,imp:0, /* sin contador */
-    cal:eq.filter(a=>a.prox).length,
-    wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='final'}).length,
-    req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
+  let n=null;
+  if(dentro){
+    const c=cli(S.inCli);
+    const eq=ACTIVOS.filter(a=>a.cli===S.inCli);
+    n={assets:eq.length,
+      parts:0,imp:0, /* sin contador */
+      cal:eq.filter(a=>a.prox).length,
+      wo:ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a?.cli===S.inCli&&o.et!=='final'}).length,
+      req:SOLICITUDES.filter(s=>s.cli===S.inCli).length};
+    if(inside){
+      const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;
+      $('#cbSub').textContent=`${c.ruc?'RUC '+c.ruc+' · ':''}${c.ind} · ${c.fac}`;
+    }
+  }
   $('#cbTabs').innerHTML='';
   pintarSubNav(n);
 }
@@ -4143,6 +4263,89 @@ const cotMias=()=>{
 };
 const cotVencida=c=>c.est==='enviada'&&c.valida&&dias(c.valida)<0;
 
+/* En qué quedó cada cotización, dicho como lo diría un vendedor:
+   todavía no la ve · está esperando respuesta · se le venció · la
+   aceptó · no la tomó. Es lo que hay que saber para llamar al cliente. */
+const COT_SIT=[
+ ['borrador', 'Sin enviar',  'ink-3'],
+ ['abierta',  'Esperando',   'sel'],
+ ['vencida',  'Se venció',   'due'],
+ ['aceptada', 'Aceptada',    'ok'],
+ ['rechazada','No la tomó',  'late']
+];
+function cotSituacion(c){
+  if(c.est==='aceptada')return 'aceptada';
+  if(c.est==='rechazada')return 'rechazada';
+  if(c.est==='borrador')return 'borrador';
+  return cotVencida(c)?'vencida':'abierta';
+}
+/* El resumen de ventas: cuántas veces se le cotizó a este cliente,
+   por cuánto, y en qué acabó cada una. Los montos van con IGV porque
+   es el número que el cliente aprueba. */
+function cotResumen(lista){
+  const r={n:lista.length, monto:0};
+  COT_SIT.forEach(([k])=>r[k]={n:0,m:0});
+  lista.forEach(c=>{const t=cotTot(c), s=cotSituacion(c); r.monto+=t; r[s].n++; r[s].m+=t});
+  r.decididas=r.aceptada.n+r.rechazada.n;
+  r.efec=r.decididas?Math.round(r.aceptada.n*100/r.decididas):null;
+  return r;
+}
+/* Lo mismo abierto por vendedor: quién cotizó cuánto y cuánto cerró.
+   Sin esto «12 cotizaciones» no dice nada de quién las hizo. */
+function cotPorVendedor(lista){
+  const m=new Map();
+  lista.forEach(c=>{
+    const v=(c.por||'Sin asignar').trim()||'Sin asignar';
+    let x=m.get(v);
+    if(!x){x={v,n:0,monto:0,gana:0,montoGana:0,pierde:0,espera:0,montoEspera:0}; m.set(v,x)}
+    const t=cotTot(c), s=cotSituacion(c);
+    x.n++; x.monto+=t;
+    if(s==='aceptada'){x.gana++; x.montoGana+=t}
+    else if(s==='rechazada')x.pierde++;
+    else if(s==='abierta'||s==='vencida'){x.espera++; x.montoEspera+=t}
+  });
+  return [...m.values()].sort((a,b)=>b.montoGana-a.montoGana||b.monto-a.monto);
+}
+function pintarCotResumen(lista){
+  const caja=$('#cotResumen'); if(!caja)return;
+  if(S.rol==='cliente'||!lista.length){caja.innerHTML='';return}
+  const r=cotResumen(lista), foco=cotFoco();
+  const quien=foco?esc(cli(foco).n):'todos los clientes';
+  const kpi=(v,k,d,cls,dot)=>`<div class="kpi"><span class="kv">${dot?`<span class="dot" style="color:var(--${dot})"></span>`:''}${v}</span>
+    <span class="kk">${esc(k)}</span><span class="kd ${cls||''}">${esc(d)}</span></div>`;
+  const vend=cotPorVendedor(lista);
+  caja.innerHTML=`
+   <div class="kpis">
+     ${kpi(r.n,`Veces cotizadas a ${foco?'este cliente':'clientes'}`,`${usd(r.monto)} ofertado con IGV`)}
+     ${kpi(r.abierta.n+r.vencida.n,'Todavía abiertas',
+        r.vencida.n?`${usd(r.abierta.m+r.vencida.m)} · ${r.vencida.n} ya vencida${r.vencida.n===1?'':'s'}`:`${usd(r.abierta.m)} esperando respuesta`,
+        r.vencida.n?'warn':'', (r.abierta.n+r.vencida.n)?'sel':'')}
+     ${kpi(r.aceptada.n,'Cerradas · el cliente aceptó',`${usd(r.aceptada.m)} de venta`,'good',r.aceptada.n?'ok':'')}
+     ${kpi(r.rechazada.n,'No las tomó',r.rechazada.n?`${usd(r.rechazada.m)} que se perdió`:'ninguna rechazada',r.rechazada.n?'bad':'good',r.rechazada.n?'late':'')}
+     ${kpi(r.efec==null?'—':r.efec+'%','Efectividad',
+        r.efec==null?'ninguna decidida todavía':`${r.aceptada.n} de ${r.decididas} decididas`,
+        r.efec==null?'':r.efec>=50?'good':'warn')}
+   </div>
+   ${r.borrador.n?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Hay <b>${r.borrador.n} borrador${r.borrador.n===1?'':'es'}</b> por ${usd(r.borrador.m)} que ${r.borrador.n===1?'no ha salido':'no han salido'} todavía: el cliente no ${r.borrador.n===1?'la':'las'} ve hasta que se ${r.borrador.n===1?'envíe':'envíen'}.</div></div>`:''}
+   ${vend.length?panel(`Qué ha cotizado cada vendedor a ${quien}`,`<div class="grid-wrap"><table class="grid"><thead><tr>
+       <th>Vendedor</th><th class="num" style="width:96px">Cotizó</th><th class="num" style="width:132px">Monto ofertado</th>
+       <th class="num" style="width:112px">Esperando</th><th class="num" style="width:96px">Cerró</th>
+       <th class="num" style="width:132px">Venta cerrada</th><th style="width:110px">Efectividad</th>
+     </tr></thead><tbody>
+     ${vend.map(x=>{const dec=x.gana+x.pierde, ef=dec?Math.round(x.gana*100/dec):null;
+       return `<tr style="cursor:default">
+       <td><b>${esc(x.v)}</b></td>
+       <td class="num">${x.n}</td>
+       <td class="num mono">${usd(x.monto)}</td>
+       <td class="num">${x.espera?`${x.espera} · <span class="mono">${usd(x.montoEspera)}</span>`:'—'}</td>
+       <td class="num">${x.gana||'—'}</td>
+       <td class="num mono"><b>${usd(x.montoGana)}</b></td>
+       <td>${ef==null?'<span class="muted">sin decidir</span>':`<span class="tag ${ef>=50?'ok':'due'}"><span class="dot"></span>${ef}%</span>`}</td>
+     </tr>`}).join('')}
+     </tbody></table></div>`,`<span class="count">${vend.length} vendedor${vend.length===1?'':'es'}</span>`):''}`;
+}
+
 function renderCot(){
   const caja=$('#cotList'); if(!caja) return;
   const cliente=S.rol==='cliente';
@@ -4156,6 +4359,7 @@ function renderCot(){
 
   const lista=cotMias();
   const ct=$('#ctCot'); if(ct)ct.textContent=lista.filter(c=>c.est==='enviada').length||'';
+  pintarCotResumen(lista);
 
   if(!lista.length){
     caja.innerHTML=`<div class="panel"><div class="empty">
@@ -4164,17 +4368,19 @@ function renderCot(){
     return;
   }
   caja.innerHTML=`<div class="snc-l">${lista.map(c=>{
-    const e=cotEst(c.est), a=ACTIVOS.find(x=>x.id===c.act), venc=cotVencida(c);
+    const a=ACTIVOS.find(x=>x.id===c.act), venc=cotVencida(c);
+    const sit=COT_SIT.find(s=>s[0]===cotSituacion(c));
     const nq=(c.items||[]).reduce((s,i)=>s+(i.q||1),0);
     return `<article class="snc-c" onclick="verCot('${c.id}')">
       <div class="snc-h">
         <span class="mono snc-n">${esc(c.n)}</span>
-        <span class="tag ${venc?'due':e[2]}">${venc?'Vencida':e[1]}</span>
+        <span class="tag ${sit[2]==='ink-3'?'':sit[2]}">${sit[1]}</span>
         <span class="snc-f">${c.f}</span>
       </div>
       <b class="snc-t">${(c.items||[]).length} posicion${(c.items||[]).length===1?'':'es'} · ${nq} unidad${nq===1?'':'es'} · <span class="mono">${usd(cotTot(c))}</span> con IGV</b>
       <div class="snc-m">
         ${a?`<span class="tag mono">${esc(a.tag)}</span>`:''}
+        ${c.por?`<span>Cotizó ${esc(c.por)}</span>`:''}
         <span>${esc((c.items||[]).map(i=>i.n).slice(0,3).join(', '))}${(c.items||[]).length>3?'…':''}</span>
         ${!cotFoco()?`<span>· ${esc(cli(c.cli).n)}</span>`:''}
       </div>
@@ -4895,15 +5101,11 @@ function psvNuevo(actId){
     // disparo
     setEsp:a.setPress||'', und:a.setUnd||'psi', asFound:'', fluidoP:'Nitrógeno',
     t1:'',t2:'',t3:'', pc1:'',pc2:'',pc3:'',
-    // hermeticidad API 527
-    hTiempo:'1 min', hb1:'',hb2:'',hb3:'', hConf:'Conforme',
-    // resorte
-    perpAlt:'',perpNEsp:'',perpFi:'',perpAng:'',perpDesv:'',
-    parFi:'',parAng:'',parDesv:'', metodo:'Métrico',
-    pernoIni:'',pernoFin:'',muescaSup:'',muescaInf:'',
-    altRes:'',diamEsp:'',numEsp:'',
-    discoExt:'',discoInt:'',discoH:'', tobExt:'',tobInt:'',tobH:'',
-    coment:'', fotos:[], firmas:[]
+    /* Hermeticidad API 527 y las medidas del resorte salían del
+       formato pero nadie las llenaba: se quitaron del formulario y del
+       certificado. Los ensayos viejos que las traigan las conservan en
+       su registro; simplemente ya no se piden ni se imprimen. */
+    coment:'', pares:[], fotos:[], firmas:[]
   };
 }
 
@@ -5013,64 +5215,26 @@ function pintarPSV(){
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec"><summary>3 · Hermeticidad · API 527</summary><div class="psv-b">
-      <p class="pl-regla">Se aplica el <b>90 % de la presión de ajuste</b> y se cuentan las burbujas por minuto.
-        El criterio de aceptación depende del orificio y del tipo de asiento: lo marca el técnico.</p>
-      <div class="two">
-        ${F('hTiempo','Tiempo de prueba','1 min')}
-        <div class="fld"><label for="pv-hConf">Resultado</label>
-          <select class="inp" id="pv-hConf" onchange="psvCampo('hConf',this.value)">
-            ${['Conforme','No conforme'].map(x=>`<option ${t.hConf===x?'selected':''}>${x}</option>`).join('')}</select></div>
-      </div>
-      <div class="psv-tests">
-        ${[1,2,3].map(i=>`<div class="fld"><label for="pv-hb${i}">Burbujas/min ${i}</label>
-          <input class="inp mono" id="pv-hb${i}" inputmode="decimal" value="${esc(t['hb'+i])}"
-            placeholder="—" oninput="psvCampo('hb${i}',this.value)"></div>`).join('')}
-      </div>
-    </div></details>
-
-    <details class="psv-sec"><summary>4 · Resorte y componentes</summary><div class="psv-b">
-      <h4 class="snc-sec">Perpendicularidad</h4>
-      <div class="two">
-        ${F('perpAlt','Altura (mm)')}${F('perpNEsp','N.º de espiras')}
-        ${F('perpFi','Ø espiral (mm)')}${F('perpAng','Ángulo (°)')}
-        ${F('perpDesv','Desviación (°)')}
-        <div class="fld"><label for="pv-metodo">Método usado</label>
-          <select class="inp" id="pv-metodo" onchange="psvCampo('metodo',this.value)">
-            ${['Métrico','Imperial'].map(x=>`<option ${t.metodo===x?'selected':''}>${x}</option>`).join('')}</select></div>
-      </div>
-      <h4 class="snc-sec">Paralelismo y fatiga</h4>
-      <div class="two">${F('parFi','Ø externo (mm)')}${F('parAng','Ángulo (°)')}${F('parDesv','Desviación (°)')}</div>
-      <h4 class="snc-sec">Regulación</h4>
-      <div class="two">
-        ${F('pernoIni','Perno regulación inicial (mm)')}${F('pernoFin','Perno regulación final (mm)')}
-        ${F('muescaSup','Muescas anillo superior')}${F('muescaInf','Muescas anillo inferior')}
-        ${F('altRes','Altura del resorte (mm)')}${F('diamEsp','Ø de espiras (mm)')}${F('numEsp','N.º de espiras')}
-      </div>
-      <h4 class="snc-sec">Disco y tobera</h4>
-      <div class="two">
-        ${F('discoExt','Disco · Ø ext')}${F('discoInt','Disco · Ø int')}${F('discoH','Disco · h')}
-        ${F('tobExt','Tobera · Ø ext')}${F('tobInt','Tobera · Ø int')}${F('tobH','Tobera · h')}
-      </div>
-    </div></details>
-
-    <details class="psv-sec"><summary>5 · Registro fotográfico y comentarios</summary><div class="psv-b">
-      <div class="fld"><label for="pv-coment">Comentarios u observaciones</label>
-        <textarea class="inp" id="pv-coment" rows="3" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea></div>
+    <details class="psv-sec" open><summary>3 · Conclusiones y registro fotográfico
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
+      <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento</label>
+        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)"
+          placeholder="Qué se encontró, qué se cambió y en qué estado queda la válvula. Esto sale como «Conclusiones» en el certificado y en el Word.">${esc(t.coment||'')}</textarea>
+        <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
+      <h4 class="snc-sec">Antes y después <span class="opc">una pareja de fotos por cada cosa que quieras mostrar</span></h4>
       <div class="pv-fotos-b">
         <label class="ev-add" for="pvFotoA">
           <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-          <span>Antes del mantenimiento</span></label>
+          <span>Subir fotos del antes</span></label>
         <input id="pvFotoA" type="file" accept="image/*" capture="environment" multiple
-          style="display:none" onchange="psvFotos(this.files,'antes');this.value=''">
-        <label class="ev-add" for="pvFotoD">
-          <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-          <span>Después del mantenimiento</span></label>
-        <input id="pvFotoD" type="file" accept="image/*" capture="environment" multiple
-          style="display:none" onchange="psvFotos(this.files,'despues');this.value=''">
+          style="display:none" onchange="psvParSubir(this.files,null,'a');this.value=''">
+        <button class="ev-add" type="button" onclick="psvParNuevo()">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span>Agregar una comparación vacía</span></button>
       </div>
-      <div class="muted" style="font-size:11.5px;margin-top:8px">El par antes/después es lo que el cliente mira primero
-        en el informe, y lo que zanja una discusión sobre en qué estado llegó la válvula.</div>
+      <div class="muted" style="font-size:11.5px;margin-top:8px">Sube las fotos del antes —una, tres, las que hagan falta—
+        y a cada una le pones después su foto del final. En el informe salen emparejadas y numeradas.
+        Cualquiera de las dos se puede cambiar o quitar si te equivocas.</div>
       <div id="pvFotos"></div>
     </div></details>
    </div>`;
@@ -5116,6 +5280,16 @@ function pintarPSVResultado(){
         se espera ≤ 8 % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
       ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
         pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad antes de cerrar.</span>`:''}
+    </div>
+    <!-- El mismo dibujo que va al certificado, aquí mismo mientras se
+         escribe: un número dentro de la banda y otro fuera se leen
+         igual en una tabla, pero no en el gráfico. Con la válvula
+         todavía en el banco, ver un disparo saltando la banda es lo
+         que evita devolverla así. -->
+    <div class="psv-graf-caja">
+      <div class="psv-graf-h"><b>Cómo está disparando ahora</b>
+        <span>banda admisible en verde · el disparo que se sale va marcado con un aspa</span></div>
+      ${psvGrafica(v)}
     </div>`;
 }
 
@@ -5128,44 +5302,132 @@ function pintarPSVResultado(){
    para no perder lo ya subido. */
 const fotoObj=f=>typeof f==='string'?{d:f,m:''}:f;
 const MOMENTOS=[['antes','Antes del mantenimiento'],['despues','Después del mantenimiento']];
-function psvFotos(files,momento){
+/* Las fotos van EN PAREJAS numeradas: la 1 de antes con la 1 de
+   después, la 2 con la 2. Antes eran dos montones sueltos y en el
+   informe nadie sabía qué foto final correspondía a qué foto inicial
+   — que es justo lo único que el par tiene que demostrar.
+   Cada pareja lleva además su propia nota: «asiento», «resorte»…
+   Los ensayos ya guardados traen la lista vieja; se emparejan por
+   orden al abrirlos y no se pierde ninguna. */
+function paresFoto(t){
+  if(!t)return [];
+  if(Array.isArray(t.pares))return t.pares;
+  const fs=(t.fotos||[]).map(fotoObj);
+  const A=fs.filter(f=>f.m==='antes'), D=fs.filter(f=>f.m==='despues'), X=fs.filter(f=>!f.m);
+  const p=[];
+  for(let i=0;i<Math.max(A.length,D.length);i++)
+    p.push({a:(A[i]||{}).d||'', d:(D[i]||{}).d||'', nota:''});
+  X.forEach(x=>p.push({a:x.d,d:'',nota:''}));
+  t.pares=p;
+  return p;
+}
+const LADO={a:'antes',d:'después'};
+/* Subir. Sin índice, cada archivo abre su propia pareja: eliges las
+   tres fotos del antes de golpe y quedan las tres comparaciones
+   listas para su foto final. Con índice, reemplaza ese hueco. */
+function psvParSubir(files,i,lado){
   const lista=Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
   if(!lista.length){toast('Elige una foto');return}
+  if(!PSV_TMP)return;
+  const pares=paresFoto(PSV_TMP);
+  const l=lado==='d'?'d':'a';
+  if(i!=null){
+    comprimirFoto(lista[0])
+      .then(d=>{if(pares[i]){pares[i][l]=d;pintarPSVFotos();toast(`Foto de ${LADO[l]} ${i+1} actualizada`)}})
+      .catch(()=>toast('No se pudo leer la foto'));
+    return;
+  }
   let fallos=0;
   Promise.all(lista.map(f=>comprimirFoto(f)
-    .then(d=>{if(PSV_TMP){(PSV_TMP.fotos=PSV_TMP.fotos||[]).push({d,m:momento||''})}})
+    .then(d=>{pares.push(l==='a'?{a:d,d:'',nota:''}:{a:'',d,nota:''})})
     .catch(()=>{fallos++})
   )).then(()=>{
     pintarPSVFotos();
     const ok=lista.length-fallos;
-    const cual=(MOMENTOS.find(x=>x[0]===momento)||[])[1];
     if(fallos)toast(ok?`${ok} foto${ok>1?'s':''} · ${fallos} no se pudo leer`:'No se pudo leer la foto');
-    else toast(`${ok} foto${ok>1?'s':''} ${cual?'· '+cual.toLowerCase():'agregada'}`);
+    else toast(`${ok} comparación${ok>1?'es':''} · falta la foto de ${l==='a'?'después':'antes'}`);
   });
 }
-function psvQuitarFoto(i){PSV_TMP.fotos.splice(i,1);pintarPSVFotos()}
-/* Cambiar de momento sin volver a subirla: se falla al elegir. */
-function psvMomento(i,m){
-  const f=PSV_TMP.fotos[i]; if(!f)return;
-  PSV_TMP.fotos[i]=Object.assign(fotoObj(f),{m});
+function psvParNuevo(){
+  if(!PSV_TMP)return;
+  paresFoto(PSV_TMP).push({a:'',d:'',nota:''});
   pintarPSVFotos();
+}
+function psvParQuitar(i){
+  if(!PSV_TMP)return;
+  paresFoto(PSV_TMP).splice(i,1);
+  pintarPSVFotos();
+}
+/* Borrar sólo una de las dos: la comparación sigue viva y se vuelve a
+   subir la que salió mal, sin rehacer la otra. */
+function psvParBorrarFoto(i,lado){
+  if(!PSV_TMP)return;
+  const p=paresFoto(PSV_TMP)[i]; if(!p)return;
+  p[lado==='d'?'d':'a']='';
+  pintarPSVFotos();
+}
+function psvParNota(i,v){
+  if(!PSV_TMP)return;
+  const p=paresFoto(PSV_TMP)[i]; if(p)p.nota=v;
+}
+/* El registro fotográfico tal como sale en el certificado, el PDF y el
+   Word: cada pareja en su fila, antes a la izquierda y después a la
+   derecha, numeradas. Es la misma función en los tres sitios para que
+   lo que se ve en pantalla sea exactamente lo que se imprime. */
+function psvFotosHTML(c){
+  const pares=paresFoto(c).filter(p=>p.a||p.d);
+  if(!pares.length)return '';
+  return `<section class="pd-b"><h5>Registro fotográfico · antes y después</h5>
+    <div class="pf-pares">${pares.map((p,i)=>`
+      <figure class="pf-par">
+        <figcaption>Comparación ${i+1}${p.nota?' · '+esc(p.nota):''}</figcaption>
+        <div class="pf-g">
+          <div class="pf-c"><span>Antes</span>${p.a?`<img src="${p.a}" alt="Antes de la comparación ${i+1}">`
+            :'<div class="pf-sin">sin foto</div>'}</div>
+          <div class="pf-c"><span>Después</span>${p.d?`<img src="${p.d}" alt="Después de la comparación ${i+1}">`
+            :'<div class="pf-sin">sin foto</div>'}</div>
+        </div>
+      </figure>`).join('')}</div></section>`;
 }
 function pintarPSVFotos(){
   const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
-  const todas=(PSV_TMP.fotos||[]).map((f,i)=>({...fotoObj(f),i}));
-  const grupo=(m,lbl)=>{
-    const g=todas.filter(f=>f.m===m);
-    if(!g.length)return '';
-    return `<div class="pv-grp"><h5>${lbl} <span>${g.length}</span></h5>
-      <div class="ev-tiras">${g.map(f=>`
-        <div class="ev-tira"><img src="${f.d}" alt="${lbl} ${f.i+1}">
-          <button class="ev-x" onclick="psvQuitarFoto(${f.i})" aria-label="Quitar">×</button>
-          <select class="pv-mom" onchange="psvMomento(${f.i},this.value)" aria-label="Momento de la foto">
-            ${MOMENTOS.map(([k,l])=>`<option value="${k}" ${f.m===k?'selected':''}>${l.split(' ')[0]}</option>`).join('')}
-            <option value="" ${f.m?'':'selected'}>Sin clasificar</option>
-          </select></div>`).join('')}</div></div>`;
+  const pares=paresFoto(PSV_TMP);
+  const completas=pares.filter(p=>p.a&&p.d).length;
+  if(!pares.length){
+    c.innerHTML=`<div class="pv-par-vacio">Todavía no hay ninguna comparación.
+      Sube las fotos del antes y cada una abre la suya.</div>`;
+    return;
+  }
+  const hueco=(i,l)=>{
+    const p=pares[i], src=p[l], id=`pvPar${l}${i}`;
+    return `<div class="pv-hueco ${src?'con':''}">
+      <span class="pv-hueco-t">${l==='a'?'Antes':'Después'}</span>
+      ${src
+        ? `<img src="${src}" alt="${l==='a'?'Antes':'Después'} de la comparación ${i+1}">
+           <div class="pv-hueco-b">
+             <label class="btn quiet xs" for="${id}">Cambiar</label>
+             <button class="btn quiet xs" onclick="psvParBorrarFoto(${i},'${l}')">Quitar</button>
+           </div>`
+        : `<label class="pv-hueco-v" for="${id}">
+             <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+             <span>Subir la foto de ${LADO[l]}</span></label>`}
+      <input id="${id}" type="file" accept="image/*" capture="environment" style="display:none"
+             onchange="psvParSubir(this.files,${i},'${l}');this.value=''">
+    </div>`;
   };
-  c.innerHTML=grupo('antes','Antes')+grupo('despues','Después')+grupo('','Sin clasificar');
+  c.innerHTML=`<div class="pv-pares">${pares.map((p,i)=>`
+    <div class="pv-par">
+      <div class="pv-par-h"><b>Comparación ${i+1}</b>
+        ${p.a&&p.d?'<span class="tag ok"><span class="dot"></span>completa</span>'
+          :`<span class="tag due"><span class="dot"></span>falta la de ${p.a?'después':'antes'}</span>`}
+        <span class="spacer" style="flex:1"></span>
+        <button class="icon-btn" onclick="psvParQuitar(${i})" aria-label="Quitar la comparación ${i+1}">
+          <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+      <div class="pv-par-g">${hueco(i,'a')}${hueco(i,'d')}</div>
+      <input class="inp pv-par-n" value="${esc(p.nota||'')}" placeholder="Qué se ve aquí — p. ej. asiento y tobera"
+             oninput="psvParNota(${i},this.value)" aria-label="Nota de la comparación ${i+1}">
+    </div>`).join('')}</div>
+    <div class="pv-par-pie">${completas} de ${pares.length} ${pares.length===1?'comparación completa':'comparaciones completas'} · sólo las completas se ven emparejadas en el certificado.</div>`;
 }
 
 function guardarPSV(emitir){
@@ -5364,11 +5626,22 @@ function psvGrafica(v,ancho){
     <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
     <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.5"/>
     <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="2" stroke-dasharray="7 4"/>
-    ${v.disparos.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p)}" r="5.5" fill="${tono}"/>
-      <text x="${x(i)}" y="${y(p)-11}" text-anchor="middle" font-size="12" font-weight="600" fill="#101418"
+    ${v.disparos.map((p,i)=>{
+      /* Cada disparo se pinta por SÍ MISMO, no por el veredicto: uno
+         que se salió de la banda tiene que verse aunque el promedio
+         salve la papeleta —es justo el dato que avisa de que la
+         válvula dispara disparejo—. Y no se distingue sólo por el
+         color: el que se sale lleva anillo y un aspa encima. */
+      const dentro=p>=v.min-1e-9&&p<=v.max+1e-9;
+      const col=dentro?'#1a7f52':'#c0392b';
+      return `<circle cx="${x(i)}" cy="${y(p)}" r="${dentro?5.5:6.5}" fill="${dentro?col:'none'}"
+        stroke="${col}" stroke-width="${dentro?0:2.4}"/>
+      ${dentro?'':`<path d="M${x(i)-3.2} ${y(p)-3.2}l6.4 6.4M${x(i)+3.2} ${y(p)-3.2}l-6.4 6.4"
+        stroke="${col}" stroke-width="2" stroke-linecap="round"/>`}
+      <text x="${x(i)}" y="${y(p)-12}" text-anchor="middle" font-size="12" font-weight="600" fill="${dentro?'#101418':col}"
         font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
       <text x="${x(i)}" y="${H-9}" text-anchor="middle" font-size="11" fill="#78818c"
-        font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`).join('')}
+        font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`}).join('')}
     <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
     <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="10.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
     <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
@@ -5506,37 +5779,16 @@ function verPSV(id){
         pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</p>`:''}
     </section>`:''}
 
-    ${bloque('Hermeticidad · API 527',[
-      dato('Presión aplicada', v.estado!=='incompleto'?n2(v.set*0.9):'', u),
-      dato('Fluido', c.fluidoP), dato('Tiempo', c.hTiempo),
-      dato('Burbujas/min', [c.hb1,c.hb2,c.hb3].filter(x=>x!==''&&x!=null).join(' · ')),
-      dato('Resultado', c.hConf)])}
-
-    ${bloque('Resorte y componentes',[
-      dato('Altura', c.perpAlt,'mm'), dato('N.º espiras', c.perpNEsp||c.numEsp),
-      dato('Ø espiral', c.perpFi), dato('Ángulo', c.perpAng,'°'),
-      dato('Desviación', c.perpDesv,'°'), dato('Ø externo', c.parFi),
-      dato('Perno regulación', (c.pernoIni||c.pernoFin)?((c.pernoIni||'—')+' → '+(c.pernoFin||'—')):''),
-      dato('Muescas sup / inf', (c.muescaSup||c.muescaInf)?((c.muescaSup||'—')+' / '+(c.muescaInf||'—')):''),
-      dato('Método', c.metodo)])}
-
     ${bloque('Equipo patrón',[
       dato('Descripción', c.patDesc), dato('Marca y modelo', [c.patMarca,c.patModelo].filter(Boolean).join(' ')),
       dato('N.º de serie', c.patSerie), dato('Escala', c.patEscala),
       dato('Exactitud', c.patExact), dato('Certificado', c.patCert),
       dato('Calibrado el', c.patFecha?fPE(c.patFecha):'')])}
 
-    ${c.coment?`<section class="pd-b"><h5>Comentarios u observaciones</h5>
+    ${c.coment?`<section class="pd-b"><h5>Conclusiones</h5>
       <p class="pd-txt">${esc(c.coment)}</p></section>`:''}
 
-    ${(c.fotos&&c.fotos.length)?(()=>{
-      const fs=c.fotos.map(fotoObj);
-      const g=(m,lbl)=>{const l=fs.filter(f=>f.m===m);return l.length?
-        `<div class="pv-grp"><h5>${lbl} <span>${l.length}</span></h5><div class="ev-tiras">${
-          l.map((f,i)=>`<div class="ev-tira"><img src="${f.d}" alt="${lbl} ${i+1}"></div>`).join('')}</div></div>`:''};
-      return `<section class="pd-b"><h5>Registro fotográfico</h5>
-        ${g('antes','Antes')}${g('despues','Después')}${g('','Sin clasificar')}</section>`;
-    })():''}
+    ${psvFotosHTML(c)}
 
     <section class="pd-b"><h5>Firmas</h5>
     <div class="firmas-grid">
@@ -5609,13 +5861,22 @@ function psvDocumento(id){
   .fb b{font-size:9.5px;display:block}
   .fb span.cg{color:#5b6470}
   h3.fh{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6470;margin:9px 0 4px;page-break-after:avoid}
-  .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
-  .fotos img{width:100%;height:88px;object-fit:cover;border-radius:2px}
+  /* Antes y después, uno al lado del otro. En tabla y no en grid
+     porque Word no entiende grid y desarmaba el par al abrirlo. */
+  .fpar{margin-top:6px;border-collapse:collapse;width:100%}
+  .fpar th,.fpar td{border-bottom:0;padding:0}
+  .fpar-t th{text-align:left;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    color:#5b6470;padding:9px 0 3px}
+  .fpar-f td{width:50%;padding:0 5px 9px 0;vertical-align:top;page-break-inside:avoid}
+  .fpar-f .fc-l{display:block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8a929c;margin-bottom:2px}
+  .fpar-f img{width:100%;max-height:120px;object-fit:cover;border-radius:2px;border:1px solid #e4e7ea}
+  .fpar-f .fc-sin{height:60px;border:1px dashed #cfd4d9;border-radius:2px;display:flex;
+    align-items:center;justify-content:center;font-size:8.5px;color:#9aa2ab}
   .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
     justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
   /* la gráfica es una ilustración, no la página: se le pone techo o
      se estira hasta comerse un folio entero */
-  .psv-graf{display:block;max-width:340px;margin:9px auto 4px}
+  .psv-graf{display:block;max-width:470px;margin:9px auto 4px}
   @page{size:A4;margin:11mm}
   </style></head><body>
   <div class="cab">
@@ -5683,34 +5944,20 @@ function psvDocumento(id){
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div>
   ${psvGrafica(v,660)}`:''}
 
-  <h2>PRUEBA DE HERMETICIDAD (LEAKAGE TEST SEGÚN API 527)</h2>
-  <table class="res">
-    ${fila('PRESIÓN APLICADA',(v.estado!=='incompleto'?n2(v.set*0.9)+' '+u+'  (90 % del set press)':'—'))}
-    ${fila('FLUIDO / TIEMPO',(c.fluidoP||'')+' · '+(c.hTiempo||''))}
-    ${fila('BURBUJAS POR MINUTO',[c.hb1,c.hb2,c.hb3].filter(Boolean).join('  ·  '))}
-    ${fila('RESULTADO',c.hConf)}
-  </table>
-
-  <h2>PRUEBAS DE FUNCIONABILIDAD DEL RESORTE</h2>
-  <div class="par">
-    <table><tr><th colspan="2">PERPENDICULARIDAD</th></tr>
-      ${fila('ALTURA',c.perpAlt?c.perpAlt+' mm':'')}${fila('N° ESPIRAL',c.perpNEsp)}
-      ${fila('Ø ESPIRAL',c.perpFi)}${fila('ÁNGULO',c.perpAng?c.perpAng+' °':'')}
-      ${fila('DESVIACIÓN',c.perpDesv?c.perpDesv+' °':'')}${fila('MÉTODO USADO',c.metodo)}</table>
-    <table><tr><th colspan="2">PARALELISMO Y FATIGA</th></tr>
-      ${fila('Ø EXTERNO',c.parFi)}${fila('ÁNGULO',c.parAng?c.parAng+' °':'')}
-      ${fila('DESVIACIÓN',c.parDesv?c.parDesv+' °':'')}
-      ${fila('PERNO REGULACIÓN',(c.pernoIni||'—')+' → '+(c.pernoFin||'—'))}
-      ${fila('MUESCAS ANILLO SUP / INF',(c.muescaSup||'—')+' / '+(c.muescaInf||'—'))}</table>
-  </div>
-
-  ${c.coment?`<h2>COMENTARIOS U OBSERVACIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
-  ${(c.fotos&&c.fotos.length)?(()=>{
-    const fs=c.fotos.map(fotoObj);
-    const g=(m,lbl)=>{const l=fs.filter(f=>f.m===m).slice(0,4);return l.length?
-      `<h3 class="fh">${lbl}</h3><div class="fotos">${l.map(f=>`<img src="${f.d}" alt="">`).join('')}</div>`:''};
-    return `<h2>REGISTRO FOTOGRÁFICO</h2>${g('antes','Antes del mantenimiento')}${g('despues','Después del mantenimiento')}${g('','Sin clasificar')}`;
-  })():''}
+  ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
+  ${(()=>{
+    /* Las fotos salen EMPAREJADAS: antes a la izquierda, después a la
+       derecha, en la misma fila y con el mismo número. Es lo que hace
+       que el par pruebe algo — dos montones sueltos no. */
+    const pares=paresFoto(c).filter(p=>p.a||p.d);
+    if(!pares.length)return '';
+    const celda=(src,lbl,i)=>`<td><span class="fc-l">${lbl}</span>${
+      src?`<img src="${src}" alt="${lbl} de la comparación ${i+1}">`:'<div class="fc-sin">sin foto</div>'}</td>`;
+    return `<h2>REGISTRO FOTOGRÁFICO · ANTES Y DESPUÉS</h2>
+      <table class="fpar">${pares.map((p,i)=>`
+        <tr class="fpar-t"><th colspan="2">Comparación ${i+1}${p.nota?' · '+esc(p.nota):''}</th></tr>
+        <tr class="fpar-f">${celda(p.a,'Antes',i)}${celda(p.d,'Después',i)}</tr>`).join('')}</table>`;
+  })()}
 
   <div class="firmas">
     ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
@@ -7096,9 +7343,49 @@ function ovClick(e,cerrar){
 /* ============================================================
    9 · CATÁLOGO Y USUARIOS
    ============================================================ */
+/* Cuánto hay de una pieza y de dónde sale el número.
+   La hoja de almacén manda; si todavía no se cargó, se muestra lo que
+   trae el catálogo y se dice que es del catálogo, para que nadie
+   prometa una entrega sobre un dato viejo. */
+function piezaStock(cod){
+  const real=hayStock(cod);
+  if(real!=null) return {n:real, real:true};
+  return {n:(partMeta(cod).s|0), real:false};
+}
+/* El listado de piezas de UN cliente: se recorre cada válvula suya, se
+   toma el despiece de su modelo y se juntan las repetidas. Una misma
+   pieza que va en cuatro válvulas es una sola línea que dice en cuáles
+   va — no cuatro líneas iguales. */
+function piezasDeCliente(cliId){
+  const mapa=new Map();
+  ACTIVOS.filter(a=>a.cli===cliId).forEach(a=>{
+    const m=MODELOS[a.mod]||{};
+    (BOM[m.b]||[]).forEach(p=>{
+      let x=mapa.get(p.n);
+      if(!x){x={...p, mods:new Set(), tags:[], eq:0}; mapa.set(p.n,x)}
+      x.mods.add(a.mod);
+      if(a.tag)x.tags.push(a.tag);
+      x.eq++;
+    });
+  });
+  return [...mapa.values()].map(x=>({...x, mods:[...x.mods]}))
+    .sort((a,b)=>a.g===b.g?String(a.n).localeCompare(String(b.n)):String(a.g).localeCompare(String(b.g)));
+}
+let CAT_Q='', CAT_MOD='';
+function catFiltro(v){CAT_Q=v;renderCat()}
+function catModelo(m){CAT_MOD=m;renderCat()}
+
 function renderCat(){
+  const caja=$('#catList'); if(!caja)return;
+  const foco=S.inCli||S.cli||null;
+  const tit=$('#catTit'), sub=$('#catSub'), tools=$('#catTools');
+  if(foco) return catDeCliente(foco,caja,tit,sub,tools);
+
+  if(tit)tit.textContent='Catálogo y despieces';
+  if(sub)sub.textContent='El despiece se carga una vez por modelo. Todos los equipos de ese modelo lo heredan, en todos los clientes. Entra a un cliente para ver sólo sus piezas, con precio y stock.';
+  if(tools)tools.innerHTML='';
   const porMarca={};Object.entries(MODELOS).forEach(([k,m])=>{(porMarca[m.m]=porMarca[m.m]||[]).push([k,m])});
-  $('#catList').innerHTML=Object.entries(porMarca).map(([marca,mods])=>`
+  caja.innerHTML=Object.entries(porMarca).map(([marca,mods])=>`
     <div style="padding:12px var(--sp-4);border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:12px;background:var(--surface-2)">
       <b style="font-size:13.5px">${marca}</b><span class="muted" style="font-size:12.5px">${MARCAS[marca]||''}</span>
       <span class="spacer" style="flex:1"></span><span class="count">${mods.length} modelos</span></div>
@@ -7109,6 +7396,76 @@ function renderCat(){
       <td style="width:100px"><span class="tag">${CL[m.c]}</span></td>
       <td style="width:120px" class="muted">${(BOM[m.b]||[]).length} posiciones</td>
       <td style="width:110px"><b>${ACTIVOS.filter(a=>a.mod===k).length}</b> <span class="muted">instalados</span></td></tr>`).join('')}</tbody></table>`).join('');
+}
+
+/* Dentro de un cliente el catálogo deja de ser un catálogo de marcas y
+   pasa a ser la lista de piezas que ESE cliente puede llegar a
+   necesitar: sólo las de sus válvulas, con foto, modelo, descripción,
+   costo unitario y lo que hay en almacén. */
+function catDeCliente(cliId,caja,tit,sub,tools){
+  const c=cli(cliId)||{};
+  const equipos=ACTIVOS.filter(a=>a.cli===cliId);
+  const modelos=[...new Set(equipos.map(a=>a.mod).filter(Boolean))];
+  if(CAT_MOD&&!modelos.includes(CAT_MOD))CAT_MOD='';
+  if(tit)tit.textContent=`Piezas de ${c.n||''}`;
+  if(sub)sub.textContent=`Sólo lo que llevan las ${equipos.length} válvula${equipos.length===1?'':'s'} de esta empresa: la pieza, en qué modelo va, cuánto cuesta y cuánto hay en almacén.`;
+
+  let piezas=piezasDeCliente(cliId);
+  const totalPiezas=piezas.length;
+  if(CAT_MOD)piezas=piezas.filter(p=>p.mods.includes(CAT_MOD));
+  const q=CAT_Q.trim().toLowerCase();
+  if(q)piezas=piezas.filter(p=>[p.n,p.d,p.g,p.mods.join(' '),p.tags.join(' ')].join(' ').toLowerCase().includes(q));
+
+  const conStock=piezas.filter(p=>piezaStock(p.n).n>0).length;
+  const valorKit=piezas.filter(p=>p.k).reduce((s,p)=>s+precio(p.n),0);
+
+  if(tools)tools.innerHTML=`
+    <div class="tools">
+      <input class="inp" id="catQ" placeholder="Buscar pieza, número de parte o tag…" style="max-width:320px"
+             value="${esc(CAT_Q)}" oninput="catFiltro(this.value)">
+      <span class="spacer" style="flex:1"></span>
+      <span class="count">${piezas.length}${piezas.length!==totalPiezas?` de ${totalPiezas}`:''} pieza${(piezas.length!==totalPiezas?totalPiezas:piezas.length)===1?'':'s'} · ${conStock} con stock</span>
+    </div>
+    ${modelos.length>1?`<div class="ps-quick" style="margin:0 0 var(--sp-3)"><span class="lab">Válvula</span>
+      <span class="ps-chip ${CAT_MOD?'':'on'}" onclick="catModelo('')">Todas</span>
+      ${modelos.map(m=>`<span class="ps-chip ${CAT_MOD===m?'on':''}" onclick="catModelo('${jsq(m)}')">${esc((MODELOS[m]||{}).m||'')} ${esc(m)} <b>${equipos.filter(a=>a.mod===m).length}</b></span>`).join('')}
+    </div>`:''}`;
+
+  if(!equipos.length){
+    caja.innerHTML=`<div class="empty" style="padding:34px">
+      <b>Esta empresa todavía no tiene válvulas cargadas</b>
+      Cárgalas desde <b>Válvulas → Nueva válvula</b> o desde <b>Importar</b>, y sus piezas aparecen aquí solas.</div>`;
+    return;
+  }
+  if(!piezas.length){
+    caja.innerHTML=`<div class="empty" style="padding:34px"><b>Sin coincidencias</b>
+      No hay ninguna pieza que responda a «${esc(CAT_Q)}» entre las válvulas de esta empresa.</div>`;
+    return;
+  }
+  const sinHoja=!STOCK.length;
+  caja.innerHTML=`
+    ${sinHoja?`<div class="callout" style="margin:var(--sp-3) var(--sp-4) 0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> para ver la cantidad real de hoy.</div></div>`:''}
+    <div class="grid-wrap"><table class="grid"><thead><tr>
+      <th style="width:66px"></th><th>Pieza</th><th style="width:190px">Va en</th>
+      <th class="num" style="width:120px">Costo unitario</th><th style="width:150px">En almacén</th>
+    </tr></thead><tbody>
+    ${piezas.map(p=>{
+      const st=piezaStock(p.n), modelo=p.mods[0];
+      const foto=PART_PHOTO[p.n]?`<img class="cat-thumb-img" src="${PART_PHOTO[p.n]}" alt="">`
+        :`<span class="cat-thumb">${photoFor(modelo)}</span>`;
+      const tono=st.n>0?'ok':'late';
+      return `<tr style="cursor:default">
+        <td>${foto}</td>
+        <td><div class="cell-2"><b class="mono">${esc(p.n)}</b><small>${esc(p.d)}${p.k?' · <b>va en el kit de overhaul</b>':''}</small></div></td>
+        <td><div class="cell-2"><span>${p.mods.map(m=>`${esc((MODELOS[m]||{}).m||'')} ${esc(m)}`).join(', ')}</span>
+          <small>${p.eq} válvula${p.eq===1?'':'s'}${p.tags.length?' · '+esc(p.tags.slice(0,3).join(', '))+(p.tags.length>3?'…':''):''}</small></div></td>
+        <td class="num mono"><b>${usd(precio(p.n))}</b></td>
+        <td><span class="tag ${tono}"><span class="dot"></span>${st.n>0?`${st.n} ${st.n===1?'unidad':'unidades'}`:'sin stock'}</span>
+          <div class="muted" style="font-size:11.5px;margin-top:3px">${st.real?'hoja de almacén':esc(p.l||'catálogo')}</div></td>
+      </tr>`}).join('')}
+    </tbody></table></div>
+    <div class="cat-pie">Kit de overhaul de esta empresa — ${piezas.filter(p=>p.k).length} piezas, <b class="mono">${usd(valorKit)}</b> sin IGV.</div>`;
 }
 /* ============================================================
    9b · REPUESTOS — storefront de despieces
@@ -8185,14 +8542,21 @@ function subirCifra(nodo,fin,suf){
   (function paso(t){
     const k=Math.min(1,(t-t0)/dur);
     nodo.textContent=Math.round(fin*(1-Math.pow(1-k,3)))+suf;
-    if(k<1)requestAnimationFrame(paso);
+    if(k<1)requestAnimationFrame(paso); else nodo.subiendo=false;
   })(t0);
 }
 function prepararCifra(el){
   const n=Array.from(el.childNodes).find(x=>x.nodeType===3&&/^\s*\d+%?\s*$/.test(x.textContent));
   if(!n)return;
+  /* Si ya va subiendo, no se vuelve a empezar. Al pintar una página se
+     pasa por aquí más de una vez, y la segunda leía el número a medio
+     camino y lo tomaba por el bueno: un KPI de 4 se quedaba clavado en
+     3 hasta el siguiente repintado. Un dato de menos por una animación
+     es peor que no animar nada. */
+  if(n.subiendo)return;
   const m=n.textContent.trim().match(/^(\d+)(%?)$/), fin=+m[1];
   if(fin<3)return;                    // por 0, 1 o 2 no vale la pena
+  n.subiendo=true;
   n.textContent='0'+m[2];
   subirCifra(n,fin,m[2]);
 }
@@ -8344,8 +8708,196 @@ function renderHomeCliente(){
    </div>`;
 }
 
+/* ── Qué le falta a una orden para poder darse por terminada ──
+   No es una opinión: es la lista concreta de lo que el taller todavía
+   no ha puesto. Se mira el ensayo que cuelga de la válvula —el de
+   verdad, no uno cualquiera— y se dice qué campo está vacío. Con esto
+   el técnico ve «me falta el tercer disparo», no «pendiente». */
+function faltaParaFinalizar(o){
+  if(!o) return {listo:false, falta:[]};
+  if(o.et==='final') return {listo:true, falta:[]};
+  if(o.et==='oc')    return {listo:false, falta:['Ingresarla a taller — todavía no llegó la válvula']};
+  if(o.et==='taller')return {listo:false, falta:['Empezar el mantenimiento y poner quién lo hace']};
+
+  /* En mantenimiento: aquí sí se mira el trabajo. */
+  const falta=[];
+  if(!o.ing) falta.push('El nombre del ingeniero que la tiene');
+  const ensayos=CALIBS.filter(c=>c.act===o.act);
+  /* El que cuenta es el más reciente: si hay uno cerrado y encima un
+     borrador nuevo, lo que está en curso es el borrador. */
+  const c=ensayos.slice().sort((x,y)=>
+    String(y.fecha||y.fin||y.ini||'').localeCompare(String(x.fecha||x.fin||x.ini||'')))[0];
+  const a=ACTIVOS.find(x=>x.id===o.act)||{};
+  const esPSV=a.cl==='seguridad';
+  if(!c){
+    falta.push(esPSV?'Registrar el ensayo de los tres disparos':'Registrar la calibración');
+  }else if(esPSV&&c.tipo==='psv'){
+    const v=psvVeredicto(c);
+    if(v.estado==='incompleto') falta.push('Del ensayo falta '+v.falta);
+    const pares=paresFoto(c);
+    if(!pares.length)                      falta.push('Las fotos del antes y del después');
+    else if(!pares.some(p=>p.a&&p.d))      falta.push('Completar el par de fotos: hay una sin su pareja');
+    if(!(c.firmas||[]).some(f=>f.rol==='ejec'&&f.n))  falta.push('La firma de quien hizo el trabajo');
+    if(!(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.n)) falta.push('El visto bueno del supervisor');
+  }else if(!c.verdict){
+    falta.push('Cerrar la calibración con su resultado');
+  }
+  if(!falta.length) falta.push('Nada: se puede registrar y finalizar');
+  return {listo:falta[0].startsWith('Nada'), falta};
+}
+
+/* ── Panel del taller ────────────────────────────────────────
+   El de servicio técnico no necesita el parque ni las marcas: necesita
+   saber qué le va a entrar, qué tiene abierto ahora mismo, qué ya
+   entregó, y —lo que más cuesta averiguar— qué le falta exactamente a
+   cada válvula para poder cerrarla. */
+function renderHomeTaller(){
+  const mio=o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli};
+  const ords=ORDENES.filter(mio);
+  const vs=visibles();
+  const abierta=id=>ORDENES.some(o=>o.act===id&&o.et!=='final');
+
+  /* 1 · Lo que todavía no tiene orden y la pide: calibración vencida o
+     por vencer, o un reclamo abierto de esa válvula. */
+  const sncAbiertos=RECLAMOS.filter(r=>r.est!=='cerrado');
+  const porMandar=vs.filter(a=>{
+    if(abierta(a.id))return false;
+    const k=estado(a).k;
+    return k==='vencido'||k==='porvencer'||sncAbiertos.some(r=>r.act===a.id);
+  }).sort((a,b)=>String(a.prox||'9999').localeCompare(String(b.prox||'9999')));
+
+  const enOC     = ords.filter(o=>o.et==='oc');
+  const enTaller = ords.filter(o=>o.et==='taller');
+  const enMant   = ords.filter(o=>o.et==='mant');
+  const reparando= enTaller.concat(enMant);
+  const fin      = ords.filter(o=>o.et==='final');
+  const activas  = enOC.length+reparando.length;
+  /* El avance es sobre lo que entró: cuántas de las que están en la
+     casa ya salieron. Sin órdenes no hay 0 % — no hay nada que avanzar. */
+  const base=activas+fin.length;
+  const pct=base?Math.round(fin.length*100/base):0;
+
+  /* Qué falta, orden por orden, para las que están en reparación. */
+  const pendientes=reparando.map(o=>({o,f:faltaParaFinalizar(o)}))
+    .sort((x,y)=>(x.f.listo?1:0)-(y.f.listo?1:0)||y.f.falta.length-x.f.falta.length);
+  const listasParaCerrar=pendientes.filter(x=>x.f.listo).length;
+
+  const yo=(typeof SES!=='undefined'&&SES?SES.n.split(/\s+/)[0]:'');
+  const primero=pendientes[0];
+  let urg;
+  if(!reparando.length&&!enOC.length)
+    urg={tono:'ok',txt:'<b>El taller está vacío.</b> Ninguna válvula en reparación ahora mismo.'};
+  else if(primero)
+    urg={tono:primero.f.listo?'ok':'due',
+      txt:primero.f.listo
+        ? `Lista para cerrar: <b>${esc((ACTIVOS.find(a=>a.id===primero.o.act)||{}).tag||primero.o.n)}</b> — ${esc(primero.o.mat||primero.o.n)}, ya tiene todo.`
+        : `Lo que falta ahora: <b>${esc((ACTIVOS.find(a=>a.id===primero.o.act)||{}).tag||primero.o.n)}</b> — ${esc(primero.f.falta[0].toLowerCase())}.`,
+      btn:`<button class="btn" onclick="verOrden('${primero.o.id}')">Ver la orden</button>`};
+  else
+    urg={tono:'due',txt:`<b>${enOC.length} válvula${enOC.length===1?'':'s'}</b> con OC recibida esperando entrar al taller.`,
+      btn:`<button class="btn" onclick="${S.inCli||S.cli?"go('wo')":"go('clients')"}">Ver las órdenes</button>`};
+
+  const filaOrden=(o,extra)=>{
+    const a=ACTIVOS.find(x=>x.id===o.act)||{};
+    const et=ETAPAS.find(e=>e[0]===o.et);
+    return `<div class="tw-i" onclick="verOrden('${o.id}')">
+      <div class="tw-m"><b>${esc(a.tag||a.ser||'sin tag')}</b>
+        <p>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</p></div>
+      <div class="tw-r"><span class="tag ${o.et==='mant'?'sel':o.et==='final'?'ok':''}">${esc(et?et[1]:o.et)}</span>
+        <small class="mono">${esc(o.mat||o.n)}</small>${extra||''}</div></div>`;
+  };
+  const listaPorMandar=porMandar.length?`<div class="tw">${porMandar.slice(0,8).map(a=>{
+      const k=estado(a).k, d=a.prox?dias(a.prox):null;
+      const razon=sncAbiertos.some(r=>r.act===a.id)?'tiene un reclamo abierto'
+        :k==='vencido'?`calibración vencida hace ${-d} días`:`vence en ${d} días`;
+      return `<div class="tw-i" onclick="verEquipo('${a.id}')">
+        <div class="tw-m"><b>${esc(a.tag||a.ser||'sin tag')}</b><p>${esc(cli(a.cli).n)} · ${esc(razon)}</p></div>
+        <div class="tw-r"><span class="tag ${k==='vencido'?'late':'due'}"><span class="dot"></span>${k==='vencido'?'Vencida':'Por vencer'}</span></div></div>`}).join('')}
+      ${porMandar.length>8?`<div class="tw-mas">y ${porMandar.length-8} más</div>`:''}</div>`
+    :`<div class="empty" style="padding:26px"><b>Nada por mandar</b>Ninguna válvula sin orden pide mantenimiento.</div>`;
+
+  const listaReparando=reparando.length?`<div class="tw">${
+      enMant.concat(enTaller).slice(0,8).map(o=>filaOrden(o,o.ing?`<small>${esc(o.ing)}</small>`:'')).join('')}
+      ${reparando.length>8?`<div class="tw-mas">y ${reparando.length-8} más</div>`:''}</div>`
+    :`<div class="empty" style="padding:26px"><b>Sin trabajo abierto</b>No hay válvulas en el taller.</div>`;
+
+  const listaFin=fin.length?`<div class="tw">${fin.slice(0,8).map(o=>filaOrden(o,o.calib?`<small>con certificado</small>`:'')).join('')}
+      ${fin.length>8?`<div class="tw-mas">y ${fin.length-8} más</div>`:''}</div>`
+    :`<div class="empty" style="padding:26px"><b>Todavía nada entregado</b>Al finalizar una orden aparece aquí.</div>`;
+
+  const faltaHtml=pendientes.length?`<div class="fal">${pendientes.map(({o,f})=>{
+      const a=ACTIVOS.find(x=>x.id===o.act)||{};
+      return `<div class="fal-i ${f.listo?'ok':''}" onclick="verOrden('${o.id}')">
+        <div class="fal-h"><b>${esc(a.tag||a.ser||'sin tag')}</b>
+          <span class="mono">${esc(o.mat||o.n)}</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="tag ${f.listo?'ok':'due'}"><span class="dot"></span>${f.listo?'lista para cerrar':`falta${f.falta.length>1?'n '+f.falta.length+' cosas':' 1 cosa'}`}</span></div>
+        <ul class="fal-l">${f.falta.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`}).join('')}</div>`
+    :`<div class="empty" style="padding:26px"><b>Nada pendiente de cerrar</b>Cuando entre una válvula al taller, aquí sale qué le falta.</div>`;
+
+  /* El avance por OC: el cliente pregunta por su OC, no por una orden
+     suelta. Sólo salen las que todavía tienen algo abierto. */
+  const proys=PROYECTOS.filter(p=>{
+    const os=ordenesDe(p.id);
+    return os.length&&os.some(o=>mio(o))&&os.some(o=>o.et!=='final');
+  });
+  const proyHtml=proys.length?`<div class="pry-av">${proys.map(p=>{
+      const av=avanceProyecto(p.id);
+      return `<div class="pry-r" onclick="irCli('${p.cli}','wo')">
+        <div class="pry-t"><b class="mono">${esc(p.oc||p.n||'')}</b><span>${esc(cli(p.cli).n)}</span>
+          <span class="spacer" style="flex:1"></span><b>${av.pct}%</b></div>
+        <div class="pry-b"><i style="width:${av.pct}%"></i></div>
+        <div class="pry-s">${av.fin} de ${av.total} válvulas finalizadas${
+          av.cuenta.mant?` · ${av.cuenta.mant} en mantenimiento`:''}${
+          av.cuenta.taller?` · ${av.cuenta.taller} en taller`:''}${
+          av.cuenta.oc?` · ${av.cuenta.oc} por entrar`:''}</div></div>`}).join('')}</div>`
+    :`<div class="empty" style="padding:26px"><b>Sin OC abiertas</b>Las OC del cliente aparecen aquí con su avance.</div>`;
+
+  /* Las secciones de válvulas y órdenes viven dentro de un cliente: si
+     todavía no hay uno elegido, el clic lleva a elegirlo, no a una
+     página que se va a redirigir sola. */
+  const aOrdenes=S.inCli||S.cli?"go('wo')":"go('clients')";
+  const aValvulas=S.inCli||S.cli?"go('assets')":"go('clients')";
+  const kpis=[
+    {v:porMandar.length,k:'Por mandar a mantenimiento',dot:porMandar.length?'due':'ok',
+     cls:porMandar.length?'warn':'good',d:porMandar.length?'sin orden todavía':'ninguna pendiente',go:aValvulas},
+    {v:reparando.length,k:'En reparación',dot:reparando.length?'sel':'',
+     d:`${enMant.length} en mantenimiento · ${enTaller.length} en taller`,go:aOrdenes},
+    {v:fin.length,k:'Finalizadas',cls:'good',d:`${fin.filter(o=>o.calib).length} con certificado`,go:aOrdenes},
+    {v:listasParaCerrar,k:'Listas para cerrar',cls:listasParaCerrar?'good':'',
+     d:listasParaCerrar?'ya tienen todo':'ninguna completa aún',go:aOrdenes}
+  ];
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}">
+    <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
+    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+
+  $('#homeView').innerHTML=
+   heroHtml({
+     titulo:'Servicio técnico'+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
+     sub:`${fechaLarga(HOY)} · ${reparando.length} válvula${reparando.length===1?'':'s'} en el taller · ${enOC.length} por entrar`,
+     cifra:pct+'%', pct:pct/100, cifraTono:pct>=80?'ok':pct>=40?'due':'late',
+     cifraPie:['Avance del mantenimiento',base?`${fin.length} de ${base} entregadas`:'nada en curso'],
+     urgente:urg,
+     acciones:`<button class="btn sec" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva OC</button>
+       <button class="btn sec" onclick="go('clients')">Entrar a un cliente</button>`
+   })+`
+   ${kpiHtml}
+   <div class="dash">
+     <div class="span-12">${panel('Qué le falta a cada válvula para finalizar',faltaHtml,
+       `<span class="count">${pendientes.length} en curso · ${listasParaCerrar} lista${listasParaCerrar===1?'':'s'}</span>`)}</div>
+     <div class="span-4">${panel('Por mandar a mantenimiento',listaPorMandar,`<span class="count">${porMandar.length}</span>`)}</div>
+     <div class="span-4">${panel('En reparación',listaReparando,`<span class="count">${reparando.length}</span>`)}</div>
+     <div class="span-4">${panel('Finalizadas',listaFin,`<span class="count">${fin.length}</span>`)}</div>
+     <div class="span-7">${panel('Avance por OC del cliente',proyHtml,`<span class="count">${proys.length} abierta${proys.length===1?'':'s'}</span>`)}</div>
+     <div class="span-5">${panel('En qué etapa está cada orden',
+       hbars(ETAPAS.map(([k,l])=>({label:l,value:ords.filter(o=>o.et===k).length,
+         tone:k==='final'?'ok':k==='mant'?'sel':''}))),`<span class="count">${ords.length} órdenes</span>`)}</div>
+   </div>`;
+}
+
 function renderHome(){
   if(S.rol==='cliente') return renderHomeCliente();
+  if(S.rol==='tec')     return renderHomeTaller();
   const vs=visibles(),st=k=>vs.filter(a=>estado(a).k===k).length;
   const total=vs.length,atn=st('vencido')+st('porvencer')+st('mant')+st('incompleto'),venc=st('vencido');
   const marcas=new Set(vs.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
