@@ -115,10 +115,19 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 /* ============================================================
    SHELL
    ============================================================ */
-.app{display:grid;grid-template-columns:auto 1fr;height:100vh;overflow:hidden}
+/* La fila tiene que medir la ventana, no el contenido. Sin
+   grid-template-rows la fila implícita es «auto» y crecía hasta lo que
+   midiera el menú: con un cliente abierto el menú pasaba de 950 px, se
+   salía de la pantalla y overflow:hidden le cortaba Maestros —sin
+   barra de desplazamiento con la que llegar—.
+   minmax(0,1fr) la ata a la ventana, y los min-height:0 dejan que el
+   nav se encoja y saque su propia barra. 100dvh porque en el móvil el
+   100vh cuenta una barra del navegador que no está. */
+.app{display:grid;grid-template-columns:auto 1fr;grid-template-rows:minmax(0,1fr);
+  height:100vh;height:100dvh;overflow:hidden}
 .rail{
   width:222px;background:var(--surface);border-right:1px solid var(--line);
-  display:flex;flex-direction:column;z-index:var(--z-rail);
+  display:flex;flex-direction:column;min-height:0;z-index:var(--z-rail);
   transition:width var(--med) var(--ease);
 }
 .app.rail-min .rail{width:56px}
@@ -134,7 +143,11 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .ws-meta b{display:block;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .ws-meta span{display:block;font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-.rail nav{padding:var(--sp-3) var(--sp-2);flex:1;overflow-y:auto}
+.rail nav{padding:var(--sp-3) var(--sp-2);flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+/* Una barra fina, que sólo se nota cuando hace falta */
+.rail nav::-webkit-scrollbar{width:8px}
+.rail nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px;border:2px solid var(--surface)}
+.rail nav:hover::-webkit-scrollbar-thumb{background:var(--line-2)}
 .rail-sec{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--ink-3);padding:var(--sp-4) 10px var(--sp-2)}
 .rail nav a{
   display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-1);
@@ -2498,8 +2511,9 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div class="bulk" id="bulk">
           <b id="bulkN"></b>
           <span class="spacer"></span>
-          <button class="btn xs" onclick="bulkAction('Órdenes de trabajo creadas')">Crear órdenes</button>
-          <button class="btn xs" onclick="bulkAction('Equipos exportados')">Exportar selección</button>
+          <button class="btn xs" onclick="ordenesEnLote()">Crear órdenes</button>
+          <button class="btn xs" onclick="exportarSeleccion()">Exportar selección</button>
+          <button class="btn xs" id="bulkBaja" onclick="pedirBajaActivos()">Eliminar seleccionadas</button>
           <button class="btn xs" onclick="clearPick()">Limpiar</button>
         </div>
         <div class="grid-wrap"><div class="grid-scroll" id="gridScroll"></div></div>
@@ -3529,8 +3543,158 @@ function rowClick(ev,id,i){S.focus=i;openAsset(id)}
 function pick(id,on){on?S.picked.add(id):S.picked.delete(id);paintBulk();renderGrid()}
 function pickAll(on){on?filtrados().forEach(a=>S.picked.add(a.id)):S.picked.clear();paintBulk();renderGrid()}
 function clearPick(){S.picked.clear();paintBulk();renderGrid()}
-function paintBulk(){$('#bulk').classList.toggle('on',S.picked.size>0);$('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`}
+function paintBulk(){
+  $('#bulk').classList.toggle('on',S.picked.size>0);
+  $('#bulkN').textContent=`${S.picked.size} seleccionado${S.picked.size===1?'':'s'}`;
+  const b=$('#bulkBaja'); if(b)b.style.display=S.rol==='cliente'?'none':'';
+}
 function bulkAction(msg){toast(`${msg} · ${S.picked.size} equipos`);clearPick()}
+const seleccionadas=()=>[...S.picked].map(id=>ACTIVOS.find(a=>a.id===id)).filter(Boolean);
+
+/* ── Exportar sólo lo marcado ────────────────────────────────
+   Antes este botón enseñaba «Equipos exportados» y no descargaba
+   nada. Ahora baja las mismas columnas que el Exportar de arriba,
+   pero de las filas marcadas. */
+function exportarSeleccion(){
+  const sel=seleccionadas();
+  if(!sel.length){toast('No hay ninguna válvula marcada');return}
+  const head='Tag,Serie,Marca,Modelo,Clase,Cliente,Area,Tamano,Rating,Criticidad,Estado,UltimoServicio,ProximaCalibracion';
+  const body=sel.map(a=>[a.tag,a.ser,MODELOS[a.mod]?.m||'',a.mod,CL[a.cl],cli(a.cli).n,area(a),a.sz,a.rt,a.cr,estado(a).t,a.ult,a.prox]
+    .map(x=>'"'+String(x??'').replace(/"/g,'""')+'"').join(','));
+  const url=URL.createObjectURL(new Blob(['\ufeff'+head+'\n'+body.join('\n')],{type:'text/csv;charset=utf-8'}));
+  const el=document.createElement('a');el.href=url;el.download='adolphus-seleccion.csv';el.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast(`${sel.length} válvula${sel.length===1?'':'s'} exportada${sel.length===1?'':'s'}`);
+}
+
+/* ── Mandar varias al taller de una vez ──────────────────────
+   Mismo efecto que «Mandar a mantenimiento» una por una: una orden
+   con su código MAT por válvula, en OC recibida. Las que ya tienen
+   una orden abierta se saltan y se dice cuáles — abrir dos órdenes
+   para la misma válvula es lo que descuadra el tablero del taller. */
+function ordenesEnLote(){
+  if(S.rol==='cliente'){toast('El servicio lo programa Adolphus');return}
+  const sel=seleccionadas();
+  if(!sel.length){toast('No hay ninguna válvula marcada');return}
+  const yaTienen=sel.filter(a=>ORDENES.some(o=>o.act===a.id&&o.et!=='final'));
+  const libres=sel.filter(a=>!yaTienen.includes(a));
+  $('#mTitle').textContent=`Mandar ${libres.length||sel.length} válvula${(libres.length||sel.length)===1?'':'s'} al taller`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+     <div>Se crea <b>una orden por válvula</b>, cada una con su código <b>MAT</b> correlativo, todas en
+       <b>OC recibida</b>. Aparecen al instante en el tablero del taller.</div></div>
+   ${yaTienen.length?`<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div><b>${yaTienen.length} de las marcadas ya tienen una orden abierta</b> y se quedan como están:
+       ${esc(yaTienen.map(a=>a.tag||a.ser||'').join(', '))}.</div></div>`:''}
+   ${libres.length?`<div class="two" style="margin-top:12px">
+     <div class="fld"><label for="loTipo">Tipo de trabajo</label><select class="inp" id="loTipo">
+       ${['Calibración','Preventivo','Correctivo','Inspección','Overhaul'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+     <div class="fld"><label for="loFec">Fecha prevista</label>
+       <input class="inp" id="loFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+   </div>
+   <div class="fld"><label for="loMot">Motivo / qué hay que hacerles</label>
+     <textarea class="inp" id="loMot" rows="2" placeholder="Lo que el taller necesita saber antes de abrirlas."></textarea></div>
+   <h4 class="snc-sec">Van al taller</h4>
+   <div class="py-lista">${libres.map(a=>`<label class="py-it">
+     <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+     <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</span></label>`).join('')}</div>`
+   :`<div class="empty" style="padding:24px"><b>No queda ninguna por mandar</b>
+      Todas las marcadas ya tienen una orden abierta.</div>`}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    ${libres.length?`<button class="btn" onclick="confirmarOrdenesLote()">Crear ${libres.length} ${libres.length===1?'orden':'órdenes'}</button>`:''}`;
+  LOTE_IDS=libres.map(a=>a.id);
+  $('#modal').classList.add('on');
+}
+let LOTE_IDS=[];
+function confirmarOrdenesLote(){
+  const tipo=$('#loTipo').value, fec=$('#loFec').value||HOY.toISOString().slice(0,10);
+  const mot=($('#loMot').value||'').trim()||'Sin observaciones.';
+  const hechas=[];
+  LOTE_IDS.forEach(id=>{
+    const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
+    if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;
+    const mat=nuevoMAT();
+    ORDENES.unshift({id:'o'+Date.now()+'-'+hechas.length,act:id,mat,n:mat,
+      et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
+    hechas.push(mat);
+  });
+  LOTE_IDS=[]; clearPick(); closeModal(); renderAll(); go('wo');
+  registrar('Orden',`${hechas.length} órdenes creadas en lote: ${hechas.join(', ')}`);
+  toast(hechas.length===1?'1 orden creada — el taller ya la ve'
+    :`${hechas.length} órdenes creadas — el taller ya las ve`);
+}
+
+/* ── Baja de varias válvulas ─────────────────────────────────
+   La misma contraseña y el mismo aviso que la baja de una sola, pero
+   diciendo el total de lo que se va: órdenes, certificados y
+   documentos de TODAS las marcadas. Un borrado de doce válvulas no
+   puede parecerse a uno de una. */
+function pedirBajaActivos(){
+  if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede eliminar equipos');return}
+  const sel=seleccionadas();
+  if(!sel.length){toast('No hay ninguna válvula marcada');return}
+  const ids=sel.map(a=>a.id);
+  const ords=ORDENES.filter(o=>ids.includes(o.act)).length;
+  const cals=CALIBS.filter(c=>ids.includes(c.act)).length;
+  const docs=DOCS.filter(d=>ids.includes(d.a)).length;
+  const recs=RECLAMOS.filter(r=>ids.includes(r.act)).length;
+  $('#mTitle').textContent=`Eliminar ${sel.length} válvula${sel.length===1?'':'s'}`;
+  $('#mBody').innerHTML=`
+   <div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Vas a dar de baja <b>${sel.length} válvula${sel.length===1?'':'s'}</b>.
+     ${(()=>{
+       /* Sólo lo que de verdad se va: enumerar «0 certificados» hace
+          que el aviso se lea por encima, y este es el que no se puede
+          leer por encima. */
+       const partes=[];
+       if(ords)partes.push(`<b>${ords} ${ords===1?'orden':'órdenes'}</b>`);
+       if(cals)partes.push(`<b>${cals} certificado${cals===1?'':'s'}</b>`);
+       if(docs)partes.push(`<b>${docs} documento${docs===1?'':'s'}</b>`);
+       if(recs)partes.push(`<b>${recs} reclamo${recs===1?'':'s'}</b>`);
+       if(!partes.length)return '';
+       const lista=partes.length>1?partes.slice(0,-1).join(', ')+' y '+partes[partes.length-1]:partes[0];
+       return `Se elimina también todo lo que cuelga de ellas: ${lista}.`;
+     })()}
+     Esta acción no se puede deshacer.</div></div>
+   <h4 class="snc-sec">Lo que se va</h4>
+   <div class="py-lista">${sel.map(a=>`<label class="py-it">
+     <span class="py-tag mono">${esc(a.tag||a.ser||'sin tag')}</span>
+     <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</span></label>`).join('')}</div>
+   <div class="fld" style="margin-top:14px"><label for="dbMotivo">Motivo de la baja</label>
+     <select class="inp" id="dbMotivo"><option>Registrado por error</option><option>Duplicado</option>
+       <option>Equipo retirado de planta</option><option>Dado de baja por falla</option><option>Otro</option></select></div>
+   <div class="fld"><label for="dbPass">Contraseña de autorización <span class="req-dot">*</span></label>
+     <input class="inp pend" id="dbPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
+     <span class="pend-msg" id="dbErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmarBajaActivos()">Eliminar ${sel.length} válvula${sel.length===1?'':'s'}</button>`;
+  $('#modal').classList.add('on');
+  const p=$('#dbPass');
+  p.oninput=()=>{$('#dbErr').style.display='none';p.classList.toggle('pend',!p.value)};
+  p.onkeydown=e=>{if(e.key==='Enter')confirmarBajaActivos()};
+  setTimeout(()=>p.focus(),80);
+}
+function confirmarBajaActivos(){
+  const p=$('#dbPass');
+  if(!p||p.value!==CLAVE_BAJA){
+    if(p){p.classList.add('pend');p.value='';p.focus()}
+    const err=$('#dbErr');if(err)err.style.display='flex';
+    toast('Contraseña incorrecta — no se eliminó ninguna');return;
+  }
+  const ids=[...S.picked], motivo=$('#dbMotivo').value;
+  const nombres=ids.map(id=>{const a=ACTIVOS.find(x=>x.id===id);return a?(a.tag||a.ser||''):''}).filter(Boolean);
+  for(let k=ORDENES.length-1;k>=0;k--)if(ids.includes(ORDENES[k].act))ORDENES.splice(k,1);
+  for(let k=CALIBS.length-1;k>=0;k--)if(ids.includes(CALIBS[k].act))CALIBS.splice(k,1);
+  for(let k=SERVS.length-1;k>=0;k--)if(ids.includes(SERVS[k].act))SERVS.splice(k,1);
+  for(let k=DOCS.length-1;k>=0;k--)if(ids.includes(DOCS[k].a))DOCS.splice(k,1);
+  for(let k=RECLAMOS.length-1;k>=0;k--)if(ids.includes(RECLAMOS[k].act))RECLAMOS.splice(k,1);
+  for(let k=ACTIVOS.length-1;k>=0;k--)if(ids.includes(ACTIVOS[k].id))ACTIVOS.splice(k,1);
+  S.cart=S.cart.filter(c=>!ids.includes(c.a));
+  S.picked.clear(); paintBulk();
+  closeModal();closeDrawer();renderAll();
+  registrar('Baja',`${ids.length} válvulas eliminadas (${motivo.toLowerCase()}): ${nombres.join(', ')}`);
+  toast(`${ids.length} válvula${ids.length===1?'':'s'} eliminada${ids.length===1?'':'s'} · ${motivo.toLowerCase()}`);
+}
 function renderAssets(){
   renderStats();renderFilters();renderGrid();paintBulk();
   /* El valvulario es de UN cliente: sin cliente elegido no significa
