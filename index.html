@@ -1030,6 +1030,18 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   object-fit:contain;background:var(--surface-2);display:block}
 .cat-pie{padding:11px var(--sp-4);border-top:1px solid var(--line-2);background:var(--surface-2);
   font-size:12.5px;color:var(--ink-2)}
+/* ── La tarjeta de cliente vista por ventas ──────────────────
+   Debajo de las cifras van los trabajos que el taller ya cerró: es de
+   ahí de donde sale la cotización, así que van en la tarjeta y no
+   escondidos dentro. */
+.cl-card.vt .vt-lista{border-top:1px solid var(--line-2);padding:10px var(--sp-4) 2px}
+.vt-lista h5{margin:0 0 6px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.vt-i{display:flex;align-items:center;gap:9px;padding:6px 0;border-bottom:1px solid var(--line-2)}
+.vt-i:last-of-type{border-bottom:0}
+.vt-m{flex:1;min-width:0}
+.vt-m b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-m p{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-mas,.vt-vacio{font-size:11.5px;color:var(--ink-3);padding:6px 0;line-height:1.5;margin:0}
 
 @media(max-width:820px){
   .cover{grid-template-columns:1fr}
@@ -3506,7 +3518,13 @@ function buscarCli(v){S.qCli=v;renderClients()}
 function soloPend(){S.cliPend=!S.cliPend;renderClients()}
 function renderClients(){
   const todos=S.cli?CLIENTES.filter(c=>c.id===S.cli):CLIENTES;
-  const pend=c=>ACTIVOS.filter(a=>a.cli===c.id&&['vencido','mant','porvencer','incompleto'].includes(estado(a).k)).length;
+  /* "Pendiente" no significa lo mismo para todos: para taller y
+     gerencia es una válvula que pide servicio; para ventas es un
+     trabajo terminado que todavía nadie cotizó. El filtro es el mismo
+     botón, pero cuenta lo que a cada uno le toca. */
+  const pend=c=>S.rol==='com'
+    ? porCotizar(c.id).length
+    : ACTIVOS.filter(a=>a.cli===c.id&&['vencido','mant','porvencer','incompleto'].includes(estado(a).k)).length;
   const q=(S.qCli||'').trim().toLowerCase();
   const list=todos.filter(c=>{
     if(S.cliPend&&!pend(c))return false;
@@ -3515,12 +3533,18 @@ function renderClients(){
   });
   $('#ctClients').textContent=todos.length;
   const ini=n=>n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  /* Alta y baja de empresas es de gerencia: ventas y taller entran a
+     mirar y a trabajar, no a cambiar el padrón de clientes. */
   const staff=S.rol!=='cliente';
+  const manda=S.rol==='admin';
+  const ventas=S.rol==='com';
   const sel=S.cliSel||(S.cliSel=new Set());
   [...sel].forEach(id=>{if(!CLIENTES.some(c=>c.id===id))sel.delete(id)});
   $('#clientsView').innerHTML=`
-   <div class="hd"><div><h1>Clientes</h1><p>Cada cliente con su parque de válvulas. Entra a uno para ver, crear y gestionar sus equipos.${staff?' Marca la casilla para seleccionar y eliminar.':''}</p></div>
-     ${staff?`<button class="btn" onclick="openNewClient()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>`:''}</div>
+   <div class="hd"><div><h1>Clientes</h1><p>${ventas
+      ? 'Cada empresa con lo que el taller ya terminó: de ahí sale qué cotizar, qué comprar y qué venderle. Entra a una para armar su cotización.'
+      : `Cada cliente con su parque de válvulas. Entra a uno para ver, crear y gestionar sus equipos.${manda?' Marca la casilla para seleccionar y eliminar.':''}`}</p></div>
+     ${manda?`<button class="btn" onclick="openNewClient()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente</button>`:''}</div>
    <div class="cl-tools">
      <label class="cl-buscar">
        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -3528,19 +3552,20 @@ function renderClients(){
               oninput="buscarCli(this.value)" aria-label="Buscar empresa">
      </label>
      <button class="ch ${S.cliPend?'on':''}" onclick="soloPend()">
-       <span class="pt" style="background:var(--due)"></span>Solo con pendientes
+       <span class="pt" style="background:var(--due)"></span>${ventas?'Solo con trabajos por cotizar':'Solo con pendientes'}
        <b>${todos.filter(pend).length}</b></button>
      ${q||S.cliPend?`<button class="btn quiet xs" onclick="S.qCli='';S.cliPend=false;renderClients()">Limpiar</button>`:''}
      <span class="cl-cont">${list.length} de ${todos.length}</span>
    </div>
-   ${staff?`<div class="bulk ${sel.size?'on':''}" style="margin-bottom:var(--sp-4)">
+   ${manda?`<div class="bulk ${sel.size?'on':''}" style="margin-bottom:var(--sp-4)">
       <b>${sel.size} cliente${sel.size===1?'':'s'} seleccionado${sel.size===1?'':'s'}</b>
       <span class="spacer" style="flex:1"></span>
       <button class="btn xs" onclick="pedirBajaClientes()">Eliminar seleccionados</button>
       <button class="btn xs" onclick="S.cliSel.clear();renderClients()">Limpiar</button></div>`:''}
    ${list.length?'':`<div class="empty"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <b>Ninguna empresa coincide</b>Prueba con otro nombre o quita el filtro.</div>`}
-   <div class="cl-grid">${list.map(c=>{
+   <div class="cl-grid">${list.map(c=>
+     S.rol==='com' ? tarjetaClienteVentas(c,ini) : (()=>{
      const eq=ACTIVOS.filter(a=>a.cli===c.id);
      const atn=eq.filter(a=>['vencido','mant','porvencer','incompleto'].includes(estado(a).k)).length;
      const venc=eq.filter(a=>a.prox&&dias(a.prox)<0).length;
@@ -3548,7 +3573,7 @@ function renderClients(){
      const rec=RECLAMOS.filter(r=>r.cli===c.id&&!['cerrado','rechazado'].includes(r.est)).length;
      const marcado=sel.has(c.id);
      return `<div class="cl-card ${marcado?'sel':''}" onclick="openClientAssets('${c.id}')">
-       ${staff?`<label class="cl-ck" onclick="event.stopPropagation()">
+       ${manda?`<label class="cl-ck" onclick="event.stopPropagation()">
           <input type="checkbox" class="ck" ${marcado?'checked':''} onchange="marcarCliente('${c.id}',this.checked)"></label>`:''}
        <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
          <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span>${c.verif===false?' <span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px" title="El RUC tiene formato correcto pero no se confirmó contra SUNAT">sin verificar</span>':''} · `:'<span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px">sin RUC</span> · '}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
@@ -3559,7 +3584,60 @@ function renderClients(){
          <button class="cl-stat" onclick="event.stopPropagation();irCli('${c.id}','cal')" title="Ver el programa de calibración"><b style="color:var(--${venc?'late':'ink'})">${venc}</b><span>Calib. vencida</span></button>
        </div>
        <div class="cl-foot">Ver válvulas <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
-     </div>`}).join('')}</div>`;
+     </div>`})()).join('')}</div>`;
+}
+/* ── La misma lista de clientes, con los ojos de ventas ──────
+   A quien vende repuestos no le sirve saber cuántas válvulas tiene la
+   empresa ni cuántas calibraciones vencieron: eso es trabajo de
+   taller. Le sirve saber QUÉ TRABAJO SE TERMINÓ, porque un trabajo
+   terminado es una válvula abierta, un despiece a la vista y una lista
+   de repuestos que alguien tiene que comprar. De ahí sale la
+   cotización. Por eso la tarjeta enseña los últimos trabajos cerrados
+   y, en cada uno, el atajo a la ficha completa de esa válvula: si el
+   cliente llama preguntando, la información está a un clic. */
+const trabajosTerminados=cliId=>ORDENES
+  .filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='final'&&a&&a.cli===cliId})
+  .sort((x,y)=>String(y.f||'').localeCompare(String(x.f||'')));
+/* Terminado y sin una cotización posterior de esa misma válvula: eso
+   es lo que está esperando a que ventas haga algo. */
+function porCotizar(cliId){
+  return trabajosTerminados(cliId).filter(o=>
+    !COTIZACIONES.some(q=>q.cli===cliId&&q.act===o.act&&String(q.f||'')>=String(o.f||'')));
+}
+function tarjetaClienteVentas(c,ini){
+  const fin=trabajosTerminados(c.id);
+  const pend=porCotizar(c.id);
+  const cots=COTIZACIONES.filter(q=>q.cli===c.id);
+  const abiertas=cots.filter(q=>cotSituacion(q)==='abierta'||cotSituacion(q)==='vencida');
+  const vendido=cots.filter(q=>q.est==='aceptada').reduce((s,q)=>s+cotTot(q),0);
+  return `<div class="cl-card vt" onclick="irCli('${c.id}','cot')">
+    <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
+      <div><div class="cl-n">${esc(c.n)}</div>
+        <div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span> · `:''}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
+    <div class="cl-stats">
+      <div class="cl-stat"><b>${fin.length}</b><span>Trabajos terminados</span></div>
+      <div class="cl-stat"><b style="color:var(--${pend.length?'due':'ok'})">${pend.length}</b><span>Por cotizar</span></div>
+      <div class="cl-stat"><b style="color:var(--${abiertas.length?'sel':'ink'})">${abiertas.length}</b><span>Cotiz. abiertas</span></div>
+      <div class="cl-stat"><b class="mono" style="font-size:15px">${usd(vendido)}</b><span>Vendido</span></div>
+    </div>
+    ${fin.length?`<div class="vt-lista">
+      <h5>Últimos trabajos terminados</h5>
+      ${fin.slice(0,3).map(o=>{const a=ACTIVOS.find(x=>x.id===o.act)||{};
+        const sinCot=pend.some(p=>p.id===o.id);
+        return `<div class="vt-i">
+          <div class="vt-m"><b>${esc(a.tag||a.ser||'sin tag')}</b>
+            <p>${esc(o.tipo||'')} · ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${fPE(o.f)}</p></div>
+          ${sinCot?'<span class="tag due">por cotizar</span>':'<span class="tag ok">cotizado</span>'}
+          <button class="btn quiet xs" onclick="event.stopPropagation();fichaParaCliente('${a.id}')"
+            title="Toda la información de esta válvula, lista para mandársela al cliente">Ver ficha</button>
+        </div>`}).join('')}
+      ${fin.length>3?`<div class="vt-mas">y ${fin.length-3} trabajo${fin.length-3===1?'':'s'} más</div>`:''}
+    </div>`
+    :`<div class="vt-lista"><p class="vt-vacio">Todavía no hay ningún trabajo terminado para esta empresa.
+       Cuando el taller cierre una orden, aparece aquí con qué se le puede ofrecer.</p></div>`}
+    <div class="cl-foot">${pend.length?`Cotizar ${pend.length} trabajo${pend.length===1?'':'s'}`:'Ver sus cotizaciones'}
+      <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+  </div>`;
 }
 function marcarCliente(id,on){
   S.cliSel=S.cliSel||new Set();
@@ -3781,6 +3859,12 @@ function openAsset(id){
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
    : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+       /* Ventas no calibra ni manda válvulas al taller: lo suyo es
+          contestar al cliente y cotizar. Su pie de ficha es ese. */
+       if(S.rol==='com')
+         return `<button class="btn sec" onclick="showTab('bom')">Ver el despiece</button>
+           <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
+           <button class="btn" onclick="closeDrawer();openCot()">Cotizar</button>`;
        /* Un ensayo PSV tiene su propio certificado (AXAD-088). El del
           formato viejo no sabe leerlo, así que el botón llevaba a nada.
           Y un borrador todavía no tiene certificado que mostrar. */
@@ -3796,6 +3880,7 @@ function openAsset(id){
          return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
            ${abierta?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
+           <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
            <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
        }
        /* Corregir los datos identificatorios tiene que estar a mano en
@@ -3806,6 +3891,7 @@ function openAsset(id){
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
       <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
       ${ORDENES.some(o=>o.act===a.id&&o.et!=='final')?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
+      <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
@@ -5973,6 +6059,192 @@ function psvDocumento(id){
     <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
   </body></html>`};
 }
+/* ════════════════════════════════════════════════════════════
+   FICHA DE LA VÁLVULA PARA MANDARLE AL CLIENTE
+   ------------------------------------------------------------
+   El cliente llama y pregunta: «¿qué tiene mi PSV-1210?». Antes había
+   que abrir tres pantallas y copiar a mano. Esto arma de una vez todo
+   lo que se sabe del equipo —identificación, ficha técnica, último
+   servicio, próxima calibración, historial y el despiece con precios—
+   y lo deja listo para mandarlo en PDF o en Word.
+   Se hace con lo que ya está guardado; no inventa ni redondea nada.
+   ════════════════════════════════════════════════════════════ */
+function datosFicha(actId){
+  const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
+  const m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  /* Sólo los ensayos terminados: un borrador a medio llenar no es un
+     dato que se le pueda mandar a nadie. El de seguridad los cierra
+     con «veredicto» y el de control con «verdict». */
+  const ensayos=CALIBS
+    .filter(c=>c.act===a.id&&(c.tipo==='psv' ? (c.veredicto&&c.veredicto!=='incompleto') : !!c.verdict))
+    .sort((x,y)=>fechaCalib(y).localeCompare(fechaCalib(x)));
+  const u=ultimoServicioDe(a.id), p=proximaCalibDe(a.id);
+  const ords=ORDENES.filter(o=>o.act===a.id).sort((x,y)=>String(y.f||'').localeCompare(String(x.f||'')));
+  const piezas=BOM[m.b||'globo']||[];
+  return {a,m,e,ensayos,u,p,ords,piezas};
+}
+function fichaClienteDoc(actId){
+  const D=datosFicha(actId); if(!D)return null;
+  const {a,m,e,ensayos,u,p,ords,piezas}=D;
+  const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
+  const fila=(k,v)=>`<tr><th>${k}</th><td>${v==null||v===''?'—':esc(String(v))}</td></tr>`;
+  const kit=piezas.filter(x=>x.k), kitTot=kit.reduce((s,x)=>s+precio(x.n),0);
+  const d=p?dias(p.f):(a.prox?dias(a.prox):null);
+  const resEnsayo=c=>c.tipo==='psv'
+    ? `${c.veredicto||'—'} · promedio ${c.prom!=null?n2(c.prom):'—'} ${c.und||''} sobre ${c.setEsp||'—'} ${c.und||''}`
+    : `${c.verdict||'—'} · as-found ${c.af??'—'} → as-left ${c.al??'—'} ${c.uni||''}`;
+  return {titulo:`Ficha ${a.tag||a.ser||'válvula'}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Ficha ${esc(a.tag||a.ser||'')}</title><style>
+*{box-sizing:border-box}
+body{font:10.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm}
+.cab{display:flex;align-items:flex-start;gap:13px;padding-bottom:11px;border-bottom:2.5px solid #102d69;margin-bottom:3px}
+.cab .ti{flex:1;min-width:0}
+.cab h1{font-size:13.5px;font-weight:700;letter-spacing:.055em;margin:0;color:#102d69;line-height:1.3}
+.cab .emp{font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#8a929c;margin-bottom:3px}
+.cab .cod{flex:0 0 auto;text-align:right;font-size:8.5px;color:#8a929c;line-height:1.6}
+.cab .cod b{display:block;font-size:11px;color:#1a1d21;letter-spacing:.05em}
+.ident{display:flex;gap:16px;flex-wrap:wrap;padding:7px 0 12px;font-size:9.5px;color:#5b6470;
+  border-bottom:1px solid #e4e7ea;margin-bottom:13px}
+.ident b{color:#1a1d21;font-weight:600}
+h2{font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#102d69;
+   margin:15px 0 5px;padding-bottom:3px;border-bottom:1px solid #102d69}
+table{width:100%;border-collapse:collapse;font-size:9.5px}
+th,td{padding:3.5px 7px;text-align:left;vertical-align:top;border-bottom:1px solid #edeff1}
+th{font-weight:600;width:38%;color:#5b6470}
+.par{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}
+.lst thead th,.lst th{background:#f4f6f8;color:#1a1d21;width:auto;font-size:8.5px;
+  letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid #cfd4d9}
+.lst td{color:#1a1d21}
+.num{text-align:right}
+.av{margin:9px 0 2px;padding:8px 10px;border-radius:3px;font-size:10px;background:#f4f6f8;border:1px solid #e4e7ea}
+.av.al{background:#fceceb;border-color:#eab5b0;color:#a8291c}
+.av.ok{background:#e8f5ee;border-color:#a9d8be;color:#126b44}
+.tot{margin-top:5px;text-align:right;font-size:10.5px}
+.pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
+  justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
+@page{size:A4;margin:11mm}
+</style></head><body>
+<div class="cab">
+  <span class="mk">${marca}</span>
+  <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
+    <h1>FICHA TÉCNICA E HISTORIAL DE LA VÁLVULA</h1></div>
+  <div class="cod"><b>${esc(a.tag||a.ser||'')}</b>${esc(m.m||'')} ${esc(a.mod||'')}<br>${fPE(HOY.toISOString().slice(0,10))}</div>
+</div>
+<div class="ident">
+  <span>Cliente <b>${esc(e.n||'')}</b></span>
+  <span>Planta <b>${esc(e.fac||'')}</b></span>
+  <span>Ubicación <b>${esc(area(a)||'—')}</b></span>
+</div>
+
+<div class="par">
+  <div><h2>IDENTIFICACIÓN</h2><table>
+    ${fila('TAG',a.tag)}${fila('N.º DE SERIE',a.ser)}${fila('MARCA',m.m)}${fila('MODELO',a.mod)}
+    ${fila('TIPO',m.t)}${fila('FAMILIA',CL[a.cl])}${fila('CRITICIDAD',a.cr)}</table></div>
+  <div><h2>FICHA TÉCNICA</h2><table>
+    ${fila('MEDIDA',a.sz)}${fila('CLASE / RATING',a.rt)}${fila('CV',a.cv)}
+    ${fila('RANGO / SET',a.rng)}${fila('ACCIÓN AIRE',a.air)}
+    ${fila('FLUIDO',a.fluido)}${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA',a.norma)}</table></div>
+</div>
+
+<h2>ESTADO DEL SERVICIO</h2>
+<table>
+  ${fila('ÚLTIMO SERVICIO',u?fPE(u.f)+(u.q?' — '+u.q:''):(a.ult?fPE(a.ult):'sin registro'))}
+  ${fila('PRÓXIMA CALIBRACIÓN',p?fPE(p.f):(a.prox?fPE(a.prox):'no aplica'))}
+  ${fila('ENSAYOS REGISTRADOS',ensayos.length)}
+  ${fila('ÓRDENES DE TRABAJO',`${ords.length} en total · ${ords.filter(o=>o.et==='final').length} finalizadas`)}
+</table>
+${d!=null?`<div class="av ${d<0?'al':'ok'}">${d<0
+  ? `La calibración venció hace ${-d} días. Recomendamos programar el servicio.`
+  : `La calibración está vigente. Vence en ${d} días.`}</div>`:''}
+
+${ensayos.length?`<h2>HISTORIAL DE ENSAYOS</h2>
+<table class="lst"><tr><th>Fecha</th><th>Tipo</th><th>Resultado</th></tr>
+${ensayos.slice(0,8).map(c=>`<tr><td>${fPE(fechaCalib(c))}</td>
+  <td>${c.tipo==='psv'?'Ensayo AXAD-088':'Calibración'}</td>
+  <td>${esc(resEnsayo(c))}</td></tr>`).join('')}</table>`:''}
+
+${ords.length?`<h2>INTERVENCIONES</h2>
+<table class="lst"><tr><th>Fecha</th><th>Orden</th><th>Tipo</th><th>Etapa</th></tr>
+${ords.slice(0,8).map(o=>`<tr><td>${fPE(o.f)}</td><td>${esc(o.mat||o.n||'')}</td>
+  <td>${esc(o.tipo||'')}</td><td>${esc((ETAPAS.find(x=>x[0]===o.et)||['',o.et])[1])}</td></tr>`).join('')}</table>`:''}
+
+${piezas.length?`<h2>DESPIECE Y PRECIOS DE REPUESTO</h2>
+<table class="lst"><tr><th>Pos.</th><th>N.º de parte</th><th>Descripción</th><th class="num">Precio</th><th>Almacén</th></tr>
+${piezas.map(x=>{const st=piezaStock(x.n);return `<tr><td>${x.p}</td><td>${esc(x.n)}</td>
+  <td>${esc(x.d)}${x.k?' · kit de overhaul':''}</td><td class="num">${usd(precio(x.n))}</td>
+  <td>${st.n>0?`${st.n} und`:'a pedido'}</td></tr>`}).join('')}</table>
+<div class="tot">Kit de overhaul — ${kit.length} piezas, <b>${usd(kitTot)}</b> sin IGV</div>`:''}
+
+<div class="pie"><span>Ficha generada por Adolphus S.A.</span>
+  <span>Precios de lista sin IGV · sujetos a confirmación de stock</span>
+  <span>${fPE(HOY.toISOString().slice(0,10))}</span></div>
+</body></html>`};
+}
+/* En pantalla primero, para revisarla antes de mandarla. */
+function fichaParaCliente(actId){
+  const D=datosFicha(actId); if(!D){toast('No encuentro la válvula');return}
+  const {a,m,e,ensayos,u,p,ords,piezas}=D;
+  const kit=piezas.filter(x=>x.k), kitTot=kit.reduce((s,x)=>s+precio(x.n),0);
+  const d=p?dias(p.f):(a.prox?dias(a.prox):null);
+  const dt=(k,v)=>`<div class="dt-i"><span>${k}</span><b>${esc(String(v||'—'))}</b></div>`;
+  $('#mTitle').textContent=`Ficha de ${a.tag||a.ser||'la válvula'}`;
+  $('#mBody').innerHTML=`
+    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+      <div>Todo lo que hay guardado de esta válvula, en una hoja. Descárgala en PDF o en Word
+        y mándasela al cliente tal cual, o retócala antes en Word.</div></div>
+    <div class="dt">
+      ${dt('Cliente',e.n)}${dt('Planta',e.fac)}${dt('Ubicación',area(a))}
+      ${dt('TAG',a.tag)}${dt('N.º de serie',a.ser)}${dt('Marca y modelo',`${m.m||''} ${a.mod||''}`)}
+      ${dt('Tipo',m.t)}${dt('Medida',a.sz)}${dt('Clase',a.rt)}${dt('Rango / set',a.rng)}
+    </div>
+    <h4 class="snc-sec">Estado del servicio</h4>
+    <div class="dt">
+      ${dt('Último servicio',u?fPE(u.f):(a.ult?fPE(a.ult):'sin registro'))}
+      ${dt('Próxima calibración',p?fPE(p.f):(a.prox?fPE(a.prox):'no aplica'))}
+      ${dt('Ensayos registrados',ensayos.length)}
+      ${dt('Órdenes finalizadas',ords.filter(o=>o.et==='final').length)}
+    </div>
+    ${d!=null?`<div class="callout ${d<0?'':'ok'}" style="margin-top:12px">
+      <svg viewBox="0 0 24 24">${d<0?'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>':'<path d="M20 6 9 17l-5-5"/>'}</svg>
+      <div>${d<0?`La calibración venció hace <b>${-d} días</b> — es el argumento para ofrecerle el servicio.`
+                :`Calibración vigente, vence en <b>${d} días</b>.`}</div></div>`:''}
+    ${piezas.length?`<h4 class="snc-sec">Repuestos de esta válvula <span class="opc">precio de lista, sin IGV</span></h4>
+    <div class="grid-wrap"><table class="grid"><thead><tr>
+      <th style="width:44px">Pos.</th><th>N.º de parte</th><th>Descripción</th>
+      <th class="num" style="width:100px">Precio</th><th style="width:110px">Almacén</th>
+    </tr></thead><tbody>
+    ${piezas.map(x=>{const st=piezaStock(x.n);return `<tr style="cursor:default">
+      <td class="mono">${x.p}</td><td class="mono"><b>${esc(x.n)}</b></td>
+      <td><div class="cell-2"><span>${esc(x.d)}</span>${x.k?'<small>va en el kit de overhaul</small>':''}</div></td>
+      <td class="num mono">${usd(precio(x.n))}</td>
+      <td><span class="tag ${st.n>0?'ok':'late'}"><span class="dot"></span>${st.n>0?`${st.n} und`:'a pedido'}</span></td>
+    </tr>`}).join('')}
+    </tbody></table></div>
+    <div class="cat-pie">Kit de overhaul — ${kit.length} piezas, <b class="mono">${usd(kitTot)}</b> sin IGV.</div>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cerrar</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" onclick="fichaClienteWord('${a.id}')">Word</button>
+    <button class="btn sec" onclick="fichaClientePDF('${a.id}')">PDF</button>
+    ${S.rol==='cliente'?'':`<button class="btn" onclick="closeModal();openCot()">Cotizar</button>`}`;
+  $('#modal').classList.add('on');
+}
+function fichaClientePDF(id){
+  const d=fichaClienteDoc(id); if(!d)return;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(d.html); w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+}
+function fichaClienteWord(id){
+  const d=fichaClienteDoc(id); if(!d)return;
+  const html=d.html.replace('<html lang="es">',
+    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
+    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
+  const url=URL.createObjectURL(new Blob(['﻿',html],{type:'application/msword'}));
+  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast('Ficha descargada en Word · lista para mandársela al cliente');
+}
+
 /* Dos salidas del mismo documento: imprimir para firmar y archivar,
    Word para retocarlo antes de mandárselo al cliente. Se arma una
    sola vez; si se escribiera dos veces acabarían diciendo cosas
@@ -7380,6 +7652,11 @@ function renderCat(){
   const foco=S.inCli||S.cli||null;
   const tit=$('#catTit'), sub=$('#catSub'), tools=$('#catTools');
   if(foco) return catDeCliente(foco,caja,tit,sub,tools);
+  /* Ventas no vende modelos de válvula: vende piezas. Fuera de un
+     cliente ve el catálogo entero de repuestos con su precio de lista
+     y lo que hay en almacén — que es lo que necesita para contestar
+     «¿cuánto cuesta esto?» sin llamar a nadie. */
+  if(S.rol==='com') return catDeVentas(caja,tit,sub,tools);
 
   if(tit)tit.textContent='Catálogo y despieces';
   if(sub)sub.textContent='El despiece se carga una vez por modelo. Todos los equipos de ese modelo lo heredan, en todos los clientes. Entra a un cliente para ver sólo sus piezas, con precio y stock.';
@@ -7446,9 +7723,16 @@ function catDeCliente(cliId,caja,tit,sub,tools){
   caja.innerHTML=`
     ${sinHoja?`<div class="callout" style="margin:var(--sp-3) var(--sp-4) 0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
       <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> para ver la cantidad real de hoy.</div></div>`:''}
-    <div class="grid-wrap"><table class="grid"><thead><tr>
-      <th style="width:66px"></th><th>Pieza</th><th style="width:190px">Va en</th>
-      <th class="num" style="width:120px">Costo unitario</th><th style="width:150px">En almacén</th>
+    ${tablaPiezas(piezas,'Va en')}
+    <div class="cat-pie">Kit de overhaul de esta empresa — ${piezas.filter(p=>p.k).length} piezas, <b class="mono">${usd(valorKit)}</b> sin IGV.</div>`;
+}
+/* La tabla de piezas, una sola vez: la usan el catálogo del cliente y
+   el de ventas, y tienen que enseñar exactamente lo mismo —foto,
+   número de parte, descripción, dónde va, precio y stock—. */
+function tablaPiezas(piezas,rotuloDonde){
+  return `<div class="grid-wrap"><table class="grid"><thead><tr>
+      <th style="width:66px"></th><th>Pieza</th><th style="width:190px">${esc(rotuloDonde)}</th>
+      <th class="num" style="width:120px">Precio unitario</th><th style="width:150px">En almacén</th>
     </tr></thead><tbody>
     ${piezas.map(p=>{
       const st=piezaStock(p.n), modelo=p.mods[0];
@@ -7459,13 +7743,69 @@ function catDeCliente(cliId,caja,tit,sub,tools){
         <td>${foto}</td>
         <td><div class="cell-2"><b class="mono">${esc(p.n)}</b><small>${esc(p.d)}${p.k?' · <b>va en el kit de overhaul</b>':''}</small></div></td>
         <td><div class="cell-2"><span>${p.mods.map(m=>`${esc((MODELOS[m]||{}).m||'')} ${esc(m)}`).join(', ')}</span>
-          <small>${p.eq} válvula${p.eq===1?'':'s'}${p.tags.length?' · '+esc(p.tags.slice(0,3).join(', '))+(p.tags.length>3?'…':''):''}</small></div></td>
+          <small>${p.eq?`${p.eq} válvula${p.eq===1?'':'s'}`:''}${p.tags.length?(p.eq?' · ':'')+esc(p.tags.slice(0,3).join(', '))+(p.tags.length>3?'…':''):''}${!p.eq&&!p.tags.length?esc(p.g||''):''}</small></div></td>
         <td class="num mono"><b>${usd(precio(p.n))}</b></td>
         <td><span class="tag ${tono}"><span class="dot"></span>${st.n>0?`${st.n} ${st.n===1?'unidad':'unidades'}`:'sin stock'}</span>
           <div class="muted" style="font-size:11.5px;margin-top:3px">${st.real?'hoja de almacén':esc(p.l||'catálogo')}</div></td>
       </tr>`}).join('')}
-    </tbody></table></div>
-    <div class="cat-pie">Kit de overhaul de esta empresa — ${piezas.filter(p=>p.k).length} piezas, <b class="mono">${usd(valorKit)}</b> sin IGV.</div>`;
+    </tbody></table></div>`;
+}
+
+/* ── El catálogo de ventas: todo lo que se puede vender ──────
+   Igual que el del cliente pero sin recortar por empresa, y agrupable
+   por familia de válvula. El precio que sale es el de lista, sin IGV:
+   es el que ventas usa para armar la cotización. */
+const FAM_PIEZA=[['globo','Válvulas de control'],['psv','Válvulas de seguridad'],
+                 ['cuchilla','Cuchilla y on-off'],['act','Actuadores']];
+function catDeVentas(caja,tit,sub,tools){
+  if(tit)tit.textContent='Catálogo de repuestos';
+  if(sub)sub.textContent='Todo lo que Adolphus puede vender, con su precio de lista y lo que hay en almacén. Es de donde salen las posiciones de una cotización.';
+
+  /* Cada pieza una vez, aunque la lleven varias familias, con el
+     recuento de válvulas instaladas que la usan: eso dice si es una
+     pieza que rota o una que se pide a fábrica. */
+  const mapa=new Map();
+  Object.entries(BOM).forEach(([base,ps])=>ps.forEach(p=>{
+    let x=mapa.get(p.n);
+    if(!x){x={...p,bases:new Set(),mods:[],tags:[],eq:0};mapa.set(p.n,x)}
+    x.bases.add(base);
+  }));
+  Object.entries(MODELOS).forEach(([k,m])=>(BOM[m.b]||[]).forEach(p=>{
+    const x=mapa.get(p.n); if(!x||x.mods.includes(k))return;
+    x.mods.push(k); x.eq+=ACTIVOS.filter(a=>a.mod===k).length;
+  }));
+  let piezas=[...mapa.values()].map(x=>({...x,bases:[...x.bases]}))
+    .sort((a,b)=>a.g===b.g?String(a.n).localeCompare(String(b.n)):String(a.g).localeCompare(String(b.g)));
+  const total=piezas.length;
+  if(CAT_MOD)piezas=piezas.filter(p=>p.bases.includes(CAT_MOD));
+  const q=CAT_Q.trim().toLowerCase();
+  if(q)piezas=piezas.filter(p=>[p.n,p.d,p.g,p.mods.join(' ')].join(' ').toLowerCase().includes(q));
+  const conStock=piezas.filter(p=>piezaStock(p.n).n>0).length;
+
+  if(tools)tools.innerHTML=`
+    <div class="tools">
+      <input class="inp" id="catQ" placeholder="Buscar por número de parte, descripción o modelo…" style="max-width:340px"
+             value="${esc(CAT_Q)}" oninput="catFiltro(this.value)">
+      <span class="spacer" style="flex:1"></span>
+      <span class="count">${piezas.length}${piezas.length!==total?` de ${total}`:''} producto${(piezas.length!==total?total:piezas.length)===1?'':'s'} · ${conStock} con stock</span>
+    </div>
+    <div class="ps-quick" style="margin:0 0 var(--sp-3)"><span class="lab">Familia</span>
+      <span class="ps-chip ${CAT_MOD?'':'on'}" onclick="catModelo('')">Todas</span>
+      ${FAM_PIEZA.filter(([k])=>BOM[k]).map(([k,l])=>
+        `<span class="ps-chip ${CAT_MOD===k?'on':''}" onclick="catModelo('${k}')">${esc(l)} <b>${(BOM[k]||[]).length}</b></span>`).join('')}
+    </div>`;
+
+  if(!piezas.length){
+    caja.innerHTML=`<div class="empty" style="padding:34px"><b>Sin coincidencias</b>
+      No hay ningún producto que responda a «${esc(CAT_Q)}».</div>`;
+    return;
+  }
+  const sinHoja=!STOCK.length;
+  caja.innerHTML=`
+    ${sinHoja?`<div class="callout" style="margin:var(--sp-3) var(--sp-4) 0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> antes de prometerle una entrega a nadie.</div></div>`:''}
+    ${tablaPiezas(piezas,'Modelos que la llevan')}
+    <div class="cat-pie">Precios de lista, sin IGV. La cotización los trae puestos y se pueden ajustar posición por posición.</div>`;
 }
 /* ============================================================
    9b · REPUESTOS — storefront de despieces
