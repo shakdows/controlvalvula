@@ -1944,6 +1944,17 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+.conf-cap{position:fixed;inset:0;z-index:120;display:grid;place-items:center;
+  background:rgba(12,16,22,.5);backdrop-filter:blur(2px);padding:20px;
+  animation:confIn .14s var(--ease-out)}
+@keyframes confIn{from{opacity:0}to{opacity:1}}
+.conf-box{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-3);
+  box-shadow:var(--e-3);padding:22px 24px;max-width:430px;width:100%}
+.conf-box h3{margin:0 0 7px;font-size:16px;letter-spacing:-.01em}
+.conf-box p{margin:0 0 18px;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.conf-b{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:460px){.conf-b{flex-direction:column-reverse}.conf-b .btn{width:100%;justify-content:center}}
+
 .pv-fotos-b{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:520px){.pv-fotos-b{grid-template-columns:1fr}}
 .pv-grp{margin-top:14px}
@@ -2513,9 +2524,9 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
   </div>
 </div>
 
-<div class="modal" id="modal" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,closeModal)">
+<div class="modal" id="modal" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,cerrarModalPidiendo)">
   <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
-    <button class="icon-btn" onclick="closeModal()"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <button class="icon-btn" onclick="cerrarModalPidiendo()" title="Cerrar (Esc)" aria-label="Cerrar"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="modal-b" id="mBody"></div><div class="modal-f" id="mFoot"></div></div>
 </div>
 
@@ -4941,6 +4952,9 @@ function pintarPSV(){
    </div>`;
 
   pintarPSVPie(); pintarPSVResultado(); pintarPSVFotos();
+  /* El ensayo sabe guardarse a medias: si se cierra sin querer, se
+     ofrece dejarlo como borrador en vez de perderlo. */
+  MODAL_GUARDA={que:'el ensayo',guardar:()=>guardarPSV(false)};
 }
 
 /* El pie dice qué falta antes de pulsar, no después. */
@@ -5743,6 +5757,7 @@ function openSNC(id,actId){
     </div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
     <button class="btn" onclick="guardarSNC()">${r?'Guardar cambios':'Registrar'}</button>`;
+  MODAL_GUARDA={que:'el reclamo',guardar:()=>guardarSNC()};
   $('#modal').classList.add('on');
   EV_TMP = r ? (r.ev||[]).slice() : [];
   pintarCtxSNC(); pintarEv();
@@ -5949,7 +5964,7 @@ function verSNC(id){
         ${(r.est!=='cerrado'&&a)?(orden
           ? `<button class="btn" onclick="closeModal();registrarEnsayoDeOrden('${orden.id}')">Empezar el mantenimiento · ${esc(orden.mat||orden.n)}</button>`
           : `<button class="btn" onclick="closeModal();mandarAMantenimiento('${a.id}')">Empezar el mantenimiento</button>`):''}
-        <button class="btn sec" onclick="cerrarSNC('${r.id}')">${r.est==='cerrado'?'Reabrir':'Cerrar'}</button></div></div>`;
+        <button class="btn sec" onclick="cerrarSNC('${r.id}')">${r.est==='cerrado'?'Reabrir el reclamo':'Cerrar el reclamo'}</button></div></div>`;
 
   $('#mTitle').textContent=r.n;
   $('#mBody').innerHTML=`
@@ -6694,7 +6709,62 @@ function saveWO(){
     partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
   closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
 }
+/* ── No perder lo escrito al cerrar sin querer ───────────────
+   Un clic fuera de la ventana, o Escape, cerraban el formulario y se
+   llevaban por delante media hora de ensayo. El botón "Cerrar" hacía
+   lo mismo sin avisar.
+   No se toca ninguna de las setenta llamadas a closeModal() —esas son
+   cierres legítimos, después de guardar—: se vigilan sólo las tres
+   maneras de cerrar SIN QUERER, y se compara el formulario con como
+   estaba al abrirlo. Si nada cambió, no se pregunta; preguntar por
+   una ventana que sólo se miró es entrenar a la gente a decir que sí
+   sin leer. */
+let MODAL_FOTO=null;      // los valores al abrir
+let MODAL_GUARDA=null;    // {que, guardar} — sólo si el formulario sabe guardar borradores
+function modalCampos(){
+  return [...document.querySelectorAll('#mBody input,#mBody textarea,#mBody select')]
+    .filter(e=>e.type!=='file'&&!e.readOnly&&!e.disabled)
+    .map(e=>e.type==='checkbox'||e.type==='radio'?(e.checked?'1':'0'):e.value).join('');
+}
+function modalSucio(){
+  if(MODAL_FOTO==null)return false;
+  return modalCampos()!==MODAL_FOTO;
+}
+/* Se apunta lo que hay al abrir, sin tocar los 30 sitios que abren
+   ventanas: se observa cuándo el modal se enciende. */
+(function vigilarModal(){
+  const m=document.getElementById('modal'); if(!m)return;
+  new MutationObserver(()=>{
+    if(m.classList.contains('on')){
+      // el contenido se pinta antes de encender, pero algunos formularios
+      // rellenan campos justo después; se espera un cuadro
+      requestAnimationFrame(()=>{MODAL_FOTO=modalCampos()});
+    }else{MODAL_FOTO=null;MODAL_GUARDA=null}
+  }).observe(m,{attributes:true,attributeFilter:['class']});
+})();
 function closeModal(){$('#modal').classList.remove('on')}
+/* El cierre que sí pregunta. Lo usan la X, el clic en el fondo y
+   Escape. */
+function cerrarModalPidiendo(){
+  const m=$('#modal'); if(!m||!m.classList.contains('on'))return;
+  if(!modalSucio()){closeModal();return}
+  const g=MODAL_GUARDA;
+  const av=document.createElement('div');
+  av.className='conf-cap'; av.id='confCerrar';
+  av.innerHTML=`<div class="conf-box" role="alertdialog" aria-labelledby="confT">
+    <h3 id="confT">¿Cerrar sin guardar?</h3>
+    <p>Escribiste cosas que todavía no están guardadas${g&&g.que?` en ${esc(g.que)}`:''}.
+      Si cierras ahora se pierden.</p>
+    <div class="conf-b">
+      <button class="btn sec" onclick="cerrarAviso()">Seguir escribiendo</button>
+      ${g&&g.guardar?`<button class="btn sec" onclick="cerrarAviso();MODAL_GUARDA_EJEC()">Guardar y salir</button>`:''}
+      <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="cerrarAviso();closeModal()">Cerrar y perderlo</button>
+    </div></div>`;
+  document.body.appendChild(av);
+  setTimeout(()=>{const b=av.querySelector('.btn.sec');if(b)b.focus()},40);
+}
+function cerrarAviso(){const a=$('#confCerrar');if(a)a.remove()}
+function MODAL_GUARDA_EJEC(){const g=MODAL_GUARDA;if(g&&g.guardar)g.guardar()}
 /* Cierre por clic en el fondo. Solo cuenta si el gesto EMPEZÓ en el fondo:
    así, arrastrar para seleccionar texto y soltar fuera no cierra la ventana. */
 let ovStart=null,ovEnd=null;
@@ -7606,7 +7676,14 @@ document.addEventListener('keydown',e=>{
   const tag=(e.target.tagName||'').toLowerCase();
   const escribiendo=['input','textarea','select'].includes(tag);
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openCmd();return}
-  if(e.key==='Escape'){closeCmd();closeModal();closeDrawer();closeNotif();closeQuote();return}
+  if(e.key==='Escape'){
+    /* Si hay un aviso de "¿cerrar sin guardar?" encima, Escape lo
+       quita a él, no al formulario que está protegiendo. */
+    if($('#confCerrar')){cerrarAviso();return}
+    closeCmd();
+    if($('#modal').classList.contains('on')){cerrarModalPidiendo();return}
+    closeDrawer();closeNotif();closeQuote();return;
+  }
   if(escribiendo)return;
   if(gPend){
     gPend=false;
@@ -8400,6 +8477,7 @@ function editarActivo(id){
   const fillAr=()=>{const c=cli($('#edCli').value)||{areas:{}};
     $('#edAr').innerHTML=Object.entries(c.areas||{}).map(([k,v])=>`<option value="${k}" ${k===a.ar?'selected':''}>${esc(v)}</option>`).join('')};
   $('#edCli').onchange=fillAr; fillAr();
+  MODAL_GUARDA={que:'los datos de la válvula',guardar:()=>guardarActivo(a.id)};
   $('#modal').classList.add('on');
 }
 function activoFoto(id,f){
