@@ -1064,6 +1064,14 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cat-pie{padding:11px var(--sp-4);border-top:1px solid var(--line-2);background:var(--surface-2);
   font-size:12.5px;color:var(--ink-2)}
 /* Una válvula, su despiece dentro */
+/* El aviso de que todavía no hay nube, con los pasos para activarla */
+.nube-no{border:1px solid var(--due);border-radius:var(--r-2);background:var(--due-bg);padding:13px 15px;margin-bottom:14px}
+.nube-no-t b{display:block;font-size:13.5px;margin-bottom:3px}
+.nube-no-t span{font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.nube-pasos{margin:11px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:7px}
+.nube-pasos li{font-size:12.5px;line-height:1.55;color:var(--ink-2)}
+.nube-pasos li i{font-style:normal;color:var(--ink-3)}
+.nube-no-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
 .lbl-sel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
 .cat-val{border-bottom:1px solid var(--line-2)}
 .cat-val:last-of-type{border-bottom:0}
@@ -12958,6 +12966,27 @@ function openSync(){
   const n=SYNCQ.length;
   $('#mTitle').textContent='Conexión y sincronización';
   $('#mBody').innerHTML=`
+   ${enNube()?'':`<div class="nube-no">
+     <div class="nube-no-t">
+       <b>Ahora mismo los datos viven sólo en este equipo</b>
+       <span>Entraste con el recorrido de demostración, que no sube nada. Lo que registres aquí
+         no se ve desde una tablet, un celular ni otra computadora — y si se borra el navegador,
+         se va con él.</span>
+     </div>
+     <ol class="nube-pasos">
+       <li><b>Prepara la base una vez.</b> En tu proyecto de Supabase, <i>SQL Editor → New query</i>,
+         pega el archivo <b class="mono">supabase.sql</b> del repositorio y pulsa RUN.
+         Se puede correr las veces que haga falta: no borra ni duplica nada.</li>
+       <li><b>Crea la cuenta.</b> Cierra sesión, pestaña <i>Crear cuenta</i>, con el código de
+         invitación <b class="mono">ADOLPHUS-2026</b>.</li>
+       <li><b>Entra con esa cuenta</b> en vez de «Entrar con datos de ejemplo». Desde ese momento
+         todo sube solo, y con el mismo correo y clave lo ves desde cualquier dispositivo.</li>
+     </ol>
+     <div class="nube-no-b">
+       <button class="btn sec" onclick="probarNube()">Probar la conexión a la base</button>
+       <button class="btn" onclick="closeModal();logout()">Ir a entrar con mi cuenta</button>
+     </div>
+   </div>`}
    <div class="callout ${online()?'':'warn'}">
      <svg viewBox="0 0 24 24">${online()
        ?'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2"/>'
