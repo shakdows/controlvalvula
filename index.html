@@ -1944,6 +1944,15 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ev-tira button:hover{background:var(--late)}
 @media(max-width:480px){.ev-tira{width:calc(33.33% - 6px);height:auto;aspect-ratio:1}}
 
+.pv-fotos-b{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:520px){.pv-fotos-b{grid-template-columns:1fr}}
+.pv-grp{margin-top:14px}
+.pv-grp h5{margin:0 0 7px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3)}
+.pv-grp h5 span{display:inline-block;margin-left:5px;padding:0 6px;border-radius:99px;
+  background:var(--surface-3);color:var(--ink-2);font-size:10.5px;letter-spacing:0}
+.ev-tira .pv-mom{position:absolute;left:4px;bottom:4px;right:4px;height:20px;padding:0 4px;
+  border:none;border-radius:5px;background:rgba(0,0,0,.66);color:#fff;font-size:10px;cursor:pointer}
+
 .fx-derivado{border:1px solid var(--line);border-radius:var(--r-2);
   background:var(--surface-2);padding:12px 14px;margin-bottom:12px}
 .fx-derivado>div{display:inline-block;vertical-align:top;min-width:170px;margin:0 22px 8px 0}
@@ -4789,6 +4798,18 @@ function pintarPSV(){
     <input class="inp" id="pv-${k}" ${tipo?`type="${tipo}"`:''} value="${esc(t[k]==null?'':t[k])}"
       placeholder="${esc(ph||'')}" oninput="psvCampo('${k}',this.value)"></div>`;
 
+  /* La primera parte del formato —servicio, contacto, y el equipo
+     patrón con su certificado— la llena el supervisor o el gerente,
+     igual que en la hoja de la empresa. Mantenimiento la LEE: son los
+     datos contra los que va a ensayar, y si el técnico pudiera
+     cambiarlos podría hacer cuadrar el ensayo moviendo la referencia
+     en vez de la válvula. Los rellena, sí, quien programa el trabajo.  */
+  const cabeceraMia=S.rol!=='tec';
+  const L=(k,lbl,vacio)=>`<div class="dt-i"><span>${lbl}</span><b>${t[k]?esc(t[k]):`<span class="muted">${vacio||'—'}</span>`}</b></div>`;
+  const faltaCab=[['os','orden de servicio'],['contacto','contacto'],['fecha','fecha'],
+    ['patDesc','equipo patrón'],['patSerie','serie del patrón'],['patCert','certificado del patrón']]
+    .filter(([k])=>!t[k]).map(([,l])=>l);
+
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
      <div><b>${esc(a.tag||'')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie ${esc(a.ser||'—')} ·
@@ -4796,7 +4817,9 @@ function pintarPSV(){
        <a href="#" onclick="openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
 
    <div class="psv-secs">
-    <details class="psv-sec" open><summary>1 · Servicio y patrón</summary><div class="psv-b">
+    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Servicio y patrón
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
+      ${cabeceraMia?`
       <div class="two">
         ${F('os','Orden de servicio','JA10138289')}
         ${F('contacto','Contacto del cliente','FARID ROJAS')}
@@ -4815,7 +4838,20 @@ function pintarPSV(){
         ${F('patExact','Clase de exactitud','0,2 % FS')}
         ${F('patFecha','Fecha de calibración','','date')}
         ${F('patCert','Certificado n.º','EP-0099-2025')}
-      </div>
+      </div>`
+      :`<div class="callout" style="margin-bottom:12px"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+         <div>Esta parte la completa el supervisor. Aquí se lee para saber contra qué patrón se ensaya;
+           no se cambia desde el taller.${faltaCab.length?` <b style="color:var(--due)">Falta ${esc(faltaCab.join(', '))}</b> — pídeselo antes de firmar.`:''}</div></div>
+       <div class="dt">
+         ${L('os','Orden de servicio','sin O.S.')}${L('contacto','Contacto del cliente')}
+         ${L('fecha','Fecha del ensayo')}${L('fluidoP','Fluido de prueba')}
+       </div>
+       <h4 class="snc-sec">Equipo patrón de calibración</h4>
+       <div class="dt">
+         ${L('patDesc','Descripción')}${L('patModelo','Modelo')}${L('patMarca','Marca')}
+         ${L('patSerie','N.º de serie')}${L('patEscala','Escala')}${L('patExact','Clase de exactitud')}
+         ${L('patFecha','Fecha de calibración')}${L('patCert','Certificado n.º')}
+       </div>`}
     </div></details>
 
     <details class="psv-sec" open><summary>2 · Disparo <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
@@ -4886,12 +4922,21 @@ function pintarPSV(){
     <details class="psv-sec"><summary>5 · Registro fotográfico y comentarios</summary><div class="psv-b">
       <div class="fld"><label for="pv-coment">Comentarios u observaciones</label>
         <textarea class="inp" id="pv-coment" rows="3" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea></div>
-      <label class="ev-add" for="pvFoto">
-        <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-        <span>Agregar fotos del ensayo</span></label>
-      <input id="pvFoto" type="file" accept="image/*" capture="environment" multiple
-        style="display:none" onchange="psvFotos(this.files);this.value=''">
-      <div class="ev-tiras" id="pvFotos"></div>
+      <div class="pv-fotos-b">
+        <label class="ev-add" for="pvFotoA">
+          <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+          <span>Antes del mantenimiento</span></label>
+        <input id="pvFotoA" type="file" accept="image/*" capture="environment" multiple
+          style="display:none" onchange="psvFotos(this.files,'antes');this.value=''">
+        <label class="ev-add" for="pvFotoD">
+          <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+          <span>Después del mantenimiento</span></label>
+        <input id="pvFotoD" type="file" accept="image/*" capture="environment" multiple
+          style="display:none" onchange="psvFotos(this.files,'despues');this.value=''">
+      </div>
+      <div class="muted" style="font-size:11.5px;margin-top:8px">El par antes/después es lo que el cliente mira primero
+        en el informe, y lo que zanja una discusión sobre en qué estado llegó la válvula.</div>
+      <div id="pvFotos"></div>
     </div></details>
    </div>`;
 
@@ -4936,27 +4981,53 @@ function pintarPSVResultado(){
     </div>`;
 }
 
-/* Las fotos se reducen antes de guardar: en planta se sube por datos. */
-function psvFotos(files){
+/* ── Fotos del mantenimiento: antes y después ────────────────
+   Una foto suelta no prueba nada; el par sí. Es lo que el cliente
+   mira primero en el informe y lo que zanja una discusión sobre en
+   qué estado llegó la válvula.
+   Las fotos antiguas se guardaron como texto suelto (el data-URI);
+   las nuevas son {d, m} con el momento. Se aceptan las dos formas
+   para no perder lo ya subido. */
+const fotoObj=f=>typeof f==='string'?{d:f,m:''}:f;
+const MOMENTOS=[['antes','Antes del mantenimiento'],['despues','Después del mantenimiento']];
+function psvFotos(files,momento){
   const lista=Array.from(files||[]).filter(f=>/^image\//.test(f.type||''));
   if(!lista.length){toast('Elige una foto');return}
   let fallos=0;
   Promise.all(lista.map(f=>comprimirFoto(f)
-    .then(d=>{if(PSV_TMP){(PSV_TMP.fotos=PSV_TMP.fotos||[]).push(d)}})
+    .then(d=>{if(PSV_TMP){(PSV_TMP.fotos=PSV_TMP.fotos||[]).push({d,m:momento||''})}})
     .catch(()=>{fallos++})
   )).then(()=>{
     pintarPSVFotos();
     const ok=lista.length-fallos;
-    if(fallos)toast(ok?`${ok} foto${ok>1?'s':''} agregada${ok>1?'s':''} · ${fallos} no se pudo leer`:'No se pudo leer la foto');
-    else toast(`${ok} foto${ok>1?'s':''} agregada${ok>1?'s':''}`);
+    const cual=(MOMENTOS.find(x=>x[0]===momento)||[])[1];
+    if(fallos)toast(ok?`${ok} foto${ok>1?'s':''} · ${fallos} no se pudo leer`:'No se pudo leer la foto');
+    else toast(`${ok} foto${ok>1?'s':''} ${cual?'· '+cual.toLowerCase():'agregada'}`);
   });
 }
 function psvQuitarFoto(i){PSV_TMP.fotos.splice(i,1);pintarPSVFotos()}
+/* Cambiar de momento sin volver a subirla: se falla al elegir. */
+function psvMomento(i,m){
+  const f=PSV_TMP.fotos[i]; if(!f)return;
+  PSV_TMP.fotos[i]=Object.assign(fotoObj(f),{m});
+  pintarPSVFotos();
+}
 function pintarPSVFotos(){
   const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
-  c.innerHTML=(PSV_TMP.fotos||[]).map((d,i)=>`
-    <div class="ev-tira"><img src="${d}" alt="Foto ${i+1} del ensayo">
-      <button class="ev-x" onclick="psvQuitarFoto(${i})" aria-label="Quitar la foto ${i+1}">×</button></div>`).join('');
+  const todas=(PSV_TMP.fotos||[]).map((f,i)=>({...fotoObj(f),i}));
+  const grupo=(m,lbl)=>{
+    const g=todas.filter(f=>f.m===m);
+    if(!g.length)return '';
+    return `<div class="pv-grp"><h5>${lbl} <span>${g.length}</span></h5>
+      <div class="ev-tiras">${g.map(f=>`
+        <div class="ev-tira"><img src="${f.d}" alt="${lbl} ${f.i+1}">
+          <button class="ev-x" onclick="psvQuitarFoto(${f.i})" aria-label="Quitar">×</button>
+          <select class="pv-mom" onchange="psvMomento(${f.i},this.value)" aria-label="Momento de la foto">
+            ${MOMENTOS.map(([k,l])=>`<option value="${k}" ${f.m===k?'selected':''}>${l.split(' ')[0]}</option>`).join('')}
+            <option value="" ${f.m?'':'selected'}>Sin clasificar</option>
+          </select></div>`).join('')}</div></div>`;
+  };
+  c.innerHTML=grupo('antes','Antes')+grupo('despues','Después')+grupo('','Sin clasificar');
 }
 
 function guardarPSV(emitir){
@@ -5320,8 +5391,14 @@ function verPSV(id){
     ${c.coment?`<section class="pd-b"><h5>Comentarios u observaciones</h5>
       <p class="pd-txt">${esc(c.coment)}</p></section>`:''}
 
-    ${(c.fotos&&c.fotos.length)?`<section class="pd-b"><h5>Registro fotográfico</h5>
-      <div class="ev-tiras">${c.fotos.map((d,i)=>`<div class="ev-tira"><img src="${d}" alt="Foto ${i+1}"></div>`).join('')}</div></section>`:''}
+    ${(c.fotos&&c.fotos.length)?(()=>{
+      const fs=c.fotos.map(fotoObj);
+      const g=(m,lbl)=>{const l=fs.filter(f=>f.m===m);return l.length?
+        `<div class="pv-grp"><h5>${lbl} <span>${l.length}</span></h5><div class="ev-tiras">${
+          l.map((f,i)=>`<div class="ev-tira"><img src="${f.d}" alt="${lbl} ${i+1}"></div>`).join('')}</div></div>`:''};
+      return `<section class="pd-b"><h5>Registro fotográfico</h5>
+        ${g('antes','Antes')}${g('despues','Después')}${g('','Sin clasificar')}</section>`;
+    })():''}
 
     <section class="pd-b"><h5>Firmas</h5>
     <div class="firmas-grid">
@@ -5338,7 +5415,8 @@ function verPSV(id){
         </div>`}).join('')}
     </div></section>`;
   $('#mFoot').innerHTML=`
-    <button class="btn sec" onclick="imprimirPSV('${c.id}')">Imprimir certificado</button>
+    <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
+    <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
     ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
   $('#modal').classList.add('on');
 }
@@ -5346,18 +5424,18 @@ function verPSV(id){
 /* ── El certificado impreso · AXAD-088 V.2 ───────────────────
    Mismo orden, mismos títulos y mismo pie que el formato de la
    empresa: es lo que el auditor y el cliente esperan ver. */
-function imprimirPSV(id){
+function psvDocumento(id){
   const c=CALIBS.find(x=>x.id===id); if(!c)return;
   const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
   const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  // el documento se arma aquí; quien lo abre decide si imprime o descarga
   const fila=(k,val)=>`<tr><th>${k}</th><td>${val==null||val===''?'—':esc(String(val))}</td></tr>`;
   const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
   /* El logotipo va en el papel: es lo primero que mira el cliente y lo
      que hace que el certificado se vea de la empresa y no de una hoja
      de cálculo. Va como SVG, así que imprime nítido a cualquier tamaño. */
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+    return {titulo:`Certificado ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
   <title>AXAD-088 ${esc(a.tag||'')}</title><style>
   *{box-sizing:border-box}
   body{font:10.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm}
@@ -5392,6 +5470,7 @@ function imprimirPSV(id){
   .fb .ln{border-top:1px solid #1a1d21;margin-top:3px;padding-top:3px}
   .fb b{font-size:9.5px;display:block}
   .fb span.cg{color:#5b6470}
+  h3.fh{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6470;margin:9px 0 4px;page-break-after:avoid}
   .fotos{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:6px}
   .fotos img{width:100%;height:88px;object-fit:cover;border-radius:2px}
   .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
@@ -5488,8 +5567,12 @@ function imprimirPSV(id){
   </div>
 
   ${c.coment?`<h2>COMENTARIOS U OBSERVACIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
-  ${(c.fotos&&c.fotos.length)?`<h2>REGISTRO FOTOGRÁFICO</h2>
-    <div class="fotos">${c.fotos.slice(0,6).map(d=>`<img src="${d}" alt="">`).join('')}</div>`:''}
+  ${(c.fotos&&c.fotos.length)?(()=>{
+    const fs=c.fotos.map(fotoObj);
+    const g=(m,lbl)=>{const l=fs.filter(f=>f.m===m).slice(0,4);return l.length?
+      `<h3 class="fh">${lbl}</h3><div class="fotos">${l.map(f=>`<img src="${f.d}" alt="">`).join('')}</div>`:''};
+    return `<h2>REGISTRO FOTOGRÁFICO</h2>${g('antes','Antes del mantenimiento')}${g('despues','Después del mantenimiento')}${g('','Sin clasificar')}`;
+  })():''}
 
   <div class="firmas">
     ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
@@ -5503,8 +5586,31 @@ function imprimirPSV(id){
   <div class="pie"><span>AXAD-088 · Versión 2</span>
     <span>Adolphus S.A. · Control de fluidos · Lima</span>
     <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
-  </body></html>`);
+  </body></html>`};
+}
+/* Dos salidas del mismo documento: imprimir para firmar y archivar,
+   Word para retocarlo antes de mandárselo al cliente. Se arma una
+   sola vez; si se escribiera dos veces acabarían diciendo cosas
+   distintas. */
+function imprimirPSV(id){
+  const d=psvDocumento(id); if(!d)return;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(d.html);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+}
+function psvWord(id){
+  const d=psvDocumento(id); if(!d)return;
+  /* Word abre un HTML con extensión .doc sin rechistar. Evita cargar
+     media librería para generar un .docx que el cliente sólo va a
+     abrir y retocar. */
+  const html=d.html.replace('<html lang="es">',
+    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
+    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
+  const url=URL.createObjectURL(new Blob(['\ufeff',html],{type:'application/msword'}));
+  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast('Descargado en Word · se puede editar antes de enviarlo');
 }
 
 
@@ -5830,12 +5936,20 @@ function verSNC(id){
 
   /* Un reclamo abierto es trabajo que espera. Se dice arriba, con el
      botón para cerrarlo al lado: es lo único que hay que decidir. */
+  /* El reclamo dice qué válvula está esperando. De ahí sale el
+     trabajo: un botón lo convierte en orden con su MAT y abre el
+     ensayo, sin tener que ir a buscar la válvula por otro lado. */
+  const orden=a?ORDENES.find(o=>o.act===a.id&&o.et!=='final'):null;
   const aviso=`<div class="snc-dec ${r.est==='cerrado'?'no':''}">
       <div class="snc-dec-t"><b>${r.est==='cerrado'?'Cerrado':'Abierto — pendiente de resolver'}</b>
         <span>${r.est==='cerrado'
           ? `Cerrado${r.fCierre?' el '+fPE(r.fCierre):''}.`
           : 'Todo el personal de Adolphus lo ve en sus avisos.'}</span></div>
-      <div class="snc-dec-b"><button class="btn ${r.est==='cerrado'?'sec':''}" onclick="cerrarSNC('${r.id}')">${r.est==='cerrado'?'Reabrir':'Cerrar el registro'}</button></div></div>`;
+      <div class="snc-dec-b">
+        ${(r.est!=='cerrado'&&a)?(orden
+          ? `<button class="btn" onclick="closeModal();registrarEnsayoDeOrden('${orden.id}')">Empezar el mantenimiento · ${esc(orden.mat||orden.n)}</button>`
+          : `<button class="btn" onclick="closeModal();mandarAMantenimiento('${a.id}')">Empezar el mantenimiento</button>`):''}
+        <button class="btn sec" onclick="cerrarSNC('${r.id}')">${r.est==='cerrado'?'Reabrir':'Cerrar'}</button></div></div>`;
 
   $('#mTitle').textContent=r.n;
   $('#mBody').innerHTML=`
@@ -10041,7 +10155,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
    ============================================================ */
 
 /* La organización contratante (el "tenant"). */
-const VERSION='2026-08-09b · OC y MAT · alta de cliente a mano';
+const VERSION='2026-08-09c · reclamos simples · ensayo por rol · fotos antes/después';
 const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
