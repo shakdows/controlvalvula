@@ -3814,21 +3814,49 @@ function queToca(a){
 function fxBloque(titulo,extra,cuerpo){
   return `<section class="fx-blk"><div class="fx-blk-h"><h3>${titulo}</h3>${extra||''}</div>${cuerpo}</section>`;
 }
+/* La última calibración de la válvula, sea del formato que sea.
+   Antes se ordenaba por 'fin' y se pintaban 'af', 'al' y 'devAl', que
+   son campos de la calibración clásica: un ensayo AXAD-088 no tiene
+   ninguno, así que después de llenarlo el bloque seguía diciendo que
+   no había nada —o peor, pintaba "undefined"—. Ahora se leen los dos
+   formatos y sale también CUÁNDO toca la siguiente, que es lo que se
+   viene a mirar. */
+const fechaCalib=c=>(c.fecha||c.fin||c.ini||'').slice(0,10);
 function fichaCalib(a){
-  const c=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+  const hechos=CALIBS.filter(x=>x.act===a.id&&x.veredicto!=='incompleto');
+  const c=hechos.slice().sort((x,y)=>fechaCalib(y).localeCompare(fechaCalib(x)))[0];
+  const borrador=CALIBS.find(x=>x.act===a.id&&x.veredicto==='incompleto');
   if(!c) return fxBloque('Última calibración',
-    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="openCalib('${a.id}')">Registrar</button>`,
-    `<p class="fx-vacio">Este equipo aún no tiene una calibración registrada en el sistema.</p>`);
-  const conf=Math.abs(c.devAl)<=(c.tol||3);
+    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="${a.cl==='seguridad'?`openPSV('${a.id}')`:`openCalib('${a.id}')`}">${borrador?'Seguir el ensayo':'Registrar'}</button>`,
+    `<p class="fx-vacio">${borrador
+      ? 'Hay un ensayo a medio llenar. En cuanto se guarde completo, aquí sale el resultado y la próxima fecha.'
+      : 'Este equipo aún no tiene una calibración registrada en el sistema.'}</p>`);
+
+  const esPSV=c.tipo==='psv';
+  const prox=proximaCalibDe(a.id);
+  const d=prox?dias(prox.f):(a.prox?dias(a.prox):null);
+  const tonoProx=d==null?'':d<0?'late':d<=90?'due':'ok';
+  /* Cada formato dice su resultado con sus palabras; se normaliza para
+     el semáforo y se conserva el texto original para leerlo. */
+  const dice=esPSV?(c.veredicto||''):(c.verdict||'');
+  const ok=/^(aprobado|conforme)/i.test(dice)&&!/^no conforme/i.test(dice);
+  const celdas=esPSV
+    ? [['Set requerido',`${esc(String(c.setEsp||'—'))} ${esc(c.und||'')}`],
+       ['Promedio de disparo',c.prom!=null?`${n2(c.prom)} ${esc(c.und||'')}`:'—'],
+       ['Desviación',c.desv!=null?`${c.desv>0?'+':''}${n2(c.desv)} %`:'—']]
+    : [['Set',`${esc(String(c.nom??'—'))} ${esc(c.uni||'')}`],
+       ['As-found',String(c.af??'—')],
+       ['As-left',String(c.al??'—')],
+       ['Desviación final',c.devAl!=null?`${c.devAl>0?'+':''}${c.devAl} %`:'—']];
   return fxBloque('Última calibración',
-    `<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(x=>x.id==='${c.id}'))">Ver certificado</button>`,
+    `<button class="btn sec xs" onclick="${esPSV?`verPSV('${c.id}')`:`showCalibReport(CALIBS.find(x=>x.id==='${c.id}'))`}">Ver certificado</button>`,
     `<div class="fx-cal">
-       <div class="fx-cal-n"><span>Set</span><b>${c.nom} ${esc(c.uni)}</b></div>
-       <div class="fx-cal-n"><span>As-found</span><b style="color:var(--${Math.abs(c.devAf)<=(c.tol||3)?'ok':'late'})">${c.af}</b></div>
-       <div class="fx-cal-n"><span>As-left</span><b style="color:var(--${conf?'ok':'late'})">${c.al}</b></div>
-       <div class="fx-cal-n"><span>Desviación final</span><b>${c.devAl>0?'+':''}${c.devAl}%</b></div>
-       <div class="fx-cal-n"><span>Resultado</span><b><span class="tag ${conf?'ok':'late'}"><span class="dot"></span>${conf?'Conforme':'No conforme'}</span></b></div>
-       <div class="fx-cal-n"><span>Fecha</span><b class="mono">${esc(c.fin||c.ini||'')}</b></div>
+       ${celdas.map(([k,v])=>`<div class="fx-cal-n"><span>${k}</span><b>${v}</b></div>`).join('')}
+       <div class="fx-cal-n"><span>Resultado</span><b><span class="tag ${ok?'ok':'late'}"><span class="dot"></span>${esc(dice||'—')}</span></b></div>
+       <div class="fx-cal-n"><span>Fecha del ensayo</span><b class="mono">${fPE(fechaCalib(c))}</b></div>
+       <div class="fx-cal-n"><span>Próxima calibración</span><b class="mono" style="color:var(--${tonoProx})">${
+         prox?fPE(prox.f):(a.prox?fPE(a.prox):'no aplica')}${
+         d!=null?` <span style="font-weight:500">· ${d<0?`vencida hace ${-d} d`:`en ${d} d`}</span>`:''}</b></div>
      </div>`);
 }
 function fichaRepuestos(a){
@@ -4727,10 +4755,22 @@ function tolPSV(setEsp,und){
    Es exactamente el paso 3 del procedimiento del formato. */
 function psvVeredicto(c){
   const set=num(c.setEsp), u=c.und||'psi';
-  const t=[c.t1,c.t2,c.t3].map(num).filter(x=>isFinite(x)&&x>0);
+  const crudos=[c.t1,c.t2,c.t3].map(num);
+  const t=crudos.filter(x=>isFinite(x)&&x>0);
   const tol=tolPSV(set,u);
-  if(!isFinite(set)||set<=0||!t.length||!tol)
-    return {estado:'incompleto', falta:!isFinite(set)||set<=0?'la presión de ajuste requerida':'al menos un disparo'};
+  /* Los TRES disparos, no uno. El formato AXAD-088 tiene TEST 1, 2 y
+     3 y el veredicto sale del promedio: con un solo dato no hay
+     promedio que valga, y dar "APROBADO" sobre una sola lectura es
+     certificar lo que no se midió.
+     Además, mientras falten disparos el ensayo sigue siendo un
+     BORRADOR — que es lo que permite al técnico anotar el primero,
+     cerrar, y retomarlo después sin perder nada. */
+  const faltan=3-t.length;
+  if(!isFinite(set)||set<=0||!tol)
+    return {estado:'incompleto', falta:'la presión de ajuste requerida'};
+  if(faltan>0)
+    return {estado:'incompleto',
+      falta:t.length?`${faltan} disparo${faltan>1?'s':''} de los tres del formato`:'los tres disparos'};
   const prom=t.reduce((a,b)=>a+b,0)/t.length;
   const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
   const dif=prom-set, desv=set?dif/set*100:0;
@@ -8450,22 +8490,25 @@ function openNewAsset(preCli){
   const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${(fijo||preCli)===c.id?'selected':''}>${esc(c.n)}</option>`).join('');
   const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}">${l}</option>`).join('');
   const gallery=Object.entries(MODELOS).map(([k,m])=>`
-    <div class="nm-card" data-m="${k}" onclick="selNaMod('${k}')">
+    <div class="nm-card" data-m="${k}" data-b="${esc((m.m+' '+k+' '+(m.t||'')+' '+(CL[m.c]||'')).toLowerCase())}" onclick="selNaMod('${k}')">
       <div class="nm-ph">${photoFor(k)}</div>
       <div class="nm-bd"><span class="nm-mk">${esc(m.m)}</span><span class="nm-cd">${esc(k)}</span><span class="nm-ty">${esc(m.t)}</span></div>
     </div>`).join('');
   $('#mTitle').textContent=fijo?`Nueva válvula · ${cli(fijo).n}`:'Nueva válvula';
   $('#mBody').innerHTML=`
    ${fijo
-     ? `<input type="hidden" id="naCli" value="${fijo}">
-        <div class="fld"><label>Área / unidad <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Zona de la planta de ${esc(cli(fijo).n)} donde queda instalada la válvula.">?</span></label><select class="inp" id="naAr"></select></div>`
-     : `<div class="two">
-          <div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>
-          <div class="fld"><label>Área / unidad</label><select class="inp" id="naAr"></select></div>
-        </div>`}
+     ? `<input type="hidden" id="naCli" value="${fijo}">`
+     : `<div class="fld"><label>Cliente</label><select class="inp" id="naCli">${cOpts}</select></div>`}
+   <select id="naAr" style="display:none"></select>
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;margin-top:8px;display:block">1 · Elige el modelo <span style="color:var(--ink-3);font-weight:400">— se autocompletan marca, tipo, clase y despiece</span>
      <button class="btn quiet xs" id="naClear" style="display:none;float:right" onclick="clearNaMod()">✕ Quitar selección</button></label>
-   <div class="nm-grid">${gallery}</div>
+   <div style="display:flex;gap:8px;align-items:center;margin-bottom:9px">
+     <input class="inp" id="naBusca" placeholder="Filtra por código, marca o tipo — p. ej. 1900, Masoneilan, pinch"
+       oninput="filtrarModelos(this.value)" autocomplete="off" style="flex:1">
+     <span class="count" id="naCuenta"></span>
+   </div>
+   <div class="nm-grid" id="naGrid">${gallery}</div>
+   <div id="naNada" class="empty" style="display:none;padding:22px"><b>Ningún modelo con ese texto</b>Prueba con el código o la marca.</div>
    <div id="naHint" class="callout" style="display:none;margin-bottom:14px"></div>
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— opcional: si no tienes la placa a mano, déjalo en blanco y lo completas después</span></label>
    <div class="two">
@@ -8490,6 +8533,20 @@ function openNewAsset(preCli){
   const fillAr=()=>{const c=cli($('#naCli').value);$('#naAr').innerHTML=Object.entries(c.areas).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')};
   $('#naCli').onchange=fillAr;fillAr();
   $('#modal').classList.add('on');
+}
+/* Filtra la galería sin volver a pintarla: repintar perdería la
+   selección y el desplazamiento, y con la cámara del celular
+   abierta eso se nota. */
+function filtrarModelos(q){
+  const t=String(q||'').toLowerCase().trim();
+  let n=0;
+  document.querySelectorAll('#naGrid .nm-card').forEach(c=>{
+    const ok=!t||(c.dataset.b||'').includes(t);
+    c.style.display=ok?'':'none'; if(ok)n++;
+  });
+  const nada=$('#naNada'); if(nada)nada.style.display=n?'none':'';
+  const g=$('#naGrid'); if(g)g.style.display=n?'':'none';
+  const ct=$('#naCuenta'); if(ct)ct.textContent=t?`${n} de ${Object.keys(MODELOS).length}`:'';
 }
 function clearNaMod(){
   naSel='';
