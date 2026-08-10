@@ -284,6 +284,26 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
 
 /* ---- grilla de datos ---- */
 .grid-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-2);overflow:hidden}
+/* Una tabla que no cabe se desplaza; recortada esconde columnas que
+   nadie puede alcanzar —y en el catálogo las recortadas eran el precio
+   y el stock, que es a lo que se entra—. */
+.grid-wrap.ancha{overflow-x:auto}
+.grid-wrap.ancha .grid{min-width:560px}
+/* En pantallas estrechas lo que se comprime es «dónde va», nunca el
+   precio ni el stock: son las dos columnas por las que se abre esta
+   tabla. El listado completo de modelos sigue en el title. */
+/* La grilla general no deja partir las celdas (white-space:nowrap), y
+   con descripciones largas eso empujaba precio y stock fuera de vista.
+   Aquí sí se parten: la pieza envuelve en dos líneas y «dónde va» se
+   corta con puntos suspensivos, con el listado entero en el title. */
+.grid-wrap.ancha td:nth-child(2){white-space:normal;max-width:300px}
+.grid-wrap.ancha td:nth-child(2) .cell-2{line-height:1.35;padding:7px 0}
+.grid-wrap.ancha td:nth-child(3){max-width:190px}
+.grid-wrap.ancha td:nth-child(3) .cell-2>span,
+.grid-wrap.ancha td:nth-child(3) .cell-2>small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1180px){.grid-wrap.ancha td:nth-child(2){max-width:230px}
+  .grid-wrap.ancha td:nth-child(3),.grid-wrap.ancha th:nth-child(3){max-width:130px}}
+@media(max-width:760px){.grid-wrap.ancha td:nth-child(3),.grid-wrap.ancha th:nth-child(3){display:none}}
 .grid-scroll{overflow:auto;max-height:calc(100vh - 300px)}
 /* Catálogo y Usuarios pintan su tabla directamente dentro del panel:
    sin esto la tabla empuja la página entera en pantallas angostas. */
@@ -1042,6 +1062,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .vt-m b{display:block;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vt-m p{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .vt-mas,.vt-vacio{font-size:11.5px;color:var(--ink-3);padding:6px 0;line-height:1.5;margin:0}
+/* Los avisos de arriba del catálogo (precios y stock) */
+.cat-avisos{padding:var(--sp-3) var(--sp-4) 0;display:flex;flex-direction:column;gap:8px}
+.cat-avisos:empty{display:none}
 
 @media(max-width:820px){
   .cover{grid-template-columns:1fr}
@@ -2560,6 +2583,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <p>Lo que hay en Lima ahora mismo. Sale de la hoja de cálculo que mantiene almacén: el portal la lee, no la modifica.</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn sec" onclick="stkPegar()"><svg viewBox="0 0 24 24"><rect x="8" y="4" width="12" height="16" rx="2"/><path d="M16 4V2H8v2M4 8v12h4"/></svg>Pegar o subir</button>
+            <button class="btn sec" onclick="preciosPegar()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Lista de precios</button>
             <button class="btn" onclick="stkActualizar()" id="stkBtn"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5"/></svg>Actualizar</button>
           </div></div>
         <div id="stkEstado"></div>
@@ -4503,6 +4527,7 @@ function pintarCot(){
   const equipos=ACTIVOS.filter(a=>a.cli===t.cli&&a.tag);
   const sub=cotSub(t), igv=sub*IGV, tot=sub+igv;
   $('#mBody').innerHTML=`
+    ${hayLista()?'':avisoPrecios()}
     <div class="snc-form">
       <div class="two">
         <div class="fld"><label for="cotCli">Cliente</label>
@@ -6175,8 +6200,9 @@ ${piezas.map(x=>{const st=piezaStock(x.n);return `<tr><td>${x.p}</td><td>${esc(x
   <td>${st.n>0?`${st.n} und`:'a pedido'}</td></tr>`}).join('')}</table>
 <div class="tot">Kit de overhaul — ${kit.length} piezas, <b>${usd(kitTot)}</b> sin IGV</div>`:''}
 
+${piezas.length&&!hayLista()?`<div class="av">Los precios de esta hoja son de demostración: todavía no se ha cargado la lista de precios de la empresa.</div>`:''}
 <div class="pie"><span>Ficha generada por Adolphus S.A.</span>
-  <span>Precios de lista sin IGV · sujetos a confirmación de stock</span>
+  <span>Precios sin IGV · sujetos a confirmación de stock</span>
   <span>${fPE(HOY.toISOString().slice(0,10))}</span></div>
 </body></html>`};
 }
@@ -6208,7 +6234,8 @@ function fichaParaCliente(actId){
       <svg viewBox="0 0 24 24">${d<0?'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>':'<path d="M20 6 9 17l-5-5"/>'}</svg>
       <div>${d<0?`La calibración venció hace <b>${-d} días</b> — es el argumento para ofrecerle el servicio.`
                 :`Calibración vigente, vence en <b>${d} días</b>.`}</div></div>`:''}
-    ${piezas.length?`<h4 class="snc-sec">Repuestos de esta válvula <span class="opc">precio de lista, sin IGV</span></h4>
+    ${piezas.length?`<h4 class="snc-sec">Repuestos de esta válvula <span class="opc">precios sin IGV</span></h4>
+    ${hayLista()?'':avisoPrecios()}
     <div class="grid-wrap"><table class="grid"><thead><tr>
       <th style="width:44px">Pos.</th><th>N.º de parte</th><th>Descripción</th>
       <th class="num" style="width:100px">Precio</th><th style="width:110px">Almacén</th>
@@ -7222,7 +7249,21 @@ function stkMapear(filas){
   const iQ=col('cantidad','cant','stock','saldo','existencia');
   const iU=col('unidad','um','medida');
   const iL=col('ubicación','ubicacion','almacén','almacen','local');
+  const iP=col('precio','p. unit','p.unit','costo','venta');
   if(iC<0&&iD<0)return [];
+  /* Si la misma hoja trae el precio, se aprovecha: una sola hoja da el
+     stock y la lista, y almacén no tiene que mantener dos. */
+  if(iC>=0&&iP>=0){
+    const m={};
+    filas.slice(1).forEach(f=>{
+      const cod=String(f[iC]??'').trim().toUpperCase(); if(!cod)return;
+      const n=numeroDeHoja(f[iP]); if(n!=null)m[cod]=n;
+    });
+    if(Object.keys(m).length){
+      PRECIOS_HOJA=m; PRE_LEIDO=new Date().toISOString(); PRE_MSG='';
+      preciosGuardar();
+    }
+  }
   return filas.slice(1).map(f=>({
     cod:String(f[iC]??'').trim(),
     desc:String(f[iD]??'').trim(),
@@ -7319,6 +7360,164 @@ function stkAplicar(){
   registrar('Stock',`${filas.length} artículos cargados`);
   toast(`${filas.length} artículos cargados`);
 }
+/* ============================================================
+   9c bis · LISTA DE PRECIOS
+   ------------------------------------------------------------
+   Los precios de la demo son inventados. Están puestos para que las
+   cotizaciones y las fichas se vean completas, no para vender nada.
+   En cuanto haya la lista de verdad se carga aquí —un Excel guardado
+   como CSV, un archivo pegado o una hoja publicada— y a partir de ese
+   momento manda ella: la ficha del cliente, el catálogo de ventas, el
+   despiece y la cotización leen todos el mismo precio()·
+   Mientras no se cargue, la aplicación lo DICE. Un precio inventado
+   que parece real es peor que no tener precio.
+   ============================================================ */
+let PRECIOS_HOJA={};            /* código -> precio, el de verdad */
+let PRE_LEIDO='', PRE_MSG='';
+const LS_PREURL='adolphus.precios.url';
+let PRE_URL=''; try{PRE_URL=localStorage.getItem(LS_PREURL)||''}catch(e){}
+try{PRE_LEIDO=localStorage.getItem('adolphus.precios.fecha')||''}catch(e){}
+try{const d=JSON.parse(localStorage.getItem('adolphus.precios')||'null');
+    if(d&&typeof d==='object')PRECIOS_HOJA=d}catch(e){}
+const hayLista=()=>Object.keys(PRECIOS_HOJA).length>0;
+/* De dónde sale el número que se está enseñando. */
+function precioFuente(cod){
+  const k=String(cod||'').trim().toUpperCase();
+  if(PRECIOS_HOJA[k]!=null)return 'lista';
+  return 'demo';
+}
+function preciosGuardar(){
+  try{localStorage.setItem('adolphus.precios',JSON.stringify(PRECIOS_HOJA));
+      localStorage.setItem('adolphus.precios.fecha',PRE_LEIDO)}catch(e){}
+  bdPon('estado',{v:1,PRECIOS_HOJA,fecha:PRE_LEIDO},'precios').catch(()=>{});
+}
+/* Se reconocen las columnas por el nombre, igual que en el stock: la
+   lista que manda almacén nunca tiene las columnas en el mismo orden
+   dos meses seguidos. */
+function preciosMapear(filas){
+  if(!filas.length)return null;
+  const cab=filas[0].map(x=>String(x||'').toLowerCase().trim());
+  const col=(...claves)=>{for(const k of claves){const i=cab.findIndex(h=>h.includes(k));if(i>=0)return i}return -1};
+  const iC=col('código','codigo','cod','parte','sku','item');
+  const iP=col('precio','pu','p. unit','p.unit','costo','venta','importe','valor');
+  if(iC<0||iP<0)return null;
+  const m={};
+  filas.slice(1).forEach(f=>{
+    const cod=String(f[iC]??'').trim().toUpperCase(); if(!cod)return;
+    /* Acepta "1.850,00", "$1,850.00" y "1850": se limpia el símbolo y
+       se decide el separador decimal por cuál va último. */
+    const n=numeroDeHoja(f[iP]);
+    if(n!=null)m[cod]=n;
+  });
+  return Object.keys(m).length?m:null;
+}
+function numeroDeHoja(v){
+  let t=String(v??'').replace(/[^\d.,-]/g,'').trim();
+  if(!t)return null;
+  const ic=t.lastIndexOf(','), ip=t.lastIndexOf('.');
+  if(ic>ip)      t=t.replace(/\./g,'').replace(',','.');   // 1.850,00
+  else if(ip>ic) t=t.replace(/,/g,'');                     // 1,850.00
+  else           t=t.replace(',','.');
+  const n=parseFloat(t);
+  return isFinite(n)&&n>=0?n:null;
+}
+function preciosPegar(){
+  $('#mTitle').textContent='Cargar la lista de precios';
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>Bastan <b>dos columnas</b> con su título en la primera fila:
+       <b class="mono">código</b> y <b class="mono">precio</b>. El orden da igual y las demás columnas se ignoran,
+       así que puedes subir la lista de almacén tal cual está.<br>
+       <span class="muted">Si tu hoja de stock ya trae una columna de precio, se toma de ahí y no hace falta cargar nada aquí.</span></div></div>
+   <div class="fld"><label for="preUrl">Dirección de la hoja publicada como CSV <span class="opc">opcional</span></label>
+     <input class="inp mono" id="preUrl" value="${esc(PRE_URL)}"
+       placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&single=true&output=csv"></div>
+   <div class="muted" style="font-size:11.5px;margin:-4px 0 14px">En Excel: <b>Guardar como → CSV UTF-8</b>.
+     En Google Sheets: <b>Archivo → Compartir → Publicar en la web</b>, la pestaña y el formato <b>CSV</b>.</div>
+   <h4 class="snc-sec">O súbela aquí</h4>
+   <label class="ev-add" for="preFile"><svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+     <span>Subir un archivo .csv</span></label>
+   <input type="file" id="preFile" accept=".csv,text/csv" style="display:none"
+     onchange="preciosArchivo(this.files[0]);this.value=''">
+   <div class="fld" style="margin-top:10px"><label for="preTxt">Pegar el contenido</label>
+     <textarea class="inp mono" id="preTxt" rows="7" style="font-size:11.5px"
+       placeholder="Código,Descripción,Precio&#10;AD-SV-KIT-SEL,Kit completo de juntas y sellos,165.00&#10;AD-SV-TOB-D,Tobera orificio D SS316,540.00"></textarea></div>
+   ${hayLista()?`<div class="callout" style="margin-top:12px"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+     <div>Ahora mismo hay <b>${Object.keys(PRECIOS_HOJA).length} precios</b> cargados${PRE_LEIDO?`, leídos el ${fPE(PRE_LEIDO.slice(0,10))}`:''}.
+       Cargar otra lista los reemplaza.
+       <button class="btn quiet xs" style="margin-left:6px" onclick="preciosOlvidar()">Volver a los de demostración</button></div></div>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="preciosAplicar()">Cargar</button>`;
+  $('#modal').classList.add('on');
+}
+function preciosArchivo(f){
+  if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{const t=$('#preTxt');if(t)t.value=e.target.result;toast('Archivo leído · pulsa Cargar')};
+  r.onerror=()=>toast('No se pudo leer el archivo');
+  r.readAsText(f,'utf-8');
+}
+function preciosAplicar(){
+  const u=($('#preUrl').value||'').trim();
+  if(u&&!/^https:\/\//i.test(u)){toast('La dirección tiene que empezar por https://');return}
+  PRE_URL=u; try{localStorage.setItem(LS_PREURL,u)}catch(e){}
+  const txt=($('#preTxt').value||'').trim();
+  if(!txt){
+    closeModal();
+    if(u){toast('Dirección guardada · leyendo la lista');preciosActualizar()}
+    else toast('Dirección guardada');
+    return;
+  }
+  const m=preciosMapear(leerCSV(txt));
+  if(!m){toast('No encontré las columnas código y precio · revisa la primera fila');return}
+  aplicarPrecios(m);
+  closeModal();
+}
+function aplicarPrecios(m){
+  PRECIOS_HOJA=m; PRE_LEIDO=new Date().toISOString(); PRE_MSG='';
+  preciosGuardar(); renderAll();
+  registrar('Precios',`${Object.keys(m).length} precios cargados`);
+  toast(`${Object.keys(m).length} precios cargados · ya salen en cotizaciones y fichas`);
+}
+function preciosOlvidar(){
+  PRECIOS_HOJA={}; PRE_LEIDO=''; preciosGuardar(); closeModal(); renderAll();
+  toast('Lista borrada · vuelven los precios de demostración');
+}
+async function preciosActualizar(){
+  if(!PRE_URL){preciosPegar();return}
+  PRE_MSG='carga'; renderCat();
+  try{
+    const ctrl=new AbortController(), corte=setTimeout(()=>ctrl.abort(),12000);
+    const r=await fetch(PRE_URL,{signal:ctrl.signal});
+    clearTimeout(corte);
+    if(!r.ok)throw new Error('la hoja contestó '+r.status);
+    const m=preciosMapear(leerCSV(await r.text()));
+    if(!m)throw new Error('no encontré las columnas código y precio');
+    aplicarPrecios(m);
+  }catch(e){
+    /* Si la hoja no contesta se conserva lo último leído y se avisa:
+       trabajar con la lista de ayer es razonable; hacerlo sin saberlo,
+       no. */
+    PRE_MSG='No se pudo leer la lista: '+(e.name==='AbortError'?'tardó demasiado':e.message)+
+      '. Se sigue usando lo último leído.';
+    renderCat(); toast('No se pudo leer la lista de precios');
+  }
+}
+/* Un aviso, siempre a la vista mientras los precios sean los de la
+   demo, en cualquier pantalla que enseñe dinero. */
+function avisoPrecios(){
+  if(PRE_MSG==='carga')return `<div class="callout"><span class="muted">Leyendo la lista de precios…</span></div>`;
+  if(PRE_MSG)return `<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+    <div>${esc(PRE_MSG)}</div></div>`;
+  if(hayLista())return `<div class="callout ok"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+    <div><b>${Object.keys(PRECIOS_HOJA).length} precios</b> de la lista cargada${PRE_LEIDO?` el ${fPE(PRE_LEIDO.slice(0,10))}`:''}.
+      ${S.rol==='cliente'?'':`<button class="btn quiet xs" onclick="preciosPegar()">Actualizar la lista</button>`}</div></div>`;
+  return `<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+    <div><b>Los precios que ves son de demostración.</b> Están puestos para que la cotización y la ficha se vean
+      completas — no son los de Adolphus.
+      ${S.rol==='cliente'?'':`<button class="btn quiet xs" onclick="preciosPegar()">Cargar la lista de precios</button>`}</div></div>`;
+}
+
 /* Cuánto hay de un código concreto: lo usan las cotizaciones y el
    despiece para decir si se puede prometer entrega. */
 function hayStock(cod){
@@ -7721,8 +7920,9 @@ function catDeCliente(cliId,caja,tit,sub,tools){
   }
   const sinHoja=!STOCK.length;
   caja.innerHTML=`
-    ${sinHoja?`<div class="callout" style="margin:var(--sp-3) var(--sp-4) 0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> para ver la cantidad real de hoy.</div></div>`:''}
+    <div class="cat-avisos">${avisoPrecios()}
+      ${sinHoja?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> para ver la cantidad real de hoy.</div></div>`:''}</div>
     ${tablaPiezas(piezas,'Va en')}
     <div class="cat-pie">Kit de overhaul de esta empresa — ${piezas.filter(p=>p.k).length} piezas, <b class="mono">${usd(valorKit)}</b> sin IGV.</div>`;
 }
@@ -7730,7 +7930,7 @@ function catDeCliente(cliId,caja,tit,sub,tools){
    el de ventas, y tienen que enseñar exactamente lo mismo —foto,
    número de parte, descripción, dónde va, precio y stock—. */
 function tablaPiezas(piezas,rotuloDonde){
-  return `<div class="grid-wrap"><table class="grid"><thead><tr>
+  return `<div class="grid-wrap ancha"><table class="grid"><thead><tr>
       <th style="width:66px"></th><th>Pieza</th><th style="width:190px">${esc(rotuloDonde)}</th>
       <th class="num" style="width:120px">Precio unitario</th><th style="width:150px">En almacén</th>
     </tr></thead><tbody>
@@ -7742,9 +7942,19 @@ function tablaPiezas(piezas,rotuloDonde){
       return `<tr style="cursor:default">
         <td>${foto}</td>
         <td><div class="cell-2"><b class="mono">${esc(p.n)}</b><small>${esc(p.d)}${p.k?' · <b>va en el kit de overhaul</b>':''}</small></div></td>
-        <td><div class="cell-2"><span>${p.mods.map(m=>`${esc((MODELOS[m]||{}).m||'')} ${esc(m)}`).join(', ')}</span>
-          <small>${p.eq?`${p.eq} válvula${p.eq===1?'':'s'}`:''}${p.tags.length?(p.eq?' · ':'')+esc(p.tags.slice(0,3).join(', '))+(p.tags.length>3?'…':''):''}${!p.eq&&!p.tags.length?esc(p.g||''):''}</small></div></td>
-        <td class="num mono"><b>${usd(precio(p.n))}</b></td>
+        <td>${(()=>{
+          /* Un repuesto de bonete lo llevan ocho modelos. Escritos
+             enteros, la columna empujaba el precio y el stock fuera de
+             la pantalla —justo los dos datos por los que se abre esta
+             página—. Se enseñan dos y el resto se cuenta; el nombre
+             completo queda en el title. */
+          const todos=p.mods.map(m=>`${(MODELOS[m]||{}).m||''} ${m}`.trim());
+          const corto=todos.slice(0,2).join(', ')+(todos.length>2?` +${todos.length-2}`:'');
+          return `<div class="cell-2" title="${esc(todos.join(', '))}"><span>${esc(corto)}</span>
+          <small>${p.eq?`${p.eq} válvula${p.eq===1?'':'s'}`:''}${p.tags.length?(p.eq?' · ':'')+esc(p.tags.slice(0,3).join(', '))+(p.tags.length>3?'…':''):''}${!p.eq&&!p.tags.length?esc(p.g||''):''}</small></div>`})()}</td>
+        <td class="num mono"><b>${usd(precio(p.n))}</b>${
+          hayLista()&&precioFuente(p.n)==='demo'
+            ? '<div class="muted" style="font-size:11px;margin-top:2px;font-family:inherit">no está en la lista</div>':''}</td>
         <td><span class="tag ${tono}"><span class="dot"></span>${st.n>0?`${st.n} ${st.n===1?'unidad':'unidades'}`:'sin stock'}</span>
           <div class="muted" style="font-size:11.5px;margin-top:3px">${st.real?'hoja de almacén':esc(p.l||'catálogo')}</div></td>
       </tr>`}).join('')}
@@ -7787,6 +7997,7 @@ function catDeVentas(caja,tit,sub,tools){
       <input class="inp" id="catQ" placeholder="Buscar por número de parte, descripción o modelo…" style="max-width:340px"
              value="${esc(CAT_Q)}" oninput="catFiltro(this.value)">
       <span class="spacer" style="flex:1"></span>
+      <button class="btn sec xs" onclick="preciosPegar()"><svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>${hayLista()?'Actualizar precios':'Cargar lista de precios'}</button>
       <span class="count">${piezas.length}${piezas.length!==total?` de ${total}`:''} producto${(piezas.length!==total?total:piezas.length)===1?'':'s'} · ${conStock} con stock</span>
     </div>
     <div class="ps-quick" style="margin:0 0 var(--sp-3)"><span class="lab">Familia</span>
@@ -7802,10 +8013,11 @@ function catDeVentas(caja,tit,sub,tools){
   }
   const sinHoja=!STOCK.length;
   caja.innerHTML=`
-    ${sinHoja?`<div class="callout" style="margin:var(--sp-3) var(--sp-4) 0"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-      <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> antes de prometerle una entrega a nadie.</div></div>`:''}
+    <div class="cat-avisos">${avisoPrecios()}
+      ${sinHoja?`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div>El stock que ves es el del catálogo. Carga la hoja de almacén en <b>Stock de almacén</b> antes de prometerle una entrega a nadie.</div></div>`:''}</div>
     ${tablaPiezas(piezas,'Modelos que la llevan')}
-    <div class="cat-pie">Precios de lista, sin IGV. La cotización los trae puestos y se pueden ajustar posición por posición.</div>`;
+    <div class="cat-pie">Precios sin IGV. La cotización los trae puestos y se pueden ajustar posición por posición.</div>`;
 }
 /* ============================================================
    9b · REPUESTOS — storefront de despieces
@@ -10454,7 +10666,15 @@ const PRECIOS={
  'AD-KG-ACT-NEU':980,'AD-KG-SEN-POS':220,'AD-KG-KIT-PER':95,
  'AD-AC-MOT-3F':720,'AD-AC-RED-25':1180,'AD-AC-LIM-TOR':430,'AD-AC-TAR-LOG':560,'AD-AC-VOL-MAN':130,'AD-AC-KIT-ORI':90
 };
-const precio=n=>PRECIOS[n]??120;
+/* El precio de una pieza. Manda la lista que cargó la empresa; si esa
+   pieza no está en la lista se cae al número de la demo, y precioFuente()
+   permite decir en pantalla cuál de los dos es —que es lo que evita que
+   alguien cotice sobre un número inventado sin saberlo. */
+const precio=n=>{
+  const k=String(n||'').trim().toUpperCase();
+  if(typeof PRECIOS_HOJA!=='undefined'&&PRECIOS_HOJA[k]!=null)return PRECIOS_HOJA[k];
+  return PRECIOS[n]??120;
+};
 const usd=x=>'$'+(x||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 let _PM=null;
 function partMeta(n){if(!_PM){_PM={};Object.values(BOM).flat().forEach(p=>{if(!_PM[p.n])_PM[p.n]=p})}return _PM[n]||{d:'Repuesto',s:0,l:''}}
@@ -10782,6 +11002,7 @@ const NUBE_COLS=[
 const NUBE_MAESTROS=[
  {k:'MODELOS',    obj:()=>MODELOS},   {k:'BOM',        obj:()=>BOM},
  {k:'PRECIOS',    obj:()=>PRECIOS},   {k:'PART_PHOTO', obj:()=>PART_PHOTO},
+ {k:'PRECIOS_HOJA',obj:()=>PRECIOS_HOJA},
  {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA}
 ];
 /* Lo único que un cliente puede escribir. Coincide con la política de
