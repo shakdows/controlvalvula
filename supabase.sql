@@ -100,6 +100,10 @@ grant execute on function public.es_admin()    to authenticated;
 
 
 -- ── 5. Alta de usuarios ─────────────────────────────────────
+--  La PRIMERA persona que entra con el código de Adolphus queda como
+--  administradora y activa. Antes todos quedaban como 'tec', y como
+--  sólo un 'admin' puede ascender a otro, nunca podía existir el
+--  primero: la puerta se cerraba desde adentro.
 --  Cuando alguien se registra, Supabase crea la fila en auth.users y
 --  este disparador le arma el perfil:
 --    · con código de invitación → queda ACTIVO;
@@ -109,10 +113,12 @@ grant execute on function public.es_admin()    to authenticated;
 create or replace function public.manejar_nuevo_usuario()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
-  e       public.empresas%rowtype;
-  cod     text := nullif(trim(new.raw_user_meta_data->>'codigo'), '');
-  ruc_in  text := nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'ruc',''), '\D', '', 'g'), '');
-  por_cod boolean := false;
+  e         public.empresas%rowtype;
+  cod       text := nullif(trim(new.raw_user_meta_data->>'codigo'), '');
+  ruc_in    text := nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'ruc',''), '\D', '', 'g'), '');
+  por_cod   boolean := false;
+  hay_admin boolean;
+  rol_nuevo public.rol_usuario;
 begin
   if cod is not null then
     select * into e from public.empresas where upper(codigo_invitacion) = upper(cod);
@@ -124,6 +130,14 @@ begin
      where regexp_replace(coalesce(ruc,''), '\D', '', 'g') = ruc_in;
   end if;
 
+  select exists(select 1 from public.perfiles where rol = 'admin') into hay_admin;
+
+  rol_nuevo := (case
+    when e.id is null                     then 'cliente'
+    when e.es_proveedor and not hay_admin then 'admin'
+    when e.es_proveedor                   then 'tec'
+    else 'cliente' end)::public.rol_usuario;
+
   insert into public.perfiles (id, correo, nombre, cargo, telefono, empresa_id, rol, estado)
   values (
     new.id,
@@ -132,11 +146,11 @@ begin
     nullif(trim(new.raw_user_meta_data->>'cargo'), ''),
     nullif(trim(new.raw_user_meta_data->>'telefono'), ''),
     e.id,
-    -- los dos CASE necesitan el cast: son tipos enumerados, no texto
-    (case when e.id is null      then 'cliente'
-          when e.es_proveedor    then 'tec'
-          else 'cliente' end)::public.rol_usuario,
-    (case when e.id is not null and por_cod then 'activo'
+    rol_nuevo,
+    -- el primer administrador no puede quedar esperando aprobación,
+    -- porque no hay todavía nadie que pueda aprobarlo
+    (case when rol_nuevo = 'admin'          then 'activo'
+          when e.id is not null and por_cod then 'activo'
           else 'pendiente' end)::public.estado_usuario
   );
   return new;
@@ -166,6 +180,7 @@ create table if not exists public.registros (
 );
 create index if not exists registros_empresa_ix     on public.registros(empresa_id);
 create index if not exists registros_actualizado_ix on public.registros(actualizado);
+create index if not exists registros_por_ix         on public.registros(por);
 
 --  Sella quién y cuándo, sin confiar en lo que mande el navegador.
 create or replace function public.sellar_registro()
@@ -189,21 +204,21 @@ alter table public.registros enable row level security;
 -- Empresas: Adolphus las ve todas; un cliente sólo la suya.
 drop policy if exists empresas_lectura on public.empresas;
 create policy empresas_lectura on public.empresas for select to authenticated
-using (public.es_adolphus() or id = public.mi_empresa());
+using ((select public.es_adolphus()) or id = (select public.mi_empresa()));
 
 drop policy if exists empresas_cambio on public.empresas;
 create policy empresas_cambio on public.empresas for update to authenticated
-using (public.es_admin()) with check (public.es_admin());
+using ((select public.es_admin())) with check ((select public.es_admin()));
 
 drop policy if exists empresas_alta on public.empresas;
 create policy empresas_alta on public.empresas for insert to authenticated
-with check (public.es_admin());
+with check ((select public.es_admin()));
 
 -- Perfiles: el propio, los de Adolphus, y los compañeros de empresa.
 drop policy if exists perfiles_lectura on public.perfiles;
 create policy perfiles_lectura on public.perfiles for select to authenticated
-using (id = auth.uid() or public.es_adolphus()
-       or (empresa_id is not null and empresa_id = public.mi_empresa()));
+using (id = (select auth.uid()) or (select public.es_adolphus())
+       or (empresa_id is not null and empresa_id = (select public.mi_empresa())));
 
 drop policy if exists perfiles_propio on public.perfiles;
 create policy perfiles_propio on public.perfiles for update to authenticated
@@ -211,7 +226,7 @@ using (id = auth.uid()) with check (id = auth.uid());
 
 drop policy if exists perfiles_admin on public.perfiles;
 create policy perfiles_admin on public.perfiles for update to authenticated
-using (public.es_admin()) with check (public.es_admin());
+using ((select public.es_admin())) with check ((select public.es_admin()));
 
 -- Registros: AQUÍ está el aislamiento entre clientes.
 -- Adolphus ve todo. Un cliente ve lo suyo y los maestros compartidos
@@ -219,9 +234,9 @@ using (public.es_admin()) with check (public.es_admin());
 drop policy if exists registros_ver on public.registros;
 create policy registros_ver on public.registros for select to authenticated
 using (
-  public.esta_activo() and (
-    public.es_adolphus()
-    or empresa_id = public.mi_empresa()
+  (select public.esta_activo()) and (
+    (select public.es_adolphus())
+    or empresa_id = (select public.mi_empresa())
     or empresa_id is null
   )
 );
@@ -231,9 +246,9 @@ using (
 drop policy if exists registros_alta on public.registros;
 create policy registros_alta on public.registros for insert to authenticated
 with check (
-  public.esta_activo() and (
-    public.es_adolphus()
-    or (empresa_id = public.mi_empresa()
+  (select public.esta_activo()) and (
+    (select public.es_adolphus())
+    or (empresa_id = (select public.mi_empresa())
         and coleccion in ('SOLICITUDES','COTIZACIONES','PLAN_OK'))
   )
 );
@@ -241,16 +256,16 @@ with check (
 drop policy if exists registros_cambio on public.registros;
 create policy registros_cambio on public.registros for update to authenticated
 using (
-  public.esta_activo() and (
-    public.es_adolphus()
-    or (empresa_id = public.mi_empresa()
+  (select public.esta_activo()) and (
+    (select public.es_adolphus())
+    or (empresa_id = (select public.mi_empresa())
         and coleccion in ('SOLICITUDES','COTIZACIONES','PLAN_OK'))
   )
 )
 with check (
-  public.esta_activo() and (
-    public.es_adolphus()
-    or (empresa_id = public.mi_empresa()
+  (select public.esta_activo()) and (
+    (select public.es_adolphus())
+    or (empresa_id = (select public.mi_empresa())
         and coleccion in ('SOLICITUDES','COTIZACIONES','PLAN_OK'))
   )
 );
@@ -259,7 +274,7 @@ with check (
 -- equipos se enteren de la baja al sincronizar.
 drop policy if exists registros_baja on public.registros;
 create policy registros_baja on public.registros for delete to authenticated
-using (public.es_admin());
+using ((select public.es_admin()));
 
 
 -- ── 8. Las empresas y sus códigos de invitación ─────────────
