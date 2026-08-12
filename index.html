@@ -3411,6 +3411,9 @@ function go(p){
      trabajo — salvo Reclamos, que también se ve de corrido. */
   if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
+  // cada visita a «Usuarios y accesos» vuelve a preguntar a la base:
+  // entre una visita y otra puede haberse registrado alguien
+  if(p==='users')USERS_TOCA_REFRESCAR=true;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
   $$('#nav > a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
   const base=S.cli?esc(cli(S.cli).n):'Adolphus';
@@ -9546,12 +9549,13 @@ const ALCANCE={admin:'Maestros, catálogo, despieces, usuarios y reportes',tec:'
 const EST_TAG={activo:'ok',invitado:'sel',pendiente:'due',suspendido:'late'};
 /* Al abrir el panel, traer la lista de verdad. Se pinta primero con
    lo que hay y se repinta al llegar la respuesta: así la pantalla no
-   se queda en blanco esperando a la red. */
-let USERS_PEDIDOS=false;
+   se queda en blanco esperando a la red. El aviso lo dispara go(),
+   una vez por visita — no en cada repintado, que son muchos. */
+let USERS_TOCA_REFRESCAR=true;
 function renderUsers(){
   if(typeof CUENTAS==='undefined'||!CUENTAS)return;   // aún no arrancó la capa de cuentas
-  if(!USERS_PEDIDOS&&enNube()){
-    USERS_PEDIDOS=true;
+  if(USERS_TOCA_REFRESCAR&&enNube()){
+    USERS_TOCA_REFRESCAR=false;
     refrescarUsuarios().then(ok=>{if(ok)renderUsers()});
   }
   const pend=CUENTAS.filter(c=>c.est==='pendiente');
@@ -9574,6 +9578,7 @@ function renderUsers(){
    <div class="panel-b" style="border-top:1px solid var(--line-2);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
      <div style="flex:1;min-width:220px"><b style="font-size:12.5px">Código de invitación · ${esc(ORG.cod)}</b>
        <p class="hint" style="margin-top:3px">Quien se registre con este código entra activado, sin esperar aprobación. Compártelo solo con tu equipo.</p></div>
+     <button class="btn sec xs" onclick="USERS_TOCA_REFRESCAR=true;renderUsers()" title="Volver a preguntar a la base quién hay">Actualizar lista</button>
      <button class="btn sec xs" onclick="copiarCodigo()">Copiar código</button>
      <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
    </div>`;
@@ -9619,9 +9624,17 @@ function vincularUsuario(c){
     <button class="btn" onclick="confirmarVinculo('${c.id}')">Vincular y activar</button>`;
   $('#modal').classList.add('on');
 }
-function confirmarVinculo(id){
+async function confirmarVinculo(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
-  c.cli=$('#vuCli').value;c.est='activo';guardarCuentas();closeModal();renderUsers();
+  const clave=$('#vuCli').value;
+  // de qué empresa es y que quede activo, en el mismo viaje: si sólo
+  // se guardara una de las dos cosas quedaría un cliente activo sin
+  // empresa, que es justo el que no puede ver nada y no sabe por qué
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,{empresa_id:NUBE_EMP[clave]||null,estado:'activo'})}
+    catch(e){return toast('No se pudo vincular: '+e.message)}
+  }
+  c.cli=clave;c.est='activo';guardarCuentas();closeModal();renderUsers();
   registrar('Cuenta',`${c.n} vinculado a ${cli(c.cli).n}`);toast(`${c.n} vinculado a ${cli(c.cli).n}`);
 }
 async function suspenderUsuario(id){
@@ -9691,6 +9704,10 @@ async function guardarPerfilDe(id){
 }
 function restablecerPw(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  // En una cuenta de nube la contraseña vive en Supabase, no aquí.
+  // Inventar una temporal en este navegador no cambiaría nada y le
+  // daríamos al administrador una clave que no abre la puerta.
+  if(enNube()&&c.nube)return recuperarPwNube(c);
   const tmp='Adolphus'+Math.abs(Math.round((c.id.length*7919+c.m.length*104729)%9000)+1000);
   c.pw=resumen(tmp);guardarCuentas();
   $('#mTitle').textContent='Contraseña temporal';
@@ -12556,6 +12573,37 @@ async function nubeCargarPerfil(){
   (es||[]).forEach(e=>{if(e.clave){NUBE_EMP[e.clave]=e.id;NUBE_EMP_INV[e.id]=e.clave}});
   return NUBE_YO;
 }
+/* Pide a Supabase que le mande el correo de recuperación. El enlace
+   lo genera y lo firma el servidor: nadie —ni el administrador— llega
+   a ver la contraseña de nadie, que es como tiene que ser. */
+async function recuperarPwNube(c){
+  $('#mTitle').textContent='Restablecer contraseña';
+  $('#mBody').innerHTML=`<p class="hint" style="line-height:1.6">Se le enviará a
+    <b>${esc(c.n)}</b> un correo a <b class="mono">${esc(c.m)}</b> con un enlace
+    para poner una contraseña nueva.</p>
+    <p class="hint" style="margin-top:12px">El enlace lo firma el servidor y caduca solo.
+    Ni tú ni nadie llega a ver la contraseña: por eso no aparece en esta pantalla.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" id="rcBtn" onclick="enviarRecuperacion('${c.id}')">Enviar el correo</button>`;
+  $('#modal').classList.add('on');
+}
+async function enviarRecuperacion(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const b=$('#rcBtn'); if(b){b.disabled=true;b.textContent='Enviando…'}
+  try{
+    await nubeFetch('/auth/v1/recover',{metodo:'POST',sinAuth:true,cuerpo:{email:c.m}});
+    closeModal();toast('Correo enviado a '+c.m);
+    registrar('Cuenta',`Restablecimiento enviado a ${c.n}`);
+  }catch(e){
+    if(b){b.disabled=false;b.textContent='Enviar el correo'}
+    // el proyecto limita cuántos correos salen por hora; conviene
+    // decirlo tal cual y no dejar al administrador probando a ciegas
+    toast(e.status===429
+      ? 'Supabase limita los correos por hora. Inténtalo más tarde.'
+      : 'No se pudo enviar: '+e.message);
+  }
+}
+
 /* ── El panel de usuarios contra la base ─────────────────────
    Hasta aquí «Usuarios y accesos» era una lista de mentira: activabas
    a alguien y no pasaba nada, porque el cambio se quedaba en este
