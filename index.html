@@ -321,6 +321,15 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
 /* Catálogo y Usuarios pintan su tabla directamente dentro del panel:
    sin esto la tabla empuja la página entera en pantallas angostas. */
 #catList,#userList{overflow-x:auto}
+/* el ojo va DENTRO del campo, sin empujar el diseño */
+.pw-wrap{position:relative;display:block}
+.pw-wrap .inp{width:100%;padding-right:46px}
+.pw-ojo{position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:36px;height:36px;display:flex;align-items:center;justify-content:center;
+  background:none;border:0;border-radius:var(--r-1);cursor:pointer;
+  color:var(--ink-3);padding:0}
+.pw-ojo:hover{color:var(--ink-1);background:var(--surface-2)}
+.pw-ojo:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--font-d)}
 table.grid th{
   position:sticky;top:0;background:var(--surface-2);z-index:2;text-align:left;font-size:11px;font-weight:600;
@@ -2448,7 +2457,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <label for="inMail">Correo corporativo</label>
         <input class="inp" id="inMail" type="email" autocomplete="username" placeholder="nombre@empresa.pe" required>
         <div class="auth-lbl"><label for="inPw">Contraseña</label><a onclick="recuperar()">¿La olvidaste?</a></div>
-        <input class="inp" id="inPw" type="password" autocomplete="current-password" placeholder="Escribe tu contraseña" required>
+        <div class="pw-wrap"><input class="inp" id="inPw" type="password" autocomplete="current-password" placeholder="Escribe tu contraseña" required>
+          <button type="button" class="pw-ojo" onclick="verPw('inPw',this)" aria-label="Ver la contraseña" title="Ver la contraseña"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div>
         <label class="auth-chk"><input type="checkbox" id="inRec" checked>Mantener la sesión iniciada en este equipo</label>
         <button class="cover-btn" type="submit">Entrar<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </form>
@@ -2481,7 +2491,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <label for="upMail">Correo corporativo</label>
         <input class="inp" id="upMail" type="email" autocomplete="email" placeholder="nombre@empresa.pe" required>
         <label for="upPw">Contraseña</label>
-        <input class="inp" id="upPw" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required oninput="pwMeter()">
+        <div class="pw-wrap"><input class="inp" id="upPw" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required oninput="pwMeter()">
+          <button type="button" class="pw-ojo" onclick="verPw('upPw',this)" aria-label="Ver la contraseña" title="Ver la contraseña"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg></button></div>
         <div class="pw-meter" id="pwMeter"><i></i><i></i><i></i><i></i></div>
         <p class="pw-note" id="pwNote">Usa 8 caracteres o más, con números y mayúsculas.</p>
         <label class="auth-chk"><input type="checkbox" id="upTerm" required>Acepto los <a onclick="event.preventDefault();verLegal('terminos')" style="color:var(--sel)">términos del servicio</a> y la <a onclick="event.preventDefault();verLegal('privacidad')" style="color:var(--sel)">política de privacidad</a></label>
@@ -13293,6 +13304,23 @@ const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
 const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
   return ('0000000'+(h>>>0).toString(16)).slice(-8)};
 const PERFILES={admin:'Administrador',tec:'Servicio técnico',com:'Comercial',cliente:'Cliente'};
+
+/* Ver la contraseña que se está escribiendo. En el celular, con el
+   teclado tapando media pantalla y los puntitos, no hay forma de saber
+   si el error fue tuyo o de la página — y se acaba probando la misma
+   contraseña correcta tres veces. */
+const OJO_TACHADO='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/><path d="M3 3l18 18"/></svg>';
+const OJO_ABIERTO='<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+function verPw(id,btn){
+  const i=document.getElementById(id); if(!i)return;
+  const ver = i.type==='password';
+  i.type = ver ? 'text' : 'password';
+  btn.innerHTML = ver ? OJO_TACHADO : OJO_ABIERTO;
+  btn.setAttribute('aria-label', ver ? 'Ocultar la contraseña' : 'Ver la contraseña');
+  btn.title = btn.getAttribute('aria-label');
+  // devolver el cursor al final, que si no salta al principio
+  try{const n=i.value.length;i.focus();i.setSelectionRange(n,n)}catch(e){}
+}
 /* Un código por área. Tienen que decir lo MISMO que la tabla
    'invitaciones' de la base: es ella la que manda al registrarse, esto
    es sólo lo que se enseña para poder repartirlos. */
@@ -13423,8 +13451,18 @@ async function login(ev){
     }catch(e){
       const red=!e.status;                       // sin status = no hubo respuesta
       if(!red){
-        authMsg(e.status===400
-          ? 'Correo o contraseña incorrectos.'
+        // Supabase devuelve 400 tanto si la contraseña está mal como si
+        // el correo no se ha confirmado. Decir «contraseña incorrecta»
+        // en el segundo caso manda a la persona a probar contraseñas
+        // que ya eran correctas — que es exactamente lo que no hay que
+        // hacerle a alguien que acaba de crear su cuenta.
+        const m=String(e.message||'').toLowerCase();
+        authMsg(
+          /not confirmed|confirm/.test(m)
+            ? 'Tu cuenta existe y la contraseña es correcta, pero <b>falta confirmar el correo</b>. '
+              +'Busca el mensaje de Supabase en tu bandeja (mira también en spam) y pulsa el enlace. '
+              +'Si no llega, un administrador puede confirmarla desde el panel de Supabase.'
+          : e.status===400 ? 'Correo o contraseña incorrectos.'
           : 'No se pudo entrar: '+esc(e.message));
         return false;
       }
