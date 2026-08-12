@@ -12583,6 +12583,17 @@ async function nubeEntrar(correo,clave){
 async function nubeRegistrar({correo,clave,nombre,cargo,telefono,codigo,ruc}){
   const d=await nubeFetch('/auth/v1/signup',{metodo:'POST',sinAuth:true,
     cuerpo:{email:correo,password:clave,data:{nombre,cargo,telefono,codigo,ruc}}});
+
+  /* Si el correo YA tenía cuenta, Supabase no lo dice: responde como si
+     todo hubiera ido bien, para que nadie pueda ir probando correos
+     hasta descubrir cuáles existen. La única señal es que devuelve el
+     usuario con la lista de 'identities' VACÍA. Sin mirar eso, la
+     pantalla decía «cuenta creada» y la persona se quedaba esperando un
+     correo que no iba a llegar — y volvía a registrarse otra vez. */
+  if(d&&d.user&&Array.isArray(d.user.identities)&&d.user.identities.length===0){
+    const e=new Error('YA_EXISTE'); e.yaExiste=true; throw e;
+  }
+
   if(d&&d.access_token){guardarSesionNube(d);return await nubeCargarPerfil()}
   return null;              // el proyecto pide confirmar el correo
 }
@@ -13516,10 +13527,18 @@ async function signup(ev){
       try{await nubeVuelta(true);latirNube();arrancarJob()}catch(e){}
       return false;
     }catch(e){
+      if(e.yaExiste||(e.status&&/registered|already/i.test(e.message))){
+        // no dejarlo en un aviso y ya: llevarlo a la pantalla de acceso
+        // con su correo puesto, que es lo que tiene que hacer ahora
+        authTab('in');$('#inMail').value=m;
+        const p=$('#inPw'); if(p){p.value='';setTimeout(()=>p.focus(),60)}
+        authMsg('<b>Ese correo ya tiene cuenta.</b> No hace falta crear otra: '
+               +'escribe tu contraseña aquí abajo para entrar. '
+               +'Si no la recuerdas, pulsa «¿Olvidaste tu contraseña?».','info');
+        return false;
+      }
       if(e.status){
-        authMsg(/registered|already/i.test(e.message)
-          ? 'Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.'
-          : 'No se pudo crear la cuenta: '+esc(e.message));
+        authMsg('No se pudo crear la cuenta: '+esc(e.message));
         return false;
       }
       // sin red: se crea en el equipo y se registra en la nube al volver
