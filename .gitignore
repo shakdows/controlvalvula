@@ -7,4 +7,7 @@ __pycache__/
 # herramientas de desarrollo: no son parte de la web
 .agents/
 .claude/
+# …salvo los permisos, que sí conviene que viajen con el repositorio:
+# sin esto se quedan en el contenedor y hay que volver a darlos cada vez.
+!.claude/settings.json
 skills-lock.json

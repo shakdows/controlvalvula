@@ -1064,6 +1064,14 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cat-pie{padding:11px var(--sp-4);border-top:1px solid var(--line-2);background:var(--surface-2);
   font-size:12.5px;color:var(--ink-2)}
 /* Una válvula, su despiece dentro */
+/* El aviso de que todavía no hay nube, con los pasos para activarla */
+.nube-no{border:1px solid var(--due);border-radius:var(--r-2);background:var(--due-bg);padding:13px 15px;margin-bottom:14px}
+.nube-no-t b{display:block;font-size:13.5px;margin-bottom:3px}
+.nube-no-t span{font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.nube-pasos{margin:11px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:7px}
+.nube-pasos li{font-size:12.5px;line-height:1.55;color:var(--ink-2)}
+.nube-pasos li i{font-style:normal;color:var(--ink-3)}
+.nube-no-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
 .lbl-sel{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
 .cat-val{border-bottom:1px solid var(--line-2)}
 .cat-val:last-of-type{border-bottom:0}
@@ -2456,9 +2464,10 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <div><label for="upCargo">Cargo</label><input class="inp" id="upCargo" placeholder="Ing. de confiabilidad"></div>
         </div>
         <div id="upStaff">
-          <label for="upCod">Código de invitación de la empresa</label>
-          <input class="inp" id="upCod" placeholder="ADOLPHUS-2026">
-          <p class="pw-note" style="margin-top:-8px">Lo entrega el administrador desde <b>Usuarios y accesos</b>. Sin él, la cuenta queda pendiente de aprobación.</p>
+          <label for="upCod">Código de invitación de tu área</label>
+          <input class="inp" id="upCod" placeholder="ADOLPHUS-TALLER-2026">
+          <p class="pw-note" style="margin-top:-8px">Cada área tiene el suyo y decide con qué entras: gerencia, taller o comercial.
+            Pídeselo a tu jefatura. Sin código la cuenta queda <b>pendiente de aprobación</b>.</p>
         </div>
         <div id="upCli" style="display:none">
           <label for="upRuc">RUC de tu empresa</label>
@@ -3403,6 +3412,9 @@ function go(p){
      trabajo — salvo Reclamos, que también se ve de corrido. */
   if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
   S.page=p;
+  // cada visita a «Usuarios y accesos» vuelve a preguntar a la base:
+  // entre una visita y otra puede haberse registrado alguien
+  if(p==='users')USERS_TOCA_REFRESCAR=true;
   $$('.page').forEach(x=>x.classList.toggle('on',x.id==='p-'+p));
   $$('#nav > a').forEach(a=>a.classList.toggle('on',a.dataset.p===p||(S.inCli&&CLI_TABS.some(([x])=>x===p)&&a.dataset.p==='clients')));
   const base=S.cli?esc(cli(S.cli).n):'Adolphus';
@@ -9536,8 +9548,17 @@ function saveNewPart(){
 const ALCANCE={admin:'Maestros, catálogo, despieces, usuarios y reportes',tec:'Órdenes de trabajo, informes y certificados',
   com:'Solicitudes, cotizaciones y stock local',cliente:'Lectura de sus activos y solicitud de repuestos'};
 const EST_TAG={activo:'ok',invitado:'sel',pendiente:'due',suspendido:'late'};
+/* Al abrir el panel, traer la lista de verdad. Se pinta primero con
+   lo que hay y se repinta al llegar la respuesta: así la pantalla no
+   se queda en blanco esperando a la red. El aviso lo dispara go(),
+   una vez por visita — no en cada repintado, que son muchos. */
+let USERS_TOCA_REFRESCAR=true;
 function renderUsers(){
   if(typeof CUENTAS==='undefined'||!CUENTAS)return;   // aún no arrancó la capa de cuentas
+  if(USERS_TOCA_REFRESCAR&&enNube()){
+    USERS_TOCA_REFRESCAR=false;
+    refrescarUsuarios().then(ok=>{if(ok)renderUsers()});
+  }
   const pend=CUENTAS.filter(c=>c.est==='pendiente');
   const aviso=pend.length?`<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
     <div class="panel-b" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -9555,11 +9576,21 @@ function renderUsers(){
     <td style="white-space:nowrap">${accionesUsuario(c)}</td></tr>`).join('');
   $('#userList').innerHTML=aviso+`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Perfil</th><th>Organización</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead>
    <tbody>${filas}</tbody></table>
-   <div class="panel-b" style="border-top:1px solid var(--line-2);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-     <div style="flex:1;min-width:220px"><b style="font-size:12.5px">Código de invitación · ${esc(ORG.cod)}</b>
-       <p class="hint" style="margin-top:3px">Quien se registre con este código entra activado, sin esperar aprobación. Compártelo solo con tu equipo.</p></div>
-     <button class="btn sec xs" onclick="copiarCodigo()">Copiar código</button>
-     <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
+   <div class="panel-b" style="border-top:1px solid var(--line-2)">
+     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+       <b style="font-size:12.5px;flex:1;min-width:200px">Códigos de invitación</b>
+       <button class="btn sec xs" onclick="USERS_TOCA_REFRESCAR=true;renderUsers()" title="Volver a preguntar a la base quién hay">Actualizar lista</button>
+       <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
+     </div>
+     <p class="hint" style="margin-bottom:12px">Cada área tiene el suyo, y el código decide con qué perfil entra la persona
+       —sin esperar aprobación—. Después puedes cambiárselo desde el botón <b>Perfil</b> de su fila.
+       Entrégalos solo a quien corresponda: quien tiene el de gerencia, manda.</p>
+     ${CODIGOS_AREA.map(c=>`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--line-2)">
+       <span class="tag ${c.r==='admin'?'due':''}" style="min-width:104px;justify-content:center">${esc(PERFILES[c.r])}</span>
+       <b class="mono" style="font-size:12.5px;flex:1;min-width:170px">${esc(c.cod)}</b>
+       <span class="hint" style="flex:2;min-width:200px">${esc(c.q)}</span>
+       <button class="btn sec xs" onclick="copiarTexto('${jsq(c.cod)}')">Copiar</button>
+     </div>`).join('')}
    </div>`;
 }
 function accionesUsuario(c){
@@ -9569,14 +9600,29 @@ function accionesUsuario(c){
   if(c.est==='pendiente'||c.est==='suspendido')b.push(`<button class="btn quiet xs" onclick="activarUsuario('${c.id}')">Activar</button>`);
   if(c.est==='activo'&&!yo)b.push(`<button class="btn quiet xs" onclick="suspenderUsuario('${c.id}')">Suspender</button>`);
   if(c.est==='invitado')b.push(`<button class="btn quiet xs" onclick="toast('Invitación reenviada a '+'${esc(c.m)}')">Reenviar</button>`);
+  // repartir perfiles es cosa del administrador y de nadie más
+  if(S.rol==='admin')b.push(`<button class="btn quiet xs" onclick="cambiarPerfil('${c.id}')" title="Cambiar qué puede hacer esta persona">Perfil</button>`);
   b.push(`<button class="btn quiet xs" onclick="restablecerPw('${c.id}')" title="Genera una contraseña temporal">Restablecer</button>`);
   return `<span style="display:flex;gap:4px;justify-content:flex-end">${b.join('')}</span>`;
 }
-function activarUsuario(id){
+async function activarUsuario(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
   if(c.perfil==='cliente'&&!c.cli)return vincularUsuario(c);
-  c.est='activo';guardarCuentas();renderUsers();
+  if(!await aplicarPersona(c,{estado:'activo'},'est','activo'))return;
   registrar('Cuenta',`${c.n} activado`);toast(`${c.n} ya puede ingresar`);
+}
+
+/* Un solo sitio donde se guarda un cambio sobre una persona: primero
+   en la base —que es la que manda— y sólo si allí funcionó, aquí. Al
+   revés se vería un cambio que no existe. */
+async function aplicarPersona(c,campos,prop,valor){
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,campos)}
+    catch(e){toast('No se pudo guardar: '+e.message);return false}
+  }
+  if(prop)c[prop]=valor;
+  guardarCuentas();renderUsers();
+  return true;
 }
 function vincularUsuario(c){
   $('#mTitle').textContent='Vincular a una organización';
@@ -9588,18 +9634,90 @@ function vincularUsuario(c){
     <button class="btn" onclick="confirmarVinculo('${c.id}')">Vincular y activar</button>`;
   $('#modal').classList.add('on');
 }
-function confirmarVinculo(id){
+async function confirmarVinculo(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
-  c.cli=$('#vuCli').value;c.est='activo';guardarCuentas();closeModal();renderUsers();
+  const clave=$('#vuCli').value;
+  // de qué empresa es y que quede activo, en el mismo viaje: si sólo
+  // se guardara una de las dos cosas quedaría un cliente activo sin
+  // empresa, que es justo el que no puede ver nada y no sabe por qué
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,{empresa_id:NUBE_EMP[clave]||null,estado:'activo'})}
+    catch(e){return toast('No se pudo vincular: '+e.message)}
+  }
+  c.cli=clave;c.est='activo';guardarCuentas();closeModal();renderUsers();
   registrar('Cuenta',`${c.n} vinculado a ${cli(c.cli).n}`);toast(`${c.n} vinculado a ${cli(c.cli).n}`);
 }
-function suspenderUsuario(id){
+async function suspenderUsuario(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
-  c.est='suspendido';guardarCuentas();renderUsers();
+  if(!await aplicarPersona(c,{estado:'suspendido'},'est','suspendido'))return;
   registrar('Cuenta',`${c.n} suspendido`);toast(`${c.n} ya no puede ingresar`);
+}
+
+/* ── Cambiar el perfil de alguien ────────────────────────────
+   Sólo un administrador ve este botón, y la base vuelve a comprobarlo
+   por su cuenta: que el botón no esté no es una medida de seguridad,
+   es una cortesía. Lo que de verdad protege es la política de RLS. */
+function cambiarPerfil(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const yo=SES&&SES.id===c.id;
+  $('#mTitle').textContent='Perfil de '+c.n;
+  $('#mBody').innerHTML=`
+    <p class="hint" style="margin-bottom:14px">Qué puede hacer <b>${esc(c.n)}</b> dentro del portal.
+      El cambio entra la próxima vez que esa persona abra la página.</p>
+    <div class="fld"><label>Perfil</label>
+      <select class="inp" id="cpRol" onchange="pintarAyudaPerfil()">
+        ${Object.entries(PERFILES).map(([k,v])=>
+          `<option value="${k}"${c.perfil===k?' selected':''}>${esc(v)}</option>`).join('')}
+      </select></div>
+    <div class="fld" id="cpCliBox" style="display:${c.perfil==='cliente'?'block':'none'}">
+      <label>Organización cliente</label>
+      <select class="inp" id="cpCli">
+        ${CLIENTES.map(x=>`<option value="${x.id}"${c.cli===x.id?' selected':''}>${esc(x.n)}</option>`).join('')}
+      </select></div>
+    <p class="hint" id="cpAyuda" style="padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-2)"></p>
+    ${yo?`<p class="hint" style="margin-top:12px;color:var(--due)"><b>Ojo:</b> este eres tú.
+      Si te quitas el perfil de administrador ya no podrás volver a entrar aquí,
+      y hará falta otro administrador para devolvértelo.</p>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarPerfilDe('${c.id}')">Guardar perfil</button>`;
+  $('#modal').classList.add('on');
+  pintarAyudaPerfil();
+}
+const AYUDA_PERFIL={
+  admin:'Ve y cambia todo, y es el único que reparte estos perfiles. Reserva este para dirección.',
+  tec:'Órdenes de trabajo, calibraciones, informes y repuestos. No toca usuarios ni precios de lista.',
+  com:'Solicitudes, cotizaciones y stock. No firma trabajos técnicos.',
+  cliente:'Sólo lee los equipos de SU empresa y pide repuestos. No ve nada de los demás clientes.'
+};
+function pintarAyudaPerfil(){
+  const r=$('#cpRol').value;
+  $('#cpAyuda').innerHTML=esc(AYUDA_PERFIL[r]||'');
+  $('#cpCliBox').style.display=r==='cliente'?'block':'none';
+}
+async function guardarPerfilDe(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const rol=$('#cpRol').value, esCli=rol==='cliente';
+  const clave=esCli?$('#cpCli').value:null;
+  const campos={rol};
+  // un cliente cuelga de su empresa; el personal de Adolphus, de Adolphus
+  if(enNube())campos.empresa_id=esCli?(NUBE_EMP[clave]||null):(NUBE_EMP.adolphus||null);
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,campos)}
+    catch(e){toast('No se pudo guardar: '+e.message);return}
+  }
+  c.perfil=rol;c.cli=esCli?clave:null;
+  guardarCuentas();closeModal();renderUsers();
+  registrar('Cuenta',`${c.n} ahora es ${PERFILES[rol]}`);
+  toast(`${c.n} ahora es ${PERFILES[rol]}`);
+  // si me cambié a mí mismo, la pantalla tiene que reflejarlo ya
+  if(SES&&SES.id===c.id){SES.perfil=rol;SES.cli=c.cli;applyRole(rolDe(SES))}
 }
 function restablecerPw(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  // En una cuenta de nube la contraseña vive en Supabase, no aquí.
+  // Inventar una temporal en este navegador no cambiaría nada y le
+  // daríamos al administrador una clave que no abre la puerta.
+  if(enNube()&&c.nube)return recuperarPwNube(c);
   const tmp='Adolphus'+Math.abs(Math.round((c.id.length*7919+c.m.length*104729)%9000)+1000);
   c.pw=resumen(tmp);guardarCuentas();
   $('#mTitle').textContent='Contraseña temporal';
@@ -12344,8 +12462,8 @@ const LS_NUBE_CFG='adolphus.nube.cfg';
    desde la propia página (chip de red → «Conectar a otra base») sin
    tocar el archivo: queda guardado en este equipo. */
 const NUBE_POR_DEFECTO={
-  url:'https://lksmfgtaftmpftbkypow.supabase.co',
-  key:'sb_publishable_foupdi94glmIl6tsHAaW3w_nj0MurwH'
+  url:'https://eemhgbmjenzvngokwpof.supabase.co',
+  key:'sb_publishable_uwghjWOYxrLQaaxPaYx5Iw_kUdoblyr'
 };
 const NUBE={...NUBE_POR_DEFECTO};
 (function cargarCfgNube(){
@@ -12465,6 +12583,80 @@ async function nubeCargarPerfil(){
   (es||[]).forEach(e=>{if(e.clave){NUBE_EMP[e.clave]=e.id;NUBE_EMP_INV[e.id]=e.clave}});
   return NUBE_YO;
 }
+/* Pide a Supabase que le mande el correo de recuperación. El enlace
+   lo genera y lo firma el servidor: nadie —ni el administrador— llega
+   a ver la contraseña de nadie, que es como tiene que ser. */
+async function recuperarPwNube(c){
+  $('#mTitle').textContent='Restablecer contraseña';
+  $('#mBody').innerHTML=`<p class="hint" style="line-height:1.6">Se le enviará a
+    <b>${esc(c.n)}</b> un correo a <b class="mono">${esc(c.m)}</b> con un enlace
+    para poner una contraseña nueva.</p>
+    <p class="hint" style="margin-top:12px">El enlace lo firma el servidor y caduca solo.
+    Ni tú ni nadie llega a ver la contraseña: por eso no aparece en esta pantalla.</p>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" id="rcBtn" onclick="enviarRecuperacion('${c.id}')">Enviar el correo</button>`;
+  $('#modal').classList.add('on');
+}
+async function enviarRecuperacion(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const b=$('#rcBtn'); if(b){b.disabled=true;b.textContent='Enviando…'}
+  try{
+    await nubeFetch('/auth/v1/recover',{metodo:'POST',sinAuth:true,cuerpo:{email:c.m}});
+    closeModal();toast('Correo enviado a '+c.m);
+    registrar('Cuenta',`Restablecimiento enviado a ${c.n}`);
+  }catch(e){
+    if(b){b.disabled=false;b.textContent='Enviar el correo'}
+    // el proyecto limita cuántos correos salen por hora; conviene
+    // decirlo tal cual y no dejar al administrador probando a ciegas
+    toast(e.status===429
+      ? 'Supabase limita los correos por hora. Inténtalo más tarde.'
+      : 'No se pudo enviar: '+e.message);
+  }
+}
+
+/* ── El panel de usuarios contra la base ─────────────────────
+   Hasta aquí «Usuarios y accesos» era una lista de mentira: activabas
+   a alguien y no pasaba nada, porque el cambio se quedaba en este
+   navegador. La persona seguía sin poder entrar y nadie entendía por
+   qué. Estas tres funciones son las que hacen que el botón sirva. */
+
+/* Trae a TODAS las personas. Quien no sea de Adolphus recibe sólo a
+   sus compañeros de empresa: eso no lo decide esta función, lo decide
+   la política de la base, que es donde tiene que decidirse. */
+async function nubeUsuarios(){
+  const p=await nubeFetch('/rest/v1/perfiles?select=*&order=alta.asc');
+  return (p||[]).map(x=>{
+    const clave=x.empresa_id?NUBE_EMP_INV[x.empresa_id]:null;
+    return {id:x.id,n:x.nombre||x.correo,m:x.correo,pw:'',
+            perfil:x.rol,cli:x.rol==='cliente'?clave:null,
+            cargo:x.cargo||'',tel:x.telefono||'',est:x.estado,
+            alta:(x.alta||'').slice(0,10),
+            ult:(x.ultimo_acceso||'').slice(0,10)||'—',nube:true};
+  });
+}
+
+/* Cambia el perfil o el estado de alguien. Si la base dice que no
+   —porque quien lo intenta no es administrador— el error sube tal
+   cual: es preferible un aviso claro a un cambio que parece hecho y
+   en realidad no ocurrió. */
+async function nubeGuardarPersona(id,campos){
+  const r=await nubeFetch('/rest/v1/perfiles?id=eq.'+encodeURIComponent(id),
+    {metodo:'PATCH',cuerpo:campos,cab:{Prefer:'return=representation'}});
+  if(!r||!r.length)throw new Error('La base no dejó guardar el cambio. ¿Sigues siendo administrador?');
+  return r[0];
+}
+
+/* Refresca la lista desde la base y vuelve a pintar. Si no hay nube,
+   se queda con lo que haya en este equipo y no molesta. */
+async function refrescarUsuarios(){
+  if(!enNube())return false;
+  try{
+    const l=await nubeUsuarios();
+    if(l.length){CUENTAS=l;guardarCuentas()}
+    return true;
+  }catch(e){toast('No se pudo traer la lista de personas: '+e.message);return false}
+}
+
 /* La sesión de la nube se traduce a la cuenta que el portal ya sabe
    manejar, para no tener dos maneras de estar dentro. */
 function cuentaDeNube(){
@@ -12958,6 +13150,26 @@ function openSync(){
   const n=SYNCQ.length;
   $('#mTitle').textContent='Conexión y sincronización';
   $('#mBody').innerHTML=`
+   ${enNube()?'':`<div class="nube-no">
+     <div class="nube-no-t">
+       <b>Ahora mismo los datos viven sólo en este equipo</b>
+       <span>Entraste con el recorrido de demostración, que no sube nada. Lo que registres aquí
+         no se ve desde una tablet, un celular ni otra computadora — y si se borra el navegador,
+         se va con él.</span>
+     </div>
+     <ol class="nube-pasos">
+       <li><b>La base ya está lista</b> — <i>adolphus-valvulas</i>, con sus tablas, sus políticas de
+         seguridad por fila y las cuatro empresas cargadas. No hay nada que correr.</li>
+       <li><b>Crea la cuenta.</b> Cierra sesión, pestaña <i>Crear cuenta</i>, con el código de
+         invitación <b class="mono">ADOLPHUS-2026</b>.</li>
+       <li><b>Entra con esa cuenta</b> en vez de «Entrar con datos de ejemplo». Desde ese momento
+         todo sube solo, y con el mismo correo y clave lo ves desde cualquier dispositivo.</li>
+     </ol>
+     <div class="nube-no-b">
+       <button class="btn sec" onclick="probarNube()">Probar la conexión a la base</button>
+       <button class="btn" onclick="closeModal();logout()">Ir a entrar con mi cuenta</button>
+     </div>
+   </div>`}
    <div class="callout ${online()?'':'warn'}">
      <svg viewBox="0 0 24 24">${online()
        ?'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5.5 5.5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1.2"/>'
@@ -13081,6 +13293,20 @@ const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
 const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
   return ('0000000'+(h>>>0).toString(16)).slice(-8)};
 const PERFILES={admin:'Administrador',tec:'Servicio técnico',com:'Comercial',cliente:'Cliente'};
+/* Un código por área. Tienen que decir lo MISMO que la tabla
+   'invitaciones' de la base: es ella la que manda al registrarse, esto
+   es sólo lo que se enseña para poder repartirlos. */
+const CODIGOS_AREA=[
+ {r:'admin',cod:'ADOLPHUS-GERENCIA-2026',q:'Gerencia y jefaturas. Ve y cambia todo, y es quien reparte los perfiles.'},
+ {r:'tec',  cod:'ADOLPHUS-TALLER-2026',  q:'Servicio técnico: órdenes, calibraciones, informes y repuestos.'},
+ {r:'com',  cod:'ADOLPHUS-VENTAS-2026',  q:'Comercial y otras áreas: solicitudes, cotizaciones y stock.'}
+];
+function copiarTexto(t){
+  const ok=()=>toast('Copiado: '+t);
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok).catch(()=>ok());
+  else{const i=document.createElement('textarea');i.value=t;document.body.appendChild(i);i.select();
+       try{document.execCommand('copy')}catch(e){} i.remove(); ok()}
+}
 
 let CUENTAS=[
  {id:'u1',n:'Ana Quispe',   m:'ingenieria@adolphus.pe',   pw:resumen('adolphus2026'),perfil:'admin',  cli:null,   cargo:'Jefa de Ingeniería',       tel:'+51 987 000 111',est:'activo',alta:'2026-01-15',ult:'2026-07-23'},

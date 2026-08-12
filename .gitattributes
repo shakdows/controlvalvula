@@ -1,14 +1,12 @@
-# El editor web de GitHub guarda con finales de línea de Windows (CRLF).
-# Sin esto, cada vez que se pega el archivo desde el navegador el diff
-# sale como "9521 líneas cambiadas" aunque no se haya tocado una letra,
-# y cualquier merge choca contra sí mismo.
-# Con esto, git normaliza a LF al guardar y los diffs vuelven a mostrar
-# sólo lo que de verdad cambió.
+# Guardar SIEMPRE con finales de línea Unix.
+#
+# Al pegar el archivo en el editor web de GitHub, el navegador lo manda
+# con CRLF. Entonces un cambio de dos líneas aparece como 23.000 líneas
+# modificadas, no se puede leer el diff y cualquier fusión da conflicto
+# en todo el archivo aunque nadie haya tocado lo mismo.
 * text=auto eol=lf
 
-# Binarios: que git no los toque nunca.
+# binarios: que git no los toque
 *.png  binary
 *.jpg  binary
-*.jpeg binary
-*.mp4  binary
-*.ico  binary
+*.xlsx binary
