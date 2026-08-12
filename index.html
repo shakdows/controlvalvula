@@ -2464,9 +2464,10 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <div><label for="upCargo">Cargo</label><input class="inp" id="upCargo" placeholder="Ing. de confiabilidad"></div>
         </div>
         <div id="upStaff">
-          <label for="upCod">Código de invitación de la empresa</label>
-          <input class="inp" id="upCod" placeholder="ADOLPHUS-2026">
-          <p class="pw-note" style="margin-top:-8px">Lo entrega el administrador desde <b>Usuarios y accesos</b>. Sin él, la cuenta queda pendiente de aprobación.</p>
+          <label for="upCod">Código de invitación de tu área</label>
+          <input class="inp" id="upCod" placeholder="ADOLPHUS-TALLER-2026">
+          <p class="pw-note" style="margin-top:-8px">Cada área tiene el suyo y decide con qué entras: gerencia, taller o comercial.
+            Pídeselo a tu jefatura. Sin código la cuenta queda <b>pendiente de aprobación</b>.</p>
         </div>
         <div id="upCli" style="display:none">
           <label for="upRuc">RUC de tu empresa</label>
@@ -9575,12 +9576,21 @@ function renderUsers(){
     <td style="white-space:nowrap">${accionesUsuario(c)}</td></tr>`).join('');
   $('#userList').innerHTML=aviso+`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Perfil</th><th>Organización</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead>
    <tbody>${filas}</tbody></table>
-   <div class="panel-b" style="border-top:1px solid var(--line-2);display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-     <div style="flex:1;min-width:220px"><b style="font-size:12.5px">Código de invitación · ${esc(ORG.cod)}</b>
-       <p class="hint" style="margin-top:3px">Quien se registre con este código entra activado, sin esperar aprobación. Compártelo solo con tu equipo.</p></div>
-     <button class="btn sec xs" onclick="USERS_TOCA_REFRESCAR=true;renderUsers()" title="Volver a preguntar a la base quién hay">Actualizar lista</button>
-     <button class="btn sec xs" onclick="copiarCodigo()">Copiar código</button>
-     <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
+   <div class="panel-b" style="border-top:1px solid var(--line-2)">
+     <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+       <b style="font-size:12.5px;flex:1;min-width:200px">Códigos de invitación</b>
+       <button class="btn sec xs" onclick="USERS_TOCA_REFRESCAR=true;renderUsers()" title="Volver a preguntar a la base quién hay">Actualizar lista</button>
+       <button class="btn xs" onclick="openNewUser()">Invitar por correo</button>
+     </div>
+     <p class="hint" style="margin-bottom:12px">Cada área tiene el suyo, y el código decide con qué perfil entra la persona
+       —sin esperar aprobación—. Después puedes cambiárselo desde el botón <b>Perfil</b> de su fila.
+       Entrégalos solo a quien corresponda: quien tiene el de gerencia, manda.</p>
+     ${CODIGOS_AREA.map(c=>`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--line-2)">
+       <span class="tag ${c.r==='admin'?'due':''}" style="min-width:104px;justify-content:center">${esc(PERFILES[c.r])}</span>
+       <b class="mono" style="font-size:12.5px;flex:1;min-width:170px">${esc(c.cod)}</b>
+       <span class="hint" style="flex:2;min-width:200px">${esc(c.q)}</span>
+       <button class="btn sec xs" onclick="copiarTexto('${jsq(c.cod)}')">Copiar</button>
+     </div>`).join('')}
    </div>`;
 }
 function accionesUsuario(c){
@@ -13283,6 +13293,20 @@ const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
 const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
   return ('0000000'+(h>>>0).toString(16)).slice(-8)};
 const PERFILES={admin:'Administrador',tec:'Servicio técnico',com:'Comercial',cliente:'Cliente'};
+/* Un código por área. Tienen que decir lo MISMO que la tabla
+   'invitaciones' de la base: es ella la que manda al registrarse, esto
+   es sólo lo que se enseña para poder repartirlos. */
+const CODIGOS_AREA=[
+ {r:'admin',cod:'ADOLPHUS-GERENCIA-2026',q:'Gerencia y jefaturas. Ve y cambia todo, y es quien reparte los perfiles.'},
+ {r:'tec',  cod:'ADOLPHUS-TALLER-2026',  q:'Servicio técnico: órdenes, calibraciones, informes y repuestos.'},
+ {r:'com',  cod:'ADOLPHUS-VENTAS-2026',  q:'Comercial y otras áreas: solicitudes, cotizaciones y stock.'}
+];
+function copiarTexto(t){
+  const ok=()=>toast('Copiado: '+t);
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok).catch(()=>ok());
+  else{const i=document.createElement('textarea');i.value=t;document.body.appendChild(i);i.select();
+       try{document.execCommand('copy')}catch(e){} i.remove(); ok()}
+}
 
 let CUENTAS=[
  {id:'u1',n:'Ana Quispe',   m:'ingenieria@adolphus.pe',   pw:resumen('adolphus2026'),perfil:'admin',  cli:null,   cargo:'Jefa de Ingeniería',       tel:'+51 987 000 111',est:'activo',alta:'2026-01-15',ult:'2026-07-23'},

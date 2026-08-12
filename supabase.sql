@@ -99,44 +99,60 @@ grant execute on function public.es_adolphus() to authenticated;
 grant execute on function public.es_admin()    to authenticated;
 
 
--- ── 5. Alta de usuarios ─────────────────────────────────────
---  La PRIMERA persona que entra con el código de Adolphus queda como
---  administradora y activa. Antes todos quedaban como 'tec', y como
---  sólo un 'admin' puede ascender a otro, nunca podía existir el
---  primero: la puerta se cerraba desde adentro.
---  Cuando alguien se registra, Supabase crea la fila en auth.users y
---  este disparador le arma el perfil:
---    · con código de invitación → queda ACTIVO;
---    · sólo con el RUC          → queda PENDIENTE, porque el RUC es
---      público y no prueba que la persona trabaje ahí. Un
---      administrador la activa desde «Usuarios y accesos».
+-- ── 5. Códigos de invitación y alta de usuarios ─────────────
+--  Un código POR ÁREA, no uno para toda la empresa. El código dice de
+--  qué empresa es la persona y con qué perfil entra, así que nadie
+--  tiene que ascender a mano al primero que llega —cosa que además era
+--  imposible: sólo un admin puede nombrar a otro, y no había ninguno.
+create table if not exists public.invitaciones (
+  codigo      text primary key,
+  empresa_id  uuid not null references public.empresas(id) on delete cascade,
+  rol         public.rol_usuario not null,
+  activa      boolean not null default true,
+  nota        text,
+  creada      timestamptz not null default now()
+);
+
 create or replace function public.manejar_nuevo_usuario()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare
+  inv       public.invitaciones%rowtype;
   e         public.empresas%rowtype;
   cod       text := nullif(trim(new.raw_user_meta_data->>'codigo'), '');
   ruc_in    text := nullif(regexp_replace(coalesce(new.raw_user_meta_data->>'ruc',''), '\D', '', 'g'), '');
-  por_cod   boolean := false;
-  hay_admin boolean;
   rol_nuevo public.rol_usuario;
+  est_nuevo public.estado_usuario;
 begin
+  -- 1) por código de invitación: entra activo y con el perfil de su área
   if cod is not null then
-    select * into e from public.empresas where upper(codigo_invitacion) = upper(cod);
-    por_cod := found;
+    select * into inv from public.invitaciones
+     where upper(codigo) = upper(cod) and activa;
   end if;
 
-  if e.id is null and ruc_in is not null then
-    select * into e from public.empresas
-     where regexp_replace(coalesce(ruc,''), '\D', '', 'g') = ruc_in;
+  if inv.codigo is not null then
+    select * into e from public.empresas where id = inv.empresa_id;
+    rol_nuevo := inv.rol;
+    est_nuevo := 'activo';
+  else
+    -- 2) sin código válido, sólo por RUC: queda PENDIENTE, porque el RUC
+    --    es público y no prueba que la persona trabaje ahí
+    if ruc_in is not null then
+      select * into e from public.empresas
+       where regexp_replace(coalesce(ruc,''), '\D', '', 'g') = ruc_in;
+    end if;
+    rol_nuevo := (case when e.id is not null and e.es_proveedor then 'tec'
+                       else 'cliente' end)::public.rol_usuario;
+    est_nuevo := 'pendiente';
   end if;
 
-  select exists(select 1 from public.perfiles where rol = 'admin') into hay_admin;
-
-  rol_nuevo := (case
-    when e.id is null                     then 'cliente'
-    when e.es_proveedor and not hay_admin then 'admin'
-    when e.es_proveedor                   then 'tec'
-    else 'cliente' end)::public.rol_usuario;
+  -- red de seguridad: si no queda NINGÚN administrador en toda la casa,
+  -- el primero de Adolphus lo es. Sin esto, un borrado accidental de
+  -- perfiles dejaría el portal sin nadie que pueda repartir accesos.
+  if rol_nuevo <> 'cliente'
+     and not exists(select 1 from public.perfiles where rol = 'admin') then
+    rol_nuevo := 'admin';
+    est_nuevo := 'activo';
+  end if;
 
   insert into public.perfiles (id, correo, nombre, cargo, telefono, empresa_id, rol, estado)
   values (
@@ -147,11 +163,7 @@ begin
     nullif(trim(new.raw_user_meta_data->>'telefono'), ''),
     e.id,
     rol_nuevo,
-    -- el primer administrador no puede quedar esperando aprobación,
-    -- porque no hay todavía nadie que pueda aprobarlo
-    (case when rol_nuevo = 'admin'          then 'activo'
-          when e.id is not null and por_cod then 'activo'
-          else 'pendiente' end)::public.estado_usuario
+    est_nuevo
   );
   return new;
 end $$;
@@ -276,6 +288,18 @@ drop policy if exists registros_baja on public.registros;
 create policy registros_baja on public.registros for delete to authenticated
 using ((select public.es_admin()));
 
+-- Los códigos son la llave de la casa: sólo el personal de Adolphus los
+-- ve, y sólo la gerencia los cambia.
+alter table public.invitaciones enable row level security;
+
+drop policy if exists invitaciones_lectura on public.invitaciones;
+create policy invitaciones_lectura on public.invitaciones for select to authenticated
+using ((select public.es_adolphus()));
+
+drop policy if exists invitaciones_cambio on public.invitaciones;
+create policy invitaciones_cambio on public.invitaciones for all to authenticated
+using ((select public.es_admin())) with check ((select public.es_admin()));
+
 
 -- ── 8. Las empresas y sus códigos de invitación ─────────────
 --  Cambia los códigos por los que quieras entregar. Quien se registre
@@ -289,7 +313,24 @@ insert into public.empresas (nombre, ruc, sector, planta, codigo_invitacion, es_
 on conflict (codigo_invitacion) do update
   set clave = excluded.clave, ruc = coalesce(public.empresas.ruc, excluded.ruc);
 
+--  Un código por área. Cambia estos por los que vayas a repartir.
+insert into public.invitaciones (codigo, empresa_id, rol, nota)
+select v.codigo, e.id, v.rol::public.rol_usuario, v.nota
+from (values
+  ('ADOLPHUS-GERENCIA-2026','adolphus','admin',  'Gerencia y jefaturas: lo ve y lo cambia todo, y reparte los perfiles'),
+  ('ADOLPHUS-TALLER-2026',  'adolphus','tec',    'Servicio técnico: órdenes, calibraciones, informes y repuestos'),
+  ('ADOLPHUS-VENTAS-2026',  'adolphus','com',    'Comercial y otras áreas: solicitudes, cotizaciones y stock'),
+  ('COSTANORTE-2026',       'refi',    'cliente','Refinería Costa Norte'),
+  ('ANDES-2026',            'minera',  'cliente','Minera Los Andes'),
+  ('AGROVALLE-2026',        'agro',    'cliente','Agroindustrias del Valle')
+) as v(codigo, clave, rol, nota)
+join public.empresas e on e.clave = v.clave
+on conflict (codigo) do update
+  set rol = excluded.rol, empresa_id = excluded.empresa_id, nota = excluded.nota;
+
 
 -- ── 9. Comprobación ─────────────────────────────────────────
---  Al terminar deberías ver las 4 empresas con su clave corta.
-select nombre, clave, codigo_invitacion, es_proveedor from public.empresas order by es_proveedor desc, nombre;
+--  Al terminar deberías ver los códigos con el perfil que da cada uno.
+select i.codigo, i.rol, e.nombre as empresa, i.nota
+from public.invitaciones i join public.empresas e on e.id = i.empresa_id
+where i.activa order by (e.es_proveedor is false), i.rol, i.codigo;
