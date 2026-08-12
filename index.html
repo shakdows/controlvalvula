@@ -9544,8 +9544,16 @@ function saveNewPart(){
 const ALCANCE={admin:'Maestros, catálogo, despieces, usuarios y reportes',tec:'Órdenes de trabajo, informes y certificados',
   com:'Solicitudes, cotizaciones y stock local',cliente:'Lectura de sus activos y solicitud de repuestos'};
 const EST_TAG={activo:'ok',invitado:'sel',pendiente:'due',suspendido:'late'};
+/* Al abrir el panel, traer la lista de verdad. Se pinta primero con
+   lo que hay y se repinta al llegar la respuesta: así la pantalla no
+   se queda en blanco esperando a la red. */
+let USERS_PEDIDOS=false;
 function renderUsers(){
   if(typeof CUENTAS==='undefined'||!CUENTAS)return;   // aún no arrancó la capa de cuentas
+  if(!USERS_PEDIDOS&&enNube()){
+    USERS_PEDIDOS=true;
+    refrescarUsuarios().then(ok=>{if(ok)renderUsers()});
+  }
   const pend=CUENTAS.filter(c=>c.est==='pendiente');
   const aviso=pend.length?`<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
     <div class="panel-b" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -9577,14 +9585,29 @@ function accionesUsuario(c){
   if(c.est==='pendiente'||c.est==='suspendido')b.push(`<button class="btn quiet xs" onclick="activarUsuario('${c.id}')">Activar</button>`);
   if(c.est==='activo'&&!yo)b.push(`<button class="btn quiet xs" onclick="suspenderUsuario('${c.id}')">Suspender</button>`);
   if(c.est==='invitado')b.push(`<button class="btn quiet xs" onclick="toast('Invitación reenviada a '+'${esc(c.m)}')">Reenviar</button>`);
+  // repartir perfiles es cosa del administrador y de nadie más
+  if(S.rol==='admin')b.push(`<button class="btn quiet xs" onclick="cambiarPerfil('${c.id}')" title="Cambiar qué puede hacer esta persona">Perfil</button>`);
   b.push(`<button class="btn quiet xs" onclick="restablecerPw('${c.id}')" title="Genera una contraseña temporal">Restablecer</button>`);
   return `<span style="display:flex;gap:4px;justify-content:flex-end">${b.join('')}</span>`;
 }
-function activarUsuario(id){
+async function activarUsuario(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
   if(c.perfil==='cliente'&&!c.cli)return vincularUsuario(c);
-  c.est='activo';guardarCuentas();renderUsers();
+  if(!await aplicarPersona(c,{estado:'activo'},'est','activo'))return;
   registrar('Cuenta',`${c.n} activado`);toast(`${c.n} ya puede ingresar`);
+}
+
+/* Un solo sitio donde se guarda un cambio sobre una persona: primero
+   en la base —que es la que manda— y sólo si allí funcionó, aquí. Al
+   revés se vería un cambio que no existe. */
+async function aplicarPersona(c,campos,prop,valor){
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,campos)}
+    catch(e){toast('No se pudo guardar: '+e.message);return false}
+  }
+  if(prop)c[prop]=valor;
+  guardarCuentas();renderUsers();
+  return true;
 }
 function vincularUsuario(c){
   $('#mTitle').textContent='Vincular a una organización';
@@ -9601,10 +9624,70 @@ function confirmarVinculo(id){
   c.cli=$('#vuCli').value;c.est='activo';guardarCuentas();closeModal();renderUsers();
   registrar('Cuenta',`${c.n} vinculado a ${cli(c.cli).n}`);toast(`${c.n} vinculado a ${cli(c.cli).n}`);
 }
-function suspenderUsuario(id){
+async function suspenderUsuario(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
-  c.est='suspendido';guardarCuentas();renderUsers();
+  if(!await aplicarPersona(c,{estado:'suspendido'},'est','suspendido'))return;
   registrar('Cuenta',`${c.n} suspendido`);toast(`${c.n} ya no puede ingresar`);
+}
+
+/* ── Cambiar el perfil de alguien ────────────────────────────
+   Sólo un administrador ve este botón, y la base vuelve a comprobarlo
+   por su cuenta: que el botón no esté no es una medida de seguridad,
+   es una cortesía. Lo que de verdad protege es la política de RLS. */
+function cambiarPerfil(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const yo=SES&&SES.id===c.id;
+  $('#mTitle').textContent='Perfil de '+c.n;
+  $('#mBody').innerHTML=`
+    <p class="hint" style="margin-bottom:14px">Qué puede hacer <b>${esc(c.n)}</b> dentro del portal.
+      El cambio entra la próxima vez que esa persona abra la página.</p>
+    <div class="fld"><label>Perfil</label>
+      <select class="inp" id="cpRol" onchange="pintarAyudaPerfil()">
+        ${Object.entries(PERFILES).map(([k,v])=>
+          `<option value="${k}"${c.perfil===k?' selected':''}>${esc(v)}</option>`).join('')}
+      </select></div>
+    <div class="fld" id="cpCliBox" style="display:${c.perfil==='cliente'?'block':'none'}">
+      <label>Organización cliente</label>
+      <select class="inp" id="cpCli">
+        ${CLIENTES.map(x=>`<option value="${x.id}"${c.cli===x.id?' selected':''}>${esc(x.n)}</option>`).join('')}
+      </select></div>
+    <p class="hint" id="cpAyuda" style="padding:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-2)"></p>
+    ${yo?`<p class="hint" style="margin-top:12px;color:var(--due)"><b>Ojo:</b> este eres tú.
+      Si te quitas el perfil de administrador ya no podrás volver a entrar aquí,
+      y hará falta otro administrador para devolvértelo.</p>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarPerfilDe('${c.id}')">Guardar perfil</button>`;
+  $('#modal').classList.add('on');
+  pintarAyudaPerfil();
+}
+const AYUDA_PERFIL={
+  admin:'Ve y cambia todo, y es el único que reparte estos perfiles. Reserva este para dirección.',
+  tec:'Órdenes de trabajo, calibraciones, informes y repuestos. No toca usuarios ni precios de lista.',
+  com:'Solicitudes, cotizaciones y stock. No firma trabajos técnicos.',
+  cliente:'Sólo lee los equipos de SU empresa y pide repuestos. No ve nada de los demás clientes.'
+};
+function pintarAyudaPerfil(){
+  const r=$('#cpRol').value;
+  $('#cpAyuda').innerHTML=esc(AYUDA_PERFIL[r]||'');
+  $('#cpCliBox').style.display=r==='cliente'?'block':'none';
+}
+async function guardarPerfilDe(id){
+  const c=CUENTAS.find(x=>x.id===id);if(!c)return;
+  const rol=$('#cpRol').value, esCli=rol==='cliente';
+  const clave=esCli?$('#cpCli').value:null;
+  const campos={rol};
+  // un cliente cuelga de su empresa; el personal de Adolphus, de Adolphus
+  if(enNube())campos.empresa_id=esCli?(NUBE_EMP[clave]||null):(NUBE_EMP.adolphus||null);
+  if(enNube()&&c.nube){
+    try{await nubeGuardarPersona(c.id,campos)}
+    catch(e){toast('No se pudo guardar: '+e.message);return}
+  }
+  c.perfil=rol;c.cli=esCli?clave:null;
+  guardarCuentas();closeModal();renderUsers();
+  registrar('Cuenta',`${c.n} ahora es ${PERFILES[rol]}`);
+  toast(`${c.n} ahora es ${PERFILES[rol]}`);
+  // si me cambié a mí mismo, la pantalla tiene que reflejarlo ya
+  if(SES&&SES.id===c.id){SES.perfil=rol;SES.cli=c.cli;applyRole(rolDe(SES))}
 }
 function restablecerPw(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
@@ -12473,6 +12556,49 @@ async function nubeCargarPerfil(){
   (es||[]).forEach(e=>{if(e.clave){NUBE_EMP[e.clave]=e.id;NUBE_EMP_INV[e.id]=e.clave}});
   return NUBE_YO;
 }
+/* ── El panel de usuarios contra la base ─────────────────────
+   Hasta aquí «Usuarios y accesos» era una lista de mentira: activabas
+   a alguien y no pasaba nada, porque el cambio se quedaba en este
+   navegador. La persona seguía sin poder entrar y nadie entendía por
+   qué. Estas tres funciones son las que hacen que el botón sirva. */
+
+/* Trae a TODAS las personas. Quien no sea de Adolphus recibe sólo a
+   sus compañeros de empresa: eso no lo decide esta función, lo decide
+   la política de la base, que es donde tiene que decidirse. */
+async function nubeUsuarios(){
+  const p=await nubeFetch('/rest/v1/perfiles?select=*&order=alta.asc');
+  return (p||[]).map(x=>{
+    const clave=x.empresa_id?NUBE_EMP_INV[x.empresa_id]:null;
+    return {id:x.id,n:x.nombre||x.correo,m:x.correo,pw:'',
+            perfil:x.rol,cli:x.rol==='cliente'?clave:null,
+            cargo:x.cargo||'',tel:x.telefono||'',est:x.estado,
+            alta:(x.alta||'').slice(0,10),
+            ult:(x.ultimo_acceso||'').slice(0,10)||'—',nube:true};
+  });
+}
+
+/* Cambia el perfil o el estado de alguien. Si la base dice que no
+   —porque quien lo intenta no es administrador— el error sube tal
+   cual: es preferible un aviso claro a un cambio que parece hecho y
+   en realidad no ocurrió. */
+async function nubeGuardarPersona(id,campos){
+  const r=await nubeFetch('/rest/v1/perfiles?id=eq.'+encodeURIComponent(id),
+    {metodo:'PATCH',cuerpo:campos,cab:{Prefer:'return=representation'}});
+  if(!r||!r.length)throw new Error('La base no dejó guardar el cambio. ¿Sigues siendo administrador?');
+  return r[0];
+}
+
+/* Refresca la lista desde la base y vuelve a pintar. Si no hay nube,
+   se queda con lo que haya en este equipo y no molesta. */
+async function refrescarUsuarios(){
+  if(!enNube())return false;
+  try{
+    const l=await nubeUsuarios();
+    if(l.length){CUENTAS=l;guardarCuentas()}
+    return true;
+  }catch(e){toast('No se pudo traer la lista de personas: '+e.message);return false}
+}
+
 /* La sesión de la nube se traduce a la cuenta que el portal ya sabe
    manejar, para no tener dos maneras de estar dentro. */
 function cuentaDeNube(){
