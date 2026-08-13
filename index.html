@@ -13395,6 +13395,32 @@ function authMsg(txt,tono){
   const el=$('#authMsg');
   el.className='auth-msg'+(txt?' on '+(tono||'bad'):'');
   el.innerHTML=txt||'';
+  /* El aviso vive ARRIBA del formulario. En un celular se pulsa «Crear
+     cuenta» con la pantalla desplazada hasta abajo, así que el mensaje
+     aparecía fuera de vista: la persona pulsaba, la página respondía, y
+     desde su sitio no pasaba nada. Traerlo a la vista es la diferencia
+     entre «no funciona el botón» y saber qué ocurrió. */
+  if(txt){
+    /* Va en un setTimeout a propósito: al pulsar «Crear cuenta» el
+       navegador enfoca el botón y desplaza la vista hacia ÉL, lo que
+       cancelaba este movimiento si se hacía en el mismo tick. Y sin
+       'smooth', porque un desplazamiento animado también se pierde si
+       algo lo interrumpe a mitad. */
+    setTimeout(()=>{
+      try{el.scrollIntoView({block:'center'})}catch(e){try{el.scrollIntoView()}catch(e2){}}
+    },0);
+  }
+}
+
+/* Mientras se crea la cuenta o se entra, decirlo EN EL BOTÓN, que es
+   donde está mirando el dedo. Y bloquearlo, que si no se pulsa tres
+   veces y se intentan tres altas. */
+function ocupado(form,si,txt){
+  const b=document.querySelector('#'+form+' button[type=submit]');
+  if(!b)return;
+  if(si){ b.dataset.txt=b.dataset.txt||b.innerHTML; b.disabled=true;
+          b.innerHTML=esc(txt||'Un momento…'); }
+  else  { b.disabled=false; if(b.dataset.txt)b.innerHTML=b.dataset.txt; }
 }
 let UP_TIPO='staff';
 function upTipo(t){
@@ -13438,9 +13464,11 @@ async function login(ev){
      que el que ya entró antes pueda seguir trabajando en planta. */
   if(NUBE.url&&online()){
     authMsg('Comprobando…','info');
+    ocupado('authIn',true,'Comprobando…');
     try{
       await nubeEntrar(m,pw);
       const c=cuentaDeNube();
+      ocupado('authIn',false);
       if(c.est==='pendiente'){
         await nubeSalir();
         authMsg('Tu cuenta está <b>pendiente de aprobación</b>. Un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
@@ -13460,6 +13488,7 @@ async function login(ev){
       }catch(e){toast('Dentro, pero no se pudieron traer los datos: '+e.message)}
       return false;
     }catch(e){
+      ocupado('authIn',false);
       const red=!e.status;                       // sin status = no hubo respuesta
       if(!red){
         // Supabase devuelve 400 tanto si la contraseña está mal como si
@@ -13504,10 +13533,12 @@ async function signup(ev){
     if(!esStaff&&!rucValido(ruc)){authMsg('Ingresa el RUC de tu empresa (11 dígitos, con dígito verificador válido).');return false}
     const cod=((esStaff?$('#upCod').value:$('#upCodCli').value)||'').trim().toUpperCase();
     authMsg('Creando la cuenta…','info');
+    ocupado('authUp',true,'Creando la cuenta…');
     try{
       const p=await nubeRegistrar({correo:m,clave:pw,nombre:n,
         cargo:$('#upCargo').value.trim(),telefono:'',codigo:cod,ruc:esStaff?'':ruc});
       if(!p){
+        ocupado('authUp',false);
         authTab('in');$('#inMail').value=m;
         authMsg('Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.','info');
         return false;
@@ -13515,6 +13546,7 @@ async function signup(ev){
       const c=cuentaDeNube();
       if(c.est!=='activo'){
         await nubeSalir();
+        ocupado('authUp',false);
         authTab('in');$('#inMail').value=m;
         authMsg('Cuenta creada. Queda <b>pendiente de aprobación</b>: un administrador de Adolphus debe activarla desde Usuarios y accesos.','info');
         return false;
@@ -13522,11 +13554,13 @@ async function signup(ev){
       const i=CUENTAS.findIndex(x=>x.id===c.id);
       if(i>=0)CUENTAS[i]=c; else CUENTAS.push(c);
       ONB={perfil:false,org:false,equipo:false,movil:false,off:false};
+      ocupado('authUp',false);
       abrirSesion(c,true,'Cuenta creada y activada.');
       sellarIds();authMsg('');
       try{await nubeVuelta(true);latirNube();arrancarJob()}catch(e){}
       return false;
     }catch(e){
+      ocupado('authUp',false);
       if(e.yaExiste||(e.status&&/registered|already/i.test(e.message))){
         // no dejarlo en un aviso y ya: llevarlo a la pantalla de acceso
         // con su correo puesto, que es lo que tiene que hacer ahora
@@ -13538,20 +13572,45 @@ async function signup(ev){
         return false;
       }
       if(e.status){
-        authMsg('No se pudo crear la cuenta: '+esc(e.message));
+        const t=String(e.message||'').toLowerCase();
+        /* El servicio de correo que trae Supabase de fábrica manda muy
+           pocos mensajes por hora. Al segundo o tercer intento devuelve
+           429 y el alta se cae ENTERA — no por la contraseña ni por el
+           código, sino por el correo de confirmación que ni siquiera
+           hace falta aquí, porque el código de invitación ya prueba que
+           la persona es de la casa. */
+        authMsg(
+          e.status===429||/rate limit|too many/.test(t)
+            ? '<b>Supabase no deja crear más cuentas por ahora.</b> Su servicio de correo '
+              +'permite muy pocos mensajes por hora y ya se agotaron. '
+              +'Espera una hora, o mejor: en Supabase → Authentication → Sign In / Providers → '
+              +'Email, apaga <b>«Confirm email»</b>. Aquí el código de invitación ya prueba '
+              +'quién eres, y entonces no hace falta enviar ningún correo.'
+          : /password/.test(t)
+            ? 'La contraseña no cumple lo que pide Supabase: '+esc(e.message)
+          : 'No se pudo crear la cuenta: '+esc(e.message));
         return false;
       }
       // sin red: se crea en el equipo y se registra en la nube al volver
+      ocupado('authUp',false);
     }
   }
+  ocupado('authUp',false);
 
   if(cuentaPorMail(m)){authMsg('Ya existe una cuenta con ese correo. Inicia sesión o recupera tu contraseña.');return false}
   let perfil='cliente',cliId=null,est='pendiente',aviso='';
   if(UP_TIPO==='staff'){
     const cod=($('#upCod').value||'').trim().toUpperCase();
-    perfil='tec';
-    if(cod===ORG.cod){est='activo';aviso='Cuenta creada y activada con el código de la empresa.'}
-    else{est='pendiente';aviso='Cuenta creada. Queda <b>pendiente de aprobación</b> porque el código de invitación no coincide.'}
+    // sin conexión hay que reconocer los MISMOS códigos que la base, o
+    // el de gerencia daría «no coincide» en planta y sin explicación
+    const area=CODIGOS_AREA.find(c=>c.cod===cod);
+    perfil=area?area.r:'tec';
+    if(area||cod===ORG.cod){
+      est='activo';
+      aviso=`Cuenta creada y activada como <b>${esc(PERFILES[perfil])}</b>. `
+           +'Se registrará en la nube en cuanto haya señal.';
+    }
+    else{est='pendiente';aviso='Cuenta creada. Queda <b>pendiente de aprobación</b> porque el código de invitación no coincide con ninguna área.'}
   }else{
     const r=($('#upRuc').value||'').replace(/\D/g,'');
     if(!rucValido(r)){authMsg('Ingresa el RUC de tu empresa (11 dígitos, con dígito verificador válido).');return false}
