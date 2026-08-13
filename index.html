@@ -9568,7 +9568,9 @@ function renderUsers(){
   if(typeof CUENTAS==='undefined'||!CUENTAS)return;   // aún no arrancó la capa de cuentas
   if(USERS_TOCA_REFRESCAR&&enNube()){
     USERS_TOCA_REFRESCAR=false;
-    refrescarUsuarios().then(ok=>{if(ok)renderUsers()});
+    // repintar SIEMPRE, salga bien o mal: si falló hay que decirlo, y
+    // antes se quedaba el dibujo de la lista local sin ninguna señal
+    refrescarUsuarios().then(()=>renderUsers());
   }
   const pend=CUENTAS.filter(c=>c.est==='pendiente');
   const aviso=pend.length?`<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
@@ -9577,6 +9579,16 @@ function renderUsers(){
       <b style="font-size:13px">${pend.length} solicitud${pend.length===1?'':'es'} de acceso esperando aprobación</b>
       <span class="hint" style="flex:1;min-width:180px">Se registraron desde la pantalla de acceso. Revisa que la persona y la organización sean correctas antes de activarlas.</span>
     </div></div>`:'';
+  const origen =
+    USERS_ORIGEN==='nube'  ? ''
+  : USERS_ORIGEN==='error' ? `<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--bad)">
+      <div class="panel-b"><b style="font-size:13px">No se pudo leer la lista de la base</b>
+        <p class="hint" style="margin-top:4px">${esc(USERS_FALLO)}. Lo que ves abajo es lo guardado en
+          este equipo y puede estar desfasado. Pulsa «Actualizar lista» para reintentar.</p></div></div>`
+  : `<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
+      <div class="panel-b"><b style="font-size:13px">Estas personas son de la demostración</b>
+        <p class="hint" style="margin-top:4px">No existen en ninguna base y activarlas no da acceso a nadie.
+          Entra con tu cuenta para ver quién puede entrar de verdad.</p></div></div>`;
   const filas=CUENTAS.map(c=>`<tr style="cursor:default">
     <td><b>${esc(c.n)}</b>${c.cargo?`<span style="display:block;font-size:11px;color:var(--ink-3);margin-top:2px">${esc(c.cargo)}</span>`:''}</td>
     <td class="mono muted">${esc(c.m)}</td>
@@ -9585,7 +9597,7 @@ function renderUsers(){
     <td><span class="tag ${EST_TAG[c.est]||''}"><span class="dot"></span>${esc(c.est)}</span></td>
     <td class="mono muted">${esc(c.ult||'—')}</td>
     <td style="white-space:nowrap">${accionesUsuario(c)}</td></tr>`).join('');
-  $('#userList').innerHTML=aviso+`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Perfil</th><th>Organización</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead>
+  $('#userList').innerHTML=origen+aviso+`<table class="grid"><thead><tr><th>Usuario</th><th>Correo</th><th>Perfil</th><th>Organización</th><th>Estado</th><th>Último ingreso</th><th></th></tr></thead>
    <tbody>${filas}</tbody></table>
    <div class="panel-b" style="border-top:1px solid var(--line-2)">
      <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px">
@@ -12670,13 +12682,24 @@ async function nubeGuardarPersona(id,campos){
 
 /* Refresca la lista desde la base y vuelve a pintar. Si no hay nube,
    se queda con lo que haya en este equipo y no molesta. */
+/* De dónde salió lo que se está viendo. Sin esto, la lista de
+   demostración y la de verdad se parecen demasiado: se activa a
+   «Ana Quispe», que no existe en ninguna base, y no pasa nada. */
+let USERS_ORIGEN='local';   // 'local' | 'nube' | 'error'
+let USERS_FALLO='';
 async function refrescarUsuarios(){
-  if(!enNube())return false;
+  if(!enNube()){USERS_ORIGEN='local';return false}
   try{
     const l=await nubeUsuarios();
-    if(l.length){CUENTAS=l;guardarCuentas()}
+    // Reemplaza SIEMPRE, aunque venga vacío: si la base dice que no hay
+    // nadie, enseñar los de demostración es peor que enseñar nada.
+    CUENTAS=l; guardarCuentas();
+    USERS_ORIGEN='nube'; USERS_FALLO='';
     return true;
-  }catch(e){toast('No se pudo traer la lista de personas: '+e.message);return false}
+  }catch(e){
+    USERS_ORIGEN='error'; USERS_FALLO=e.message||'error desconocido';
+    return false;
+  }
 }
 
 /* La sesión de la nube se traduce a la cuenta que el portal ya sabe
