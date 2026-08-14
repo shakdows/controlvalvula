@@ -4676,7 +4676,7 @@ function fichaCalib(a){
   const c=hechos.slice().sort((x,y)=>fechaCalib(y).localeCompare(fechaCalib(x)))[0];
   const borrador=CALIBS.find(x=>x.act===a.id&&x.veredicto==='incompleto');
   if(!c) return fxBloque('Última calibración',
-    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="${a.cl==='seguridad'?`openPSV('${a.id}')`:`openCalib('${a.id}')`}">${borrador?'Seguir el ensayo':'Registrar'}</button>`,
+    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="openPSV('${a.id}')">${borrador?'Seguir el ensayo':'Registrar'}</button>`,
     `<p class="fx-vacio">${borrador
       ? 'Hay un ensayo a medio llenar. En cuanto se guarde completo, aquí sale el resultado y la próxima fecha.'
       : 'Este equipo aún no tiene una calibración registrada en el sistema.'}</p>`);
@@ -4781,7 +4781,7 @@ function paneCal(){
   const a=S.cur;
   const cs=CALIBS.filter(x=>x.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''));
   const bar=S.rol==='cliente'?'':`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-     <button class="btn sec xs" onclick="${a.cl==='seguridad'?`openPSV('${a.id}')`:`openCalib('${a.id}')`}"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>${a.cl==='seguridad'?'Nuevo ensayo PSV':'Nueva calibración'}</button>
+     <button class="btn sec xs" onclick="openPSV('${a.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo ensayo</button>
      <button class="btn quiet xs" onclick="printFieldSheet('${a.id}')">Imprimir hoja de campo</button></div>`;
   if(!cs.length){
     $('#pn-cal').innerHTML=bar+`<div class="empty"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
@@ -5944,7 +5944,9 @@ function openPSV(actId,edit,seccion){
   PSV_TMP=c?JSON.parse(JSON.stringify(c)):psvNuevo(a.id);
   if(retomado)setTimeout(()=>toast('Seguimos con el borrador que quedó a medias'),300);
   if(!PSV_TMP)return;
-  $('#mTitle').textContent=(c?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+  /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
+     que firma el papel. */
+  $('#mTitle').textContent=(c?'Editar ensayo · ':(a.cl==='seguridad'?'Ensayo PSV · ':'Ensayo · '))+(a.tag||a.ser||'');
   pintarPSV();
   $('#modal').classList.add('on');
 }
@@ -6688,7 +6690,9 @@ function volverDePlaca(){
   if(t){
     PSV_TMP=t;
     const a=ACTIVOS.find(x=>x.id===t.act)||{};
-    $('#mTitle').textContent=(t.id?'Editar ensayo · ':'Ensayo PSV · ')+(a.tag||a.ser||'');
+    /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
+     que firma el papel. */
+  $('#mTitle').textContent=(t.id?'Editar ensayo · ':(a.cl==='seguridad'?'Ensayo PSV · ':'Ensayo · '))+(a.tag||a.ser||'');
     pintarPSV(); return;
   }
   closeModal();
@@ -8902,7 +8906,13 @@ function registrarEnsayoDeOrden(id){
   const ya=o.calib?CALIBS.find(x=>x.id===o.calib):null;
   toast(ya?`${o.n} · retomando el ensayo que ya tenía`
           :`${o.n} · registra el ensayo y la orden se cierra sola`);
-  if(a.cl==='seguridad')openPSV(a.id,ya?ya.id:null); else openCalib(a.id,ya||undefined);
+  /* TODAS las válvulas van al ensayo completo, no sólo las de
+     seguridad. La calibración simple no tiene fotos, ni firmas, ni
+     certificado: el técnico que abría una PINCH se quedaba sin la
+     mitad del trabajo y sin forma de cerrar la orden como las demás.
+     Que el formulario dependa de la clase de válvula obligaba además a
+     recordar cuál era cuál antes de tocar el botón. */
+  openPSV(a.id, ya?ya.id:null);
 }
 function openCloseWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
