@@ -2481,16 +2481,16 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         </div>
         <div id="upStaff">
           <label for="upCod">Código de invitación de tu área</label>
-          <input class="inp" id="upCod" placeholder="ADOLPHUS-TALLER-2026">
+          <input class="inp" id="upCod" placeholder="El que te dé tu jefatura" autocomplete="off" spellcheck="false">
           <p class="pw-note" style="margin-top:-8px">Cada área tiene el suyo y decide con qué entras: gerencia, taller o comercial.
             Pídeselo a tu jefatura. Sin código la cuenta queda <b>pendiente de aprobación</b>.</p>
         </div>
         <div id="upCli" style="display:none">
           <label for="upRuc">RUC de tu empresa</label>
-          <input class="inp" id="upRuc" inputmode="numeric" maxlength="11" placeholder="20100128056" oninput="upRucCheck()">
+          <input class="inp" id="upRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos" oninput="upRucCheck()">
           <p class="pw-note" id="upRucEst" style="margin-top:-8px">Con el RUC vinculamos tu cuenta a la organización correcta.</p>
           <label for="upCodCli">Código de invitación <span class="opc">si Adolphus te dio uno</span></label>
-          <input class="inp" id="upCodCli" placeholder="COSTANORTE-2026">
+          <input class="inp" id="upCodCli" placeholder="El que te dio Adolphus" autocomplete="off" spellcheck="false">
           <p class="pw-note" style="margin-top:-8px">Con el código entras enseguida. Sólo con el RUC, tu cuenta queda
             <b>pendiente</b> hasta que un ingeniero de Adolphus la active.</p>
         </div>
@@ -9591,8 +9591,10 @@ function renderUsers(){
   if(USERS_TOCA_REFRESCAR&&enNube()){
     USERS_TOCA_REFRESCAR=false;
     // repintar SIEMPRE, salga bien o mal: si falló hay que decirlo, y
-    // antes se quedaba el dibujo de la lista local sin ninguna señal
-    refrescarUsuarios().then(()=>renderUsers());
+    // antes se quedaba el dibujo de la lista local sin ninguna señal.
+    // Los códigos van en el mismo viaje: se enseñan en esta pantalla y
+    // tampoco están en la página, hay que pedirlos a la base.
+    Promise.all([refrescarUsuarios(),cargarCodigos()]).then(()=>renderUsers());
   }
   const pend=CUENTAS.filter(c=>c.est==='pendiente');
   const aviso=pend.length?`<div class="panel" style="margin-bottom:var(--sp-3);border-color:var(--due)">
@@ -9630,6 +9632,9 @@ function renderUsers(){
      <p class="hint" style="margin-bottom:12px">Cada área tiene el suyo, y el código decide con qué perfil entra la persona
        —sin esperar aprobación—. Después puedes cambiárselo desde el botón <b>Perfil</b> de su fila.
        Entrégalos solo a quien corresponda: quien tiene el de gerencia, manda.</p>
+     ${!CODIGOS_AREA.length?`<p class="hint" style="padding:10px 0;border-top:1px solid var(--line-2)">
+       ${enNube()?'No hay ningún código activo, o tu perfil no puede verlos: sólo el personal de Adolphus los ve.'
+                 :'Los códigos viven en la base, no en esta página. Entra con tu cuenta para verlos.'}</p>`:''}
      ${CODIGOS_AREA.map(c=>`<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--line-2)">
        <span class="tag ${c.r==='admin'?'due':''}" style="min-width:104px;justify-content:center">${esc(PERFILES[c.r])}</span>
        <b class="mono" style="font-size:12.5px;flex:1;min-width:170px">${esc(c.cod)}</b>
@@ -13453,14 +13458,26 @@ function verPw(id,btn){
   // devolver el cursor al final, que si no salta al principio
   try{const n=i.value.length;i.focus();i.setSelectionRange(n,n)}catch(e){}
 }
-/* Un código por área. Tienen que decir lo MISMO que la tabla
-   'invitaciones' de la base: es ella la que manda al registrarse, esto
-   es sólo lo que se enseña para poder repartirlos. */
-const CODIGOS_AREA=[
- {r:'admin',cod:'ADOLPHUS-GERENCIA-2026',q:'Gerencia y jefaturas. Ve y cambia todo, y es quien reparte los perfiles.'},
- {r:'tec',  cod:'ADOLPHUS-TALLER-2026',  q:'Servicio técnico: órdenes, calibraciones, informes y repuestos.'},
- {r:'com',  cod:'ADOLPHUS-VENTAS-2026',  q:'Comercial y otras áreas: solicitudes, cotizaciones y stock.'}
-];
+/* LOS CÓDIGOS NO VIVEN AQUÍ. Este archivo lo descarga cualquiera que
+   abra la página: escribirlos dentro es entregarlos. Bastaba pulsar F12
+   para leer el de gerencia y crearse una cuenta de administrador sin
+   trabajar en la casa.
+   Se leen de la tabla 'invitaciones', que tiene su propia política: sólo
+   el personal de Adolphus los ve, y sólo la gerencia los cambia. Quien
+   no ha entrado no recibe ninguno. */
+let CODIGOS_AREA=[];
+
+async function cargarCodigos(){
+  if(!enNube()){CODIGOS_AREA=[];return false}
+  try{
+    const l=await nubeFetch('/rest/v1/invitaciones?select=codigo,rol,nota,activa'
+      +'&activa=eq.true&order=rol.asc');
+    // sólo los del personal: los de cliente se reparten por otro camino
+    CODIGOS_AREA=(l||[]).filter(x=>x.rol!=='cliente')
+      .map(x=>({r:x.rol, cod:x.codigo, q:x.nota||''}));
+    return true;
+  }catch(e){CODIGOS_AREA=[];return false}
+}
 function copiarTexto(t){
   const ok=()=>toast('Copiado: '+t);
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok).catch(()=>ok());
