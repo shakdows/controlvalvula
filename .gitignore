@@ -11,3 +11,7 @@ __pycache__/
 # sin esto se quedan en el contenedor y hay que volver a darlos cada vez.
 !.claude/settings.json
 skills-lock.json
+
+# la copia con la piel de diseño: se genera para enseñarla y se sirve
+# desde el directorio de trabajo, NUNCA forma parte del portal
+adolphus-pro.html
