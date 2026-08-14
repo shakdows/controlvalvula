@@ -4484,7 +4484,7 @@ function openAsset(id){
           arreglarse. */
        return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
-      <button class="btn sec" onclick="openCalib('${a.id}')">${uc?'Nueva calibración':'Registrar calibración'}</button>
+      <button class="btn sec" onclick="openPSV('${a.id}')">${uc?'Nuevo ensayo':'Registrar ensayo'}</button>
       ${ORDENES.some(o=>o.act===a.id&&o.et!=='final')?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
       <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
       <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
@@ -4647,7 +4647,7 @@ function queToca(a){
     ac={t:'Ver la orden',f:`verOrden('${o.id}')`};}
   else if(e.k==='vencido'){t='late';
     txt=`La calibración venció hace ${Math.abs(d)} días. Este equipo debería salir de servicio o calibrarse ya.`;
-    if(!cliente)ac={t:'Calibrar ahora',f:`openCalib('${a.id}')`};}
+    if(!cliente)ac={t:'Ensayar ahora',f:`openPSV('${a.id}')`};}
   else if(e.k==='porvencer'){t='due';
     txt=`La calibración vence en ${d} días (${a.prox}). Conviene programarla antes de que caiga.`;
     if(!cliente)ac={t:'Programar la visita',f:`openWO('${a.id}','Calibración')`};}
@@ -4885,7 +4885,7 @@ function paneHist(){
   const os=ORDENES.filter(o=>o.act===S.cur.id).sort((a,b)=>b.f.localeCompare(a.f));
   const bar=S.rol!=='cliente'?`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
      <button class="btn sec xs" onclick="openService('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Parte de servicio</button>
-     <button class="btn sec xs" onclick="openCalib('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Calibración</button></div>`:'';
+     <button class="btn sec xs" onclick="openPSV('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Ensayo</button></div>`:'';
   $('#pn-hist').innerHTML=bar+(os.length?`<div class="tl">${os.map(o=>`
     <div class="tl-i ${o.tipo==='Preventivo'?'pv':o.tipo==='Correctivo'?'cor':'cal'}">
       <div class="tl-m"><span>${o.f}</span><span>·</span><span>${o.n}</span><span class="tag">${o.tipo}</span>
@@ -7998,7 +7998,7 @@ function renderCal(){
         <span class="hz-fill" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)}%;background:var(--${c});opacity:.55"></span>
       </div>
       <div class="hz-d" style="color:var(--${c})">${d<0?`−${-d} d`:`${d} d`}</div>
-      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="printFieldSheet('${a.id}')" title="Imprimir hoja para llenar en planta"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button><button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openCalib('${a.id}')">Calibrar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
+      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="printFieldSheet('${a.id}')" title="Imprimir hoja para llenar en planta"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button><button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openPSV('${a.id}')">Ensayar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
     </div>`}).join('')
    :`<div class="empty"><b>Sin programa de calibración</b>Aplica a válvulas de seguridad y alivio.</div>`;
 }
@@ -10430,7 +10430,7 @@ function colaTrabajo(){
     if(e.k==='vencido')
       out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
-        ac:cliente?null:{t:'Calibrar',f:`openCalib('${a.id}')`}});
+        ac:cliente?null:{t:'Ensayar',f:`openPSV('${a.id}')`}});
     else if(e.k==='mant'){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final');
       out.push({pr,p:2,g:'mant',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
@@ -11559,6 +11559,11 @@ function guardarActivo(id){
    ============================================================ */
 let CALIBS=[];
 const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.split('-');return `${D}/${M}/${Y}${t?' · '+t:''}`};
+/* Sólo para ABRIR una calibración ya guardada con el formato antiguo.
+   Las nuevas se registran todas por openPSV, sea cual sea la clase de
+   válvula: un solo formulario, con fotos, firmas y certificado. Dejar
+   dos formas de registrar era lo que hacía que media orden se pudiera
+   cerrar y la otra media no. */
 function openCalib(assetId,edit){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
   if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
@@ -12474,7 +12479,7 @@ function saveUploadSheet(){
   }
   closeModal();
   // abre la calibración con los datos de la hoja ya cargados
-  openCalib(a.id);
+  openPSV(a.id);
   setTimeout(()=>{
     const set=(i,v)=>{const el=$(i);if(el){el.value=v;el.dispatchEvent(new Event('input'))}};
     set('#cbAf',af);set('#cbAl',al);set('#cbTec',tec);
