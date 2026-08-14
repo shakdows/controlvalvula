@@ -1755,13 +1755,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   /* ── EL CAJÓN DE NAVEGACIÓN ─────────────────────────────────
      Con velo, para que se entienda que hay algo encima y para
      poder cerrarlo tocando fuera. */
-  /* El cajón TIENE que ir por encima de su propio velo. Con el velo
-     delante, el menú se abría y no respondía a nada: cada toque sobre
-     «Clientes» o «Cotizaciones» lo recibía el velo, que sólo sabe
-     cerrar. Parecía que el menú estaba roto y en realidad estaba
-     tapado por la capa que existe para cerrarlo. */
-  .rail{width:min(280px,84vw);box-shadow:var(--shadow-over);
-    z-index:calc(var(--z-scrim) + 1)}
+  .rail{width:min(280px,84vw);box-shadow:var(--shadow-over)}
   .rail nav a{padding:11px 12px;font-size:14.5px}
   .rail-scrim{display:block;position:fixed;inset:0;background:oklch(0.235 0.012 255 /.42);
     opacity:0;pointer-events:none;transition:opacity var(--med) var(--ease);z-index:var(--z-scrim)}
@@ -2425,6 +2419,293 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
   .cl-card:active,.ps-card:active,.fam:active,.nm-card:active{transform:none}
 }
 </style>
+<style id="piel-pro">
+/* ══════════════════════════════════════════════════════════════
+   ADOLPHUS · PIEL «PRO»
+   Capa de diseño encima de la existente. No toca marcado ni lógica:
+   sólo redefine tokens y afina superficies. Se puede quitar entera
+   borrando este bloque y el portal queda exactamente como estaba.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Paleta ───────────────────────────────────────────────
+   El gris plano de antes no tenía temperatura: todo pesaba igual y
+   nada mandaba. Ahora los neutros llevan una pizca de azul —lo justo
+   para que el papel parezca papel— y el azul profundo hace de color
+   de mando. El carmesí de la marca se reserva para lo urgente: si se
+   usa en botones y en avisos a la vez, deja de significar nada. */
+:root{
+  --bg:          oklch(0.968 0.004 255);
+  --surface:     oklch(1 0 0);
+  --surface-2:   oklch(0.982 0.003 255);
+  --surface-3:   oklch(0.958 0.005 255);
+  --ink:         oklch(0.205 0.020 258);
+  --ink-2:       oklch(0.442 0.018 258);
+  --ink-3:       oklch(0.548 0.016 258);
+  --line:        oklch(0.912 0.006 258);
+  --line-2:      oklch(0.950 0.005 258);
+
+  --marca:       oklch(0.548 0.212 22);      /* el rojo del logotipo */
+  --sel:         oklch(0.480 0.160 258);
+  --sel-bg:      oklch(0.960 0.024 258);
+
+  --ok:          oklch(0.505 0.125 160);
+  --ok-bg:       oklch(0.962 0.032 160);
+  --due:         oklch(0.552 0.132 68);
+  --due-bg:      oklch(0.966 0.048 78);
+  --late:        oklch(0.545 0.190 22);
+  --late-bg:     oklch(0.962 0.034 22);
+
+  /* radios un punto más generosos: es lo que separa una herramienta
+     interna de un producto */
+  --r-1:7px; --r-2:11px; --r-3:15px;
+
+  /* sombras de foco corto y difusión amplia — se sienten sin verse */
+  --e-1: 0 1px 2px oklch(0.205 0.020 258 / .045),
+         0 0 0 1px oklch(0.205 0.020 258 / .022);
+  --e-2: 0 2px 4px oklch(0.205 0.020 258 / .05),
+         0 8px 20px -6px oklch(0.205 0.020 258 / .09);
+  --e-3: 0 4px 8px oklch(0.205 0.020 258 / .05),
+         0 20px 48px -12px oklch(0.205 0.020 258 / .16);
+  --shadow-pop:  var(--e-2);
+  --shadow-over: 0 32px 80px -20px oklch(0.205 0.020 258 / .28);
+
+  --t-5:26px; --t-6:36px;
+  --rail-bg:  oklch(0.196 0.022 260);
+  --rail-ink: oklch(0.882 0.010 258);
+}
+/* El tema oscuro hay que repetirlo ENTERO: este bloque va después del
+   original en el documento y, a igualdad de especificidad, gana el
+   último. Si aquí sólo se tocaran cuatro tokens, los demás caerían al
+   :root de arriba —que es claro— y el modo noche saldría blanco. */
+[data-theme="dark"]{
+  --bg:        oklch(0.172 0.012 260);
+  --surface:   oklch(0.213 0.013 260);
+  --surface-2: oklch(0.242 0.014 260);
+  --surface-3: oklch(0.275 0.015 260);
+  --ink:       oklch(0.962 0.004 258);
+  --ink-2:     oklch(0.772 0.011 258);
+  --ink-3:     oklch(0.668 0.013 258);
+  --line:      oklch(0.318 0.015 260);
+  --line-2:    oklch(0.268 0.013 260);
+
+  --marca:     oklch(0.672 0.196 24);
+  --sel:       oklch(0.740 0.128 258);
+  --sel-bg:    oklch(0.302 0.055 258);
+  --ok:        oklch(0.735 0.122 160);
+  --ok-bg:     oklch(0.300 0.045 160);
+  --due:       oklch(0.812 0.122 82);
+  --due-bg:    oklch(0.322 0.050 72);
+  --late:      oklch(0.712 0.158 24);
+  --late-bg:   oklch(0.312 0.060 24);
+  --info-bg:   oklch(0.282 0.030 258);
+
+  --rail-bg:  oklch(0.140 0.012 260);
+  --rail-ink: oklch(0.862 0.010 258);
+  --e-1: 0 1px 2px oklch(0 0 0 / .32), 0 0 0 1px oklch(1 0 0 / .05);
+  --e-2: 0 2px 6px oklch(0 0 0 / .36), 0 10px 26px -8px oklch(0 0 0 / .44);
+  --e-3: 0 6px 12px oklch(0 0 0 / .38), 0 24px 56px -14px oklch(0 0 0 / .58);
+  --shadow-pop:  var(--e-2);
+  --shadow-over: 0 32px 80px -20px oklch(0 0 0 / .68);
+}
+/* en oscuro la barra ya no contrasta por color sino por profundidad */
+[data-theme="dark"] .rail{ box-shadow:inset -1px 0 0 oklch(1 0 0 / .055) }
+[data-theme="dark"] .kpi{
+  background:linear-gradient(180deg, var(--surface-2), var(--surface));
+}
+
+/* ── 2. Cifras que se leen de un vistazo ─────────────────────
+   Números tabulares en TODO lo que sea dato: sin esto las columnas
+   bailan al cambiar de fila y comparar dos presiones cuesta el doble. */
+body{ -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility }
+table.grid td, table.grid th, .kpi .kv, .stat b, .mono,
+.tag, .barra, input.inp[inputmode="numeric"]{
+  font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1,"cv01" 1;
+}
+
+/* ── 3. La barra lateral, oscura ─────────────────────────────
+   Es el cambio que más se nota. Un panel oscuro a la izquierda separa
+   «dónde estoy» de «qué estoy mirando» sin necesidad de una línea, y
+   le da al contenido todo el blanco disponible. */
+.rail{
+  background:var(--rail-bg); border-right:0; color:var(--rail-ink);
+  box-shadow:inset -1px 0 0 oklch(1 0 0 / .07);
+}
+.rail *{ border-color:oklch(1 0 0 / .09) !important }
+.rail .rail-h, .rail .rail-f{ border-color:oklch(1 0 0 / .09) }
+.rail #nav > a{
+  color:oklch(0.760 0.012 258); border-radius:9px; margin-inline:8px;
+  transition:background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.rail #nav > a:hover{ background:oklch(1 0 0 / .07); color:#fff }
+.rail #nav > a.on{
+  background:oklch(1 0 0 / .12); color:#fff;
+  box-shadow:inset 0 0 0 1px oklch(1 0 0 / .09);
+}
+/* el filo de color dice cuál es la página actual sin gritar */
+.rail #nav > a.on::before{
+  content:''; position:absolute; left:-8px; top:50%; transform:translateY(-50%);
+  width:3px; height:17px; border-radius:0 3px 3px 0; background:var(--marca);
+}
+.rail #nav > a{ position:relative }
+.rail #nav > a svg{ opacity:.72 }
+.rail #nav > a.on svg{ opacity:1 }
+.rail .grp, .rail .rail-grp, .rail h4{
+  color:oklch(0.605 0.014 258); letter-spacing:.09em; text-transform:uppercase; font-size:10.5px;
+}
+.rail .brand-sub, .rail .sub, .rail small{ color:oklch(0.620 0.014 258) }
+.rail .cnt, .rail .badge{ background:oklch(1 0 0 / .13); color:oklch(0.900 0.010 258) }
+
+/* ── 4. La cabecera, de cristal ──────────────────────────────
+   Al desplazarse, el contenido pasa POR DEBAJO y se difumina. Deja
+   claro que la barra flota y que hay más cosas más abajo. */
+.app > header, .topbar, .app-top, #crumbs{ position:relative; z-index:var(--z-sticky) }
+.app > header, .topbar, .app-top{
+  background:oklch(1 0 0 / .78); backdrop-filter:saturate(1.7) blur(14px);
+  -webkit-backdrop-filter:saturate(1.7) blur(14px);
+  border-bottom:1px solid var(--line-2);
+}
+[data-theme="dark"] .app > header,
+[data-theme="dark"] .topbar,
+[data-theme="dark"] .app-top{ background:oklch(0.212 0.012 258 / .76) }
+
+/* ── 5. Tarjetas y paneles ───────────────────────────────────
+   Un borde de 1px hacía que todo pareciera una casilla. Ahora el
+   contorno lo pone la sombra —más suave— y el borde queda de refuerzo. */
+.panel, .kpi, .cl-card, .ps-card, .cover-card, .sess-card{
+  border-color:var(--line-2); box-shadow:var(--e-1);
+  transition:box-shadow var(--med) var(--ease), transform var(--med) var(--ease),
+             border-color var(--med) var(--ease);
+}
+.cl-card:hover, .ps-card:hover{
+  box-shadow:var(--e-2); transform:translateY(-1px); border-color:var(--line);
+}
+
+/* Las cifras grandes: más aire, más peso, y un acento arriba que las
+   convierte en tarjeta de indicador y no en una caja con un número. */
+.kpi{
+  padding:17px 19px; min-height:112px; position:relative; overflow:hidden;
+  background:linear-gradient(180deg, var(--surface), var(--surface-2));
+}
+.kpi::after{
+  content:''; position:absolute; inset:0 auto auto 0; height:2px; width:100%;
+  background:linear-gradient(90deg, var(--sel), transparent 62%); opacity:.5;
+}
+.kpi .kv{ font-size:var(--t-6); font-weight:650; letter-spacing:-.035em }
+.kpi .kk{ font-size:11.5px; letter-spacing:.02em; color:var(--ink-3) }
+
+/* ── 6. Tablas ───────────────────────────────────────────────
+   Es donde vive el trabajo: cincuenta válvulas al día se leen aquí. */
+table.grid th{
+  height:38px; font-size:10.5px; letter-spacing:.075em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:650;
+  background:oklch(1 0 0 / .84); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+[data-theme="dark"] table.grid th{ background:oklch(0.232 0.012 258 / .88) }
+table.grid td{ height:var(--row-h) }
+table.grid tbody tr{ transition:background var(--fast) var(--ease) }
+table.grid tbody tr:hover{ background:var(--surface-2) }
+table.grid tbody tr:hover td:first-child{ box-shadow:inset 2px 0 0 var(--sel) }
+
+/* ── 7. Pastillas de estado ──────────────────────────────────
+   Un punto de color y el borde a juego: se distinguen de un vistazo
+   incluso en escala de grises, que es como se imprime un informe. */
+.tag{
+  height:22px; padding:0 9px; border-radius:var(--r-pill); font-size:11px;
+  font-weight:650; letter-spacing:.015em;
+  box-shadow:inset 0 0 0 1px currentColor; --tw:1;
+}
+.tag{ background-color:color-mix(in oklch, currentColor 9%, transparent) }
+.tag.ok{ color:var(--ok) } .tag.due{ color:var(--due) }
+.tag.late{ color:var(--late) } .tag.sel{ color:var(--sel) }
+.tag .dot{ box-shadow:0 0 0 3px color-mix(in oklch, currentColor 18%, transparent) }
+
+/* ── 8. Botones ──────────────────────────────────────────────
+   El principal deja de ser un rectángulo de tinta plana: un degradado
+   mínimo y una luz interior arriba le dan cuerpo. */
+.btn{
+  height:34px; border-radius:var(--r-1); font-weight:600; letter-spacing:.005em;
+  background:linear-gradient(180deg,
+    color-mix(in oklch, var(--ink) 92%, white), var(--ink));
+  box-shadow:var(--e-1), inset 0 1px 0 oklch(1 0 0 / .13);
+  transition:filter var(--fast) var(--ease), transform var(--fast) var(--ease),
+             box-shadow var(--fast) var(--ease);
+}
+.btn:hover:not(:disabled){ filter:brightness(1.14); box-shadow:var(--e-2), inset 0 1px 0 oklch(1 0 0 / .16) }
+.btn:active:not(:disabled){ transform:translateY(1px); filter:brightness(.97) }
+.btn.sec, .btn.quiet{
+  background:var(--surface); color:var(--ink); border-color:var(--line);
+  box-shadow:var(--e-1);
+}
+.btn.sec:hover:not(:disabled), .btn.quiet:hover:not(:disabled){
+  background:var(--surface-2); filter:none; border-color:var(--ink-3);
+}
+.btn:disabled{ opacity:.5; cursor:not-allowed }
+.btn:focus-visible, .inp:focus-visible, .pw-ojo:focus-visible, a:focus-visible{
+  outline:2px solid var(--sel); outline-offset:2px;
+}
+
+/* ── 9. Campos ───────────────────────────────────────────────*/
+.inp{
+  border-radius:var(--r-1); border-color:var(--line);
+  background:var(--surface); transition:border-color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.inp:hover:not(:focus){ border-color:var(--ink-3) }
+.inp:focus{
+  border-color:var(--sel); outline:0;
+  box-shadow:0 0 0 3.5px color-mix(in oklch, var(--sel) 15%, transparent);
+}
+
+/* ── 10. La portada de acceso ────────────────────────────────
+   Es lo primero que ve un cliente al que le pasas el enlace. Un fondo
+   con profundidad y una tarjeta que flota: cuesta lo mismo y dice que
+   detrás hay una empresa. */
+.cover-hero{
+  background:
+    radial-gradient(1100px 620px at 82% -8%,  oklch(0.548 0.212 22 / .17), transparent 62%),
+    radial-gradient(900px 560px at 8% 105%,   oklch(0.480 0.160 258 / .24), transparent 60%),
+    linear-gradient(158deg, oklch(0.238 0.030 262), oklch(0.164 0.020 260));
+  position:relative; overflow:hidden;
+}
+/* retícula tenue: guiño a un plano de planta, sin distraer */
+.cover-hero::before{
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background-image:
+    linear-gradient(oklch(1 0 0 / .045) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(1 0 0 / .045) 1px, transparent 1px);
+  background-size:52px 52px;
+  mask-image:radial-gradient(70% 62% at 50% 42%, #000, transparent 78%);
+  -webkit-mask-image:radial-gradient(70% 62% at 50% 42%, #000, transparent 78%);
+}
+.cover-hero > *{ position:relative; z-index:1 }
+.cover-panel{ background:var(--bg) }
+.cover-card{
+  border-radius:var(--r-3); box-shadow:var(--e-3); border-color:var(--line-2);
+}
+
+/* ── 11. Detalles que se notan sin mirarlos ──────────────────*/
+::selection{ background:color-mix(in oklch, var(--sel) 24%, transparent) }
+*::-webkit-scrollbar{ width:11px; height:11px }
+*::-webkit-scrollbar-thumb{
+  background:color-mix(in oklch, var(--ink) 20%, transparent);
+  border-radius:99px; border:3px solid transparent; background-clip:content-box;
+}
+*::-webkit-scrollbar-thumb:hover{ background:color-mix(in oklch, var(--ink) 34%, transparent); background-clip:content-box }
+*::-webkit-scrollbar-track{ background:transparent }
+
+.net-chip{ border-radius:var(--r-pill); box-shadow:var(--e-1); font-weight:600 }
+.sub-nav a.on, .cbar-tabs a.on, .dr-tab.on{ font-weight:650 }
+.dr-tab.on{ box-shadow:inset 0 -2px 0 var(--sel) }
+.barra{ border-radius:var(--r-pill); overflow:hidden }
+
+/* Respetar a quien pidió menos movimiento: en planta, con guantes y
+   pantalla al sol, las animaciones estorban. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; transition-duration:.01ms !important }
+}
+
+</style>
 </head>
 <body>
 
@@ -2516,10 +2797,6 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
         </select>
         <button class="btn sec" style="width:100%;justify-content:center" onclick="enterApp()">Entrar con datos de ejemplo</button>
-        <button class="btn quiet" data-instalar style="display:none;width:100%;margin-top:10px"
-          onclick="instalarApp()" title="Guardarla en tu equipo para abrirla como una app">
-          <svg viewBox="0 0 24 24"><path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-          Descargar la app</button>
       </div>
       <p class="cover-foot">Adolphus S.A. · v1.4 · <a onclick="verLegal('terminos')" style="cursor:pointer;text-decoration:underline">Términos</a> · <a onclick="verLegal('privacidad')" style="cursor:pointer;text-decoration:underline">Privacidad</a></p>
     </div>
@@ -2610,7 +2887,6 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
             </select>
           </div>
           <hr>
-          <button class="mi" data-instalar style="display:none" onclick="closeAcct();instalarApp()"><svg viewBox="0 0 24 24"><path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Descargar la app</button>
           <button class="mi" onclick="closeAcct();logout()"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>Cerrar sesión</button>
         </div>
       </div>
@@ -13316,77 +13592,6 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
       })
       .catch(()=>{});
   });
-}
-
-/* ── Instalar la app en el equipo ────────────────────────────
-   El navegador esconde esta opción en un submenú que nadie encuentra.
-   Aquí se ofrece un botón, y sólo cuando de verdad se puede instalar:
-   un botón que no hace nada es peor que no tenerlo. */
-let PROMPT_INSTALAR=null;
-
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();          // que no salga la barra del navegador
-  PROMPT_INSTALAR=e;
-  pintarInstalar();
-});
-window.addEventListener('appinstalled',()=>{
-  PROMPT_INSTALAR=null; pintarInstalar();
-  toast('Adolphus quedó instalada en tu equipo');
-  registrar('Cuenta','App instalada');
-});
-
-/* Ya está instalada si se abrió desde el icono, no desde el navegador. */
-const yaInstalada=()=>
-  window.matchMedia('(display-mode: standalone)').matches ||
-  window.navigator.standalone===true;
-
-/* iPhone no tiene beforeinstallprompt: allí se instala a mano desde
-   Compartir → Añadir a inicio, y hay que explicarlo con palabras. */
-const esIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent) ||
-  (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
-
-function sePuedeInstalar(){ return !yaInstalada() && (!!PROMPT_INSTALAR || esIOS()) }
-
-/* En iPhone 'beforeinstallprompt' NO existe, así que si sólo pintáramos
-   al recibirlo, el botón no aparecería nunca justo donde más falta hace
-   —que es donde hay que explicar el camino a mano—. Por eso se pinta
-   también al arrancar. */
-document.addEventListener('DOMContentLoaded',pintarInstalar);
-window.addEventListener('load',pintarInstalar);
-
-function pintarInstalar(){
-  document.querySelectorAll('[data-instalar]').forEach(b=>{
-    b.style.display = sePuedeInstalar() ? '' : 'none';
-  });
-}
-
-async function instalarApp(){
-  if(yaInstalada())return toast('Ya la estás usando instalada');
-  if(PROMPT_INSTALAR){
-    PROMPT_INSTALAR.prompt();
-    const r=await PROMPT_INSTALAR.userChoice.catch(()=>null);
-    PROMPT_INSTALAR=null; pintarInstalar();
-    if(r&&r.outcome==='accepted')toast('Instalando…');
-    return;
-  }
-  if(esIOS())return comoInstalarIOS();
-  toast('Tu navegador no ofrece instalarla. Prueba con Chrome o Edge.');
-}
-
-function comoInstalarIOS(){
-  $('#mTitle').textContent='Instalar Adolphus en tu iPhone';
-  $('#mBody').innerHTML=`<p class="hint" style="line-height:1.7">
-    Safari no deja instalarla desde un botón: hay que hacerlo desde su menú.
-    Son tres toques.</p>
-    <ol class="nube-pasos" style="margin-top:14px">
-      <li>Toca <b>Compartir</b> abajo en el centro — el cuadrado con la flecha hacia arriba.</li>
-      <li>Baja y elige <b>Añadir a pantalla de inicio</b>.</li>
-      <li>Toca <b>Añadir</b>. Te queda el icono de Adolphus junto a tus otras apps.</li>
-    </ol>
-    <p class="hint" style="margin-top:12px">Desde ahí abre a pantalla completa y
-      sigue funcionando en planta aunque te quedes sin señal.</p>`;
-  $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Entendido</button>`;
-  $('#modal').classList.add('on');
 }
 
 /* ============================================================
