@@ -1309,6 +1309,27 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   padding:12px var(--sp-5);border-top:1px solid var(--line-2);background:var(--surface-2)
 }
 .hero-urg .pt{width:8px;height:8px;border-radius:50%;background:var(--tono);flex:0 0 auto}
+
+/* Trabajo que acaba de llegar y el taller todavía no ha mirado. Va
+   encima de todo, con el punto latiendo, porque es lo único de la
+   pantalla que aparece sin que nadie de este lado haya hecho nada. */
+.nuevo{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px var(--sp-5);border-bottom:1px solid var(--line-2);
+  background:color-mix(in oklch,var(--due) 12%,var(--surface-1))
+}
+.nuevo .pt{width:9px;height:9px;border-radius:50%;background:var(--due);flex:0 0 auto;
+  box-shadow:0 0 0 0 color-mix(in oklch,var(--due) 60%,transparent);animation:late 2s ease-out infinite}
+.nuevo p{flex:1;min-width:220px;font-size:13px;color:var(--ink-2);line-height:1.45}
+.nuevo p b{color:var(--ink);font-weight:600}
+.nuevo .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+@keyframes late{
+  0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--due) 60%,transparent)}
+  70%{box-shadow:0 0 0 9px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+@media(prefers-reduced-motion:reduce){.nuevo .pt{animation:none}}
+@media(max-width:760px){.nuevo{padding:11px var(--sp-4)}.nuevo .btn{width:100%;justify-content:center}}
 .hero-urg p{flex:1;min-width:220px;font-size:13px;color:var(--ink-2);line-height:1.45}
 .hero-urg p b{color:var(--ink);font-weight:600}
 .hero-urg.ok p{color:var(--ink-3)}
@@ -4223,6 +4244,7 @@ function verEquipo(id){
 /* Detalle de una orden, también encima. */
 function verOrden(idOrAct,esActivo){
   const o=esActivo?ORDENES.find(x=>x.act===idOrAct&&x.et!=='final'):ORDENES.find(x=>x.id===idOrAct);
+  if(o)darPorVistas([o.id]);   // mirarla es enterarse; el aviso se apaga solo
   if(!o){toast('Esa orden ya no está abierta');return}
   const a=ACTIVOS.find(x=>x.id===o.act)||{};
   /* Una orden puede llevar varias válvulas: la cabecera va por la más
@@ -4261,7 +4283,14 @@ function verOrden(idOrAct,esActivo){
               <p>${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')}${v.ar?' · '+esc(area(v)):''}</p>
               ${x.et!=='final'&&f.falta.length?`<small>${esc(f.falta[0])}</small>`:''}</div>
             <span class="tag ${x.et==='final'?'ok':x.et==='mant'?'sel':''}">${esc(et[1])}</span>
-            ${S.rol==='cliente'?'':`<button class="btn quiet xs" onclick="closeModal();${
+            ${S.rol==='cliente'?''
+              /* Mientras la válvula no ha llegado no hay nada que
+                 ensayar: lo único cierto es que entra al taller, y se
+                 mete de una en una porque no siempre llegan juntas. */
+              /* Sin botón por línea: al taller entran las dos juntas,
+                 con el único botón del pie. */
+              :x.et==='oc' ? ''
+              :`<button class="btn quiet xs" onclick="closeModal();${
               x.et==='taller' ? `openPSV('${x.act}',null,'taller')`
               : x.et==='final' ? `verEquipo('${x.act}')`
               : `registrarEnsayoDeOrden('${x.id}')`}">${
@@ -4289,14 +4318,20 @@ function verOrden(idOrAct,esActivo){
     ${o.partes&&o.partes.length?`<section class="fx-blk"><div class="fx-blk-h"><h3>Repuestos previstos</h3></div>
       <div class="parts-inline">${o.partes.map(x=>`<span class="tag mono">${esc(x)}</span>`).join('')}</div></section>`:''}`;
   const cliente=S.rol==='cliente';
+  /* La orden recién recibida no da para más que meterla al taller: no
+     hay nada que fotografiar, ni que ensayar, ni etiqueta que pegar en
+     una válvula que todavía no ha llegado. */
+  const enEspera=etC==='oc';
+  const porEntrar=ls.filter(x=>x.et==='oc').length;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
-    ${varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
-    ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
+    ${enEspera||varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
+    ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
     ${!cliente&&!varias&&etC==='taller'
       ? `<button class="btn" onclick="closeModal();openPSV('${o.act}',null,'taller')">Colocar datos</button>`
       : !cliente&&!varias&&etC==='mant'
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el ensayo</button>` : ''}
-    ${!cliente&&sig&&etC!=='taller'?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}')">Pasar a ${esc(sig[1].toLowerCase())}</button>`:''}`;
+    ${!cliente&&sig&&etC!=='taller'?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}')">${
+      enEspera?`Pasar al taller${porEntrar>1?` las ${porEntrar}`:''}`:`Pasar a ${esc(sig[1].toLowerCase())}`}</button>`:''}`;
   $('#modal').classList.add('on');
 }
 
@@ -10900,6 +10935,75 @@ function tallerFoco(){
   return S.homeCli||S.inCli||null;
 }
 function tallerCambiar(v){S.homeCli=v||'__todos';renderHome()}
+/* ============================================================
+   TRABAJO QUE EL TALLER TODAVÍA NO HA VISTO
+   ------------------------------------------------------------
+   Gerencia abre la orden de servicio desde su pantalla y la válvula
+   aparece en el taller sin que suene nada. Aquí se apunta qué órdenes
+   ha mirado ya cada persona, y el panel enseña arriba las que no.
+   Se guarda por correo, no por navegador: si dos técnicos comparten
+   la tablet, lo que vio uno no se lo da por visto al otro.
+   ============================================================ */
+const LS_VISTO='adolphus.ordenes.vistas.v1';
+const quienMira=()=>(typeof SES!=='undefined'&&SES&&SES.m)||'invitado';
+function leerVistas(){try{return JSON.parse(localStorage.getItem(LS_VISTO)||'{}')}catch(e){return {}}}
+function escribirVistas(t){try{localStorage.setItem(LS_VISTO,JSON.stringify(t))}catch(e){}}
+/* La primera vez que entra alguien no puede salirle que TODO es nuevo.
+   Se da por visto lo que ya está en marcha o entregado; lo que sigue en
+   «OC recibida» sí es trabajo pendiente de entrar, y ese sí se avisa. */
+function sembrarVistas(){
+  const t=leerVistas(); if(t[quienMira()])return t;
+  t[quienMira()]=ORDENES.filter(o=>o.et!=='oc').map(o=>o.id);
+  escribirVistas(t); return t;
+}
+function ordenesNuevas(foco){
+  const vistas=new Set(sembrarVistas()[quienMira()]||[]);
+  return ORDENES.filter(o=>{
+    if(o.et==='final'||vistas.has(o.id))return false;
+    const a=ACTIVOS.find(x=>x.id===o.act);
+    return !foco||a?.cli===foco;
+  });
+}
+function darPorVistas(ids){
+  const t=sembrarVistas(), yo=quienMira();
+  const antes=(t[yo]||[]).length;
+  t[yo]=[...new Set([...(t[yo]||[]),...ids])];
+  escribirVistas(t);
+  /* Si el panel está detrás —la orden se abre en un cajón encima— hay
+     que repintarlo: si no, al cerrar el cajón el aviso sigue ahí
+     pidiendo mirar algo que se acaba de mirar. */
+  if(t[yo].length!==antes&&S.page==='home'&&S.rol==='tec'){renderHomeTaller();renderNotif()}
+}
+/* «Enterado»: se apaga el aviso, no se toca la orden. */
+function vistoElTrabajo(){
+  const n=ordenesNuevas(tallerFoco());
+  darPorVistas(n.map(o=>o.id));
+  renderHome(); renderNotif();
+  toast(n.length===1?'Orden marcada como vista':`${n.length} órdenes marcadas como vistas`);
+}
+/* Ver las órdenes nuevas es haberlas visto. */
+function irANuevas(){
+  const n=ordenesNuevas(tallerFoco());
+  darPorVistas(n.map(o=>o.id));
+  if(n.length===1)return verOrden(n[0].id);
+  go(S.inCli||S.cli?'wo':'clients');
+}
+function avisoNuevoHtml(foco){
+  const n=ordenesNuevas(foco);
+  if(!n.length)return '';
+  const tags=n.slice(0,6).map(o=>{
+    const a=ACTIVOS.find(x=>x.id===o.act)||{};
+    return `<span class="tag due"><span class="dot"></span>${esc(a.tag||a.ser||o.n)}</span>`;
+  }).join('')+(n.length>6?`<span class="tag">y ${n.length-6} más</span>`:'');
+  return `<div class="nuevo"><span class="pt"></span>
+    <div style="flex:1;min-width:220px">
+      <p><b>${n.length} orden${n.length===1?'':'es'} de trabajo nueva${n.length===1?'':'s'}</b> — gerencia las mandó a mantenimiento y todavía no las has abierto.</p>
+      <div class="tags">${tags}</div>
+    </div>
+    <button class="btn" onclick="irANuevas()">Ver el trabajo nuevo</button>
+    <button class="btn quiet" onclick="vistoElTrabajo()">Enterado</button></div>`;
+}
+
 function renderHomeTaller(){
   const foco=tallerFoco();
   const mio=o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !foco||a?.cli===foco};
@@ -11022,6 +11126,7 @@ function renderHomeTaller(){
     <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
 
   $('#homeView').innerHTML=
+   avisoNuevoHtml(foco)+
    heroHtml({
      titulo:'Servicio técnico'+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
      sub:`${foco?esc(cli(foco).n)+' · ':''}${fechaLarga(HOY)} · ${reparando.length} válvula${reparando.length===1?'':'s'} en el taller · ${enOC.length} por entrar`,
@@ -11332,6 +11437,11 @@ function buildNotif(){
     });
   vs.filter(a=>a.prox&&dias(a.prox)<0).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'late',ic:'!',t:`${a.tag||a.ser} · calibración vencida`,s:`hace ${-dias(a.prox)} días · ${cli(a.cli).n}`,id:a.id}));
   vs.filter(a=>a.prox&&dias(a.prox)>=0&&dias(a.prox)<=90).sort((a,b)=>dias(a.prox)-dias(b.prox)).forEach(a=>items.push({tone:'due',ic:'◷',t:`${a.tag} · vence en ${dias(a.prox)} d`,s:cli(a.cli).n,id:a.id}));
+  if(S.rol==='tec')ordenesNuevas(S.cli||null).forEach(o=>{
+    const a=ACTIVOS.find(x=>x.id===o.act);
+    items.push({tone:'due',ic:'●',t:`${a?.tag||a?.ser||o.n} · trabajo nuevo`,
+      s:`${o.mat||o.n} — mandada a mantenimiento, sin abrir`,id:o.act});
+  });
   ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return o.et==='mant'&&(!S.cli||a?.cli===S.cli)}).forEach(o=>{const a=ACTIVOS.find(x=>x.id===o.act);items.push({tone:'sel',ic:'⚙',t:`${o.n} en taller`,s:`${a?.tag||''} · ${o.tipo}`,id:o.act})});
   SOLICITUDES.filter(s=>(!S.cli||s.cli===S.cli)&&!['cerrada','ejecucion'].includes(s.est))
     .forEach(s=>items.push({tone:s.est==='cotizada'?'sel':'due',ic:'▤',t:`${s.n} · ${pasoDe(s.est).n.toLowerCase()}`,
