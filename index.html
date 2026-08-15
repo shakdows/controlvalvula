@@ -7467,16 +7467,15 @@ ${ords.length?`<h2>INTERVENCIONES</h2>
 ${ords.slice(0,8).map(o=>`<tr><td>${fPE(o.f)}</td><td>${esc(o.mat||o.n||'')}</td>
   <td>${esc(o.tipo||'')}</td><td>${esc((ETAPAS.find(x=>x[0]===o.et)||['',o.et])[1])}</td></tr>`).join('')}</table>`:''}
 
-${piezas.length?`<h2>DESPIECE Y PRECIOS DE REPUESTO</h2>
-<table class="lst"><tr><th>Pos.</th><th>N.º de parte</th><th>Descripción</th><th class="num">Precio</th><th>Almacén</th></tr>
-${piezas.map(x=>{const st=piezaStock(x.n);return `<tr><td>${x.p}</td><td>${esc(x.n)}</td>
-  <td>${esc(x.d)}${x.k?' · kit de overhaul':''}</td><td class="num">${usd(precio(x.n))}</td>
-  <td>${st.n>0?`${st.n} und`:'a pedido'}</td></tr>`}).join('')}</table>
-<div class="tot">Kit de overhaul — ${kit.length} piezas, <b>${usd(kitTot)}</b> sin IGV</div>`:''}
+${piezas.length?`<h2>DESPIECE DEL EQUIPO</h2>
+<table class="lst"><tr><th>Pos.</th><th>N.º de parte</th><th>Descripción</th></tr>
+${piezas.map(x=>`<tr><td>${x.p}</td><td>${esc(x.n)}</td>
+  <td>${esc(x.d)}${x.k?' · kit de overhaul':''}</td></tr>`).join('')}</table>
+<div class="tot">Kit de overhaul — ${kit.length} pieza${kit.length===1?'':'s'}.
+  Para el precio, pide una cotización a tu contacto comercial.</div>`:''}
 
-${piezas.length&&!hayLista()?`<div class="av">Los precios de esta hoja son de demostración: todavía no se ha cargado la lista de precios de la empresa.</div>`:''}
 <div class="pie"><span>Ficha generada por Adolphus S.A.</span>
-  <span>Precios sin IGV · sujetos a confirmación de stock</span>
+  <span>Despiece de referencia · para precios, solicita cotización</span>
   <span>${fPE(HOY.toISOString().slice(0,10))}</span></div>
 ${BARRA_IMPRIMIR}
 </body></html>`};
@@ -7485,7 +7484,12 @@ ${BARRA_IMPRIMIR}
 function fichaParaCliente(actId){
   const D=datosFicha(actId); if(!D){toast('No encuentro la válvula');return}
   const {a,m,e,ensayos,u,p,ords,piezas}=D;
-  const kit=piezas.filter(x=>x.k), kitTot=kit.reduce((s,x)=>s+precio(x.n),0);
+  /* SIN PRECIOS. Esta hoja se le manda al cliente, y un precio suelto
+     en una ficha técnica es una oferta que nadie revisó: ni descuento,
+     ni vigencia, ni condiciones. Cotizar es un acto comercial y tiene
+     su propio circuito. Aquí va el despiece —qué piezas lleva la
+     válvula, que es información del equipo del cliente— y punto. */
+  const kit=piezas.filter(x=>x.k);
   const d=p?dias(p.f):(a.prox?dias(a.prox):null);
   const dt=(k,v)=>`<div class="dt-i"><span>${k}</span><b>${esc(String(v||'—'))}</b></div>`;
   $('#mTitle').textContent=`Ficha de ${a.tag||a.ser||'la válvula'}`;
@@ -7509,20 +7513,18 @@ function fichaParaCliente(actId){
       <svg viewBox="0 0 24 24">${d<0?'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>':'<path d="M20 6 9 17l-5-5"/>'}</svg>
       <div>${d<0?`La calibración venció hace <b>${-d} días</b> — es el argumento para ofrecerle el servicio.`
                 :`Calibración vigente, vence en <b>${d} días</b>.`}</div></div>`:''}
-    ${piezas.length?`<h4 class="snc-sec">Repuestos de esta válvula <span class="opc">precios sin IGV</span></h4>
-    ${hayLista()?'':avisoPrecios()}
+    ${piezas.length?`<h4 class="snc-sec">Repuestos de esta válvula
+      <span class="opc">sin precios — esta hoja va al cliente</span></h4>
     <div class="grid-wrap"><table class="grid"><thead><tr>
       <th style="width:44px">Pos.</th><th>N.º de parte</th><th>Descripción</th>
-      <th class="num" style="width:100px">Precio</th><th style="width:110px">Almacén</th>
     </tr></thead><tbody>
-    ${piezas.map(x=>{const st=piezaStock(x.n);return `<tr style="cursor:default">
+    ${piezas.map(x=>`<tr style="cursor:default">
       <td class="mono">${x.p}</td><td class="mono"><b>${esc(x.n)}</b></td>
       <td><div class="cell-2"><span>${esc(x.d)}</span>${x.k?'<small>va en el kit de overhaul</small>':''}</div></td>
-      <td class="num mono">${usd(precio(x.n))}</td>
-      <td><span class="tag ${st.n>0?'ok':'late'}"><span class="dot"></span>${st.n>0?`${st.n} und`:'a pedido'}</span></td>
-    </tr>`}).join('')}
+    </tr>`).join('')}
     </tbody></table></div>
-    <div class="cat-pie">Kit de overhaul — ${kit.length} piezas, <b class="mono">${usd(kitTot)}</b> sin IGV.</div>`:''}`;
+    <div class="cat-pie">Kit de overhaul — ${kit.length} pieza${kit.length===1?'':'s'}.
+      El precio lo pone una cotización, no esta ficha.</div>`:''}`;
   $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cerrar</button>
     <span style="flex:1"></span>
     <button class="btn sec" onclick="fichaClienteWord('${a.id}')">Word</button>
