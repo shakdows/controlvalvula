@@ -4002,6 +4002,7 @@ function guardarValvulasOrden(g,idOrden){
     toast('La orden no puede quedarse sin ninguna válvula');
     return;
   }
+  olvidarVarios('ORDENES',quitar.map(x=>x.id));
   quitar.forEach(x=>{const i=ORDENES.indexOf(x); if(i>=0)ORDENES.splice(i,1)});
 
   // añadir las nuevas al MISMO grupo y con el MISMO código
@@ -4108,6 +4109,13 @@ function confirmarBajaActivos(){
   }
   const ids=[...S.picked], motivo=$('#dbMotivo').value;
   const nombres=ids.map(id=>{const a=ACTIVOS.find(x=>x.id===id);return a?(a.tag||a.ser||''):''}).filter(Boolean);
+  // cada baja se apunta: es la única forma de que suba a la nube
+  olvidarVarios('ORDENES', ORDENES.filter(x=>ids.includes(x.act)).map(x=>x.id));
+  olvidarVarios('CALIBS',  CALIBS.filter(x=>ids.includes(x.act)).map(x=>x.id));
+  olvidarVarios('SERVS',   SERVS.filter(x=>ids.includes(x.act)).map(x=>x.id));
+  olvidarVarios('DOCS',    DOCS.filter(x=>ids.includes(x.a)).map(x=>x.id));
+  olvidarVarios('RECLAMOS',RECLAMOS.filter(x=>ids.includes(x.act)).map(x=>x.id));
+  olvidarVarios('ACTIVOS', ids);
   for(let k=ORDENES.length-1;k>=0;k--)if(ids.includes(ORDENES[k].act))ORDENES.splice(k,1);
   for(let k=CALIBS.length-1;k>=0;k--)if(ids.includes(CALIBS[k].act))CALIBS.splice(k,1);
   for(let k=SERVS.length-1;k>=0;k--)if(ids.includes(SERVS[k].act))SERVS.splice(k,1);
@@ -4295,6 +4303,13 @@ function confirmarBajaClientes(){
   const ids=[...(S.cliSel||[])],nombres=ids.map(id=>cli(id).n);
   ids.forEach(id=>{
     const suyos=ACTIVOS.filter(a=>a.cli===id).map(a=>a.id);
+    olvidar('CLIENTES',id);
+    olvidarVarios('ACTIVOS',suyos);
+    olvidarVarios('ORDENES', ORDENES.filter(x=>suyos.includes(x.act)).map(x=>x.id));
+    olvidarVarios('CALIBS',  CALIBS.filter(x=>suyos.includes(x.act)).map(x=>x.id));
+    olvidarVarios('SERVS',   SERVS.filter(x=>suyos.includes(x.act)).map(x=>x.id));
+    olvidarVarios('DOCS',    DOCS.filter(x=>suyos.includes(x.a)).map(x=>x.id));
+    olvidarVarios('SOLICITUDES', SOLICITUDES.filter(x=>x.cli===id).map(x=>x.id));
     for(let k=ORDENES.length-1;k>=0;k--)if(suyos.includes(ORDENES[k].act))ORDENES.splice(k,1);
     for(let k=CALIBS.length-1;k>=0;k--)if(suyos.includes(CALIBS[k].act))CALIBS.splice(k,1);
     for(let k=SERVS.length-1;k>=0;k--)if(suyos.includes(SERVS[k].act))SERVS.splice(k,1);
@@ -4830,6 +4845,11 @@ function confirmDeleteAsset(id){
   }
   const i=ACTIVOS.findIndex(x=>x.id===id);if(i<0)return;
   const a=ACTIVOS[i],motivo=$('#daMotivo').value;
+  olvidar('ACTIVOS',id);
+  olvidarVarios('ORDENES',ORDENES.filter(x=>x.act===id).map(x=>x.id));
+  olvidarVarios('CALIBS', CALIBS.filter(x=>x.act===id).map(x=>x.id));
+  olvidarVarios('SERVS',  SERVS.filter(x=>x.act===id).map(x=>x.id));
+  olvidarVarios('DOCS',   DOCS.filter(x=>x.a===id).map(x=>x.id));
   for(let k=ORDENES.length-1;k>=0;k--)if(ORDENES[k].act===id)ORDENES.splice(k,1);
   for(let k=CALIBS.length-1;k>=0;k--)if(CALIBS[k].act===id)CALIBS.splice(k,1);
   for(let k=SERVS.length-1;k>=0;k--)if(SERVS[k].act===id)SERVS.splice(k,1);
@@ -7916,6 +7936,7 @@ function borrarSNC(id){
 function confirmarBorrarSNC(id){
   const i=RECLAMOS.findIndex(x=>x.id===id); if(i<0)return;
   const r=RECLAMOS[i];
+  olvidar('RECLAMOS',r.id);
   RECLAMOS.splice(i,1);
   closeModal(); renderAll();
   registrar('Reclamo',`${r.n} eliminado`);
@@ -12442,6 +12463,9 @@ function confirmDeleteCalib(id){
   const i=CALIBS.findIndex(c=>c.id===id);if(i<0)return;
   const rec=CALIBS[i],a=ACTIVOS.find(x=>x.id===rec.act);
   if(a){if(rec.prevUlt!==undefined)a.ult=rec.prevUlt;if(rec.prevProx!==undefined)a.prox=rec.prevProx;}
+  olvidar('CALIBS',rec.id);
+  olvidarVarios('ORDENES',ORDENES.filter(x=>x.calib===id).map(x=>x.id));
+  olvidarVarios('DOCS',   DOCS.filter(x=>x.calib===id).map(x=>x.id));
   CALIBS.splice(i,1);
   for(let k=ORDENES.length-1;k>=0;k--)if(ORDENES[k].calib===id)ORDENES.splice(k,1);
   for(let k=DOCS.length-1;k>=0;k--)if(DOCS[k].calib===id)DOCS.splice(k,1);
@@ -13411,9 +13435,16 @@ async function nubeBajar(reemplazar){
           '&order=actualizado.asc'+(NUBE_DESDE?'&actualizado=gt.'+encodeURIComponent(NUBE_DESDE):'');
   const filas=await nubeFetch(q);
   if(!filas)return 0;
+  /* La otra cara del mismo fallo. Antes, si bajaba UNA fila cualquiera
+     se vaciaban TODAS las listas de memoria y se rellenaban con lo que
+     hubiera venido: si la nube estaba a medias —o vacía— el equipo se
+     quedaba sin nada y acto seguido subía esa nada. Ahora sólo se
+     vacía la lista de la que de verdad han bajado filas, y sólo si
+     esas filas traen contenido. */
   if(reemplazar&&filas.length){
-    NUBE_COLS.forEach(({arr})=>{const a=arr();a.length=0});
-    Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
+    const traidas=new Set(filas.filter(f=>!f.borrado).map(f=>f.coleccion));
+    NUBE_COLS.forEach(({c,arr})=>{if(traidas.has(c)){const a=arr();a.length=0}});
+    if(traidas.has('PLAN_OK'))Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
   }
   filas.forEach(f=>{
     const kk=f.coleccion+SEP+f.clave;
@@ -13437,10 +13468,68 @@ async function nubeBajar(reemplazar){
   return filas.length;
 }
 
+/* ── LOS BORRADOS SE APUNTAN, NO SE ADIVINAN ─────────────────
+   Aquí estaba el fallo que se llevó por delante los datos de la
+   empresa dos veces. La regla era: «si algo está en el espejo de la
+   nube y no está en memoria, es que lo borraron — bórralo arriba».
+   Eso vale mientras la memoria sea una copia fiel. Deja de valer en
+   cuanto la memoria arranca vacía: un equipo nuevo, una instalación
+   recién hecha, una descarga que no terminó. Entonces «no está en
+   memoria» no quiere decir «lo borraron», quiere decir «todavía no lo
+   he traído» — y el portal subía el borrado de TODO.
+
+   Ahora sólo se borra arriba lo que alguien borró aquí abajo, a
+   propósito, con su contraseña. Lo demás que falte no se borra: se
+   vuelve a bajar. El precio es que si algún día se me escapa apuntar
+   un borrado, ese registro reaparece en la siguiente sincronización.
+   Un registro de más se borra otra vez en diez segundos; los datos de
+   una empresa no se recuperan.
+   ============================================================ */
+const LS_BORRADOS='adolphus.borrados.v1';
+let BORRADOS=new Set();
+try{BORRADOS=new Set(JSON.parse(localStorage.getItem(LS_BORRADOS)||'[]'))}catch(e){}
+function olvidar(col,id){
+  if(id==null)return;
+  BORRADOS.add(col+SEP+String(id));
+  try{localStorage.setItem(LS_BORRADOS,JSON.stringify([...BORRADOS]))}catch(e){}
+}
+/* Varias de una vez: borrar un cliente se lleva sus válvulas, sus
+   órdenes y sus certificados. */
+const olvidarVarios=(col,ids)=>ids.forEach(x=>olvidar(col,x));
+function borradoHecho(kk){
+  BORRADOS.delete(kk);
+  try{localStorage.setItem(LS_BORRADOS,JSON.stringify([...BORRADOS]))}catch(e){}
+}
+/* Las bajas apuntadas que además ya no están en memoria. Se manda el
+   último contenido conocido, no un {} : una lápida vacía no se puede
+   deshacer, y ya nos costó una vez. */
+function bajasApuntadas(vistos){
+  const out=[];
+  BORRADOS.forEach(kk=>{
+    if(vistos.has(kk))return;               // volvió a existir: ya no es una baja
+    if(!ESPEJO[kk])return;                  // arriba no está: nada que borrar
+    const i=kk.indexOf(SEP);
+    let ultimo={}; try{ultimo=JSON.parse(ESPEJO[kk].j)}catch(e){}
+    out.push({k:kk,coleccion:kk.slice(0,i),clave:kk.slice(i+SEP.length),
+              empresa_id:ESPEJO[kk].emp,datos:ultimo,borrado:true});
+  });
+  return out;
+}
+/* Lo que está arriba y no está aquí SIN que nadie lo haya borrado: se
+   perdió de este lado. Se olvida del espejo para que la próxima bajada
+   lo traiga de vuelta en vez de darlo por muerto. */
+function recuperarLoQueFalta(vistos){
+  let n=0;
+  Object.keys(ESPEJO).forEach(kk=>{
+    if(vistos.has(kk)||BORRADOS.has(kk))return;
+    delete ESPEJO[kk]; NUBE_DESDE=''; n++;
+  });
+  return n;
+}
+
 /* ── Subir ───────────────────────────────────────────────────
    No se manda todo cada vez: se compara contra el espejo de lo que la
-   nube ya tiene y sólo viaja lo que cambió. Lo que desapareció de la
-   memoria se marca como borrado, para que los demás equipos se enteren. */
+   nube ya tiene y sólo viaja lo que cambió. */
 function filasLocales(){
   const out=[];
   NUBE_COLS.forEach(({c,arr,emp})=>arr().forEach(x=>{
@@ -13472,11 +13561,8 @@ async function nubeSubirDirecto(){
     const j=JSON.stringify(f.datos);
     if(!ESPEJO[kk]||ESPEJO[kk].j!==j)cambios.push({...f,borrado:false,_j:j});
   });
-  Object.keys(ESPEJO).forEach(kk=>{
-    if(vistos.has(kk))return;
-    const [c,k]=kk.split(SEP);
-    cambios.push({coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,datos:{},borrado:true,_j:null});
-  });
+  bajasApuntadas(vistos).forEach(b=>cambios.push({...b,_j:null}));
+  recuperarLoQueFalta(vistos);
   const mios=cambios.filter(puedoEscribir);
   if(!mios.length)return 0;
   for(let i=0;i<mios.length;i+=100){
@@ -13639,12 +13725,9 @@ async function apuntarPendientes(){
       filas.push({k:kk,coleccion:f.coleccion,clave:f.clave,empresa_id:f.empresa_id,
                   datos:f.datos,borrado:false,ts:Date.now(),intentos:0});
   });
-  Object.keys(ESPEJO).forEach(kk=>{
-    if(vistos.has(kk))return;
-    const [c,k]=kk.split(SEP);
-    filas.push({k:kk,coleccion:c,clave:k,empresa_id:ESPEJO[kk].emp,
-                datos:{},borrado:true,ts:Date.now(),intentos:0});
-  });
+  bajasApuntadas(vistos).forEach(b=>filas.push({...b,ts:Date.now(),intentos:0}));
+  const perdidos=recuperarLoQueFalta(vistos);
+  if(perdidos)console.warn('[nube] '+perdidos+' registros no estaban en memoria y NO se borran: se vuelven a bajar');
   const mios=filas.filter(puedoEscribir);
   await bdOp('pendientes','readwrite',o=>{mios.forEach(f=>o.put(f))});
   PEND_N=(await bdCuenta('pendientes'))||mios.length;
@@ -13666,8 +13749,22 @@ const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
    servidor. Se cortan en 2 MB, y una fila que sola pase de ahí viaja
    sola —es lo mejor que se puede hacer con ella—. */
 const LOTE_MAX=2*1024*1024;
+/* Freno de mano, por si algún día se me escapa otro camino: por muchas
+   bajas que se hayan apuntado, no se vacía una colección entera de la
+   nube en una sola sincronización sin que quede constancia. Vaciar el
+   parque de válvulas de una empresa nunca es una operación de rutina. */
+function frenoDeMano(filas){
+  const bajas=filas.filter(f=>f.borrado);
+  if(bajas.length<10)return filas;
+  const vivas=Object.keys(ESPEJO).length;
+  if(!vivas||bajas.length<vivas*0.6)return filas;
+  console.error('[nube] '+bajas.length+' bajas de '+vivas+' registros en una sola vez: se frenan');
+  toast(`${bajas.length} bajas de golpe · se subieron los cambios pero no los borrados`);
+  registrar('Nube',`Freno: ${bajas.length} borrados no se subieron por seguridad`);
+  return filas.filter(f=>!f.borrado);
+}
 async function drenarPendientes(){
-  const filas=(await bdTodos('pendientes'))||[];
+  const filas=frenoDeMano((await bdTodos('pendientes'))||[]);
   if(!filas.length){PEND_N=0;return 0}
   let subidas=0, i=0;
   while(i<filas.length){
@@ -13687,7 +13784,8 @@ async function drenarPendientes(){
        que ya subió no se vuelve a subir y lo que falta sigue en la
        tabla de pendientes. */
     for(const f of lote){
-      if(f.borrado)delete ESPEJO[f.k]; else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
+      if(f.borrado){delete ESPEJO[f.k]; borradoHecho(f.k);}
+      else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
       await bdQuita('pendientes',f.k);
       subidas++;
     }
