@@ -2770,7 +2770,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
 
       <!-- ═══ ÓRDENES ═══ -->
       <section class="page" id="p-wo"><div class="view-pad">
-        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Una tarjeta por válvula, con su código MAT. Avanza con su botón: entra a taller, un ingeniero la toma poniendo su nombre, y se finaliza registrando el ensayo.</p></div>
+        <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Una tarjeta por válvula, con su código MAT. Avanza con su botón: pasa a mantenimiento, un ingeniero la toma poniendo su nombre, y se finaliza registrando el ensayo.</p></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
             <button class="btn sec" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM3 7l2-3h14l2 3M9 12h6"/></svg>Nueva OC</button>
@@ -3232,13 +3232,17 @@ let ORDENES=[
  {id:'o3',act:'a12',n:'AD-25-1188',et:'final',tipo:'Calibración',f:'2025-08-20',tec:'K. Ortiz',hall:'Prueba de banco a 120 psig. Set point conforme, precintada y certificada.',partes:['AD-SV-KIT-SEL']},
  {id:'o4',act:'a7',n:'AD-26-0511',et:'final',tipo:'Preventivo',f:'2026-04-02',tec:'O. Julio de la Rosa',hall:'Cambio de asiento perimetral por desgaste abrasivo. Se recomienda frecuencia de 6 meses en relaves.',partes:['AD-KG-ASI-EPDM','AD-KG-EMP-TRA']},
  {id:'o5',act:'a13',n:'AD-26-0688',et:'mant',tipo:'Calibración',f:'2026-07-14',tec:'K. Ortiz',hall:'Ingresa a banco de pruebas. Calibración vencida desde enero.',partes:[]},
- {id:'o6',act:'a8',n:'AD-26-0701',et:'taller',tipo:'Correctivo',f:'2026-07-29',tec:'Por asignar',hall:'Reemplazo de manga por adelgazamiento detectado en inspección.',partes:['AD-KG-ASI-EPDM']},
+ {id:'o6',act:'a8',n:'AD-26-0701',et:'mant',tipo:'Correctivo',f:'2026-07-29',tec:'Por asignar',hall:'Reemplazo de manga por adelgazamiento detectado en inspección.',partes:['AD-KG-ASI-EPDM']},
  {id:'o7',act:'a5',n:'AD-26-0712',et:'oc',tipo:'Calibración',f:'2026-08-05',tec:'Por asignar',hall:'Recalibración anual programada antes del vencimiento.',partes:[]}
 ];
 /* El camino de una válvula, con los nombres que usa Adolphus:
-   la OC del cliente entra, la válvula llega al taller, un ingeniero
+   la OC del cliente entra, la válvula llega a mantenimiento, un ingeniero
    la toma para mantenerla, y se finaliza con el ensayo. */
-const ETAPAS=[['oc','OC recibida'],['taller','En taller'],['mant','En mantenimiento'],['final','Finalizado']];
+/* Tres etapas. «En taller» y «En mantenimiento» eran la misma cosa
+   contada dos veces: la válvula está en la casa y alguien la tiene
+   abierta. Separarlas obligaba a mover la tarjeta dos veces para el
+   mismo trabajo, y dejaba media columna vacía en el tablero. */
+const ETAPAS=[['oc','OC recibida'],['mant','En mantenimiento'],['final','Finalizado']];
 const DOCS=[
  {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
  {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
@@ -3446,7 +3450,7 @@ function estado(a){
      va bien, naranja hay que mirarlo, rojo corre prisa— y una válvula
      abierta en el taller es exactamente «hay que mirarlo». Un cuarto
      color obliga a aprenderse otra clave. */
-  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='taller'?'En taller':'Trabajo abierto',c:'due'};
+  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':'Trabajo abierto',c:'due'};
   const d=a.prox?dias(a.prox):null;
   if(d!==null&&d<0) return {k:'vencido',t:'Calibración vencida',c:'late'};
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
@@ -4431,21 +4435,20 @@ function verOrden(idOrAct,esActivo){
               /* Mientras la válvula no ha llegado no hay nada que
                  ensayar: lo único cierto es que entra al taller, y se
                  mete de una en una porque no siempre llegan juntas. */
-              /* Sin botón por línea: al taller entran las dos juntas,
-                 con el único botón del pie. */
+              /* Sin botón por línea: a mantenimiento entran las dos
+                 juntas, con el único botón del pie. */
               :x.et==='oc' ? ''
               :`<button class="btn quiet xs" onclick="closeModal();${
-              x.et==='taller' ? `openPSV('${x.act}',null,'taller')`
-              : x.et==='final' ? `verEquipo('${x.act}')`
-              : `registrarEnsayoDeOrden('${x.id}')`}">${
-              x.et==='taller'?'Datos':x.et==='final'?'Ver':'Ensayo'}</button>`}
+              x.et==='final' ? `verEquipo('${x.act}')`
+                             : `registrarEnsayoDeOrden('${x.id}')`}">${
+              x.et==='final'?'Ver':'Ensayo'}</button>`}
           </div>`}).join('')}</div>
       </section>`;
     })():''}
-    ${etC==='taller'&&!varias&&S.rol!=='cliente'?(()=>{
-      /* En taller es donde se desarma. Es el único momento en que se
-         puede fotografiar la pieza gastada antes de cambiarla: una vez
-         montada la nueva, ese «antes» ya no existe. */
+    ${etC==='mant'&&!varias&&S.rol!=='cliente'?(()=>{
+      /* En mantenimiento es donde se desarma. Es el único momento en
+         que se puede fotografiar la pieza gastada antes de cambiarla:
+         una vez montada la nueva, ese «antes» ya no existe. */
       const c=CALIBS.filter(x=>x.act===o.act).sort((x,y)=>
         String(y.fecha||y.fin||y.ini||'').localeCompare(String(x.fecha||x.fin||x.ini||'')))[0];
       const n=c?paresFoto(c).filter(p=>p.a).length:0;
@@ -4453,7 +4456,7 @@ function verOrden(idOrAct,esActivo){
         <svg viewBox="0 0 24 24">${n?'<path d="M20 6 9 17l-5-5"/>':'<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/>'}</svg>
         <div>${n?`<b>${n} foto${n===1?'':'s'} del desarme</b> ya guardada${n===1?'':'s'}.`
               :'<b>Toca desarmar.</b> Fotografía cada pieza que se va a cambiar: es el «antes» del informe, y una vez montada la nueva ya no se puede tomar.'}
-          <button class="btn quiet xs" onclick="closeModal();openPSV('${o.act}',null,'taller')">${n?'Seguir':'Colocar los datos'}</button></div></div>`;
+          <button class="btn quiet xs" onclick="closeModal();openPSV('${o.act}',null,'fotos')">${n?'Seguir':'Colocar los datos'}</button></div></div>`;
     })():''}
     <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
       <div class="fx-blk-h"><h3>Alcance y hallazgos</h3></div>
@@ -4462,20 +4465,18 @@ function verOrden(idOrAct,esActivo){
     ${o.partes&&o.partes.length?`<section class="fx-blk"><div class="fx-blk-h"><h3>Repuestos previstos</h3></div>
       <div class="parts-inline">${o.partes.map(x=>`<span class="tag mono">${esc(x)}</span>`).join('')}</div></section>`:''}`;
   const cliente=S.rol==='cliente';
-  /* La orden recién recibida no da para más que meterla al taller: no
-     hay nada que fotografiar, ni que ensayar, ni etiqueta que pegar en
-     una válvula que todavía no ha llegado. */
+  /* La orden recién recibida no da para más que meterla a
+     mantenimiento: no hay nada que fotografiar, ni que ensayar, ni
+     etiqueta que pegar en una válvula que todavía no ha llegado. */
   const enEspera=etC==='oc';
   const porEntrar=ls.filter(x=>x.et==='oc').length;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
     ${enEspera||varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
     ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
-    ${!cliente&&!varias&&etC==='taller'
-      ? `<button class="btn" onclick="closeModal();openPSV('${o.act}',null,'taller')">Colocar datos</button>`
-      : !cliente&&!varias&&etC==='mant'
+    ${!cliente&&!varias&&etC==='mant'
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el ensayo</button>` : ''}
-    ${!cliente&&sig&&etC!=='taller'?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
-      enEspera?`Pasar al taller${porEntrar>1?` las ${porEntrar}`:''}`:`Pasar a ${esc(sig[1].toLowerCase())}`}</button>`:''}`;
+    ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
+      enEspera?`Pasar a mantenimiento${porEntrar>1?` las ${porEntrar}`:''}`:`Pasar a ${esc(sig[1].toLowerCase())}`}</button>`:''}`;
   $('#modal').classList.add('on');
 }
 
@@ -6252,10 +6253,8 @@ let PSV_ABRIR_EN=null;      // 'fotos' cuando se entra a documentar el desarme
    llegó y el desarme pieza por pieza. Los tres disparos de salida son
    de mantenimiento, y enseñarlos antes de tiempo invita a rellenarlos
    con la válvula aún sin abrir. */
-let PSV_MODO='mant';
 function openPSV(actId,edit,seccion){
   PSV_ABRIR_EN=seccion||null;
-  PSV_MODO=(seccion==='taller'||seccion==='fotos')?'taller':'mant';
   let c=edit?CALIBS.find(x=>x.id===edit):null;
   /* Sin decir cuál, se retoma el borrador que haya quedado a medias en
      esa válvula. Si no hay ninguno, recién ahí se empieza uno nuevo:
@@ -6304,7 +6303,6 @@ const psvCampo=(k,v)=>{
   /* En taller el pie va diciendo qué falta para poder pasar a
      mantenimiento, así que se refresca con cada dato. En
      mantenimiento, lo que cambia el resultado repinta el veredicto. */
-  if(PSV_MODO==='taller'){ if(['asFound','setEsp','und'].includes(k))pintarPSVPie(); return }
   if(['setEsp','und'].includes(k))pintarPSVResultado();
 };
 
@@ -6379,13 +6377,12 @@ function pintarPSV(){
        </div>`}
     </div></details>
 
-    ${PSV_MODO==='taller'?`
-    <details class="psv-sec" open><summary>2 · Cómo llegó · prueba inicial
-      <span class="psv-req">antes de tocar nada</span></summary><div class="psv-b">
+    <details class="psv-sec" open><summary>2 · Cómo llegó y disparos
+      <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-        <div>Se dispara la válvula <b>tal como llegó</b>, sin ajustar nada. Es el dato que dice en qué estado
-          la mandó el cliente, y el único momento en que se puede tomar. Los tres disparos de salida vienen
-          después, en mantenimiento.</div></div>
+        <div>Primero se dispara la válvula <b>tal como llegó</b>, sin ajustar nada: es el dato que dice en
+          qué estado la mandó el cliente, y el único momento en que se puede tomar. Los tres disparos de
+          salida vienen después, ya con la válvula puesta a punto.</div></div>
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
           <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="150" oninput="psvCampo('setEsp',this.value)"></div>
@@ -6401,65 +6398,30 @@ function pintarPSV(){
         <textarea class="inp" id="pv-recep" rows="2" oninput="psvCampo('recep',this.value)"
           placeholder="Corrosión, fugas, golpes, precintos, lo que traiga puesto.">${esc(t.recep||'')}</textarea></div>
       <div id="psvAsFound"></div>
-    </div></details>`:`
-    <details class="psv-sec" open><summary>2 · Disparo <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
-      <div class="two">
-        <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
-          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="1500" oninput="psvCampo('setEsp',this.value)"></div>
-        <div class="fld"><label for="pv-und">Unidad</label>
-          <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
-            ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
-        ${F('asFound','Disparo inicial · AS FOUND','cómo llegó')}
-      </div>
       <h4 class="snc-sec">Verificación final · AS LEFT
         <span class="opc">cada disparo con su foto, tomada en ese momento</span></h4>
       <div id="psvDisparos"></div>
       <div id="psvRes"></div>
-    </div></details>`}
+    </div></details>
 
-    <details class="psv-sec" open><summary>3 · ${PSV_MODO==='taller'?'Desarme · piezas que hay que cambiar':'Conclusiones y registro fotográfico'}
-      <span class="psv-req" style="color:var(--ink-3);font-weight:500">${PSV_MODO==='taller'?'la foto del antes sólo existe ahora':'va tal cual al certificado'}</span></summary><div class="psv-b">
-      ${PSV_MODO==='taller'?`
+    <details class="psv-sec" open><summary>3 · Desarme, conclusiones y firma
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
           y qué se le va a hacer. Cuando montes la nueva, vuelves aquí y le pones su foto del «después».
-          Una vez armada, ese antes ya no se puede tomar.</div></div>`
-      :`<div class="fld"><label for="pv-coment">Conclusiones del mantenimiento</label>
-        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)"
-          placeholder="Qué se encontró, qué se cambió y en qué estado queda la válvula. Esto sale como «Conclusiones» en el certificado y en el Word.">${esc(t.coment||'')}</textarea>
-        <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>`}
-      ${PSV_MODO==='taller'?`
+          Una vez armada, ese antes ya no se puede tomar.</div></div>
       <h4 class="snc-sec">Pieza por pieza
         <span class="opc">foto del antes ahora, la del después al montarla</span></h4>
-      <!-- UN botón. Antes había dos: «Subir fotos del antes» y «Agregar
-           una comparación vacía». El segundo creaba un hueco sin foto,
-           que es lo que nadie quiere con las manos sucias y la válvula
-           abierta: se viene a fotografiar, no a preparar casillas. Con
-           dos botones, uno de ellos siempre es el equivocado. -->
       <div class="muted" style="font-size:11.5px;margin:2px 0 10px">Una foto por pieza —una, tres, las que hagan falta—.
         A cada una le pones después su foto del final, y en el informe salen emparejadas.
         Cualquiera de las dos se puede cambiar o quitar si te equivocas.</div>
-      <div id="pvFotos"></div>`
-      :(()=>{
-        /* El antes y después se toma en el TALLER, cuando la válvula
-           está abierta. Aquí sólo se recuerda lo que ya hay: repetir el
-           bloque invitaba a subir fotos de piezas con la válvula ya
-           montada, que es justo lo que no se puede. */
-        const n=paresFoto(t).filter(p=>p.a||p.d).length;
-        const sinPar=paresFoto(t).filter(p=>p.a&&!p.d).length;
-        return n?`<div class="callout ${sinPar?'warn':'ok'}"><svg viewBox="0 0 24 24">${sinPar
-            ?'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'
-            :'<path d="M20 6 9 17l-5-5"/>'}</svg>
-          <div><b>${n} pieza${n===1?'':'s'}</b> del desarme, tomada${n===1?'':'s'} en el taller.
-            ${sinPar?`A <b>${sinPar}</b> le falta la foto de cómo quedó:
-              <button class="btn quiet xs" onclick="verFotosTaller()">Completarlas</button>`
-            :'Salen en el certificado emparejadas.'}</div></div>`
-          :`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-            <div>No hay fotos del desarme. Se toman en <b>En taller</b>, con la válvula abierta —
-              una vez montada ya no se pueden tomar.</div></div>`;
-      })()}
+      <div id="pvFotos"></div>
 
-      ${PSV_MODO==='taller'?'':`
+      <div class="fld" style="margin-top:14px"><label for="pv-coment">Conclusiones del mantenimiento</label>
+        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)"
+          placeholder="Qué se encontró, qué se cambió y en qué estado queda la válvula. Esto sale como «Conclusiones» en el certificado y en el Word.">${esc(t.coment||'')}</textarea>
+        <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
+
       <h4 class="snc-sec">Quién lo hizo</h4>
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento</label>
@@ -6470,13 +6432,13 @@ function pintarPSV(){
             placeholder="Taller de válvulas" oninput="psvCampo('respArea',this.value)">
           <datalist id="areasAdolphus">${AREAS_ADOLPHUS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
       </div>
-      <div id="pvFirma"></div>`}
+      <div id="pvFirma"></div>
     </div></details>
    </div>`;
 
   pintarPSVPie();
-  if(PSV_MODO==='taller'){pintarAsFound()}
-  else {pintarDisparos(); pintarPSVResultado(); pintarFirmaPSV()}
+  /* Un solo formulario: se pintan todas sus partes. */
+  pintarAsFound(); pintarDisparos(); pintarPSVResultado(); pintarFirmaPSV();
   pintarPSVFotos();
   /* Cuando la válvula todavía está EN TALLER lo que toca es el desarme:
      abrir por los disparos sería pedirle al técnico que ensaye una
@@ -6630,21 +6592,6 @@ function quitarFirmaEnsayo(){
 
 function pintarPSVPie(){
   const p=$('#mFoot'); if(!p||!PSV_TMP)return;
-  if(PSV_MODO==='taller'){
-    /* En taller no se emite nada: se recoge cómo llegó y qué se
-       desarmó, y de ahí se pasa a mantenimiento. Enseñar «Emitir
-       certificado» con la válvula abierta encima del banco es pedir
-       que alguien lo pulse por costumbre. */
-    const pares=paresFoto(PSV_TMP).filter(x=>x.a||x.d);
-    const hayAF=!!num(PSV_TMP.asFound);
-    const listo=hayAF&&pares.length>0;
-    p.innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
-      <span style="flex:1"></span>
-      <span class="pie-falta">${listo?'':`Falta ${!hayAF?'la prueba inicial':'fotografiar alguna pieza'}`}</span>
-      <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
-      <button class="btn" onclick="guardarYAlTaller()">Pasar a mantenimiento</button>`;
-    return;
-  }
   const v=psvVeredicto(PSV_TMP), listo=v.estado!=='incompleto';
   /* Si el trabajo lleva varias válvulas, aquí no se emite nada: el
      certificado de una sola cierra media orden y deja al cliente con un
@@ -6689,22 +6636,6 @@ function confirmarEmitir(){
     </div>
     <button class="btn sec" onclick="pintarPSVPie()">No, seguir editando</button>
     <button class="btn" onclick="guardarPSV(true)">Sí, emitir</button>`;
-}
-
-/* Guardar lo del taller y mover la orden a mantenimiento de una vez:
-   son dos pasos que en el banco son uno solo. */
-function guardarYAlTaller(){
-  if(!PSV_TMP)return;
-  const act=PSV_TMP.act;
-  const pares=paresFoto(PSV_TMP).filter(x=>x.a||x.d);
-  if(!num(PSV_TMP.asFound))
-    {toast('Falta a qué presión disparó al llegar');const e=$('#pv-asFound');e&&e.focus();return}
-  if(!pares.length)
-    {toast('Fotografía al menos una pieza antes de pasar a mantenimiento');return}
-  guardarPSV(false);
-  const o=ORDENES.find(x=>x.act===act&&x.et==='taller');
-  if(o){setTimeout(()=>advanceWO(o.id),120);return}
-  toast('Datos del taller guardados');
 }
 
 /* El veredicto se ve mientras se escribe: si el tercer disparo se
@@ -6879,11 +6810,11 @@ function pintarAsFound(){
 /* Desde mantenimiento se puede volver a las piezas para ponerles la
    foto de cómo quedaron: la del antes ya está tomada, y la del después
    se hace justo al montarlas. */
+/* El desarme está en este mismo formulario, más abajo: sólo hay que
+   llevar al técnico hasta él. */
 function verFotosTaller(){
-  if(!PSV_TMP)return;
-  const act=PSV_TMP.act;
-  guardarPSV(false,true);
-  openPSV(act,PSV_TMP?PSV_TMP.id:null,'taller');
+  const c=document.getElementById('pvFotos');
+  if(c)c.scrollIntoView({block:'center'});
 }
 function pintarPSVFotos(){
   const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
@@ -8401,7 +8332,7 @@ function renderCal(){
 /* ============================================================
    8 · ÓRDENES DE TRABAJO (kanban)
    ============================================================ */
-const WO_NEXT={oc:['taller','Ingresar a taller'],taller:['mant','Empezar el mantenimiento'],mant:['final','Registrar y finalizar']};
+const WO_NEXT={oc:['mant','Pasar a mantenimiento'],mant:['final','Registrar y finalizar']};
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
    ------------------------------------------------------------
@@ -9282,22 +9213,19 @@ function renderWO(){
           ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
           ${o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
-          ${G.et==='taller'&&S.rol!=='cliente'?(()=>{
-            /* En taller hay UN botón. Dos —fotografiar y avanzar—
-               invitaban a pulsar el segundo sin haber hecho lo
-               primero, y el «antes» de una válvula ya armada no se
-               puede recuperar. Se entra a poner los datos y desde
-               dentro se pasa a mantenimiento. */
+          ${G.et==='mant'&&S.rol!=='cliente'?(()=>{
+            /* En mantenimiento se desarma, se fotografía y se ensaya:
+               todo en el mismo formulario. Un botón para entrar. */
             const n=ls.reduce((t,x)=>{
               const c=CALIBS.filter(y=>y.act===x.act).sort((p,q)=>
                 String(q.fecha||q.fin||q.ini||'').localeCompare(String(p.fecha||p.fin||p.ini||'')))[0];
               return t+(c?paresFoto(c).filter(p=>p.a||p.d).length:0);},0);
-            return `<button class="btn xs" style="width:100%;margin-top:8px;justify-content:center"
-              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'taller')`}">
+            return `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'fotos')`}">
               <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
               n?`Colocar datos · ${n} pieza${n===1?'':'s'}`:'Colocar datos'}</button>`;
           })():''}
-          ${nx&&S.rol!=='cliente'&&G.et!=='taller'?`<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`:''}
+          ${nx&&S.rol!=='cliente'?`<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`:''}
           <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
@@ -10914,7 +10842,7 @@ function gauge(pct,label){
    ============================================================ */
 const GRUPOS=[
  {k:'venc', n:'Vencidas',        tono:'late'},
- {k:'mant',n:'En taller',      tono:'due'},
+ {k:'mant',n:'En mantenimiento',tono:'due'},
  {k:'prox', n:'Vencen pronto',   tono:'due'},
  {k:'ficha',n:'Ficha incompleta',tono:'due'},
  {k:'sol',  n:'Solicitudes',     tono:'due'}
@@ -11208,7 +11136,6 @@ function faltaParaFinalizar(o){
   if(!o) return {listo:false, falta:[]};
   if(o.et==='final') return {listo:true, falta:[]};
   if(o.et==='oc')    return {listo:false, falta:['Ingresarla a taller — todavía no llegó la válvula']};
-  if(o.et==='taller')return {listo:false, falta:['Empezar el mantenimiento y poner quién lo hace']};
 
   /* En mantenimiento: aquí sí se mira el trabajo. */
   const falta=[];
@@ -11336,9 +11263,8 @@ function renderHomeTaller(){
   }).sort((a,b)=>String(a.prox||'9999').localeCompare(String(b.prox||'9999')));
 
   const enOC     = ords.filter(o=>o.et==='oc');
-  const enTaller = ords.filter(o=>o.et==='taller');
   const enMant   = ords.filter(o=>o.et==='mant');
-  const reparando= enTaller.concat(enMant);
+  const reparando= enMant;   // «en taller» se fundió con mantenimiento
   const fin      = ords.filter(o=>o.et==='final');
   const activas  = enOC.length+reparando.length;
   /* El avance es sobre lo que entró: cuántas de las que están en la
@@ -11386,7 +11312,7 @@ function renderHomeTaller(){
     :`<div class="empty" style="padding:26px"><b>Nada por mandar</b>Ninguna válvula sin orden pide mantenimiento.</div>`;
 
   const listaReparando=reparando.length?`<div class="tw">${
-      enMant.concat(enTaller).slice(0,8).map(o=>filaOrden(o,o.ing?`<small>${esc(o.ing)}</small>`:'')).join('')}
+      enMant.slice(0,8).map(o=>filaOrden(o,o.ing?`<small>${esc(o.ing)}</small>`:'')).join('')}
       ${reparando.length>8?`<div class="tw-mas">y ${reparando.length-8} más</div>`:''}</div>`
     :`<div class="empty" style="padding:26px"><b>Sin trabajo abierto</b>No hay válvulas en el taller.</div>`;
 
@@ -11431,7 +11357,7 @@ function renderHomeTaller(){
     {v:porMandar.length,k:'Por mandar a mantenimiento',dot:porMandar.length?'due':'ok',
      cls:porMandar.length?'warn':'good',d:porMandar.length?'sin orden todavía':'ninguna pendiente',go:aValvulas},
     {v:reparando.length,k:'En reparación',dot:reparando.length?'due':'',
-     d:`${enMant.length} en mantenimiento · ${enTaller.length} en taller`,go:aOrdenes},
+     d:`${enMant.length} en mantenimiento`,go:aOrdenes},
     {v:fin.length,k:'Finalizadas',cls:'good',d:`${fin.filter(o=>o.calib).length} con certificado`,go:aOrdenes},
     {v:listasParaCerrar,k:'Listas para cerrar',cls:listasParaCerrar?'good':'',
      d:listasParaCerrar?'ya tienen todo':'ninguna completa aún',go:aOrdenes}
@@ -11486,7 +11412,7 @@ function resumenClientesHtml(){
   const ESTADOS=[
     {k:'vencido',   t:'Vencidas',        c:'late'},
     {k:'porvencer', t:'Por vencer',      c:'due'},
-    {k:'mant',      t:'En taller',       c:'due'},
+    {k:'mant',      t:'En mantenimiento',c:'due'},
     {k:'incompleto',t:'Ficha incompleta',c:'ink-3'}
   ];
   const filas=CLIENTES.map(c=>{
@@ -11566,7 +11492,7 @@ function renderHome(){
      go:S.cli?"setView('atencion');go('assets')":"S.cliPend=true;go('clients')"},
     {v:venc,k:'Calibraciones vencidas',dot:venc?'late':'ok',cls:venc?'bad':'good',d:venc?'acción inmediata':'ninguna',
      go:S.cli?"go('cal')":"go('clients')"},
-    {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en taller`,go:S.cli?"go('wo')":"go('clients')"},
+    {v:ordAb,k:'Órdenes abiertas',d:`${enTaller} en mantenimiento`,go:S.cli?"go('wo')":"go('clients')"},
     {v:cumpl+'%',k:'Cumplimiento calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',
      d:cumpl>=90?'en meta (≥90%)':'bajo meta',go:"go('rep')"}
   ];
@@ -13682,9 +13608,9 @@ function aplicarFoto(d){
    viejos: si no se traducen, esas órdenes desaparecen del tablero
    porque su etapa no coincide con ninguna columna. */
 /* 'programada' era una orden aceptada cuya válvula todavía no había
-   llegado: eso es "OC recibida", no "En taller". Y el viejo 'taller'
-   significaba lo mismo que el nuevo, así que se queda igual. */
-const ETAPAS_VIEJAS={solicitada:'oc',programada:'oc',certificada:'final'};
+   llegado: eso es "OC recibida". Y 'taller' desapareció como etapa
+   propia: lo que estaba en el taller está en mantenimiento. */
+const ETAPAS_VIEJAS={solicitada:'oc',programada:'oc',taller:'mant',certificada:'final'};
 function migrarEtapas(){
   let n=0;
   ORDENES.forEach(o=>{
