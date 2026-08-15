@@ -13591,6 +13591,12 @@ async function nubeVuelta(primera){
   let bajadas=0, subidas=0;
   if(primera){
     bajadas=await nubeBajar(true);
+    /* Si arriba no hay nada de lo importante y aquí sí, el espejo está
+       mintiendo: se vacía para que suba todo en vez de quedarse callado
+       creyendo que ya está. */
+    const arriba=Object.keys(ESPEJO).some(k=>k.startsWith('CLIENTES')||k.startsWith('ACTIVOS'));
+    const aqui=CLIENTES.length||ACTIVOS.length;
+    if(!arriba&&aqui){ESPEJO={};console.warn('[nube] el servidor está vacío: se vuelve a subir todo lo de este equipo')}
     subidas=await nubeSubirDirecto();
     await bdOp('pendientes','readwrite',o=>o.clear());PEND_N=0;
   }else{
@@ -13943,6 +13949,26 @@ function sincronizar(manual){
   },900);
 }
 /* Apuntar el portal a otra base sin abrir el archivo. */
+/* Volver a sembrar el servidor con lo que hay en este equipo.
+   El portal sólo manda lo que difiere del «espejo» —su copia de lo que
+   la nube ya tiene—. Si arriba se perdió algo, el espejo sigue diciendo
+   que está y no se vuelve a mandar nunca. Vaciando el espejo, todo pasa
+   a ser nuevo y sube otra vez. No puede borrar nada: los borrados van
+   por su propio registro, y ese no se toca. */
+async function resembrarNube(){
+  if(!enNube()){toast('Primero entra con tu cuenta');return}
+  if(!online()){toast('Hace falta conexión para volver a subir');return}
+  const cuantas=filasLocales().length;
+  ESPEJO={}; NUBE_DESDE=null;
+  toast(`Subiendo ${cuantas} registros de este equipo…`);
+  try{
+    const subidas=await nubeSubirDirecto();
+    guardarLocal(); pintarNet();
+    toast(`${subidas} registros subidos al servidor`);
+    registrar('Nube',`Resiembra manual · ${subidas} registros`);
+    if($('#modal').classList.contains('on'))openSync();
+  }catch(e){ toast('No se pudo subir: '+e.message) }
+}
 function guardarCfgNube(){
   const url=($('#nbUrl').value||'').trim().replace(/\/+$/,''), key=($('#nbKey').value||'').trim();
   if(url&&!/^https:\/\/.+/.test(url)){toast('La dirección debe empezar por https://');return}
@@ -14004,6 +14030,12 @@ function openSync(){
    </div>
    <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
      :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
+   ${enNube()?`<div class="set-row" style="margin-top:12px">
+     <div class="t"><b>Volver a subir todo lo de este equipo</b>
+       <span>Cuando este equipo tiene datos que en el servidor no están —porque se perdieron
+         arriba, o porque se trabajó mucho tiempo sin cuenta—. No borra nada de ningún lado:
+         sólo manda otra vez lo que hay aquí.</span></div>
+     <button class="btn sec xs" onclick="resembrarNube()">Subirlo todo</button></div>`:''}
    <div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
