@@ -13,8 +13,17 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Ni la letra ni el Excel pueden impedir que la pantalla se pinte.
+     Los dos vienen de fuera, y en planta «fuera» a veces no contesta:
+     colgados en el <head> dejaban al técnico mirando el arranque. La
+     hoja de fuentes se carga aparte y se aplica al llegar; mientras
+     tanto se ve la letra del sistema. La librería de Excel va con
+     defer: sólo hace falta al importar o exportar, y para entonces ya
+     está —o no está, y sólo fallan esos dos botones. -->
+<link rel="stylesheet" media="print" onload="this.media='all'"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"></noscript>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* ============================================================
    TOKENS — color es información, nunca decoración.
@@ -10273,6 +10282,10 @@ function leerArchivo(file){
     else{const r=new FileReader();r.onload=ev=>pintar(ev.target.result);r.readAsDataURL(file)}
     return;
   }
+  if(typeof XLSX==='undefined'){
+    toast('Para leer un Excel hace falta abrir el portal una vez con internet · un CSV sí se puede ahora');
+    return;
+  }
   const r=new FileReader();               // Excel / CSV
   r.onload=ev=>{try{
     const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
@@ -10290,6 +10303,7 @@ function descargarPlantilla(){
     ['Refinería Costa Norte','Unidad de Crudo','TV-561B','N-11-267173','Masoneilan','21000','control','2"','600','39','7-15 psi','OPEN','Alta','2026-02-18',''],
     ['','','','','','','','','','','','','','','']
   ];
+  if(typeof XLSX==='undefined'){toast('La plantilla de Excel necesita internet la primera vez · vuelve a intentarlo con señal');return}
   try{
     const ws=XLSX.utils.aoa_to_sheet([cab,...ej]);
     ws['!cols']=cab.map(c=>({wch:Math.max(12,c.length+3)}));
@@ -10478,6 +10492,7 @@ function descargarPlantillaCalib(){
       '','Conforme','','Conforme','7%','Sí',hoy,'K. Ortiz','Banco neumático · patrón Fluke 700G','Aire',22,
       prox.toISOString().slice(0,10),''];
   });
+  if(typeof XLSX==='undefined'){toast('La plantilla de Excel necesita internet la primera vez · vuelve a intentarlo con señal');return}
   try{
     const ws=XLSX.utils.aoa_to_sheet([CAL_COLS,...filas]);
     ws['!cols']=CAL_COLS.map(c=>({wch:Math.max(13,Math.min(30,c.length+4))}));
