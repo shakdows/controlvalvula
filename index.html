@@ -3506,6 +3506,97 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
 const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',stk:'Stock de almacén',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+/* ============================================================
+   EL BOTÓN «ATRÁS» DEL CELULAR
+   ------------------------------------------------------------
+   Sin esto, la primera pulsación cerraba la aplicación entera. En un
+   celular o una tablet ese botón es el que más se usa, y nadie espera
+   salirse de un ensayo a medio llenar por pulsarlo sin mirar.
+   Ahora atrás hace, en este orden:
+     1 · cierra lo que esté encima —ventana, ficha lateral, menú—;
+     2 · retrocede a la pantalla anterior de la propia aplicación;
+     3 · y sólo cuando ya no queda nada detrás avisa, y hay que
+         pulsarlo otra vez para salir de verdad.
+   Ese doble toque es lo único que permite un navegador: bloquear la
+   salida del todo no se puede, y fingir que sí sería peor.
+   ============================================================ */
+let PILA=[], PILA_QUIETA=false, SALIR_ARMADO=0, SALIDA_LIBRE=false;
+
+function anotarSitio(p){
+  if(PILA_QUIETA)return;
+  const u=PILA[PILA.length-1];
+  if(u&&u.p===p&&u.inCli===(S.inCli||null))return;   // repintados, no viajes
+  PILA.push({p,inCli:S.inCli||null});
+  if(PILA.length>40)PILA.shift();                    // no crece sin fin
+}
+/* Qué hay abierto encima de la página, de lo más encima a lo menos. */
+function loQueEstaEncima(){
+  const on=id=>{const e=document.getElementById(id);return e&&e.classList.contains('on')};
+  if(on('modal'))return 'modal';
+  if(on('drawer'))return 'drawer';
+  if(on('notifPop'))return 'notif';
+  if(document.getElementById('app')?.classList.contains('rail-open'))return 'menu';
+  return '';
+}
+/* Cerrar el ensayo con «atrás» no puede costarle el trabajo a nadie:
+   si está a medias se guarda como borrador —eso no mueve la válvula ni
+   cierra ninguna orden— y si ya está completo se pregunta, porque ahí
+   cerrar sin guardar sí tira un ensayo entero. */
+let DESCARTE_ARMADO=0;
+function cerrarEnsayoConAtras(){
+  if(typeof PSV_TMP==='undefined'||!PSV_TMP)return false;
+  if(psvVeredicto(PSV_TMP).estado==='incompleto'){
+    guardarPSV(false,true);            // graba el borrador, sin efectos
+    PSV_TMP=null; closeModal(); renderAll();
+    return true;
+  }
+  if(DESCARTE_ARMADO&&Date.now()-DESCARTE_ARMADO<3000){
+    DESCARTE_ARMADO=0; PSV_TMP=null; closeModal(); renderAll();
+    return true;
+  }
+  DESCARTE_ARMADO=Date.now();
+  toast('El ensayo está completo y sin guardar · pulsa atrás otra vez para descartarlo');
+  return true;                          // consumida: no se cierra todavía
+}
+function cerrarLoDeEncima(q){
+  if(q==='modal'){ if(cerrarEnsayoConAtras())return; closeModal(); }
+  else if(q==='drawer')closeDrawer();
+  else if(q==='notif')closeNotif();
+  else if(q==='menu')document.getElementById('app').classList.remove('rail-open');
+}
+function volverA(sitio){
+  PILA_QUIETA=true;
+  try{
+    if((S.inCli||null)!==sitio.inCli){
+      if(sitio.inCli)enterClient(sitio.inCli,sitio.p);
+      else{exitClient();go(sitio.p)}
+    }else go(sitio.p);
+  }finally{PILA_QUIETA=false}
+}
+/* Un peldaño de historial de reserva: es lo que hace que «atrás» nos
+   llegue a nosotros en vez de sacar al usuario del navegador. */
+function anclarHistorial(){
+  if(SALIDA_LIBRE)return;
+  try{history.pushState({adolphus:1},'')}catch(e){}
+}
+function atrasDelSistema(){
+  const q=loQueEstaEncima();
+  if(q){cerrarLoDeEncima(q);anclarHistorial();return}
+  if(PILA.length>1){PILA.pop();volverA(PILA[PILA.length-1]);anclarHistorial();return}
+  /* Ya no queda nada detrás. Se avisa una vez; si vuelve a pulsar
+     dentro de los tres segundos, se le deja salir. */
+  if(SALIR_ARMADO&&Date.now()-SALIR_ARMADO<3000){
+    SALIDA_LIBRE=true;                 // dejamos de anclar: el siguiente atrás sale
+    try{history.back()}catch(e){}
+    return;
+  }
+  SALIR_ARMADO=Date.now();
+  toast('Pulsa atrás otra vez para salir de Adolphus');
+  anclarHistorial();
+}
+addEventListener('popstate',atrasDelSistema);
+anclarHistorial();
+
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   /* Las páginas de un cliente solo se abren desde su espacio de
@@ -3527,6 +3618,7 @@ function go(p){
   $('.view').scrollTop=0;
   $('#app').classList.remove('scrolled');
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
+  anotarSitio(p);
   // la página que entra se dibuja: barras, donas y cifras arrancan de cero
   requestAnimationFrame(animarVista);
 }
