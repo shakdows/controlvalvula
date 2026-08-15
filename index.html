@@ -554,6 +554,22 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .wo.t-ok{border-left-color:var(--ok)}
 .wo.t-due{border-left-color:var(--due)}
 .wo.t-late{border-left-color:var(--late)}
+/* El cuadro de añadir es una pieza más de la lista: mismo hueco, mismo
+   borde, pero punteado, para que se lea como «aquí va la siguiente». */
+.pie-confirma{flex:1;min-width:220px;font-size:12px;line-height:1.45;color:var(--ink-2)}
+.pie-confirma b{color:var(--ink);font-weight:600}
+.pie-confirma span{display:block;color:var(--ink-3);margin-top:2px}
+.pv-mas{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  min-height:132px;padding:18px;cursor:pointer;text-align:center;
+  border:2px dashed var(--line);border-radius:var(--r-1);background:var(--surface-2);
+  color:var(--ink-3);transition:border-color var(--fast),background var(--fast),color var(--fast)
+}
+.pv-mas svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.pv-mas b{font-size:13px;color:var(--ink-2)}
+.pv-mas span{font-size:11.5px;max-width:24ch;line-height:1.4}
+.pv-mas:hover,.pv-mas:focus-within{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
+.pv-mas:hover b{color:var(--sel)}
 .wo-parte{font-size:11px;color:var(--ink-3);margin-top:4px;line-height:1.4}
 .wo-parte b{color:var(--ink-2);font-weight:600}
 .wo-tarde{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--late);font-weight:600;margin:-2px 0 5px}
@@ -6269,14 +6285,7 @@ function pintarPSV(){
            que es lo que nadie quiere con las manos sucias y la válvula
            abierta: se viene a fotografiar, no a preparar casillas. Con
            dos botones, uno de ellos siempre es el equivocado. -->
-      <div class="pv-fotos-b">
-        <label class="ev-add" for="pvFotoA" style="width:100%">
-          <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-          <span>Agregar más fotos</span></label>
-        <input id="pvFotoA" type="file" accept="image/*" capture="environment" multiple
-          style="display:none" onchange="psvParSubir(this.files,null,'a');this.value=''">
-      </div>
-      <div class="muted" style="font-size:11.5px;margin-top:8px">Una foto por pieza —una, tres, las que hagan falta—.
+      <div class="muted" style="font-size:11.5px;margin:2px 0 10px">Una foto por pieza —una, tres, las que hagan falta—.
         A cada una le pones después su foto del final, y en el informe salen emparejadas.
         Cualquiera de las dos se puede cambiar o quitar si te equivocas.</div>
       <div id="pvFotos"></div>`
@@ -6485,11 +6494,37 @@ function pintarPSVPie(){
     return;
   }
   const v=psvVeredicto(PSV_TMP), listo=v.estado!=='incompleto';
+  /* Si el trabajo lleva varias válvulas, aquí no se emite nada: el
+     certificado de una sola cierra media orden y deja al cliente con un
+     papel por la mitad. Se guarda, y el certificado sale cuando estén
+     todas. Con una válvula sola sí se emite, pero preguntando: es el
+     único botón de la aplicación que no tiene vuelta atrás. */
+  const orden=ORDEN_ACTIVA?ORDENES.find(x=>x.id===ORDEN_ACTIVA):ordenAbiertaDe(PSV_TMP.act);
+  const hermanas=orden?lineasDe(orden).length:1;
   p.innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
     <span style="flex:1"></span>
-    <button class="btn sec" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
-    <button class="btn" onclick="guardarPSV(true)" ${listo?'':'disabled title="Falta '+esc(v.falta)+'" style="opacity:.5;cursor:not-allowed"'}>Emitir certificado</button>`;
+    ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
+    <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
+    ${hermanas>1?'':`<button class="btn" onclick="confirmarEmitir()" ${listo?'':'disabled title="Falta '+esc(v.falta)+'" style="opacity:.5;cursor:not-allowed"'}>Emitir certificado</button>`}`;
 }
+/* Emitir es cerrar: el certificado se numera, la válvula renueva su
+   vigencia y la orden se da por terminada. Se pregunta una vez. */
+/* La pregunta va en el propio pie, no en otra ventana: el ensayo vive
+   en este mismo modal y abrir otro encima lo borraría entero. */
+function confirmarEmitir(){
+  const t=PSV_TMP; if(!t)return;
+  const a=ACTIVOS.find(x=>x.id===t.act)||{};
+  const v=psvVeredicto(t);
+  const pie=$('#mFoot'); if(!pie)return;
+  pie.innerHTML=`<div class="pie-confirma">
+      <b>¿Emitir el certificado de ${esc(a.tag||a.ser||'esta válvula')}?</b>
+      <span>Resultado <b>${esc(v.estado)}</b>. Se numera el certificado, se renueva la próxima
+        calibración y la orden queda cerrada. Después ya no se cambia.</span>
+    </div>
+    <button class="btn sec" onclick="pintarPSVPie()">No, seguir editando</button>
+    <button class="btn" onclick="guardarPSV(true)">Sí, emitir</button>`;
+}
+
 /* Guardar lo del taller y mover la orden a mantenimiento de una vez:
    son dos pasos que en el banco son uno solo. */
 function guardarYAlTaller(){
@@ -6689,9 +6724,19 @@ function pintarPSVFotos(){
   pintarPSVPie();          // el pie cuenta las piezas fotografiadas
   const pares=paresFoto(PSV_TMP);
   const completas=pares.filter(p=>p.a&&p.d).length;
+  /* El «+» va al FINAL de la lista. Con la válvula abierta y las manos
+     sucias, tener que subir hasta la cabecera para añadir la pieza
+     siguiente es exactamente donde se deja de fotografiar. */
+  const masFotos=`<label class="pv-mas" for="pvFotoFin">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      <b>Agregar pieza</b><span>una foto del antes por cada pieza</span>
+      <input id="pvFotoFin" type="file" accept="image/*" capture="environment" multiple
+        style="display:none" onchange="psvParSubir(this.files,null,'a');this.value=''">
+    </label>`;
   if(!pares.length){
-    c.innerHTML=`<div class="pv-par-vacio">Todavía no hay ninguna comparación.
-      Sube las fotos del antes y cada una abre la suya.</div>`;
+    c.innerHTML=`<div class="pv-pares">${masFotos}</div>
+      <div class="pv-par-vacio">Todavía no hay ninguna pieza. Pulsa <b>+</b>, saca la foto del antes,
+      y al montar la nueva vuelves y le pones la del después.</div>`;
     return;
   }
   const ACCIONES=['Se cambia','Mantenimiento','Limpieza','Se recupera','Sólo se revisa'];
@@ -6730,8 +6775,8 @@ function pintarPSVFotos(){
           ${ACCIONES.map(x=>`<option ${p.accion===x?'selected':''}>${x}</option>`).join('')}
         </select>
       </div>
-    </div>`).join('')}</div>
-    <div class="pv-par-pie">${completas} de ${pares.length} ${pares.length===1?'comparación completa':'comparaciones completas'} · sólo las completas se ven emparejadas en el certificado.</div>`;
+    </div>`).join('')}${masFotos}</div>
+    <div class="pv-par-pie">${completas} de ${pares.length} ${pares.length===1?'comparación completa':'comparaciones completas'} · sólo las completas se ven emparejadas en el certificado. Cada pieza se quita con la <b>✕</b> de su cabecera.</div>`;
 }
 
 function guardarPSV(emitir,seguir){
