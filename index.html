@@ -3311,7 +3311,7 @@ const USUARIOS=[
    ============================================================ */
 const HOY=new Date('2026-07-23T00:00:00');
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
-         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'perfil',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
+         focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'org',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
@@ -8138,7 +8138,7 @@ function renderCal(){
         <span class="hz-fill" style="left:${Math.min(50,pct)}%;width:${Math.abs(pct-50)}%;background:var(--${c});opacity:.55"></span>
       </div>
       <div class="hz-d" style="color:var(--${c})">${d<0?`−${-d} d`:`${d} d`}</div>
-      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="printFieldSheet('${a.id}')" title="Imprimir hoja para llenar en planta"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button><button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button><button class="btn xs" onclick="openPSV('${a.id}')">Ensayar</button>`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
+      <div style="text-align:right;display:flex;gap:6px;justify-content:flex-end;flex:0 0 auto">${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="printFieldSheet('${a.id}')" title="Imprimir hoja para llenar en planta"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button><button class="btn sec xs" onclick="openWO('${a.id}','Calibración')">Programar</button>${S.rol==='tec'?`<button class="btn xs" onclick="openPSV('${a.id}')">Ensayar</button>`:''}`:`<span class="mono muted" style="font-size:12px">${a.prox}</span>`}</div>
     </div>`}).join('')
    :`<div class="empty"><b>Sin programa de calibración</b>Aplica a válvulas de seguridad y alivio.</div>`;
 }
@@ -10575,7 +10575,12 @@ function colaTrabajo(){
     if(e.k==='vencido')
       out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
-        ac:cliente?null:{t:'Ensayar',f:`openPSV('${a.id}')`}});
+        /* Desde el panel no se ensaya. El ensayo se hace con la válvula
+           delante, dentro de una orden; aquí sólo se decide qué hacer con
+           ella: gerencia abre la orden de servicio, los demás la miran. */
+        ac:cliente?null
+          :S.rol==='admin'?{t:'Orden de servicio',f:`mandarAMantenimiento('${a.id}')`}
+          :{t:'Ver la válvula',f:`verEquipo('${a.id}')`}});
     else if(e.k==='mant'){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final');
       out.push({pr,p:2,g:'mant',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
@@ -12071,7 +12076,6 @@ function saveNewUser(){
     <div style="margin-top:14px;display:grid;gap:8px">
       <div class="set-row" style="padding:10px 0"><div class="t"><b>Correo</b></div><span class="mono">${esc(m)}</span></div>
       <div class="set-row" style="padding:10px 0"><div class="t"><b>Contraseña temporal</b></div><span class="mono">${esc(tmp)}</span></div>
-      <div class="set-row" style="padding:10px 0"><div class="t"><b>O que se registre con</b></div><span class="mono">${esc(ORG.cod)}</span></div>
     </div>
     <p class="hint" style="margin-top:12px">Con servidor esto sale por correo automáticamente, con un enlace de un solo uso.</p>`;
   $('#mFoot').innerHTML=`<button class="btn" onclick="closeModal()">Listo</button>`;
@@ -13664,7 +13668,7 @@ const ORG={
   n:'Adolphus S.A.', ruc:'20100128056', dir:'Av. Elmer Faucett 3000 — Callao, Lima',
   tel:'+51 1 715 8000', web:'adolphus.pe', ind:'Control de fluidos',
   tz:'America/Lima · GMT-5', mon:'USD', desde:'2026-01-15',
-  cod:'ADOLPHUS-2026', verif:false
+  verif:false
 };
 
 
@@ -13977,7 +13981,7 @@ async function signup(ev){
     // el de gerencia daría «no coincide» en planta y sin explicación
     const area=CODIGOS_AREA.find(c=>c.cod===cod);
     perfil=area?area.r:'tec';
-    if(area||cod===ORG.cod){
+    if(area){
       est='activo';
       aviso=`Cuenta creada y activada como <b>${esc(PERFILES[perfil])}</b>. `
            +'Se registrará en la nube en cuanto haya señal.';
@@ -14092,11 +14096,11 @@ function pintarCuenta(){
 
 /* ── Ajustes de la cuenta ──────────────────────────────────── */
 const SET_TABS=[['perfil','Mi perfil'],['seguridad','Seguridad'],['org','Organización'],['notif','Notificaciones']];
-function goSettings(tab){S.setTab=tab||'perfil';go('settings');renderSettings()}
+function goSettings(tab){S.setTab=tab||'org';go('settings');renderSettings()}
 function setTab(t){S.setTab=t;renderSettings()}
 
 function renderSettings(){
-  const t=S.setTab||'perfil', c=SES;
+  const t=S.setTab||'org', c=SES;
   const tabs=`<div class="set-tabs">${SET_TABS
     .filter(([k])=>!(k==='org'&&S.rol==='cliente'))
     .map(([k,l])=>`<button class="${t===k?'on':''}" onclick="setTab('${k}')">${l}</button>`).join('')}</div>`;
@@ -14160,34 +14164,6 @@ function renderSettings(){
         <div class="fld"><label>Teléfono</label><input class="inp" id="orTel" value="${esc(ORG.tel)}"></div>
         <div class="fld"><label>Sitio web</label><input class="inp" id="orWeb" value="${esc(ORG.web)}"></div>
         <button class="btn" onclick="guardarOrg()">Guardar organización</button>`)}
-      ${panel('Preferencias del servicio',`
-        <div class="fld"><label>Zona horaria</label>
-          <select class="inp" id="orTz"><option>America/Lima · GMT-5</option><option>America/Bogota · GMT-5</option><option>America/Santiago · GMT-4</option><option>America/Mexico_City · GMT-6</option></select></div>
-        <div class="fld"><label>Moneda de las cotizaciones</label>
-          <select class="inp" id="orMon"><option>USD</option><option>PEN</option></select></div>
-        <div class="set-row"><div class="t"><b>Código de invitación</b><span>Quien lo use al registrarse entra activado, sin aprobación manual.</span></div>
-          <span class="mono" style="font-size:12px">${esc(ORG.cod)}</span></div>
-        <div class="set-row"><div class="t"><b>Copiar el código</b><span>Compártelo solo con tu equipo.</span></div>
-          <button class="btn quiet xs" onclick="copiarCodigo()">Copiar</button></div>
-        <div class="set-row"><div class="t"><b>Exportar todos los datos</b><span>Excel con activos, calibraciones y órdenes.</span></div>
-          <button class="btn quiet xs" onclick="exportCSV()">Descargar</button></div>`)}
-      ${panel('Consulta de RUC',`
-        <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-          <div><b>Opcional, y de pago.</b> Hoy la razón social se escribe a mano, que para dar de alta un cliente son
-            veinte segundos. Al escribir el RUC el portal ya comprueba solo que el número esté bien copiado, que es
-            donde de verdad se falla.<br>
-            Si algún día vais a cargar muchos clientes de golpe, se puede conectar un servicio que traiga la razón
-            social y el domicilio desde el padrón de SUNAT. Los proveedores que lo ofrecen cobran. El archivo para
-            montarlo está en <b class="mono">supabase/ruc.ts</b> del repositorio, con las instrucciones dentro.</div></div>
-        <div class="fld"><label for="setRuc">Dirección del servicio</label>
-          <input class="inp mono" id="setRuc" value="${esc(RUC_API||'')}"
-            placeholder="https://TU-PROYECTO.supabase.co/functions/v1/ruc"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn sec" onclick="probarRucApi()">Probar la conexión</button>
-          <button class="btn" onclick="guardarRucApi()">Guardar</button></div>
-        <div id="setRucEst" style="font-size:11.5px;margin-top:9px;line-height:1.5;color:var(--ink-3)">
-          ${RUC_API?'Servicio configurado. Pulsa «Probar la conexión» para comprobar que responde.'
-                   :'Sin servicio: «Buscar datos» usa el padrón de ejemplo.'}</div>`)}
     </div>`;
   }
 
@@ -14238,14 +14214,11 @@ function guardarOrg(){
   if(r&&!rucValido(r))return toast('El RUC no pasa el dígito verificador');
   ORG.n=$('#orN').value.trim()||ORG.n;ORG.ruc=r;ORG.dir=$('#orDir').value.trim();
   ORG.tel=$('#orTel').value.trim();ORG.web=$('#orWeb').value.trim();
-  ORG.tz=$('#orTz').value;ORG.mon=$('#orMon').value;ORG.verif=!!(ORG.ruc&&ORG.dir);
+  ORG.verif=!!(ORG.ruc&&ORG.dir);
   ONB.org=ORG.verif;
   guardarCuentas();
   $$('.ws-meta b').forEach(el=>el.textContent=ORG.n);
   renderHome();renderSettings();toast('Datos de la organización guardados');
-}
-function copiarCodigo(){
-  navigator.clipboard?.writeText(ORG.cod).then(()=>toast('Código copiado: '+ORG.cod)).catch(()=>toast('Código: '+ORG.cod));
 }
 function verLegal(cual){
   const T={
