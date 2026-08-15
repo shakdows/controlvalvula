@@ -556,6 +556,10 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .wo.t-late{border-left-color:var(--late)}
 /* El cuadro de añadir es una pieza más de la lista: mismo hueco, mismo
    borde, pero punteado, para que se lea como «aquí va la siguiente». */
+/* La casilla que falta, en el mismo naranja que todo lo que hay que
+   mirar. No es un error —nadie se ha equivocado—: es lo que queda. */
+.inp.falta{border-color:var(--due);background:color-mix(in oklch,var(--due) 8%,var(--surface));box-shadow:0 0 0 3px color-mix(in oklch,var(--due) 16%,transparent)}
+.inp.falta::placeholder{color:color-mix(in oklch,var(--due) 70%,var(--ink-3))}
 .pie-confirma{flex:1;min-width:220px;font-size:12px;line-height:1.45;color:var(--ink-2)}
 .pie-confirma b{color:var(--ink);font-weight:600}
 .pie-confirma span{display:block;color:var(--ink-3);margin-top:2px}
@@ -5997,6 +6001,32 @@ function disparosDe(c){
 }
 const valoresDisparo=c=>disparosDe(c).map(t=>num(t.v)).filter(x=>isFinite(x)&&x>0);
 
+/* Qué casilla concreta falta, no sólo cuántas. Un botón apagado con un
+   título escondido deja al técnico mirando un formulario que él ve
+   lleno; hay que señalarle la casilla. */
+function psvFaltantes(c){
+  const out=[];
+  const set=num(c.setEsp);
+  if(!isFinite(set)||set<=0)
+    out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press)'});
+  disparosDe(c).forEach((t,i)=>{
+    const v=num(t.v);
+    if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`});
+  });
+  /* Con tres o más llenos ya hay promedio; los de más son opcionales. */
+  const llenos=valoresDisparo(c).length;
+  return llenos>=3 ? out.filter(x=>x.id==='pv-setEsp') : out;
+}
+/* Pinta en naranja las casillas que faltan y sube a la primera. */
+function psvSenalarFaltas(){
+  const t=PSV_TMP; if(!t)return null;
+  document.querySelectorAll('#mBody .inp.falta').forEach(e=>e.classList.remove('falta'));
+  const f=psvFaltantes(t);
+  f.forEach(x=>{const e=document.getElementById(x.id); if(e)e.classList.add('falta')});
+  const primera=f.length?document.getElementById(f[0].id):null;
+  if(primera){primera.scrollIntoView({block:'center'}); primera.focus({preventScroll:true})}
+  return f;
+}
 function psvVeredicto(c){
   const set=num(c.setEsp), u=c.und||'psi';
   const t=valoresDisparo(c);
@@ -6148,8 +6178,12 @@ function openPSV(actId,edit,seccion){
   $('#modal').classList.add('on');
 }
 
+/* En cuanto la casilla deja de estar vacía, se le quita el naranja: si
+   se quedara puesto hasta el siguiente repintado parecería un error. */
+const quitarFalta=id=>{const e=document.getElementById(id); if(e)e.classList.remove('falta')};
 const psvCampo=(k,v)=>{
   PSV_TMP[k]=v;
+  if(String(v||'').trim())quitarFalta('pv-'+k);
   /* En taller el pie va diciendo qué falta para poder pasar a
      mantenimiento, así que se refresca con cada dato. En
      mantenimiento, lo que cambia el resultado repinta el veredicto. */
@@ -6352,6 +6386,7 @@ function pintarPSV(){
 function psvDisparo(i,k,v){
   const l=disparosDe(PSV_TMP); if(!l[i])return;
   l[i][k]=v;
+  if(k==='v'&&String(v||'').trim())quitarFalta('dsp-v'+i);
   if(k==='v'||k==='pc')pintarPSVResultado(); else pintarDisparos();
 }
 function psvAgregarDisparo(){
@@ -6505,10 +6540,24 @@ function pintarPSVPie(){
     <span style="flex:1"></span>
     ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
     <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
-    ${hermanas>1?'':`<button class="btn" onclick="confirmarEmitir()" ${listo?'':'disabled title="Falta '+esc(v.falta)+'" style="opacity:.5;cursor:not-allowed"'}>Emitir certificado</button>`}`;
+    ${hermanas>1?'':`<button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
+      title="${listo?'Cierra el ensayo y numera el certificado':esc('Falta '+v.falta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
 }
 /* Emitir es cerrar: el certificado se numera, la válvula renueva su
    vigencia y la orden se da por terminada. Se pregunta una vez. */
+/* Enseña en naranja lo que falta y lo dice con nombre y apellido. */
+function avisarFaltaPSV(){
+  const f=psvSenalarFaltas();
+  if(!f)return;
+  if(!f.length){pintarPSVPie();return}
+  const pie=$('#mFoot'); if(!pie)return;
+  pie.innerHTML=`<div class="pie-confirma">
+      <b>Falta${f.length===1?'':'n'} ${f.length===1?'una casilla':f.length+' casillas'} para poder emitir</b>
+      <span>${f.map(x=>esc(x.que)).join(' · ')} — ${f.length===1?'está':'están'} en naranja en el formulario.</span>
+    </div>
+    <button class="btn sec" onclick="pintarPSVPie()">Entendido</button>`;
+}
+
 /* La pregunta va en el propio pie, no en otra ventana: el ensayo vive
    en este mismo modal y abrir otro encima lo borraría entero. */
 function confirmarEmitir(){
