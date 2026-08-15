@@ -554,6 +554,8 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .wo.t-ok{border-left-color:var(--ok)}
 .wo.t-due{border-left-color:var(--due)}
 .wo.t-late{border-left-color:var(--late)}
+.wo-parte{font-size:11px;color:var(--ink-3);margin-top:4px;line-height:1.4}
+.wo-parte b{color:var(--ink-2);font-weight:600}
 .wo-tarde{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--late);font-weight:600;margin:-2px 0 5px}
 .wo-tarde .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .wo:hover{box-shadow:var(--shadow-pop)}
@@ -4336,7 +4338,7 @@ function verOrden(idOrAct,esActivo){
       ? `<button class="btn" onclick="closeModal();openPSV('${o.act}',null,'taller')">Colocar datos</button>`
       : !cliente&&!varias&&etC==='mant'
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el ensayo</button>` : ''}
-    ${!cliente&&sig&&etC!=='taller'?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}')">${
+    ${!cliente&&sig&&etC!=='taller'?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
       enEspera?`Pasar al taller${porEntrar>1?` las ${porEntrar}`:''}`:`Pasar a ${esc(sig[1].toLowerCase())}`}</button>`:''}`;
   $('#modal').classList.add('on');
 }
@@ -8220,14 +8222,56 @@ function etapaGrupo(ls){
   return ls.map(o=>o.et).sort((a,b)=>orden.indexOf(a)-orden.indexOf(b))[0];
 }
 /* Una tarjeta por grupo, no por línea. */
+/* Mover una línea deja fecha. Sin fecha no hay línea de tiempo: no se
+   puede decir cuánto lleva una válvula parada ni cuándo entró. */
+function moverLinea(o,et){
+  if(!o||o.et===et)return;
+  o.et=et;
+  o.hist=o.hist||{};
+  o.hist[et]=hoyISO();
+}
+const entroEn=o=>(o.hist&&o.hist[o.et])||o.f||'';
+
+/* Una tarjeta por ORDEN Y ETAPA. Las válvulas de un mismo trabajo no
+   siempre viajan juntas —una entra a mantenimiento mientras la otra
+   sigue esperando— y obligarlas a moverse en bloque escondía dónde
+   está cada una. Comparten número de orden; en cuanto coinciden de
+   etapa, las dos tarjetas vuelven a ser una sola. */
 function agruparOrdenes(lista){
-  const vistos=new Set(), out=[];
-  lista.forEach(o=>{
-    const g=grupoDe(o); if(vistos.has(g))return; vistos.add(g);
-    const ls=lineasDe(o).filter(x=>lista.includes(x));
-    out.push({g, ls, jefe:ls[0], et:etapaGrupo(ls)});
+  const porGrupo=new Map();
+  lista.forEach(o=>{const g=grupoDe(o);
+    if(!porGrupo.has(g))porGrupo.set(g,[]);
+    porGrupo.get(g).push(o)});
+  const out=[];
+  porGrupo.forEach((visibles,g)=>{
+    const todas=lineasDe(visibles[0]);
+    ETAPAS.forEach(([et])=>{
+      const aqui=visibles.filter(x=>x.et===et);
+      if(aqui.length)out.push({g,ls:aqui,todas,jefe:aqui[0],et});
+    });
   });
   return out;
+}
+/* Lo que le falta al resto de la orden, para decirlo en la tarjeta. */
+function restoDeLaOrden(todas,et){
+  return ETAPAS.filter(([k])=>k!==et)
+    .map(([k,l])=>({k,l,n:todas.filter(x=>x.et===k).length}))
+    .filter(x=>x.n);
+}
+/* Nadie finaliza hasta que TODAS hayan llegado a mantenimiento. Cerrar
+   la orden con una válvula todavía en el taller es entregar un trabajo
+   a medias con el número de orden completo detrás. */
+function faltanPorLlegar(o){
+  const orden=ETAPAS.map(([k])=>k);
+  return lineasDe(o).filter(x=>orden.indexOf(x.et)<orden.indexOf('mant'));
+}
+function puedeFinalizar(o){return faltanPorLlegar(o).length===0}
+function avisoNoFinaliza(o){
+  const f=faltanPorLlegar(o);
+  if(!f.length)return '';
+  const tags=f.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v&&(v.tag||v.ser)||'—'});
+  return `Falta${f.length===1?'':'n'} ${f.length} válvula${f.length===1?'':'s'} de esta orden: ${tags.join(', ')}. `
+       + 'El trabajo se cierra cuando estén todas.';
 }
 function nuevoMAT(){
   let n=0;
@@ -8353,7 +8397,7 @@ function confirmarTomar(id){
   try{localStorage.setItem(LS_ING,ing)}catch(e){}
   const fec=$('#toFec').value||HOY.toISOString().slice(0,10);
   const ls=TOMAR_GRUPO?ORDENES.filter(x=>grupoDe(x)===TOMAR_GRUPO&&x.et===o.et):[o];
-  ls.forEach(x=>{x.ing=ing; x.tec=ing; x.tomada=fec; x.et='mant'});
+  ls.forEach(x=>{x.ing=ing; x.tec=ing; x.tomada=fec; moverLinea(x,'mant')});
   const n=ls.length; TOMAR_GRUPO=null;
   closeModal(); renderAll();
   registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} tomada por ${ing}`);
@@ -9006,15 +9050,23 @@ function renderWO(){
         const listas=ls.filter(x=>x.et==='final').length;
         const tono=tonoOrden(ls);
         return `
-        <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}')" ondragend="this.classList.remove('drag')">
+        <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}|${G.et}')" ondragend="this.classList.remove('drag')">
           <div class="wo-t" onclick="verOrden('${o.id}')"><b class="mono">${esc(o.mat||o.n)}</b><span class="tag">${o.tipo}</span></div>
           ${tono==='late'?`<div class="wo-tarde"><span class="dot"></span>${esc(porQueTarde(ls))}</div>`:''}
           <div class="wo-n" onclick="verOrden('${o.id}')">${varias
             ? `${ls.length} válvulas <span class="wo-tags">${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</span>`
             : esc(a?.tag||a?.ser||'—')}</div>
-          <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono">${o.f}</span></div>
-          ${varias?`<div class="wo-av"><i style="width:${Math.round(listas*100/ls.length)}%"></i>
-            <span>${listas} de ${ls.length} finalizadas</span></div>`:''}
+          <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono" title="Cuándo entró a esta etapa">${esc(entroEn(o))}</span></div>
+          ${G.todas.length>1?(()=>{
+            /* Cuántas de TODA la orden van finalizadas, no sólo de esta
+               columna: es lo que pregunta el cliente. */
+            const finT=G.todas.filter(x=>x.et==='final').length;
+            const resto=restoDeLaOrden(G.todas,G.et);
+            return `<div class="wo-av"><i style="width:${Math.round(finT*100/G.todas.length)}%"></i>
+              <span>${finT} de ${G.todas.length} finalizadas</span></div>
+              ${resto.length?`<div class="wo-parte"><b>${ls.length} de ${G.todas.length}</b> de esta orden${
+                ` · ${resto.map(x=>`${x.n} ${x.l.toLowerCase()}`).join(' · ')}`}</div>`:''}`;
+          })():''}
           ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
           ${o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
@@ -9033,7 +9085,7 @@ function renderWO(){
               <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
               n?`Colocar datos · ${n} pieza${n===1?'':'s'}`:'Colocar datos'}</button>`;
           })():''}
-          ${nx&&S.rol!=='cliente'&&G.et!=='taller'?`<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}')">${nx[1]}${varias?` · ${ls.filter(x=>x.et===G.et).length}`:''}</button>`:''}
+          ${nx&&S.rol!=='cliente'&&G.et!=='taller'?`<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`:''}
           <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
@@ -9064,10 +9116,18 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
   const o=apuntada||ordenAbiertaDe(actId);
   ORDEN_ACTIVA=null;
   if(!o)return null;
-  o.et='final'; o.calib=calibId;
+  o.calib=calibId;
   if(fecha)o.f=fecha;
   if(tec&&tec!=='Por asignar')o.tec=tec;
   if(resumen)o.hall=resumen;
+  /* El certificado de esta válvula queda guardado igual; lo que espera
+     es el cierre de la orden, que es de todas. */
+  if(!puedeFinalizar(o)){
+    registrar('Orden',`${o.n} · ensayo guardado, la orden sigue abierta`);
+    toast(avisoNoFinaliza(o));
+    return o;
+  }
+  moverLinea(o,'final');
   registrar('Orden',`${o.n} cerrada con el ensayo`);
   return o;
 }
@@ -9080,6 +9140,7 @@ function advanceWO(id){
   /* Pasar a mantenimiento es hacerse cargo: se pide el nombre del
      ingeniero antes de mover la tarjeta, que es el sentido de esta
      etapa —saber quién la tiene y desde cuándo. */
+  if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
     /* Una orden de calibración no se cierra con el parte genérico:
@@ -9089,7 +9150,7 @@ function advanceWO(id){
     if(/calibra/i.test(o.tipo||'')){registrarEnsayoDeOrden(id);return}
     openCloseWO(id);return;
   }
-  o.et=nx[0];
+  moverLinea(o,nx[0]);
   toast(`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   registrar('Orden',`${o.n} → ${ETAPAS.find(e=>e[0]===nx[0])[1]}`);
   renderAll();
@@ -9104,7 +9165,7 @@ function registrarEnsayoDeOrden(id){
   if(!a){toast('La válvula de esta orden ya no existe');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
   ORDEN_ACTIVA=id;
-  if(o.et!=='mant'){o.et='mant';renderAll()}
+  if(o.et!=='mant'){moverLinea(o,'mant');renderAll()}
   closeModal();
   /* Si esta orden ya tenía un ensayo —porque se finalizó y alguien la
      movió hacia atrás—, se abre ESE, no uno nuevo encima. */
@@ -9146,7 +9207,8 @@ function saveCloseWO(id){
   const a=ACTIVOS.find(x=>x.id===o.act);
   o.f=$('#cwFec').value||o.f;o.tec=$('#cwTec').value||o.tec;o.hall=$('#cwHall').value||o.hall;
   o.partes=Array.from(document.querySelectorAll('.cwP')).filter(c=>c.checked).map(c=>c.value);
-  o.et='final';
+  if(!puedeFinalizar(o)){closeModal();renderAll();toast(avisoNoFinaliza(o));return}
+  moverLinea(o,'final');
   /* La vigencia sólo se renueva si hubo un ensayo. Un parte de
      mantenimiento cuenta como intervención —cambia "último
      servicio"— pero no certifica nada: si renovara la próxima
@@ -9167,33 +9229,42 @@ let dragId=null;
    La última etapa es la excepción: certificar es válvula por válvula
    —cada una tiene su ensayo—, así que ahí se abre el detalle para que
    se elija cuál se registra. */
-function avanzarGrupo(g){
+/* Avanza las válvulas de UNA etapa de la orden. La etapa llega desde la
+   tarjeta que se pulsó: si media orden está en taller y media en
+   mantenimiento, cada tarjeta mueve lo suyo. */
+function avanzarGrupo(g,etapa){
   const ls=ORDENES.filter(x=>grupoDe(x)===g);
   if(!ls.length)return;
-  const et=etapaGrupo(ls), nx=WO_NEXT[et]; if(!nx)return;
+  const et=etapa||etapaGrupo(ls), nx=WO_NEXT[et]; if(!nx)return;
   const mueven=ls.filter(x=>x.et===et);
+  if(!mueven.length)return;
+  if(nx[0]==='final'&&!puedeFinalizar(mueven[0])){toast(avisoNoFinaliza(mueven[0]));return}
   if(mueven.length===1)return advanceWO(mueven[0].id);
   if(nx[0]==='final'){
     toast('Cada válvula se certifica con su propio ensayo');
     verOrden(mueven[0].id); return;
   }
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
-  mueven.forEach(x=>{x.et=nx[0]});
+  mueven.forEach(x=>moverLinea(x,nx[0]));
   const et2=ETAPAS.find(e=>e[0]===nx[0])[1];
   registrar('Orden',`${mueven[0].n} · ${mueven.length} válvulas → ${et2}`);
   toast(`${mueven[0].n} · ${mueven.length} válvulas → ${et2}`);
   renderAll();
 }
+/* Se arrastra «grupo|etapa»: la tarjeta que se agarra, no la orden. */
 function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataTransfer.effectAllowed='move'}
 function dropWO(ev,et){
   ev.preventDefault();ev.currentTarget.classList.remove('over');
   /* Se arrastra el grupo, que es lo que se ve. */
-  const ls=ORDENES.filter(x=>grupoDe(x)===dragId);
-  const o=ls.length?ls[0]:ORDENES.find(x=>x.id===dragId);
+  const [gArr,etArr]=String(dragId).split('|');
+  const ls=ORDENES.filter(x=>grupoDe(x)===gArr&&(!etArr||x.et===etArr));
+  const o=ls.length?ls[0]:ORDENES.find(x=>x.id===gArr);
   if(!o)return;
-  const prev=etapaGrupo(ls.length?ls:[o]);
+  const prev=etArr||etapaGrupo(ls.length?ls:[o]);
   const mueven=(ls.length?ls:[o]).filter(x=>x.et===prev);
-  if(et==='mant'&&prev!=='mant'&&!o.ing){tomarOrden(mueven[0].id,ls.length>1?dragId:null);return}
+  if(!mueven.length)return;
+  if(et==='final'&&prev!=='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
+  if(et==='mant'&&prev!=='mant'&&!o.ing){tomarOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='final'&&prev!=='final'){
     /* Arrastrar hasta el final no puede certificar por sí solo: antes
        cerraba la orden, ponía una fecha fija escrita a mano y renovaba
@@ -9203,7 +9274,7 @@ function dropWO(ev,et){
     if(/calibra/i.test(o.tipo||'')){registrarEnsayoDeOrden(mueven[0].id);return}
     openCloseWO(mueven[0].id);return;
   }
-  mueven.forEach(x=>{x.et=et});
+  mueven.forEach(x=>moverLinea(x,et));
   const et2=ETAPAS.find(e=>e[0]===et)[1];
   toast(`${o.n}${mueven.length>1?` · ${mueven.length} válvulas`:''} → ${et2}`);
   registrar('Orden',`${o.n}${mueven.length>1?` · ${mueven.length} válvulas`:''} → ${et2}`);
@@ -12054,7 +12125,10 @@ function generateCalib(assetId,editId){
      no hay ninguna se crea una. Antes se creaba siempre, así que el
      trabajo salía dos veces en el tablero. */
   const oExist=ORDENES.find(o=>o.calib===rec.id);
-  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;oExist.et='final';}
+  if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;
+    /* Mismo candado: el certificado se guarda, pero la orden no se
+       cierra mientras falte una válvula del mismo trabajo. */
+    if(puedeFinalizar(oExist))moverLinea(oExist,'final'); else toast(avisoNoFinaliza(oExist));}
   else if(!cerrarOrdenConEnsayo(a.id,rec.id,(fin||ini).slice(0,10),tec,hall)){
     const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
     ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'final',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
