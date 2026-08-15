@@ -550,6 +550,12 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .kb-h .n{margin-left:auto;font-family:'IBM Plex Mono';color:var(--ink-3);font-weight:500}
 .kb-b{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:60px}
 .wo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-1);padding:10px;cursor:grab;transition:box-shadow var(--fast),transform var(--fast)}
+.wo{border-left:3px solid var(--due)}
+.wo.t-ok{border-left-color:var(--ok)}
+.wo.t-due{border-left-color:var(--due)}
+.wo.t-late{border-left-color:var(--late)}
+.wo-tarde{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--late);font-weight:600;margin:-2px 0 5px}
+.wo-tarde .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .wo:hover{box-shadow:var(--shadow-pop)}
 .wo:active{cursor:grabbing}
 .wo.drag{opacity:.4}
@@ -4282,7 +4288,7 @@ function verOrden(idOrAct,esActivo){
             <div class="ord-m"><b>${esc(v.tag||v.ser||'sin tag')}</b>
               <p>${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')}${v.ar?' · '+esc(area(v)):''}</p>
               ${x.et!=='final'&&f.falta.length?`<small>${esc(f.falta[0])}</small>`:''}</div>
-            <span class="tag ${x.et==='final'?'ok':x.et==='mant'?'sel':''}">${esc(et[1])}</span>
+            <span class="tag ${x.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(et[1])}</span>
             ${S.rol==='cliente'?''
               /* Mientras la válvula no ha llegado no hay nada que
                  ensayar: lo único cierto es que entra al taller, y se
@@ -4922,7 +4928,7 @@ function fichaMovimientos(a){
     `<div class="fx-mov">${os.map(o=>`<div class="fx-mov-i" onclick="showTab('hist')">
        <span class="f mono">${esc(o.f)}</span>
        <span class="t"><b>${esc(o.n)}</b><small>${esc(o.tipo)} · ${esc(o.tec)}</small></span>
-       <span class="tag ${o.et==='final'?'ok':'sel'}">${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
+       <span class="tag ${o.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
      </div>`).join('')}</div>`);
 }
 
@@ -8066,7 +8072,7 @@ function renderReq(){
   $('#reqList').innerHTML=carrito+(mias.length?`<table class="grid">
     <thead><tr><th>Solicitud</th><th>Cliente</th><th>Fecha</th><th>Posiciones</th><th>Estado</th><th>Quién la tiene</th><th></th></tr></thead>
     <tbody>${mias.map(s=>`<tr style="cursor:default"><td class="mono"><b>${s.n}</b></td><td>${esc(cli(s.cli).n)}</td><td class="mono">${s.f}</td>
-      <td>${s.items.length}</td><td><span class="tag ${s.est==='cerrada'?'ok':s.est==='cotizada'?'sel':'due'}"><span class="dot"></span>${esc(pasoDe(s.est).n)}</span></td>
+      <td>${s.items.length}</td><td><span class="tag ${s.est==='cerrada'?'ok':'due'}"><span class="dot"></span>${esc(pasoDe(s.est).n)}</span></td>
       <td class="muted" style="white-space:normal;max-width:30ch">${esc(pasoDe(s.est).r)}</td>
       <td style="text-align:right"><button class="btn sec xs" onclick="verSol('${s.id}')">Ver detalle</button></td></tr>`).join('')}</tbody></table>`
     :(carrito?'':`<div class="empty"><b>Sin solicitudes</b>Las peticiones de repuestos aparecerán aquí.</div>`));
@@ -8436,7 +8442,7 @@ function informeProyecto(id){
     <tbody>${filas.map(f=>`<tr style="cursor:default">
       <td class="mono"><b>${esc(f.mat)}</b></td>
       <td><div class="cell-2"><span>${esc(f.tag)}</span><small>${esc(f.modelo)}</small></div></td>
-      <td><span class="tag ${f.etapa==='Finalizado'?'ok':'sel'}">${esc(f.etapa)}</span></td>
+      <td><span class="tag ${f.etapa==='Finalizado'?'ok':'due'}"><span class="dot"></span>${esc(f.etapa)}</span></td>
       <td>${esc(f.ing)||'<span class="muted">sin asignar</span>'}</td>
       <td>${f.resultado==='APROBADO'?`<span class="tag ok"><span class="dot"></span>${esc(f.dice)}</span>`
         :f.resultado==='RECHAZADO'?`<span class="tag late"><span class="dot"></span>${esc(f.dice)}</span>`
@@ -8953,6 +8959,28 @@ function renderStock(){
     }).join('')}</tbody></table>`;
 }
 
+/* Los tres colores de siempre, ahora sobre la orden. No pinta la etapa
+   —una etapa no es buena ni mala— sino si el trabajo va con retraso:
+   verde lo entregado, naranja lo que está en marcha, y rojo lo que ya
+   debería haber salido. Sin cuarto color y sin excepciones. */
+const DIAS_PARADA=30;
+function tonoOrden(ls){
+  if(ls.every(x=>x.et==='final'))return 'ok';
+  const tarde=ls.some(x=>{
+    if(x.et==='final')return false;
+    const v=ACTIVOS.find(y=>y.id===x.act);
+    if(v&&v.prox&&dias(v.prox)<0)return true;            // la calibración ya venció
+    const d=x.f?dias(x.f):null;                          // y la orden lleva parada
+    return d!==null&&-d>DIAS_PARADA;
+  });
+  return tarde?'late':'due';
+}
+function porQueTarde(ls){
+  const v=ls.map(x=>ACTIVOS.find(y=>y.id===x.act)).find(v=>v&&v.prox&&dias(v.prox)<0);
+  if(v)return `calibración vencida hace ${-dias(v.prox)} d`;
+  const d=Math.max(...ls.filter(x=>x.et!=='final'&&x.f).map(x=>-dias(x.f)));
+  return `${d} días sin moverse`;
+}
 function renderWO(){
   renderProyectos();
   const sel=$('#woCli');
@@ -8971,14 +8999,16 @@ function renderWO(){
   $('#kanban').innerHTML=ETAPAS.map(([k,l])=>{
     const cs=grupos.filter(g=>g.et===k).map(g=>Object.assign({},g.jefe,{__g:g}));
     return `<div class="kb-col" data-et="${k}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropWO(event,'${k}')">
-      <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':k==='mant'?'sel':k==='taller'?'due':'ink-3'})"></span>${l}<span class="n">${cs.length}</span></div>
+      <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':cs.some(o=>tonoOrden(o.__g.ls)==='late')?'late':'due'})"></span>${l}<span class="n">${cs.length}</span></div>
       <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
         const G=o.__g, ls=G.ls, varias=ls.length>1, nx=WO_NEXT[G.et];
         const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
         const listas=ls.filter(x=>x.et==='final').length;
+        const tono=tonoOrden(ls);
         return `
-        <article class="wo${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}')" ondragend="this.classList.remove('drag')">
+        <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}')" ondragend="this.classList.remove('drag')">
           <div class="wo-t" onclick="verOrden('${o.id}')"><b class="mono">${esc(o.mat||o.n)}</b><span class="tag">${o.tipo}</span></div>
+          ${tono==='late'?`<div class="wo-tarde"><span class="dot"></span>${esc(porQueTarde(ls))}</div>`:''}
           <div class="wo-n" onclick="verOrden('${o.id}')">${varias
             ? `${ls.length} válvulas <span class="wo-tags">${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</span>`
             : esc(a?.tag||a?.ser||'—')}</div>
@@ -10595,10 +10625,10 @@ function gauge(pct,label){
    ============================================================ */
 const GRUPOS=[
  {k:'venc', n:'Vencidas',        tono:'late'},
- {k:'mant',n:'En taller',      tono:'sel'},
+ {k:'mant',n:'En taller',      tono:'due'},
  {k:'prox', n:'Vencen pronto',   tono:'due'},
  {k:'ficha',n:'Ficha incompleta',tono:'due'},
- {k:'sol',  n:'Solicitudes',     tono:'sel'}
+ {k:'sol',  n:'Solicitudes',     tono:'due'}
 ];
 function colaTrabajo(){
   const vs=visibles(), cliente=S.rol==='cliente', out=[];
@@ -10845,7 +10875,7 @@ function renderHomeCliente(){
 
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
-    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'sel'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'due'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
 
   /* Lo único urgente: lo más vencido, o lo que está en taller. */
@@ -11057,7 +11087,7 @@ function renderHomeTaller(){
     return `<div class="tw-i" onclick="verOrden('${o.id}')">
       <div class="tw-m"><b>${esc(a.tag||a.ser||'sin tag')}</b>
         <p>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</p></div>
-      <div class="tw-r"><span class="tag ${o.et==='mant'?'sel':o.et==='final'?'ok':''}">${esc(et?et[1]:o.et)}</span>
+      <div class="tw-r"><span class="tag ${o.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(et?et[1]:o.et)}</span>
         <small class="mono">${esc(o.mat||o.n)}</small>${extra||''}</div></div>`;
   };
   const listaPorMandar=porMandar.length?`<div class="tw">${porMandar.slice(0,8).map(a=>{
@@ -11115,7 +11145,7 @@ function renderHomeTaller(){
   const kpis=[
     {v:porMandar.length,k:'Por mandar a mantenimiento',dot:porMandar.length?'due':'ok',
      cls:porMandar.length?'warn':'good',d:porMandar.length?'sin orden todavía':'ninguna pendiente',go:aValvulas},
-    {v:reparando.length,k:'En reparación',dot:reparando.length?'sel':'',
+    {v:reparando.length,k:'En reparación',dot:reparando.length?'due':'',
      d:`${enMant.length} en mantenimiento · ${enTaller.length} en taller`,go:aOrdenes},
     {v:fin.length,k:'Finalizadas',cls:'good',d:`${fin.filter(o=>o.calib).length} con certificado`,go:aOrdenes},
     {v:listasParaCerrar,k:'Listas para cerrar',cls:listasParaCerrar?'good':'',
@@ -11173,7 +11203,7 @@ function resumenClientesHtml(){
   const ESTADOS=[
     {k:'vencido',   t:'Vencidas',        c:'late'},
     {k:'porvencer', t:'Por vencer',      c:'due'},
-    {k:'mant',      t:'En taller',       c:'sel'},
+    {k:'mant',      t:'En taller',       c:'due'},
     {k:'incompleto',t:'Ficha incompleta',c:'ink-3'}
   ];
   const filas=CLIENTES.map(c=>{
@@ -11213,7 +11243,7 @@ function resumenClientesHtml(){
         <small>${f.eq.length} válvula${f.eq.length===1?'':'s'}${f.c.fac?' · '+esc(f.c.fac):''}</small>
       </div>
       <div class="rc-n">${ESTADOS.filter(e=>f.por[e.k].length).map(e=>
-        `<span class="tag ${e.c==='late'?'late':e.c==='due'?'due':e.c==='sel'?'sel':''}"
+        `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
            title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')
         || '<span class="tag ok"><i class="dot"></i>todas al día</span>'}</div>
       <div class="rc-l">${lista}${resto>0?`<span class="rc-mas">y ${resto} más</span>`:''}</div>
@@ -11260,7 +11290,7 @@ function renderHome(){
   const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
-    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'sel'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'due'},
     {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
   // Cantidad de válvulas por tipo constructivo y por modelo.
   // El color viene de la familia del equipo (no del ranking), así una barra
