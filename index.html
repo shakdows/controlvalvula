@@ -34,7 +34,7 @@
   --sel-bg:      oklch(0.955 0.020 258);
   --ok:          oklch(0.520 0.118 158);
   --ok-bg:       oklch(0.958 0.030 158);
-  --due:         oklch(0.530 0.128 72);
+  --due:         oklch(0.582 0.156 55);
   --due-bg:      oklch(0.962 0.045 82);
   --late:        oklch(0.545 0.185 24);
   --late-bg:     oklch(0.960 0.030 24);
@@ -84,7 +84,7 @@
   --sel-bg:      oklch(0.300 0.055 258);
   --ok:          oklch(0.720 0.125 158);
   --ok-bg:       oklch(0.300 0.045 158);
-  --due:         oklch(0.800 0.125 82);
+  --due:         oklch(0.790 0.145 62);
   --due-bg:      oklch(0.320 0.050 72);
   --late:        oklch(0.700 0.155 24);
   --late-bg:     oklch(0.310 0.060 24);
@@ -375,7 +375,9 @@ table.grid tbody tr.open{box-shadow:inset 2px 0 0 var(--sel)}
 .ck{width:14px;height:14px;accent-color:var(--sel);cursor:pointer}
 .riesgo{display:inline-flex;gap:2px;align-items:center}
 .riesgo i{width:4px;height:12px;border-radius:1px;background:var(--line);display:block}
-.riesgo i.f{background:var(--ink-2)}
+/* Criticidad con el MISMO semáforo: verde poco riesgo, naranja alta,
+   rojo crítica. Antes la media iba en gris y parecía «sin dato». */
+.riesgo i.f{background:var(--ok)}
 .riesgo.alta i.f{background:var(--due)}
 .riesgo.critica i.f{background:var(--late)}
 .bulk{
@@ -2675,7 +2677,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div class="bulk" id="bulk">
           <b id="bulkN"></b>
           <span class="spacer"></span>
-          <button class="btn xs" onclick="ordenesEnLote()">Crear órdenes</button>
+          <button class="btn xs" onclick="ordenesEnLote()">Orden de servicio</button>
           <button class="btn xs" onclick="exportarSeleccion()">Exportar selección</button>
           <button class="btn xs" id="bulkBaja" onclick="pedirBajaActivos()">Eliminar seleccionadas</button>
           <button class="btn xs" onclick="clearPick()">Limpiar</button>
@@ -3382,7 +3384,11 @@ const famLeyenda=()=>`<div class="famleg">${FAM.map(f=>`<span><i style="backgrou
 function estado(a){
   if(!a.ser||!a.tag) return {k:'incompleto',t:'Ficha incompleta',c:'due'};
   const o=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
-  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='taller'?'En taller':'Trabajo abierto',c:'sel'};
+  /* Naranja, no azul. Toda la aplicación habla con tres colores —verde
+     va bien, naranja hay que mirarlo, rojo corre prisa— y una válvula
+     abierta en el taller es exactamente «hay que mirarlo». Un cuarto
+     color obliga a aprenderse otra clave. */
+  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='taller'?'En taller':'Trabajo abierto',c:'due'};
   const d=a.prox?dias(a.prox):null;
   if(d!==null&&d<0) return {k:'vencido',t:'Calibración vencida',c:'late'};
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
@@ -3617,6 +3623,11 @@ function filtrados(){
   const k=S.sort.k,d=S.sort.dir;
   if(k==='sal') return r.sort((x,y)=>(salud(x).n-salud(y).n)*d);
   if(k==='cr')  return r.sort((x,y)=>(pesoCrit(y.cr)-pesoCrit(x.cr))*d);
+  /* Ordenar por próximo mantenimiento tiene que poner PRIMERO lo que
+     ya venció, no lo que no tiene fecha. Las sin programa van al final
+     con una fecha imposible; si fueran cadena vacía saldrían arriba. */
+  if(k==='prox') return r.sort((x,y)=>
+    String(x.prox||'9999-12-31').localeCompare(String(y.prox||'9999-12-31'))*d);
   const val=a=>({tag:a.tag||'zzz',ser:a.ser||'zzz',mod:MODELOS[a.mod]?.m+' '+a.mod,cli:cli(a.cli).n,est:estado(a).t,ult:a.ult||''})[k]||'';
   return r.sort((x,y)=>String(val(x)).localeCompare(String(val(y)),'es',{numeric:true})*d);
 }
@@ -3682,7 +3693,7 @@ function renderFilters(){
   $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
   $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
 }
-const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cli','Ubicación'],['cr','Criticidad'],['sal','Salud'],['est','Estado'],['ult','Últ. servicio']];
+const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cli','Ubicación'],['cr','Criticidad'],['sal','Salud'],['est','Estado'],['ult','Últ. servicio'],['prox','Próx. mantenimiento']];
 function renderGrid(){
   const rows=filtrados();
   const univ=visibles().filter(a=>!S.inCli||a.cli===S.inCli);
@@ -3703,7 +3714,18 @@ function renderGrid(){
       <td><span class="riesgo ${a.cr==='Crítica'?'critica':a.cr==='Alta'?'alta':''}" title="${a.cr}">${[0,1,2].map(x=>`<i class="${x<full?'f':''}"></i>`).join('')}</span></td>
       <td>${saludPill(a)}</td>
       <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
-      <td class="mono" style="color:var(--ink-3)">${a.ult||'—'}</td></tr>`}).join('')}</tbody></table>`;
+      <td class="mono" style="color:var(--ink-3)">${a.ult||'—'}</td>
+      <td class="mono">${(()=>{
+        /* La fecha sola no dice nada: «2026-08-20» obliga a restar
+           mentalmente. Al lado van los días que faltan, y el color es
+           el mismo semáforo de toda la aplicación. */
+        if(!a.prox)return '<span style="color:var(--ink-3)">sin programa</span>';
+        const d=dias(a.prox);
+        const c=d<0?'late':d<=90?'due':'ok';
+        const dice=d<0?`hace ${Math.abs(d)} d`:d===0?'hoy':`en ${d} d`;
+        return `<span style="color:var(--${c})">${esc(a.prox)}</span>
+          <small style="color:var(--ink-3);margin-left:6px">${dice}</small>`;
+      })()}</td></tr>`}).join('')}</tbody></table>`;
 }
 function sortBy(k){S.sort.dir=S.sort.k===k?-S.sort.dir:1;S.sort.k=k;renderGrid()}
 function rowClick(ev,id,i){S.focus=i;openAsset(id)}
@@ -3745,11 +3767,12 @@ function ordenesEnLote(){
   if(!sel.length){toast('No hay ninguna válvula marcada');return}
   const yaTienen=sel.filter(a=>ORDENES.some(o=>o.act===a.id&&o.et!=='final'));
   const libres=sel.filter(a=>!yaTienen.includes(a));
-  $('#mTitle').textContent=`Mandar ${libres.length||sel.length} válvula${(libres.length||sel.length)===1?'':'s'} al taller`;
+  $('#mTitle').textContent=`Orden de servicio · ${libres.length||sel.length} válvula${(libres.length||sel.length)===1?'':'s'}`;
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
-     <div>Se crea <b>una orden por válvula</b>, cada una con su código <b>MAT</b> correlativo, todas en
-       <b>OC recibida</b>. Aparecen al instante en el tablero del taller.</div></div>
+     <div>Se crea <b>una sola orden</b> con su código <b>MAT</b>, y dentro van las válvulas que marcaste.
+       Entra en <b>OC recibida</b> y el taller la ve al instante.
+       Las que no marcaste se quedan intactas y las puedes mandar cuando quieras.</div></div>
    ${yaTienen.length?`<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div><b>${yaTienen.length} de las marcadas ya tienen una orden abierta</b> y se quedan como están:
        ${esc(yaTienen.map(a=>a.tag||a.ser||'').join(', '))}.</div></div>`:''}
@@ -3768,27 +3791,112 @@ function ordenesEnLote(){
    :`<div class="empty" style="padding:24px"><b>No queda ninguna por mandar</b>
       Todas las marcadas ya tienen una orden abierta.</div>`}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
-    ${libres.length?`<button class="btn" onclick="confirmarOrdenesLote()">Crear ${libres.length} ${libres.length===1?'orden':'órdenes'}</button>`:''}`;
+    ${libres.length?`<button class="btn" onclick="confirmarOrdenesLote()">Crear la orden con ${libres.length} válvula${libres.length===1?'':'s'}</button>`:''}`;
   LOTE_IDS=libres.map(a=>a.id);
   $('#modal').classList.add('on');
 }
 let LOTE_IDS=[];
+/* ── Añadir y quitar válvulas de una orden ya abierta ────────
+   Una orden de servicio no nace cerrada: llega el cliente con dos más,
+   o resulta que una no había que tocarla. Antes había que crear otra
+   orden aparte o dejarla dentro haciendo bulto. */
+function editarValvulasOrden(idOrden){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o)return;
+  if(S.rol==='cliente'){toast('Las órdenes las arma Adolphus');return}
+  const g=grupoDe(o), ls=lineasDe(o);
+  const dentro=new Set(ls.map(x=>x.act));
+  const a0=ACTIVOS.find(x=>x.id===o.act)||{};
+  // candidatas: del MISMO cliente y sin otro trabajo abierto
+  const fuera=ACTIVOS.filter(x=>x.cli===a0.cli && !dentro.has(x.id)
+    && !ORDENES.some(y=>y.act===x.id && y.et!=='final'));
+
+  const linea=x=>{
+    const v=ACTIVOS.find(y=>y.id===x.act)||{};
+    const et=ETAPAS.find(e=>e[0]===x.et)||['',x.et];
+    // una válvula ya empezada no se saca sin más: hay trabajo hecho
+    const empezada=x.et!=='oc';
+    return `<label class="py-it${empezada?' off':''}">
+      <input type="checkbox" checked ${empezada?'disabled':''} data-act="${x.act}" class="ck-ord">
+      <span class="py-tag mono">${esc(v.tag||v.ser||'sin tag')}</span>
+      <span class="py-sub">${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')} · ${esc(et[1])}</span>
+      ${empezada?'<span class="hint">ya empezada — no se puede quitar</span>':''}</label>`;
+  };
+  const candidata=v=>`<label class="py-it">
+    <input type="checkbox" data-act="${v.id}" class="ck-ord">
+    <span class="py-tag mono">${esc(v.tag||v.ser||'sin tag')}</span>
+    <span class="py-sub">${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')}${v.ar?' · '+esc(area(v)):''}</span></label>`;
+
+  $('#mTitle').textContent=`Válvulas de ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`
+    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+      <div>Marca las que tienen que estar en esta orden. Las que quites vuelven a quedar libres
+        —sin perder nada— y las puedes mandar después en otra.</div></div>
+    <h4 class="snc-sec">En la orden <span class="opc">${ls.length}</span></h4>
+    <div class="py-lista">${ls.map(linea).join('')}</div>
+    ${fuera.length?`<h4 class="snc-sec">Se pueden añadir <span class="opc">${fuera.length} sin trabajo abierto</span></h4>
+      <div class="py-lista">${fuera.map(candidata).join('')}</div>`
+    :`<p class="hint" style="margin-top:12px">No queda ninguna otra válvula libre de este cliente.</p>`}`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="guardarValvulasOrden('${g}','${idOrden}')">Guardar</button>`;
+  $('#modal').classList.add('on');
+}
+
+function guardarValvulasOrden(g,idOrden){
+  const marcadas=new Set([...document.querySelectorAll('.ck-ord:checked')].map(e=>e.dataset.act));
+  const ls=ORDENES.filter(x=>grupoDe(x)===g);
+  const base=ls[0]; if(!base)return;
+
+  // quitar: sólo las que no habían empezado
+  const quitar=ls.filter(x=>!marcadas.has(x.act) && x.et==='oc');
+  if(quitar.length===ls.length){
+    toast('La orden no puede quedarse sin ninguna válvula');
+    return;
+  }
+  quitar.forEach(x=>{const i=ORDENES.indexOf(x); if(i>=0)ORDENES.splice(i,1)});
+
+  // añadir las nuevas al MISMO grupo y con el MISMO código
+  const dentro=new Set(ORDENES.filter(x=>grupoDe(x)===g).map(x=>x.act));
+  const sello=Date.now(); let n=0;
+  marcadas.forEach(act=>{
+    if(dentro.has(act))return;
+    if(ORDENES.some(y=>y.act===act && y.et!=='final'))return;   // se la llevó otra orden
+    ORDENES.unshift({id:'o'+sello+'-'+(n++),act,mat:base.mat,n:base.n,grupo:g,
+      et:'oc',tipo:base.tipo,f:base.f,tec:base.tec,hall:base.hall,partes:[]});
+  });
+
+  closeModal(); renderAll();
+  const total=ORDENES.filter(x=>grupoDe(x)===g).length;
+  const dice=[n?`${n} añadida${n===1?'':'s'}`:'',quitar.length?`${quitar.length} quitada${quitar.length===1?'':'s'}`:'']
+    .filter(Boolean).join(' · ')||'sin cambios';
+  registrar('Orden',`${base.mat||base.n} · ${dice} — queda con ${total}`);
+  toast(`${base.mat||base.n} · ${dice} — queda con ${total} válvula${total===1?'':'s'}`);
+}
+
 function confirmarOrdenesLote(){
   const tipo=$('#loTipo').value, fec=$('#loFec').value||HOY.toISOString().slice(0,10);
   const mot=($('#loMot').value||'').trim()||'Sin observaciones.';
+
+  /* UNA orden con las válvulas elegidas, no una orden por válvula.
+     Un cliente manda ocho válvulas y eso es UN trabajo con UN código:
+     ocho MAT sueltos no los reconoce nadie, ni el cliente que los
+     recibe ni el taller que los cobra. Por dentro sigue habiendo una
+     línea por válvula —cada una necesita su propio certificado— y lo
+     que las une es el campo 'grupo'. */
+  const mat=nuevoMAT();
+  const grupo='g'+Date.now();
+  const sello=Date.now();
   const hechas=[];
-  LOTE_IDS.forEach(id=>{
+  LOTE_IDS.forEach((id,i)=>{
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
-    if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;
-    const mat=nuevoMAT();
-    ORDENES.unshift({id:'o'+Date.now()+'-'+hechas.length,act:id,mat,n:mat,
+    if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
+    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,grupo,
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
-    hechas.push(mat);
+    hechas.push(a.tag||a.ser||'');
   });
   LOTE_IDS=[]; clearPick(); closeModal(); renderAll(); go('wo');
-  registrar('Orden',`${hechas.length} órdenes creadas en lote: ${hechas.join(', ')}`);
-  toast(hechas.length===1?'1 orden creada — el taller ya la ve'
-    :`${hechas.length} órdenes creadas — el taller ya las ve`);
+  if(!hechas.length){toast('No se creó ninguna: todas tenían ya una orden abierta');return}
+  registrar('Orden',`${mat} · ${hechas.length} válvula${hechas.length===1?'':'s'}: ${hechas.join(', ')}`);
+  toast(`${mat} creada con ${hechas.length} válvula${hechas.length===1?'':'s'} — el taller ya la ve`);
 }
 
 /* ── Baja de varias válvulas ─────────────────────────────────
@@ -4052,7 +4160,14 @@ function confirmarBajaClientes(){
   toast(`${ids.length} cliente${ids.length===1?'':'s'} eliminado${ids.length===1?'':'s'}`);
 }
 /* ---- espacio de trabajo del cliente: sus válvulas, calibraciones y órdenes ---- */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['cot','Cotizaciones'],['snc','Reclamos'],['imp','Importar']];
+/* Cotizaciones y Reclamos NO están aquí a propósito, aunque también
+   pertenezcan a un cliente: tienen su propio botón en el menú
+   principal, y salían dos veces —una dentro de la empresa y otra
+   fuera— sin que se entendiera en qué se diferenciaban. Un mismo sitio
+   al que se llega por dos caminos distintos se acaba usando mal.
+   Al entrar por el botón de arriba, la lista se filtra igual por la
+   empresa en la que estés. */
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
 /* Las nueve secciones existen para todos, pero no todos entran a un
    cliente a hacer lo mismo. El taller entra a ver qué válvulas de esa
    empresa hay que trabajar; el comercial entra a cotizar. Enseñarle al
@@ -4060,8 +4175,8 @@ const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anu
    ruido hace que la que sí importa se encuentre más tarde.
    Se ordena por lo que cada uno abre primero. */
 const CLI_TABS_ROL={
-  tec:['wo','assets','cal','parts','snc','plan'],
-  com:['cot','req','parts','assets','snc']
+  tec:['wo','assets','cal','parts','plan'],
+  com:['req','parts','assets']
 };
 function cliTabs(){
   const orden=CLI_TABS_ROL[S.rol];
@@ -4134,7 +4249,9 @@ function verOrden(idOrAct,esActivo){
       const fin=ls.filter(x=>x.et==='final').length;
       return `<section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
         <div class="fx-blk-h"><h3>Válvulas de esta orden</h3>
-          <span class="count">${fin} de ${ls.length} finalizadas</span></div>
+          <span class="count">${fin} de ${ls.length} finalizadas</span>
+          ${S.rol==='cliente'?'':`<button class="btn quiet xs" onclick="editarValvulasOrden('${o.id}')"
+            title="Añadir o quitar válvulas de esta orden">Añadir o quitar</button>`}</div>
         <div class="ord-v">${ls.map(x=>{
           const v=ACTIVOS.find(y=>y.id===x.act)||{};
           const et=ETAPAS.find(e=>e[0]===x.et)||['',x.et];
@@ -4496,10 +4613,9 @@ function openAsset(id){
             ficha; antes sólo lo tenían las demás clases. */
          const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
          return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
-           ${abierta?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
            <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
            <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
-           <button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo PSV'}</button>`;
+           ${accionDeCierre(a,abierta,borrador)}`;
        }
        /* Corregir los datos identificatorios tiene que estar a mano en
           CUALQUIER válvula, no solo en las de seguridad: una mariposa
@@ -4507,9 +4623,8 @@ function openAsset(id){
           arreglarse. */
        return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
-      <button class="btn sec" onclick="openPSV('${a.id}')">${uc?'Nuevo ensayo':'Registrar ensayo'}</button>
-      ${ORDENES.some(o=>o.act===a.id&&o.et!=='final')?'':`<button class="btn sec" onclick="mandarAMantenimiento('${a.id}')" title="Crea la orden y aparece en el tablero del taller">Mandar a mantenimiento</button>`}
       <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
+      ${accionDeCierre(a,ORDENES.find(o=>o.act===a.id&&o.et!=='final'),false)}
       <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
       <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
   showTab(S.tab||'ficha');
@@ -11542,6 +11657,29 @@ function quitarFotoActivo(id){
    código MAT en "OC recibida", igual que si viniera de una OC: para
    el taller es el mismo trabajo, sólo que lo pidió Adolphus en vez
    del cliente. */
+/* ── La acción principal de la ficha, según quién mira ───────
+   Cada perfil cierra la ficha por donde trabaja, y sólo por ahí:
+     · gerencia  → ABRE la orden de servicio. No ensaya. Poner el ensayo
+       en su pantalla invita a que la gerencia registre una prueba que
+       no hizo, y ese papel lo firma el técnico.
+     · taller    → ensaya. Es su oficio y es lo único que le falta para
+       cerrar la orden que ya tiene delante.
+     · comercial → ni una cosa ni la otra: mira, cotiza y reclama.
+   «Datos de placa» y «Etiqueta» se quedan para todos: leer la placa y
+   pegar la etiqueta lo hace quien tenga la válvula en la mano. */
+function accionDeCierre(a,ordenAbierta,borrador){
+  if(S.rol==='cliente')return '';
+  if(S.rol==='tec'){
+    return `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo'}</button>`;
+  }
+  if(S.rol==='com')return '';
+  // gerencia
+  if(ordenAbierta){
+    return `<button class="btn sec" onclick="closeDrawer();verOrden('${ordenAbierta.id}')" title="Ya tiene una orden abierta">Ver la orden ${esc(ordenAbierta.mat||ordenAbierta.n||'')}</button>`;
+  }
+  return `<button class="btn" onclick="mandarAMantenimiento('${a.id}')" title="Abre la orden de servicio y entra al tablero del taller"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6"/></svg>Orden de servicio</button>`;
+}
+
 function mandarAMantenimiento(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
   if(S.rol==='cliente'){toast('El servicio lo programa Adolphus');return}
@@ -11551,7 +11689,7 @@ function mandarAMantenimiento(id){
   const sug=a.cl==='seguridad'?'Calibración':'Preventivo';
   const u=ultimoServicioDe(id), p=proximaCalibDe(id);
   const venc=(p||a.prox)?dias((p&&p.f)||a.prox):null;
-  $('#mTitle').textContent=`Mandar a mantenimiento · ${a.tag||a.ser||''}`;
+  $('#mTitle').textContent=`${S.rol==='admin'?'Orden de servicio':'Mandar a mantenimiento'} · ${a.tag||a.ser||''}`;
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
      <div>Se crea una orden con su código <b>MAT</b> y aparece al instante en el tablero del taller,
