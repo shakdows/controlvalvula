@@ -4772,17 +4772,13 @@ function openAsset(id){
   </button>`;
   $('#drFoot').innerHTML=S.rol==='cliente'
    ? `<button class="btn sec" onclick="closeDrawer()">Cerrar</button><button class="btn" onclick="showTab('bom')">Ver repuestos</button>`
-   : (()=>{const uc=CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
+   : (()=>{
        /* Ventas no calibra ni manda válvulas al taller: lo suyo es
           contestar al cliente y cotizar. Su pie de ficha es ese. */
        if(S.rol==='com')
          return `<button class="btn sec" onclick="showTab('bom')">Ver el despiece</button>
            <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
            <button class="btn" onclick="closeDrawer();openCot()">Cotizar</button>`;
-       /* Un ensayo PSV tiene su propio certificado (AXAD-088). El del
-          formato viejo no sabe leerlo, así que el botón llevaba a nada.
-          Y un borrador todavía no tiene certificado que mostrar. */
-       const listo=uc&&(uc.tipo!=='psv'||uc.veredicto!=='incompleto');
        if(a.cl==='seguridad'){
          /* En una PSV manda el formato de la empresa: el ensayo y su
             certificado. Lo demás no desaparece —sigue en las pestañas
@@ -4791,21 +4787,21 @@ function openAsset(id){
          /* Una PSV también hay que poder mandarla al taller desde su
             ficha; antes sólo lo tenían las demás clases. */
          const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
-         return `${listo?`<button class="btn sec" onclick="verPSV('${uc.id}')" title="Certificado AXAD-088"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Certificado</button>`:''}
-           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
-           <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
+         return `           <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
            ${accionDeCierre(a,abierta,borrador)}`;
        }
        /* Corregir los datos identificatorios tiene que estar a mano en
           CUALQUIER válvula, no solo en las de seguridad: una mariposa
           dada de alta sin la placa a mano no tenía por dónde
           arreglarse. */
-       return `${listo?`<button class="btn sec" onclick="showCalibReport(CALIBS.find(c=>c.id==='${uc.id}'))" title="Certificado ${esc(uc.cert||'')}"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Ver certificado</button>`:''}
+       return `
+      ${/* Dos botones y no cinco. La etiqueta, la ficha para el cliente y
+           el reclamo no desaparecen —siguen en las pestañas de arriba y
+           en su sección del menú—, pero dejan de competir por el pulgar
+           con lo único que se hace al abrir una válvula: comprobar la
+           placa y mandarla a servicio. */''}
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
-      <button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>
-      ${accionDeCierre(a,ORDENES.find(o=>o.act===a.id&&o.et!=='final'),false)}
-      <button class="btn sec" onclick="fichaParaCliente('${a.id}')" title="Toda la información de la válvula, lista para mandársela al cliente">Ficha para el cliente</button>
-      <button class="btn sec" onclick="closeDrawer();openSNC('','${a.id}')" title="Levantar un registro de servicio no conforme para esta válvula">Levantar reclamo</button>`;})();
+      ${accionDeCierre(a,ORDENES.find(o=>o.act===a.id&&o.et!=='final'),false)}`;})();
   showTab(S.tab||'ficha');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
