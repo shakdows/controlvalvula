@@ -10968,22 +10968,22 @@ function colaHtml(){
   const todo=colaTrabajo();
   const cuenta=g=>todo.filter(x=>x.g===g).length;
   const activos=GRUPOS.filter(g=>cuenta(g.k));
-  const lista=S.cola?todo.filter(x=>x.g===S.cola):todo;
-  const tope=S.colaTodo?lista.length:6;
+  const lista=todo;
+  const tope=10;
   const cliente=S.rol==='cliente';
   const cab=`<div class="cola-h">
       <div><h2>${cliente?'Lo que necesita tu planta':'Tu trabajo'}</h2>
         <p>${todo.length?`${todo.length} ${todo.length===1?'cosa pendiente':'cosas pendientes'} · en orden de urgencia`
           :'Nada pendiente ahora mismo'}</p></div>
-      ${todo.length&&!cliente?`<button class="btn sec xs" onclick="S.cli?(setView('atencion'),go('assets')):go('clients')">Ver en la lista</button>`:''}
     </div>`;
   if(!todo.length) return `<section class="cola">${cab}
     <div class="cola-vacio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
       <div><b>Todo al día</b><span>Ninguna válvula espera calibración, orden ni repuesto.</span></div></div></section>`;
+  /* Los mismos grupos, pero como cuenta, no como filtro: en el panel
+     no se pulsa nada. */
   const chips=`<div class="cola-chips">
-    <button class="ch ${S.cola?'':'on'}" onclick="setCola('')">Todo <b>${todo.length}</b></button>
-    ${activos.map(g=>`<button class="ch ${S.cola===g.k?'on':''}" onclick="setCola('${g.k}')">
-      <span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)} <b>${cuenta(g.k)}</b></button>`).join('')}
+    ${activos.map(g=>`<span class="ch">
+      <span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)} <b>${cuenta(g.k)}</b></span>`).join('')}
   </div>`;
   const filas=lista.slice(0,tope).map(x=>{
     const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
@@ -10991,12 +10991,9 @@ function colaHtml(){
     return `<div class="cola-i" onclick="${abrir}">
       <span class="pt" style="background:var(--${tono})"></span>
       <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
-      <span class="q">${x.q}</span>
-      ${x.ac?`<button class="btn sec xs ac" onclick="event.stopPropagation();${x.ac.f}">${esc(x.ac.t)}</button>`
-            :`<button class="btn quiet xs ac" onclick="event.stopPropagation();${abrir}">Ver ficha</button>`}</div>`}).join('');
+      <span class="q">${x.q}</span></div>`}).join('');
   const mas=lista.length>tope
-    ? `<button class="cola-mas" onclick="S.colaTodo=true;renderHome()">Ver las ${lista.length-tope} restantes</button>`
-    : (S.colaTodo&&lista.length>6?`<button class="cola-mas" onclick="S.colaTodo=false;renderHome()">Mostrar menos</button>`:'');
+    ? `<div class="cola-mas-t">y ${lista.length-tope} más · están en su sección del menú</div>` : '';
   return `<section class="cola">${cab}${chips}<div class="cola-l">${filas}</div>${mas}</section>`;
 }
 
@@ -11095,7 +11092,10 @@ function heroHtml({titulo,sub,cifra,cifraPie,cifraTono,pct,urgente,acciones}){
         <div class="hero-hi">${esc(saludoHora())}</div>
         <h1>${titulo}</h1>
         <p>${sub}</p>
-        ${acciones?`<div class="hero-acc">${acciones}</div>`:''}
+        ${/* El panel no lleva botones. Es la pantalla que se mira al
+              llegar para saber cómo está la casa; para hacer algo se
+              entra por el menú. Un botón aquí es un clic dado sin
+              haber terminado de leer. */''}
       </div>
       <div class="hero-dial" style="--tono:var(--${cifraTono||'ok'})">
         <div class="hero-ring">
@@ -11110,8 +11110,7 @@ function heroHtml({titulo,sub,cifra,cifraPie,cifraTono,pct,urgente,acciones}){
       </div>
     </div>
     ${urgente?`<div class="hero-urg ${urgente.tono==='ok'?'ok':''}" style="--tono:var(--${urgente.tono||'due'})">
-      <span class="pt"></span><p>${urgente.txt}</p>
-      ${urgente.btn||''}</div>`:''}
+      <span class="pt"></span><p>${urgente.txt}</p></div>`:''}
   </section>`;
 }
 
@@ -11136,9 +11135,9 @@ function renderHomeCliente(){
     {v:sols.length,k:'Solicitudes abiertas',dot:sols.length?'due':'ok',
      d:sols.length?'con Adolphus':'ninguna en curso',go:"go('req')"}
   ];
-  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}" style="text-align:left;cursor:pointer;font:inherit">
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi" style="text-align:left">
     <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
-    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
 
   /* certificados: lo que el cliente necesita cuando llega la auditoría */
   const certs=CALIBS.filter(x=>{const a=ACTIVOS.find(z=>z.id===x.act);return a?.cli===S.cli})
@@ -11193,13 +11192,11 @@ function renderHomeCliente(){
      cifraTono:saludMedia>=85?'ok':saludMedia>=65?'due':'late',
      cifraPie:['Salud del parque',saludMedia>=85?'está en buen estado':saludMedia>=65?'hay equipos que piden atención':'hay equipos en estado crítico'],
      urgente:urg,
-     acciones:`<button class="btn sec" onclick="go('assets')">Ver mis equipos</button>
-       <button class="btn sec" onclick="go('req')">Mis solicitudes</button>`
    })+`
    ${colaHtml()}
    ${kpiHtml}
    <div class="dash">
-     <div class="span-7">${panel('Próximas calibraciones',proxHtml,`<button class="btn quiet xs" onclick="go('cal')">Ver todas</button>`)}</div>
+     <div class="span-7">${panel('Próximas calibraciones',proxHtml)}</div>
      <div class="span-5">${panel('Estado de tu parque',donut(estadoSegs,vs.length,'válvulas'))}</div>
      <div class="span-7">${panel('Certificados recientes',certHtml,`<span class="count">${certs.length}</span>`)}</div>
      <div class="span-5">${panel('Servicios en curso',servHtml,`<span class="count">${ordAb.length}</span>`)}</div>
@@ -11320,11 +11317,10 @@ function avisoNuevoHtml(foco){
   }).join('')+(n.length>6?`<span class="tag">y ${n.length-6} más</span>`:'');
   return `<div class="nuevo"><span class="pt"></span>
     <div style="flex:1;min-width:220px">
-      <p><b>${n.length} orden${n.length===1?'':'es'} de trabajo nueva${n.length===1?'':'s'}</b> — gerencia las mandó a mantenimiento y todavía no las has abierto.</p>
+      <p><b>${n.length} orden${n.length===1?'':'es'} de trabajo nueva${n.length===1?'':'s'}</b> — gerencia las mandó a mantenimiento. Están en Órdenes de trabajo.</p>
       <div class="tags">${tags}</div>
     </div>
-    <button class="btn" onclick="irANuevas()">Ver el trabajo nuevo</button>
-    <button class="btn quiet" onclick="vistoElTrabajo()">Enterado</button></div>`;
+    </div>`;
 }
 
 function renderHomeTaller(){
@@ -11444,9 +11440,9 @@ function renderHomeTaller(){
     {v:listasParaCerrar,k:'Listas para cerrar',cls:listasParaCerrar?'good':'',
      d:listasParaCerrar?'ya tienen todo':'ninguna completa aún',go:aOrdenes}
   ];
-  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}">
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi">
     <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
-    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+    <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
 
   $('#homeView').innerHTML=
    avisoNuevoHtml(foco)+
@@ -11456,8 +11452,6 @@ function renderHomeTaller(){
      cifra:pct+'%', pct:pct/100, cifraTono:pct>=80?'ok':pct>=40?'due':'late',
      cifraPie:['Avance del mantenimiento',base?`${fin.length} de ${base} entregadas`:'nada en curso'],
      urgente:urg,
-     acciones:`<button class="btn sec" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva OC</button>
-       <button class="btn sec" onclick="go('clients')">Entrar a un cliente</button>`
    })+`
    ${S.cli?'':`<div class="tools">
      <label class="lbl-sel" for="homeCli">Empresa</label>
@@ -11564,13 +11558,13 @@ function renderHome(){
   const famHtml=`<div class="fams">${FAM.map(f=>{
     const de=vs.filter(a=>famDe(a)===f.k);
     const mal=de.filter(a=>['vencido','mant','incompleto','porvencer'].includes(estado(a).k)).length;
-    return `<button class="fam${de.length?'':' off'}" style="--fam:var(--${f.c})" ${de.length?`onclick="gotoFamilia('${f.k}')"`:'disabled'} title="${esc(f.n)}: ${de.length} equipos${de.length?' — ver la lista':''}">
+    return `<div class="fam${de.length?'':' off'}" style="--fam:var(--${f.c})" title="${esc(f.n)}: ${de.length} equipos${de.length?' — ver la lista':''}">
       <span class="fam-ph">${photoFor(f.mod)}</span>
       <span class="fam-t">
         <span class="fam-n">${de.length}</span>
         <span class="fam-l"><i class="sw"></i>${esc(f.n)}</span>
         <span class="fam-m">${de.length?(mal?`<b>${mal}</b> requieren atención`:'todas al día'):'sin equipos registrados'}</span>
-      </span></button>`}).join('')}</div>`;
+      </span></div>`}).join('')}</div>`;
   const kpis=[
     {v:atn,k:'Requieren atención',dot:atn?'due':'ok',cls:atn?'warn':'good',d:atn?'revisar lista':'todo al día',
      go:S.cli?"setView('atencion');go('assets')":"S.cliPend=true;go('clients')"},
@@ -11580,7 +11574,7 @@ function renderHome(){
     {v:cumpl+'%',k:'Cumplimiento calibración',cls:cumpl>=90?'good':cumpl>=70?'warn':'bad',
      d:cumpl>=90?'en meta (≥90%)':'bajo meta',go:"go('rep')"}
   ];
-  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<button class="kpi" onclick="${x.go}"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></button>`).join('')}</div>`;
+  const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
   const estadoSegs=[
     {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
     {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'due'},
@@ -11636,11 +11630,10 @@ function renderHome(){
      cifraTono:cola.length?(cola.some(x=>x.g==='venc')?'late':'due'):'ok',
      cifraPie:['Cosas pendientes',cola.length?'en orden de urgencia':'nada espera por ti'],
      urgente:urg,
-     acciones:`<button class="btn sec" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button>
-       <button class="btn sec" onclick="go('clients')">Ver clientes</button>`
    })+`
    ${colaHtml()}
-   ${onbHtml()}
+   ${/* «Termina de configurar tu espacio» vivía aquí con sus cuatro
+        botones. La configuración se hace en Ajustes; el panel se mira. */''}
    ${kpiHtml}
    ${resumenClientesHtml()}
    ${famHtml}

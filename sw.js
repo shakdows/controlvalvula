@@ -13,7 +13,7 @@
    Ahora la aplicación abre de la caché al instante, y si hay internet
    se actualiza sola por detrás para la próxima vez.
    ============================================================ */
-const CACHE = 'adolphus-v3';
+const CACHE = 'adolphus-v4';
 
 /* Ninguna petición a la red puede tardar más que esto. Sin este tope,
    una antena que no lleva a ninguna parte cuelga la promesa para
@@ -30,9 +30,16 @@ const conTope = (req, ms = TOPE_MS) => new Promise((ok, mal) => {
    incrustados dentro del propio index.html, así que precargar los
    archivos sueltos sería bajar 1,4 MB dos veces. En un celular con
    3G en planta, eso se nota. */
+/* La aplicación se guarda bajo la dirección por la que se entra —la
+   raíz del sitio—, no bajo «index.html». En Vercel no son lo mismo:
+   con cleanUrls, /index.html RE-DIRIGE a /. Guardarla por ese nombre
+   dejaba en la caché una respuesta redirigida, y una redirección no se
+   puede devolver como respuesta a una navegación: el navegador corta
+   con ERR_FAILED. Eso era el «no se puede acceder a este sitio». */
+const CASA = new URL('./', self.registration.scope).toString();
+
 const APP = [
   './',
-  './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -50,11 +57,25 @@ const APP = [
    en seguida — y la aplicación tira igual, con la letra del sistema. */
 const TERCEROS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com'];
 
+/* Guarda una copia LIMPIA: si la respuesta vino de una redirección se
+   rehace desde su contenido, porque tal cual no sirve para navegar. */
+async function guardarLimpio(c, clave, r) {
+  if (!r || !r.ok) return;
+  if (r.redirected) r = new Response(await r.blob(), {
+    status: 200, headers: { 'Content-Type': r.headers.get('Content-Type') || 'text/html; charset=utf-8' }
+  });
+  await c.put(clave, r);
+}
+
 self.addEventListener('install', e => {
-  // addAll falla entero si un archivo no está; se cachea uno a uno.
-  e.waitUntil(caches.open(CACHE).then(c =>
-    Promise.all(APP.map(u => c.add(u).catch(() => null)))
-  ).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const c = await caches.open(CACHE);
+    // la casa primero, y limpia: es lo único sin lo que no se abre nada
+    await conTope(CASA, 20000).then(r => guardarLimpio(c, CASA, r)).catch(() => {});
+    // el resto, uno a uno: que falte alguno no puede tumbar la instalación
+    await Promise.all(APP.map(u => c.add(u).catch(() => null)));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', e => {
@@ -81,26 +102,32 @@ self.addEventListener('fetch', e => {
   /* ABRIR LA APLICACIÓN. Lo primero es que abra; lo segundo, que esté
      al día. Nunca al revés. */
   if (req.mode === 'navigate') {
-    e.respondWith(
-      caches.match('./index.html').then(hit => {
-        if (hit) {                       // abre ya, y se actualiza por detrás
-          e.waitUntil(conTope(req).then(r => {
-            if (r && r.ok) return caches.open(CACHE).then(c => c.put('./index.html', r.clone()));
-          }).catch(() => {}));
-          return hit;
-        }
-        // primera visita: no hay nada guardado, hay que ir a la red
-        return conTope(req, 12000).then(r => {
-          caches.open(CACHE).then(c => c.put('./index.html', r.clone()));
-          return r;
-        }).catch(() => caches.match('./') || new Response(
+    e.respondWith((async () => {
+      const c = await caches.open(CACHE);
+      /* Se busca por la casa, y si no, por cualquier copia guardada:
+         da igual si se entró por «/», por «/index.html» o con algo
+         detrás del signo de interrogación. */
+      const hit = await c.match(CASA, { ignoreSearch: true })
+               || await c.match('./index.html', { ignoreSearch: true })
+               || await c.match(req, { ignoreSearch: true });
+      if (hit) {                         // abre ya, y se actualiza por detrás
+        e.waitUntil(conTope(req).then(r => guardarLimpio(c, CASA, r)).catch(() => {}));
+        return hit;
+      }
+      // primera visita: no hay nada guardado, hay que ir a la red
+      try {
+        const r = await conTope(req, 12000);
+        e.waitUntil(guardarLimpio(c, CASA, r.clone()).catch(() => {}));
+        return r;
+      } catch (_) {
+        return new Response(
           '<!doctype html><meta charset="utf-8"><title>Adolphus</title>' +
           '<body style="font:16px/1.5 system-ui;padding:40px;color:#1b2a4a">' +
           '<h1>Adolphus</h1><p>Esta es la primera vez que abres el portal en este equipo y no hay señal.' +
           ' Ábrelo una vez con internet y a partir de ahí funciona sin él.</p>',
-          { headers: { 'Content-Type': 'text/html; charset=utf-8' } }));
-      })
-    );
+          { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+      }
+    })());
     return;
   }
 
