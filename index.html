@@ -321,6 +321,29 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
 /* Catálogo y Usuarios pintan su tabla directamente dentro del panel:
    sin esto la tabla empuja la página entera en pantallas angostas. */
 #catList,#userList{overflow-x:auto}
+
+/* Resumen de mantenimiento por cliente — sólo vista, sin acciones.
+   Una fila por empresa: quién es, cómo está y qué válvulas concretas
+   son las que aprietan. Nada aquí es pulsable a propósito. */
+.rc{display:flex;flex-direction:column}
+.rc-f{display:grid;grid-template-columns:minmax(150px,1.1fr) auto;gap:6px var(--sp-4);
+  align-items:start;padding:12px var(--sp-4);border-top:1px solid var(--line-2)}
+.rc-f:first-child{border-top:0}
+.rc-c b{font-size:13.5px;display:block;line-height:1.3}
+.rc-c small{font-size:11.5px;color:var(--ink-3)}
+.rc-n{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.rc-l{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.rc-v{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;
+  background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-pill);
+  font-size:11.5px;white-space:nowrap;cursor:default}
+.rc-v b{font-weight:600}
+.rc-v small{color:var(--ink-3)}
+.rc-v .dot{width:6px;height:6px;flex:0 0 auto}
+.rc-mas{font-size:11.5px;color:var(--ink-3);align-self:center}
+@media (max-width:700px){
+  .rc-f{grid-template-columns:1fr}
+  .rc-n{justify-content:flex-start}
+}
 /* el ojo va DENTRO del campo, sin empujar el diseño */
 .pw-wrap{position:relative;display:block}
 .pw-wrap .inp{width:100%;padding-right:46px}
@@ -10898,6 +10921,7 @@ function renderHomeTaller(){
      <span class="count">${vs.length} válvula${vs.length===1?'':'s'} · ${ords.length} orden${ords.length===1?'':'es'}</span>
    </div>`}
    ${kpiHtml}
+   ${resumenClientesHtml()}
    <div class="dash">
      <div class="span-12">${panel('Qué le falta a cada válvula para finalizar',faltaHtml,
        `<span class="count">${pendientes.length} en curso · ${listasParaCerrar} lista${listasParaCerrar===1?'':'s'}</span>`)}</div>
@@ -10909,6 +10933,70 @@ function renderHomeTaller(){
        hbars(ETAPAS.map(([k,l])=>({label:l,value:ords.filter(o=>o.et===k).length,
          tone:k==='final'?'ok':k==='mant'?'sel':''}))),`<span class="count">${ords.length} órdenes</span>`)}</div>
    </div>`;
+}
+
+/* ── Resumen de mantenimiento por cliente ────────────────────
+   SÓLO PARA MIRAR. Ni un botón: es la foto de cómo está el parque de
+   cada empresa, para abrirla en la reunión de la mañana o enseñársela a
+   alguien sin miedo a que toque nada. Lo que haya que hacer se hace
+   desde «Tu trabajo», que está justo arriba y sí tiene acciones.
+   Aparece igual para gerencia, taller y comercial: los tres necesitan
+   saber qué empresa está peor, aunque cada uno actúe distinto. */
+function resumenClientesHtml(){
+  const ESTADOS=[
+    {k:'vencido',   t:'Vencidas',        c:'late'},
+    {k:'porvencer', t:'Por vencer',      c:'due'},
+    {k:'mant',      t:'En taller',       c:'sel'},
+    {k:'incompleto',t:'Ficha incompleta',c:'ink-3'}
+  ];
+  const filas=CLIENTES.map(c=>{
+    const eq=ACTIVOS.filter(a=>a.cli===c.id);
+    const por={}; ESTADOS.forEach(e=>por[e.k]=eq.filter(a=>estado(a).k===e.k));
+    const pend=ESTADOS.reduce((n,e)=>n+por[e.k].length,0);
+    return {c,eq,por,pend};
+  }).filter(f=>f.eq.length)                       // empresas sin equipos no dicen nada
+    .sort((a,b)=>{
+      // primero la que peor está: vencidas pesan más que por vencer
+      const p=f=>f.por.vencido.length*100+f.por.porvencer.length*10+f.pend;
+      return p(b)-p(a);
+    });
+
+  if(!filas.length)return '';
+
+  const cuerpo=filas.map(f=>{
+    const alDia=!f.pend;
+    // las que hay que mirar, la más urgente primero
+    const lista=[...f.por.vencido,...f.por.porvencer,...f.por.mant,...f.por.incompleto]
+      .slice(0,4)
+      .map(a=>{
+        const e=estado(a);
+        const d=a.prox?dias(a.prox):null;
+        const dice = e.k==='vencido'    ? `vencida hace ${Math.abs(d)} d`
+                   : e.k==='porvencer'  ? `vence en ${d} d`
+                   : e.k==='mant'       ? 'en taller'
+                   : 'falta ficha';
+        return `<span class="rc-v" title="${esc(a.tag||a.ser||'sin tag')} · ${esc(dice)}">
+          <i class="dot" style="color:var(--${e.k==='vencido'?'late':e.k==='porvencer'?'due':e.k==='mant'?'sel':'ink-3'})"></i>
+          <b>${esc(a.tag||a.ser||'sin tag')}</b><small>${esc(dice)}</small></span>`;
+      }).join('');
+    const resto=f.pend-Math.min(4,f.pend);
+    return `<div class="rc-f">
+      <div class="rc-c">
+        <b>${esc(f.c.n)}</b>
+        <small>${f.eq.length} válvula${f.eq.length===1?'':'s'}${f.c.fac?' · '+esc(f.c.fac):''}</small>
+      </div>
+      <div class="rc-n">${ESTADOS.filter(e=>f.por[e.k].length).map(e=>
+        `<span class="tag ${e.c==='late'?'late':e.c==='due'?'due':e.c==='sel'?'sel':''}"
+           title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')
+        || '<span class="tag ok"><i class="dot"></i>todas al día</span>'}</div>
+      <div class="rc-l">${lista}${resto>0?`<span class="rc-mas">y ${resto} más</span>`:''}</div>
+    </div>`;
+  }).join('');
+
+  const totalPend=filas.reduce((n,f)=>n+f.pend,0);
+  return panel('Mantenimiento por cliente',
+    `<div class="rc">${cuerpo}</div>`,
+    `<span class="count">${totalPend} válvula${totalPend===1?'':'s'} por atender</span>`);
 }
 
 function renderHome(){
@@ -11004,6 +11092,7 @@ function renderHome(){
    ${colaHtml()}
    ${onbHtml()}
    ${kpiHtml}
+   ${resumenClientesHtml()}
    ${famHtml}
    <div class="dash">
      <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
@@ -11901,14 +11990,19 @@ function revisarRUC(v){
      avisa, no se bloquea. Lo que sí impide guardar es repetir RUC Y
      planta, y de eso se encarga saveNewClient. */
   const ya=CLIENTES.filter(c=>c.ruc===r);
-  const base=`<span style="color:var(--ok)">✓ <b>Número correcto</b> · ${esc(RUC_TIPO(r))}</span>`;
+  /* Cuando el número está bien, sólo hace falta saber ESO. El tipo de
+     contribuyente y la instrucción de escribir la razón social sobraban:
+     lo primero no se decide aquí y lo segundo ya lo dice el campo de
+     abajo. Un aviso verde que se lee de un vistazo vale más que uno
+     completo que hay que leer entero. */
+  const base=`<span style="color:var(--ok)">✓ <b>RUC correcto</b></span>`;
   if(ya.length){
     est.innerHTML=`${base}<div style="color:var(--due);margin-top:2px">▲ Ya tienes <b>${esc(ya[0].n)}</b>
       con este RUC${ya[0].fac?` (planta ${esc(ya[0].fac)})`:''}. Si es otra planta de la misma empresa, sigue;
       si no, es un duplicado.</div>${btnSunat(r)}`;
     return;
   }
-  est.innerHTML=`${base}<span class="muted"> — escribe la razón social abajo.</span>${btnSunat(r)}`;
+  est.innerHTML=`${base}${btnSunat(r)}`;
 }
 /* Consulta el RUC. Con backend configurado va a SUNAT; sin él, usa el padrón
    de demostración y lo dice claramente. */
