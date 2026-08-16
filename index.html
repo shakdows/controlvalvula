@@ -567,6 +567,7 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    borde, pero punteado, para que se lea como «aquí va la siguiente». */
 /* La casilla que falta, en el mismo naranja que todo lo que hay que
    mirar. No es un error —nadie se ha equivocado—: es lo que queda. */
+#pvFotos.falta,#pvFirma.falta{outline:2px solid var(--due);outline-offset:4px;border-radius:var(--r-2)}
 .inp.falta{border-color:var(--due);background:color-mix(in oklch,var(--due) 8%,var(--surface));box-shadow:0 0 0 3px color-mix(in oklch,var(--due) 16%,transparent)}
 .inp.falta::placeholder{color:color-mix(in oklch,var(--due) 70%,var(--ink-3))}
 /* El patrón, en un recuadro aparte: se lee, no se escribe. En naranja
@@ -2292,6 +2293,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .dsp-una{position:relative;display:inline-flex;flex:0 0 auto}
 /* Lo que sale solo se enseña en gris y no se puede escribir: si se
    pudiera, alguien lo cambiaría y el certificado diría dos cosas. */
+/* El gráfico y sus criterios, uno al lado del otro. En pantalla
+   estrecha se apilan: el dibujo primero, que es lo que se mira. */
+.psv-graf-fila{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.psv-graf-svg{flex:1 1 320px;min-width:0}
+.crit-lado{flex:0 0 178px;flex-direction:column;align-items:flex-start;gap:5px}
+.crit-lado b{display:block}
+@media(max-width:640px){.crit-lado{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:center}}
 .inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
 .dsp-una img{width:56px;height:52px;object-fit:cover;border-radius:var(--r-1);display:block;
   border:1px solid var(--line-2)}
@@ -6171,25 +6179,45 @@ const valoresDisparo=c=>disparosDe(c).map(t=>num(t.v)).filter(x=>isFinite(x)&&x>
    lleno; hay que señalarle la casilla. */
 function psvFaltantes(c){
   const out=[];
+  /* 1 · contra qué se mide */
+  if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio'});
+  if(!String(c.patSerie||'').trim())out.push({id:'',        que:'la serie del equipo patrón',paso:1});
+  if(!String(c.patCert||'').trim()) out.push({id:'',        que:'el certificado del patrón',paso:1});
+  /* 2 · el desarme: al menos una pieza fotografiada */
+  if(!paresFoto(c).filter(x=>x.a||x.d).length)
+    out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme'});
+  /* 3 · la prueba */
   const set=num(c.setEsp);
   if(!isFinite(set)||set<=0)
     out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press)'});
-  disparosDe(c).forEach((t,i)=>{
+  const llenos=valoresDisparo(c).length;
+  if(llenos<3)disparosDe(c).forEach((t,i)=>{
     const v=num(t.v);
     if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`});
   });
-  /* Con tres o más llenos ya hay promedio; los de más son opcionales. */
-  const llenos=valoresDisparo(c).length;
-  return llenos>=3 ? out.filter(x=>x.id==='pv-setEsp') : out;
+  /* 4 · conclusiones */
+  if(!String(c.coment||'').trim())
+    out.push({id:'pv-coment', que:'las conclusiones del mantenimiento'});
+  /* 5 · la firma de quien lo hizo */
+  if(!String(c.respNombre||'').trim())
+    out.push({id:'pv-resp', que:'el nombre de quien hizo el trabajo'});
+  if(!(c.firmas||[]).some(f=>f.rol==='ejec'&&f.img))
+    out.push({id:'pvFirma', que:'la firma del ejecutante'});
+  return out;
 }
 /* Pinta en naranja las casillas que faltan y sube a la primera. */
 function psvSenalarFaltas(){
   const t=PSV_TMP; if(!t)return null;
-  document.querySelectorAll('#mBody .inp.falta').forEach(e=>e.classList.remove('falta'));
+  document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
   const f=psvFaltantes(t);
-  f.forEach(x=>{const e=document.getElementById(x.id); if(e)e.classList.add('falta')});
-  const primera=f.length?document.getElementById(f[0].id):null;
-  if(primera){primera.scrollIntoView({block:'center'}); primera.focus({preventScroll:true})}
+  f.forEach(x=>{const e=x.id&&document.getElementById(x.id); if(e)e.classList.add('falta')});
+  /* Sube a lo primero que falte, sea una casilla o un bloque entero
+     —el desarme y la firma no son casillas, son secciones—. */
+  const primera=f.map(x=>x.id&&document.getElementById(x.id)).find(Boolean);
+  if(primera){
+    primera.scrollIntoView({block:'center'});
+    if(typeof primera.focus==='function'&&primera.tagName==='INPUT')primera.focus({preventScroll:true});
+  }
   return f;
 }
 /* El patrón se enseña puesto y en gris: es el instrumento de la casa,
@@ -6273,6 +6301,13 @@ function psvVeredicto(c){
   if(faltan>0)
     return {estado:'incompleto',
       falta:t.length?`${faltan} disparo${faltan>1?'s':''} de los tres del formato`:'los tres disparos'};
+  /* Los otros cuatro pasos pesan igual que los disparos: un
+     certificado sin desarme, sin conclusiones o sin firma no está
+     terminado, por muy bien que hayan salido las presiones. */
+  const pendientes=psvFaltantes(c).filter(x=>!/^dsp-v|^pv-setEsp$/.test(x.id));
+  if(pendientes.length)
+    return {estado:'incompleto', falta:pendientes[0].que
+      +(pendientes.length>1?` y ${pendientes.length-1} cosa${pendientes.length>2?'s':''} más`:'')};
   const prom=t.reduce((a,b)=>a+b,0)/t.length;
   const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
   const dif=prom-set, desv=set?dif/set*100:0;
@@ -6471,8 +6506,13 @@ function pintarPSV(){
        ${esc(cli(a.cli).n||'')}. Todo esto ya lo sabe el sistema: no hay que volver a escribirlo.
        <a href="#" onclick="openPlacaPSV('${a.id}');return false" style="color:var(--sel);font-weight:700;text-decoration:underline">Corregir los datos de placa</a>.</div></div>
 
+   ${/* Cinco pasos, en el orden en que se hace el trabajo: se apunta
+        contra qué se mide, se abre la válvula y se fotografía lo que
+        viene mal, se prueba, se concluye y se firma. Antes iban en
+        tres bloques mezclados y el desarme quedaba después de las
+        pruebas, que es justo al revés de como pasa en el banco. */''}
    <div class="psv-secs">
-    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Servicio y patrón
+    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Orden de compra y equipo de medición
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
       ${cabeceraMia?`
       <div class="two">
@@ -6493,12 +6533,26 @@ function pintarPSV(){
        ${bloquePatron(t)}`}
     </div></details>
 
-    <details class="psv-sec" open><summary>2 · Cómo llegó y disparos
+    <details class="psv-sec" open><summary>2 · Desarme
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
+      <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
+        <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
+          y qué se le va a hacer. Cuando montes la nueva, vuelves aquí y le pones su foto del «después».
+          Una vez armada, ese antes ya no se puede tomar.</div></div>
+      <div class="fld"><label for="pv-recep">Cómo llegó · lo que se ve por fuera</label>
+        <textarea class="inp" id="pv-recep" rows="2" oninput="psvCampo('recep',this.value)"
+          placeholder="Corrosión, fugas, golpes, precintos, lo que traiga puesto.">${esc(t.recep||'')}</textarea></div>
+      <div id="psvAsFound"></div>
+      <h4 class="snc-sec">Pieza por pieza
+        <span class="opc">foto del antes ahora, la del después al montarla</span></h4>
+      <div class="muted" style="font-size:11.5px;margin:2px 0 10px">Una foto por pieza —una, tres, las que hagan falta—.
+        A cada una le pones después su foto del final, y en el informe salen emparejadas.
+        Cualquiera de las dos se puede cambiar o quitar si te equivocas.</div>
+      <div id="pvFotos"></div>
+    </div></details>
+
+    <details class="psv-sec" open><summary>3 · Prueba de disparo
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
-      <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-        <div>Primero se dispara la válvula <b>tal como llegó</b>, sin ajustar nada: es el dato que dice en
-          qué estado la mandó el cliente, y el único momento en que se puede tomar. Los tres disparos de
-          salida vienen después, ya con la válvula puesta a punto.</div></div>
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
           <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="150" oninput="psvCampo('setEsp',this.value)"></div>
@@ -6506,39 +6560,23 @@ function pintarPSV(){
           <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
             ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
         ${F('asFound','Disparó a · AS FOUND','a qué presión abrió al llegar')}
-        <div class="fld"><label for="pv-fluidoP">Fluido de prueba</label>
-          <select class="inp" id="pv-fluidoP2" onchange="psvCampo('fluidoP',this.value)">
-            ${['Nitrógeno','Aire','Agua','Vapor'].map(f=>`<option ${t.fluidoP===f?'selected':''}>${f}</option>`).join('')}</select></div>
       </div>
-      <div class="fld"><label for="pv-recep">Cómo llegó · lo que se ve por fuera</label>
-        <textarea class="inp" id="pv-recep" rows="2" oninput="psvCampo('recep',this.value)"
-          placeholder="Corrosión, fugas, golpes, precintos, lo que traiga puesto.">${esc(t.recep||'')}</textarea></div>
-      <div id="psvAsFound"></div>
       <h4 class="snc-sec">Verificación final · AS LEFT
         <span class="opc">cada disparo con su foto, tomada en ese momento</span></h4>
       <div id="psvDisparos"></div>
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>3 · Desarme, conclusiones y firma
-      <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
-      <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-        <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
-          y qué se le va a hacer. Cuando montes la nueva, vuelves aquí y le pones su foto del «después».
-          Una vez armada, ese antes ya no se puede tomar.</div></div>
-      <h4 class="snc-sec">Pieza por pieza
-        <span class="opc">foto del antes ahora, la del después al montarla</span></h4>
-      <div class="muted" style="font-size:11.5px;margin:2px 0 10px">Una foto por pieza —una, tres, las que hagan falta—.
-        A cada una le pones después su foto del final, y en el informe salen emparejadas.
-        Cualquiera de las dos se puede cambiar o quitar si te equivocas.</div>
-      <div id="pvFotos"></div>
-
-      <div class="fld" style="margin-top:14px"><label for="pv-coment">Conclusiones del mantenimiento</label>
+    <details class="psv-sec" open><summary>4 · Conclusiones
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
+      <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento</label>
         <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)"
           placeholder="Qué se encontró, qué se cambió y en qué estado queda la válvula. Esto sale como «Conclusiones» en el certificado y en el Word.">${esc(t.coment||'')}</textarea>
         <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
+    </div></details>
 
-      <h4 class="snc-sec">Quién lo hizo</h4>
+    <details class="psv-sec" open><summary>5 · Firmas
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento</label>
           <input class="inp" id="pv-resp" value="${esc(t.respNombre||'')}" placeholder="Nombre y apellido"
@@ -6684,7 +6722,13 @@ function pintarDisparos(){
       <span class="muted">${l.length} disparos · ${conFoto} con foto${
         totalFotos>conFoto?` (${totalFotos} fotos)`:''}${l.length>3?' · el formato pide tres como mínimo':''}</span>
     </div>
-    <div class="crit">
+    ${critHtml()}`;
+}
+/* Los criterios contra los que se juzga el ensayo. Van dos veces: bajo
+   los disparos, mientras se escriben, y de pie junto al gráfico, que es
+   donde se mira si un disparo se salió y hay que saber de qué banda. */
+function critHtml(modo){
+  return `<div class="crit ${modo==='lado'?'crit-lado':''}">
       <span>Criterios del ensayo</span>
       <b>Tolerancia ± ${n2(CRITERIOS.pct)} %</b><b>Blowdown ${n2(CRITERIOS.bd)} %</b>
       <b>± ${n2(CRITERIOS.abs)} psig hasta ${CRITERIOS.corte} psig</b>
@@ -6817,7 +6861,10 @@ function pintarPSVResultado(){
     <div class="psv-graf-caja">
       <div class="psv-graf-h"><b>Cómo está disparando ahora</b>
         <span>banda admisible en verde · el disparo que se sale va marcado con un aspa</span></div>
-      ${psvGrafica(v)}
+      <div class="psv-graf-fila">
+        <div class="psv-graf-svg">${psvGrafica(v)}</div>
+        ${critHtml('lado')}
+      </div>
     </div>`;
 }
 
@@ -7247,7 +7294,8 @@ function psvGrafica(v,ancho){
      escala al ancho del contenedor, así que en un celular de 330 px
      un lienzo de 520 encoge la letra a 6 px y no se lee. Con 400 el
      texto sobrevive al viaje. */
-  const W=ancho||400, H=168, L=56, R=14, T=15, B=28;
+  const W=ancho||400, H=176, L=56, R=14, T=23, B=28;
+  const uni=esc(v.und||'psi');   // en qué presión está medido todo esto
   const gw=W-L-R, gh=H-T-B;
   // el eje se abre un 60 % más que la banda para que la banda no llene todo
   const margen=Math.max((v.max-v.min)*0.14, Math.abs(v.prom-v.set)*0.35, v.set*0.002);
@@ -7284,10 +7332,12 @@ function psvGrafica(v,ancho){
       <text x="${x(i)}" y="${y(p)-12}" text-anchor="middle" font-size="12" font-weight="600" fill="${dentro?'#101418':col}"
         font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
       <text x="${x(i)}" y="${H-9}" text-anchor="middle" font-size="11" fill="#78818c"
-        font-family="'IBM Plex Sans',sans-serif">Test ${i+1}</text>`}).join('')}
+        font-family="'IBM Plex Sans',sans-serif">Prueba ${i+1}</text>`}).join('')}
     <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
     <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="10.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
     <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
+    <text x="${L-6}" y="${T-7}" text-anchor="end" font-size="10.5" font-weight="600" fill="#78818c"
+      font-family="'IBM Plex Sans',sans-serif">${uni}</text>
     <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
   </svg>`;
 }
