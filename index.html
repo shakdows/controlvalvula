@@ -4441,7 +4441,7 @@ function verOrden(idOrAct,esActivo){
               :`<button class="btn quiet xs" onclick="closeModal();${
               x.et==='final' ? `verEquipo('${x.act}')`
                              : `registrarEnsayoDeOrden('${x.id}')`}">${
-              x.et==='final'?'Ver':'Ensayo'}</button>`}
+              x.et==='final'?'Ver':'Hacer el mantenimiento'}</button>`}
           </div>`}).join('')}</div>
       </section>`;
     })():''}
@@ -4456,7 +4456,7 @@ function verOrden(idOrAct,esActivo){
         <svg viewBox="0 0 24 24">${n?'<path d="M20 6 9 17l-5-5"/>':'<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/>'}</svg>
         <div>${n?`<b>${n} foto${n===1?'':'s'} del desarme</b> ya guardada${n===1?'':'s'}.`
               :'<b>Toca desarmar.</b> Fotografía cada pieza que se va a cambiar: es el «antes» del informe, y una vez montada la nueva ya no se puede tomar.'}
-          <button class="btn quiet xs" onclick="closeModal();openPSV('${o.act}',null,'fotos')">${n?'Seguir':'Colocar los datos'}</button></div></div>`;
+          <button class="btn quiet xs" onclick="closeModal();openPSV('${o.act}',null,'fotos')">${n?'Seguir':'Hacer el mantenimiento'}</button></div></div>`;
     })():''}
     <section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
       <div class="fx-blk-h"><h3>Alcance y hallazgos</h3></div>
@@ -4474,9 +4474,10 @@ function verOrden(idOrAct,esActivo){
     ${enEspera||varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
     ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
     ${!cliente&&!varias&&etC==='mant'
-      ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el ensayo</button>` : ''}
+      ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
     ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
-      enEspera?`Pasar a mantenimiento${porEntrar>1?` las ${porEntrar}`:''}`:`Pasar a ${esc(sig[1].toLowerCase())}`}</button>`:''}`;
+      enEspera?`Pasar a mantenimiento${porEntrar>1?` las ${porEntrar}`:''}`
+              :'Finalizar y emitir el certificado'}</button>`:''}`;
   $('#modal').classList.add('on');
 }
 
@@ -4995,9 +4996,9 @@ function fichaCalib(a){
   const c=hechos.slice().sort((x,y)=>fechaCalib(y).localeCompare(fechaCalib(x)))[0];
   const borrador=CALIBS.find(x=>x.act===a.id&&x.veredicto==='incompleto');
   if(!c) return fxBloque('Última calibración',
-    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="openPSV('${a.id}')">${borrador?'Seguir el ensayo':'Registrar'}</button>`,
+    S.rol==='cliente'?'':`<button class="btn sec xs" onclick="openPSV('${a.id}')">${borrador?'Seguir el mantenimiento':'Hacer el mantenimiento'}</button>`,
     `<p class="fx-vacio">${borrador
-      ? 'Hay un ensayo a medio llenar. En cuanto se guarde completo, aquí sale el resultado y la próxima fecha.'
+      ? 'Hay un mantenimiento a medio llenar. En cuanto se guarde completo, aquí sale el resultado y la próxima fecha.'
       : 'Este equipo aún no tiene una calibración registrada en el sistema.'}</p>`);
 
   const esPSV=c.tipo==='psv';
@@ -5204,7 +5205,7 @@ function paneHist(){
   const os=ORDENES.filter(o=>o.act===S.cur.id).sort((a,b)=>b.f.localeCompare(a.f));
   const bar=S.rol!=='cliente'?`<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
      <button class="btn sec xs" onclick="openService('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Parte de servicio</button>
-     <button class="btn sec xs" onclick="openPSV('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Ensayo</button></div>`:'';
+     <button class="btn sec xs" onclick="openPSV('${S.cur.id}')"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Hacer el mantenimiento</button></div>`:'';
   $('#pn-hist').innerHTML=bar+(os.length?`<div class="tl">${os.map(o=>`
     <div class="tl-i ${o.tipo==='Preventivo'?'pv':o.tipo==='Correctivo'?'cor':'cal'}">
       <div class="tl-m"><span>${o.f}</span><span>·</span><span>${o.n}</span><span class="tag">${o.tipo}</span>
@@ -6289,7 +6290,7 @@ function openPSV(actId,edit,seccion){
   if(!PSV_TMP)return;
   /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
      que firma el papel. */
-  $('#mTitle').textContent=(c?'Editar ensayo · ':(a.cl==='seguridad'?'Ensayo PSV · ':'Ensayo · '))+(a.tag||a.ser||'');
+  $('#mTitle').textContent=(c?'Mantenimiento · ':'Mantenimiento · ')+(a.tag||a.ser||'');
   pintarPSV();
   $('#modal').classList.add('on');
 }
@@ -6331,9 +6332,9 @@ function pintarPSV(){
   const emitido=t.veredicto&&t.veredicto!=='incompleto';
   $('#mBody').innerHTML=`
    ${emitido?`<div class="callout warn"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
-     <div>Este es el <b>ensayo ya emitido</b> del ${fPE(t.fecha)} — no uno nuevo. Lo que cambies
-       corrige ese certificado. Si quieres un ensayo distinto, cierra y usa <b>Ensayo PSV</b>
-       desde la ficha de la válvula.</div></div>`:''}
+     <div>Este es el <b>mantenimiento ya cerrado</b> del ${fPE(t.fecha)} — no uno nuevo. Lo que
+       cambies corrige ese certificado. Si quieres hacer uno nuevo, cierra y pulsa
+       <b>Hacer el mantenimiento</b> desde la ficha de la válvula.</div></div>`:''}
    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 8h16M12 8v5M7 13h10l-5 6z"/><circle cx="12" cy="5" r="2.3"/></svg>
      <div><b>${esc(a.tag||'')}</b> · ${esc(m.m||'')} ${esc(a.mod||'')} · serie ${esc(a.ser||'—')} ·
        ${esc(cli(a.cli).n||'')}. Todo esto ya lo sabe el sistema: no hay que volver a escribirlo.
@@ -6453,7 +6454,7 @@ function pintarPSV(){
   }
   /* El ensayo sabe guardarse a medias: si se cierra sin querer, se
      ofrece dejarlo como borrador en vez de perderlo. */
-  MODAL_GUARDA={que:'el ensayo',guardar:()=>guardarPSV(false)};
+  MODAL_GUARDA={que:'el mantenimiento',guardar:()=>guardarPSV(false)};
 }
 
 /* El pie dice qué falta antes de pulsar, no después. */
@@ -6605,7 +6606,7 @@ function pintarPSVPie(){
     ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
     <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
     ${hermanas>1?'':`<button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
-      title="${listo?'Cierra el ensayo y numera el certificado':esc('Falta '+v.falta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
+      title="${listo?'Cierra el mantenimiento y numera el certificado':esc('Falta '+v.falta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
 }
 /* Emitir es cerrar: el certificado se numera, la válvula renueva su
    vigencia y la orden se da por terminada. Se pregunta una vez. */
@@ -7015,7 +7016,7 @@ function volverDePlaca(){
     const a=ACTIVOS.find(x=>x.id===t.act)||{};
     /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
      que firma el papel. */
-  $('#mTitle').textContent=(t.id?'Editar ensayo · ':(a.cl==='seguridad'?'Ensayo PSV · ':'Ensayo · '))+(a.tag||a.ser||'');
+  $('#mTitle').textContent='Mantenimiento · '+(a.tag||a.ser||'');
     pintarPSV(); return;
   }
   closeModal();
@@ -7207,7 +7208,7 @@ function verPSV(id){
   const v=psvVeredicto(c), b=psvBlowdown(c), u=c.und||'psi';
   const cliente=S.rol==='cliente';
   const firmaDe=r=>(c.firmas||[]).find(f=>f.rol===r);
-  $('#mTitle').textContent=`Ensayo · ${a.tag||''}`;
+  $('#mTitle').textContent=`Mantenimiento · ${a.tag||''}`;
   /* La ficha del ensayo se lee de arriba abajo como el certificado:
      el veredicto primero —que es a lo que se viene—, después el
      detalle del ensayo, y las firmas al final. Antes sólo se veía el
@@ -8332,7 +8333,7 @@ function renderCal(){
 /* ============================================================
    8 · ÓRDENES DE TRABAJO (kanban)
    ============================================================ */
-const WO_NEXT={oc:['mant','Pasar a mantenimiento'],mant:['final','Registrar y finalizar']};
+const WO_NEXT={oc:['mant','Pasar a mantenimiento'],mant:['final','Finalizar y emitir el certificado']};
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
    ------------------------------------------------------------
@@ -8546,7 +8547,7 @@ function confirmarTomar(id){
   registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} tomada por ${ing}`);
   toast(n>1
     ? `${o.mat||o.n} es tuya · ${n} válvulas, cada una con su ensayo`
-    : `${o.mat||o.n} es tuya · registra el ensayo cuando termines`);
+    : `${o.mat||o.n} es tuya · registra el mantenimiento cuando termines`);
 }
 /* ── El panel de avance ──
    Lo que el gerente y el taller miran para saber por dónde va cada
@@ -9223,7 +9224,7 @@ function renderWO(){
             return `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'fotos')`}">
               <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
-              n?`Colocar datos · ${n} pieza${n===1?'':'s'}`:'Colocar datos'}</button>`;
+              n?`Hacer el mantenimiento · ${n} foto${n===1?'':'s'}`:'Hacer el mantenimiento'}</button>`;
           })():''}
           ${nx&&S.rol!=='cliente'?`<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`:''}
           <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
@@ -9310,8 +9311,8 @@ function registrarEnsayoDeOrden(id){
   /* Si esta orden ya tenía un ensayo —porque se finalizó y alguien la
      movió hacia atrás—, se abre ESE, no uno nuevo encima. */
   const ya=o.calib?CALIBS.find(x=>x.id===o.calib):null;
-  toast(ya?`${o.n} · retomando el ensayo que ya tenía`
-          :`${o.n} · registra el ensayo y la orden se cierra sola`);
+  toast(ya?`${o.n} · retomando el mantenimiento que ya tenía`
+          :`${o.n} · registra el mantenimiento y la orden se cierra sola`);
   /* TODAS las válvulas van al ensayo completo, no sólo las de
      seguridad. La calibración simple no tiene fotos, ni firmas, ni
      certificado: el técnico que abría una PINCH se quedaba sin la
@@ -11148,10 +11149,10 @@ function faltaParaFinalizar(o){
   const a=ACTIVOS.find(x=>x.id===o.act)||{};
   const esPSV=a.cl==='seguridad';
   if(!c){
-    falta.push(esPSV?'Registrar el ensayo de los tres disparos':'Registrar la calibración');
+    falta.push(esPSV?'Hacer el mantenimiento y registrar los tres disparos':'Hacer el mantenimiento y registrar la calibración');
   }else if(esPSV&&c.tipo==='psv'){
     const v=psvVeredicto(c);
-    if(v.estado==='incompleto') falta.push('Del ensayo falta '+v.falta);
+    if(v.estado==='incompleto') falta.push('Del mantenimiento falta '+v.falta);
     const pares=paresFoto(c);
     if(!pares.length)                      falta.push('Las fotos del antes y del después');
     else if(!pares.some(p=>p.a&&p.d))      falta.push('Completar el par de fotos: hay una sin su pareja');
@@ -12025,7 +12026,7 @@ function quitarFotoActivo(id){
 function accionDeCierre(a,ordenAbierta,borrador){
   if(S.rol==='cliente')return '';
   if(S.rol==='tec'){
-    return `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el ensayo':'Ensayo'}</button>`;
+    return `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el mantenimiento':'Hacer el mantenimiento'}</button>`;
   }
   if(S.rol==='com')return '';
   // gerencia
@@ -12048,7 +12049,7 @@ function mandarAMantenimiento(id){
   $('#mBody').innerHTML=`
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
      <div>Se crea una orden con su código <b>MAT</b> y aparece al instante en el tablero del taller,
-       en <b>OC recibida</b>. Un ingeniero la toma poniendo su nombre y la finaliza registrando el ensayo.<br>
+       en <b>OC recibida</b>. Un ingeniero la toma poniendo su nombre y la finaliza haciendo el mantenimiento.<br>
        <span class="muted">Esto no abre ninguna orden de compra. Si el cliente mandó una OC con varias válvulas,
        se abre en <b>Órdenes de trabajo → Nueva OC</b> y se marcan todas de una vez.</span></div></div>
    <div class="dt">
