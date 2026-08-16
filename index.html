@@ -594,7 +594,16 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
   color:var(--ok);background:color-mix(in oklch,var(--ok) 12%,transparent);
   border-radius:var(--r-pill);padding:1px 8px;vertical-align:middle}
 .inp.falta-sutil{border-style:dashed;border-color:color-mix(in oklch,var(--due) 55%,var(--line))}
-#pvFotos.falta,#pvFirma.falta{outline:2px solid var(--due);outline-offset:4px;border-radius:var(--r-2)}
+/* Un latido corto sobre lo que falta: en un formulario de cinco pasos
+   un borde naranja quieto se pierde. */
+@keyframes senala{
+  0%{box-shadow:0 0 0 0 color-mix(in oklch,var(--due) 65%,transparent)}
+  70%{box-shadow:0 0 0 12px transparent}
+  100%{box-shadow:0 0 0 0 transparent}
+}
+.late-late{animation:senala 1.1s ease-out 2}
+@media(prefers-reduced-motion:reduce){.late-late{animation:none;outline:3px solid var(--due);outline-offset:3px}}
+#pvFotos.falta,#pvFirma.falta,#patCaja.falta{outline:2px solid var(--due);outline-offset:4px;border-radius:var(--r-2)}
 .inp.falta{border-color:var(--due);background:color-mix(in oklch,var(--due) 8%,var(--surface));box-shadow:0 0 0 3px color-mix(in oklch,var(--due) 16%,transparent)}
 .inp.falta::placeholder{color:color-mix(in oklch,var(--due) 70%,var(--ink-3))}
 /* El patrón, en un recuadro aparte: se lee, no se escribe. En naranja
@@ -6305,8 +6314,8 @@ function psvFaltantes(c){
   const out=[];
   /* 1 · contra qué se mide */
   if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio'});
-  if(!String(c.patSerie||'').trim())out.push({id:'',        que:'la serie del equipo patrón',paso:1});
-  if(!String(c.patCert||'').trim()) out.push({id:'',        que:'el certificado del patrón',paso:1});
+  if(!String(c.patSerie||'').trim())out.push({id:'patCaja', que:'la serie del equipo patrón',paso:1});
+  if(!String(c.patCert||'').trim()) out.push({id:'patCaja', que:'el certificado del patrón',paso:1});
   /* 2 · el desarme: al menos una pieza fotografiada */
   if(!paresFoto(c).filter(x=>x.a||x.d).length)
     out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme'});
@@ -6377,13 +6386,23 @@ function psvSenalarFaltas(){
   const t=PSV_TMP; if(!t)return null;
   document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
   const f=psvFaltantes(t);
-  f.forEach(x=>{const e=x.id&&document.getElementById(x.id); if(e)e.classList.add('falta')});
-  /* Sube a lo primero que falte, sea una casilla o un bloque entero
-     —el desarme y la firma no son casillas, son secciones—. */
-  const primera=f.map(x=>x.id&&document.getElementById(x.id)).find(Boolean);
+  const eles=[];
+  f.forEach(x=>{const e=x.id&&document.getElementById(x.id); if(e){e.classList.add('falta');eles.push(e)}});
+  /* Un paso plegado esconde lo que falta: se abren TODOS los que
+     tengan algo pendiente, porque si no, «llevarte» a una casilla
+     dentro de un bloque cerrado no lleva a ninguna parte. */
+  eles.forEach(e=>{const d=e.closest('details'); if(d)d.open=true});
+  const primera=eles[0];
   if(primera){
-    primera.scrollIntoView({block:'center'});
-    if(typeof primera.focus==='function'&&primera.tagName==='INPUT')primera.focus({preventScroll:true});
+    /* Y se sube a ella de verdad: el que hace scroll es el cuerpo del
+       modal, no la ventana. */
+    requestAnimationFrame(()=>{
+      primera.scrollIntoView({block:'center',behavior:'smooth'});
+      primera.classList.add('late-late');
+      setTimeout(()=>primera.classList.remove('late-late'),1800);
+      if(primera.tagName==='INPUT'||primera.tagName==='TEXTAREA')
+        setTimeout(()=>primera.focus({preventScroll:true}),320);
+    });
   }
   return f;
 }
@@ -6396,7 +6415,7 @@ function bloquePatron(t){
   const igualQueLaCasa=CAMPOS_PATRON.every(([k])=>(t[k]||'')===(PATRON[k]||''));
   return `<h4 class="snc-sec">Equipo patrón de calibración
       <span class="opc">${igualQueLaCasa?'el de siempre, ya puesto':'cambiado sólo para este trabajo'}</span></h4>
-    <div class="pat-caja ${igualQueLaCasa?'':'otro'}">
+    <div class="pat-caja ${igualQueLaCasa?'':'otro'}" id="patCaja">
       <div class="dt">${CAMPOS_PATRON.map(([k,l])=>
         `<div class="dt-i"><span>${l}</span><b>${t[k]?esc(t[k]):'<span class="muted">—</span>'}</b></div>`).join('')}</div>
       ${puedeCambiar?`<button class="btn quiet xs" onclick="cambiarPatron()">Cambiar el patrón de este trabajo</button>`:''}
@@ -6551,7 +6570,9 @@ function psvNuevo(actId){
   const h=HOY.toISOString().slice(0,10);
   return {
     id:'', act:a.id, tipo:'psv', cli:a.cli,
-    os:prev?prev.os:'', contacto:prev?prev.contacto:'', fecha:h,
+    /* Si esta válvula ya tuvo una orden de servicio, se respeta la
+       suya; si es nueva, se le da el siguiente número de la casa. */
+    os:prev&&prev.os?prev.os:siguienteOS(), contacto:prev?prev.contacto:'', fecha:h,
     /* El patrón de la casa, ya puesto. Si el trabajo anterior de ESTA
        válvula se hizo con otro, manda el de la casa igual: el que vale
        es con el que se va a medir hoy. */
@@ -6581,6 +6602,19 @@ function psvNuevo(actId){
 
 /* Quién se hizo cargo de la válvula: primero la orden abierta, luego
    el nombre que quedó guardado en este equipo. */
+/* La orden de servicio va numerada de corrido para TODA la casa, no
+   por cliente: OC-001, OC-002, OC-003… así, si mañana hay que buscar
+   la 47, hay una sola. Se mira el número más alto que ya existe y se
+   sigue por ahí, contando también los que se escribieron a mano. */
+function siguienteOS(){
+  let max=0;
+  const mira=t=>{
+    const m=/(\d+)\s*$/.exec(String(t||'').trim());
+    if(m){const n=parseInt(m[1],10); if(isFinite(n)&&n>max)max=n}
+  };
+  CALIBS.forEach(c=>{ if(/^OC[-\s]?\d+$/i.test(String(c.os||'').trim()))mira(c.os) });
+  return 'OC-'+String(max+1).padStart(3,'0');
+}
 function quienTomo(actId){
   const o=ORDENES.find(x=>x.act===actId&&x.et!=='final');
   if(o&&(o.ing||o.tec)&&(o.ing||o.tec)!=='Por asignar')return o.ing||o.tec;
@@ -7591,55 +7625,100 @@ function guardarPlaca(id){
    lo que el cliente mira primero. */
 function psvGrafica(v,ancho){
   if(!v||v.estado==='incompleto')return '';
-  /* Más angosto de lo que parece natural, a propósito: el SVG se
-     escala al ancho del contenedor, así que en un celular de 330 px
-     un lienzo de 520 encoge la letra a 6 px y no se lee. Con 400 el
-     texto sobrevive al viaje. */
-  const W=ancho||400, H=176, L=56, R=14, T=23, B=28;
-  const uni=esc(v.und||'psi');   // en qué presión está medido todo esto
+  /* ── EL GRÁFICO QUE VE EL CLIENTE ────────────────────────────
+     Es la única página del certificado que se entiende sin ser del
+     oficio: enseña dónde cayó cada disparo respecto de la banda
+     admisible. Por eso se dibuja como un instrumento y no como una
+     hoja de cálculo — banda con degradado, línea de referencia
+     marcada, cada punto con su halo y su valor, y una franja abajo
+     con las tres cifras que resumen el ensayo.
+     Sigue siendo un SVG sin librerías: entra en el PDF, en el Word y
+     en un celular sin señal.
+     ============================================================ */
+  const W=ancho||520, H=248, L=62, R=18, T=30, B=64;
+  const uni=esc(v.und||'psi');
   const gw=W-L-R, gh=H-T-B;
-  // el eje se abre un 60 % más que la banda para que la banda no llene todo
-  const margen=Math.max((v.max-v.min)*0.14, Math.abs(v.prom-v.set)*0.35, v.set*0.002);
+  const margen=Math.max((v.max-v.min)*0.22, Math.abs(v.prom-v.set)*0.40, v.set*0.004);
   const lo=Math.min(v.min,...v.disparos)-margen, hi=Math.max(v.max,...v.disparos)+margen;
   const y=p=>T+gh-((p-lo)/(hi-lo||1))*gh;
   const x=i=>L+gw*((i+1)/(v.disparos.length+1));
   const yMin=y(v.min), yMax=y(v.max), ySet=y(v.set), yProm=y(v.prom);
-  const tono=v.estado==='aprobado'?'#1a7f52':'#c0392b';
+  const ok=v.estado==='aprobado';
+  const tono=ok?'#1a7f52':'#c0392b';
+  const id='g'+Math.abs(Math.round(v.set*1000+v.disparos.length)).toString(36);
+  const pts=v.disparos.map((p,i)=>`${x(i)},${y(p)}`).join(' ');
+  /* El área bajo la línea da cuerpo al recorrido; sola, la polilínea
+     se pierde dentro de la banda. */
+  const area=`${L+gw*(1/(v.disparos.length+1))},${T+gh} ${pts} ${x(v.disparos.length-1)},${T+gh}`;
   return `<svg class="psv-graf" viewBox="0 0 ${W} ${H}" width="100%" role="img"
-    aria-label="Los tres disparos frente a la banda de tolerancia. Promedio ${n2(v.prom)}, requerido ${n2(v.set)}.">
-    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="#1a7f52" opacity=".10"/>
-    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
-    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="4 3"/>
-    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.5"/>
-    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="2" stroke-dasharray="7 4"/>
-    <!-- La línea que une los disparos: enseña la TENDENCIA. Tres puntos
-         sueltos dentro de la banda y tres puntos bajando hacia el borde
-         son cosas distintas, y en la tabla se leen igual. -->
-    ${v.disparos.length>1?`<polyline fill="none" stroke="${tono}" stroke-width="1.8"
-      stroke-linejoin="round" stroke-linecap="round" opacity=".55"
-      points="${v.disparos.map((p,i)=>`${x(i)},${y(p)}`).join(' ')}"/>`:''}
+    aria-label="Los ${v.disparos.length} disparos frente a la banda admisible. Promedio ${n2(v.prom)} ${uni}, requerido ${n2(v.set)} ${uni}.">
+    <defs>
+      <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1a7f52" stop-opacity=".16"/>
+        <stop offset="1" stop-color="#1a7f52" stop-opacity=".05"/>
+      </linearGradient>
+      <linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${tono}" stop-opacity=".22"/>
+        <stop offset="1" stop-color="${tono}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="${id}s" x="-40%" y="-40%" width="180%" height="180%">
+        <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="${tono}" flood-opacity=".35"/>
+      </filter>
+    </defs>
+
+    ${/* la banda admisible, con su etiqueta pegada al borde */''}
+    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="url(#${id}b)" rx="3"/>
+    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="5 4" opacity=".8"/>
+    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="5 4" opacity=".8"/>
+    <text x="${L+gw-3}" y="${yMax-5}" text-anchor="end" font-size="9" fill="#1a7f52" font-weight="600"
+      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".04em">BANDA ADMISIBLE</text>
+
+    ${/* el requerido: la referencia contra la que se juzga todo */''}
+    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.6"/>
+    ${/* La etiqueta se aparta de la línea del promedio: cuando el
+         promedio y el requerido casi coinciden, se montaban una encima
+         de otra y no se leía ninguna. */''}
+    <text x="${L+3}" y="${yProm<ySet?ySet+12:ySet-6}" font-size="9" fill="#5b6470" font-weight="600"
+      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".04em">REQUERIDO ${n2(v.set)}</text>
+
+    ${/* el recorrido de los disparos */''}
+    ${v.disparos.length>1?`<polygon points="${area}" fill="url(#${id}a)"/>
+      <polyline fill="none" stroke="${tono}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"
+        points="${pts}"/>`:''}
+    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="1.4" stroke-dasharray="2 4" opacity=".7"/>
+
     ${v.disparos.map((p,i)=>{
-      /* Cada disparo se pinta por SÍ MISMO, no por el veredicto: uno
-         que se salió de la banda tiene que verse aunque el promedio
-         salve la papeleta —es justo el dato que avisa de que la
-         válvula dispara disparejo—. Y no se distingue sólo por el
-         color: el que se sale lleva anillo y un aspa encima. */
       const dentro=p>=v.min-1e-9&&p<=v.max+1e-9;
       const col=dentro?'#1a7f52':'#c0392b';
-      return `<circle cx="${x(i)}" cy="${y(p)}" r="${dentro?5.5:6.5}" fill="${dentro?col:'none'}"
-        stroke="${col}" stroke-width="${dentro?0:2.4}"/>
-      ${dentro?'':`<path d="M${x(i)-3.2} ${y(p)-3.2}l6.4 6.4M${x(i)+3.2} ${y(p)-3.2}l-6.4 6.4"
+      return `<circle cx="${x(i)}" cy="${y(p)}" r="9" fill="${col}" opacity=".14"/>
+      <circle cx="${x(i)}" cy="${y(p)}" r="${dentro?5:6}" fill="${dentro?col:'#fff'}"
+        stroke="${col}" stroke-width="${dentro?1.6:2.4}" filter="url(#${id}s)"/>
+      ${dentro?'':`<path d="M${x(i)-3} ${y(p)-3}l6 6M${x(i)+3} ${y(p)-3}l-6 6"
         stroke="${col}" stroke-width="2" stroke-linecap="round"/>`}
-      <text x="${x(i)}" y="${y(p)-12}" text-anchor="middle" font-size="12" font-weight="600" fill="${dentro?'#101418':col}"
-        font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
-      <text x="${x(i)}" y="${H-9}" text-anchor="middle" font-size="11" fill="#78818c"
-        font-family="'IBM Plex Sans',sans-serif">Prueba ${i+1}</text>`}).join('')}
-    <text x="${L-6}" y="${yMax+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
-    <text x="${L-6}" y="${ySet+4}"  text-anchor="end" font-size="10.5" fill="#5b6470" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
-    <text x="${L-6}" y="${yMin+4}"  text-anchor="end" font-size="10.5" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
-    <text x="${L-6}" y="${T-7}" text-anchor="end" font-size="10.5" font-weight="600" fill="#78818c"
-      font-family="'IBM Plex Sans',sans-serif">${uni}</text>
-    <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
+      <text x="${x(i)}" y="${y(p)-15}" text-anchor="middle" font-size="12.5" font-weight="700"
+        fill="${dentro?'#101418':col}" font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
+      <text x="${x(i)}" y="${T+gh+16}" text-anchor="middle" font-size="10" fill="#78818c"
+        font-family="'IBM Plex Sans',sans-serif" letter-spacing=".02em">Prueba ${i+1}</text>`}).join('')}
+
+    ${/* el eje: sólo tres números, los que importan */''}
+    <text x="${L-8}" y="${T-10}" text-anchor="end" font-size="9.5" font-weight="700" fill="#78818c"
+      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".05em">${uni}</text>
+    <text x="${L-8}" y="${yMax+4}" text-anchor="end" font-size="10" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
+    <text x="${L-8}" y="${ySet+4}" text-anchor="end" font-size="10.5" font-weight="600" fill="#3a424c" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
+    <text x="${L-8}" y="${yMin+4}" text-anchor="end" font-size="10" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
+    <line x1="${L}" y1="${T-4}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
+    <line x1="${L}" y1="${T+gh}" x2="${L+gw}" y2="${T+gh}" stroke="#d7dbe0"/>
+
+    ${/* la franja de abajo: las tres cifras del ensayo, como un panel */''}
+    <line x1="${L}" y1="${H-38}" x2="${W-R}" y2="${H-38}" stroke="#edeff1"/>
+    ${[['PROMEDIO',n2(v.prom)+' '+uni,'#101418'],
+       ['DESVIACIÓN',(v.desv>0?'+':'')+n2(v.desv)+' %',tono],
+       ['RESULTADO',ok?'APROBADO':'RECHAZADO',tono]].map(([k,val,c],i,arr)=>{
+      const cw=(W-L-R)/arr.length, cx=L+cw*i+cw/2;
+      return `<text x="${cx}" y="${H-24}" text-anchor="middle" font-size="8.5" fill="#8a929c"
+          font-family="'IBM Plex Sans',sans-serif" letter-spacing=".08em">${k}</text>
+        <text x="${cx}" y="${H-9}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${c}"
+          font-family="'IBM Plex Sans',sans-serif">${esc(val)}</text>`}).join('')}
   </svg>`;
 }
 
