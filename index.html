@@ -6,6 +6,12 @@
 <title>Adolphus · Gestión de válvulas y repuestos</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#16306b">
+<!-- Sin esto, Chrome y Android aplican su «modo oscuro automático»
+     ENCIMA de la página: invierten los colores ellos, y una casilla
+     blanca con letra blanca deja de poderse leer y parece que no
+     escribe. Declararlo le dice al navegador que el portal ya tiene su
+     propio tema y que no toque nada. -->
+<meta name="color-scheme" content="light dark">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,6 +36,9 @@
    El único color saturado de la interfaz es el estado del activo.
    ============================================================ */
 :root{
+  /* El tema lo pone el portal, no el navegador: con esto deja de
+     inventarse un oscuro por su cuenta. */
+  color-scheme: light;
   --bg:          oklch(0.972 0.003 250);
   --surface:     oklch(1 0 0);
   --surface-2:   oklch(0.978 0.003 250);
@@ -77,6 +86,7 @@
 }
 [data-density="compact"]{ --row-h:30px; --font-d:12.5px; }
 [data-theme="dark"]{
+  color-scheme: dark;   /* el navegador pinta scrollbars y controles a juego */
   --e-1: 0 1px 2px oklch(0 0 0 / .30);
   --e-2: 0 2px 6px oklch(0 0 0 / .34), 0 1px 2px oklch(0 0 0 / .26);
   --e-3: 0 10px 30px oklch(0 0 0 / .46), 0 2px 6px oklch(0 0 0 / .30);
@@ -573,6 +583,9 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 /* Cuántas cosas quedan en cada paso, en la propia cabecera. */
 /* La firma que se viene a poner, señalada. Naranja: no es un error,
    es lo que queda por hacer. */
+/* La casilla del jefe, mientras está vacía: es una acción suya, no una
+   casilla más del formulario del taller. */
+.fpsv.jefe{border-color:color-mix(in oklch,var(--sel) 45%,var(--line));background:var(--sel-bg)}
 .firma-box.espera{outline:2px solid var(--due);outline-offset:3px;border-radius:var(--r-2)}
 .psv-pend{display:inline-block;margin-left:7px;font-size:10.5px;font-weight:700;letter-spacing:.02em;
   color:var(--late);background:color-mix(in oklch,var(--late) 12%,transparent);
@@ -6938,7 +6951,24 @@ const AREAS_ADOLPHUS=['Taller de válvulas','Banco de pruebas','Servicio en camp
    válvula está delante de la pantalla y es quien tiene que firmar. */
 function pintarFirmaPSV(){
   const caja=$('#pvFirma'); if(!caja||!PSV_TMP)return;
-  const f=(PSV_TMP.firmas||[]).find(x=>x.rol==='ejec');
+  const fir=r=>(PSV_TMP.firmas||[]).find(x=>x.rol===r);
+  const f=fir('ejec'), vb=fir('vbAdo');
+  /* El visto bueno lo pone gerencia y sólo gerencia: para el taller la
+     casilla ni aparece, y en cuanto está firmado lo ve todo el mundo
+     —es la prueba de que el trabajo pasó por el jefe—. */
+  const soyJefe=S.rol==='admin';
+  const bloqueVb = (soyJefe||vb) ? `
+    <div class="fpsv ${vb?'ok':'jefe'}" style="margin-top:10px">
+      <div class="fpsv-t"><b>Visto bueno de gerencia${vb?'':' · sólo tú puedes ponerlo'}</b>
+        <span>${vb?`Firmado por ${esc(vb.n)}${vb.cargo?' · '+esc(vb.cargo):''} el ${fPE(vb.f)}`
+               :'El certificado no sale hasta que lo revises y lo firmes.'}</span></div>
+      ${vb?`<img class="fpsv-img" src="${vb.img}" alt="Visto bueno de ${esc(vb.n)}">`:''}
+      <div class="fpsv-b">
+        ${!soyJefe?'' : vb
+          ? `<button class="btn quiet xs" onclick="firmarVistoBueno()">Rehacer</button>
+             <button class="btn quiet xs" onclick="quitarVistoBueno()">Quitar</button>`
+          : `<button class="btn sec xs" onclick="firmarVistoBueno()">Firmar el visto bueno</button>`}
+      </div></div>` : '';
   caja.innerHTML=`<div class="fpsv ${f?'ok':''}">
     <div class="fpsv-t"><b>Firma del personal de mantenimiento</b>
       <span>${f?`Firmado por ${esc(f.n)}${f.cargo?' · '+esc(f.cargo):''} el ${fPE(f.f)}`
@@ -6948,7 +6978,21 @@ function pintarFirmaPSV(){
       ${f?`<button class="btn quiet xs" onclick="firmarEnsayo()">Rehacer</button>
            <button class="btn quiet xs" onclick="quitarFirmaEnsayo()">Quitar</button>`
         :`<button class="btn sec xs" onclick="firmarEnsayo()">Firmar</button>`}
-    </div></div>`;
+    </div></div>${bloqueVb}`;
+}
+/* El visto bueno del jefe, desde el propio formulario. Necesita que el
+   ensayo esté guardado para colgarse de él, igual que la del técnico. */
+function firmarVistoBueno(){
+  if(S.rol!=='admin'){toast('El visto bueno lo pone gerencia');return}
+  PSV_FIRMA_VUELTA=PSV_TMP.act;          // para volver al formulario tras firmar
+  const id=guardarPSV(false,true);
+  if(id)openFirma(id,'vbAdo',(typeof SES!=='undefined'&&SES?SES.n:''),
+                  (typeof SES!=='undefined'&&SES?SES.cargo||'Gerencia':'Gerencia'));
+}
+function quitarVistoBueno(){
+  if(!PSV_TMP)return;
+  PSV_TMP.firmas=(PSV_TMP.firmas||[]).filter(x=>x.rol!=='vbAdo');
+  pintarFirmaPSV(); pintarPSVPie();
 }
 /* Se firma sobre el borrador: se guarda primero para que la firma tenga
    a qué agarrarse, y se vuelve al formulario al terminar. */
