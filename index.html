@@ -4404,7 +4404,14 @@ function irCli(id,pag,vista){enterClient(id,pag);if(vista){S.view=vista;renderAs
 /* La entrada por defecto de cada rol, en un solo sitio. */
 const ENTRADA_ROL={tec:'wo',com:'cot'};
 function enterClient(id,page){
-  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.repCli='';S.homeCli='';S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
+  /* Entrar a un cliente es empezar de cero con ese cliente: la pestaña
+     «Todos» y ningún filtro puesto. Antes se arrastraba la marca o la
+     pestaña del cliente anterior, y el gerente veía media lista sin
+     saber por qué —lo peor de un filtro es el que no se ve—. */
+  S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.repCli='';S.homeCli='';
+  S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.fMarca='';S.cliPend=false;S.focus=0;
+  S.picked.clear();
+  const fm=$('#fMarca'); if(fm)fm.value='';
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
   /* Cada rol entra por donde trabaja: el taller a las órdenes de ese
      cliente —qué falta y qué se está haciendo—, el comercial a lo que
