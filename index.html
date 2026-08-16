@@ -569,6 +569,26 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    mirar. No es un error —nadie se ha equivocado—: es lo que queda. */
 .inp.falta{border-color:var(--due);background:color-mix(in oklch,var(--due) 8%,var(--surface));box-shadow:0 0 0 3px color-mix(in oklch,var(--due) 16%,transparent)}
 .inp.falta::placeholder{color:color-mix(in oklch,var(--due) 70%,var(--ink-3))}
+/* El patrón, en un recuadro aparte: se lee, no se escribe. En naranja
+   cuando NO es el de la casa, que es justo lo que hay que notar. */
+/* Las fotos de la llegada, en rejilla, con su descripción debajo y el
+   «+» al final — el mismo patrón que el desarme, que ya se entendía. */
+.af-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.af-i{display:flex;flex-direction:column;gap:6px}
+.af-nota{font-size:12px;padding:7px 9px}
+.af-mas{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-height:112px;padding:14px;cursor:pointer;text-align:center;
+  border:2px dashed var(--line);border-radius:var(--r-1);background:var(--surface-2);
+  color:var(--ink-3);transition:border-color var(--fast),background var(--fast),color var(--fast)}
+.af-mas svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.af-mas b{font-size:12.5px;color:var(--ink-2)}
+.af-mas span{font-size:11px;max-width:20ch;line-height:1.35}
+.af-mas:hover,.af-mas:focus-within{border-color:var(--sel);background:var(--sel-bg);color:var(--sel)}
+.af-mas:hover b{color:var(--sel)}
+.af-pie{font-size:11.5px;color:var(--due);margin-top:8px;font-weight:600}
+.pat-caja{border:1px solid var(--line);border-radius:var(--r-2);padding:12px;background:var(--surface-2)}
+.pat-caja.otro{border-color:var(--due);background:color-mix(in oklch,var(--due) 7%,var(--surface))}
+.pat-caja .btn{margin-top:10px}
 .pie-confirma{flex:1;min-width:220px;font-size:12px;line-height:1.45;color:var(--ink-2)}
 .pie-confirma b{color:var(--ink);font-weight:600}
 .pie-confirma span{display:block;color:var(--ink-3);margin-top:2px}
@@ -2265,14 +2285,22 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .dsp-c label .u{color:var(--ink-3);opacity:.75}
 .dsp-c .inp{height:34px}
 .dsp-nota{height:34px;font-size:12.5px}
-.dsp-foto{position:relative;height:52px}
-.dsp-cam{height:52px;border:1px dashed var(--line);border-radius:var(--r-1);display:flex;
+/* Varias fotos por disparo: en fila, y el «+» al final. Antes era una
+   sola casilla, y un disparo puede necesitar el manómetro, el banco y
+   la fuga que se ve al abrir. */
+.dsp-foto{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:52px}
+.dsp-una{position:relative;display:inline-flex;flex:0 0 auto}
+/* Lo que sale solo se enseña en gris y no se puede escribir: si se
+   pudiera, alguien lo cambiaría y el certificado diría dos cosas. */
+.inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
+.dsp-una img{width:56px;height:52px;object-fit:cover;border-radius:var(--r-1);display:block;
+  border:1px solid var(--line-2)}
+.dsp-cam{height:52px;min-width:52px;flex:0 0 auto;border:1px dashed var(--line);border-radius:var(--r-1);display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;
   color:var(--ink-3);font-size:10.5px;transition:background var(--fast)}
 .dsp-cam:hover{background:var(--surface-3);color:var(--ink-2)}
 .dsp-cam svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6}
-.dsp-foto img{width:100%;height:52px;object-fit:cover;border-radius:var(--r-1);display:block;
-  border:1px solid var(--line-2)}
+
 .dsp-x{position:absolute;top:3px;right:3px;width:18px;height:18px;border:none;border-radius:50%;
   background:rgba(0,0,0,.62);color:#fff;font-size:13px;line-height:1;cursor:pointer;padding:0}
 .dsp-del{margin-bottom:4px}
@@ -5659,6 +5687,24 @@ const PLAN_FREQ={
    del portal. Adolphus la ajusta en pantalla: sirve para dimensionar el
    presupuesto del año, no para facturar. */
 let PLAN_TARIFA={cal:130,prev:240,insp:45};
+
+/* ── EL EQUIPO PATRÓN DE LA CASA ─────────────────────────────
+   Adolphus ensaya todas las válvulas contra el mismo manómetro
+   patrón. Escribirlo de nuevo en cada trabajo es copiar ocho casillas
+   cincuenta veces al día y equivocarse en una: el certificado saldría
+   diciendo que se midió contra un instrumento que no era.
+   Va aquí, se rellena solo en cada trabajo nuevo, y sólo gerencia lo
+   cambia —con su contraseña— cuando de verdad se usa otro. */
+let PATRON={
+  patDesc:'Manovacuómetro digital', patModelo:'681', patMarca:'ADDITEL',
+  patSerie:'', patEscala:'0.1 psi', patExact:'0,2 % FS',
+  patFecha:'', patCert:''
+};
+const CAMPOS_PATRON=[
+  ['patDesc','Descripción'],['patModelo','Modelo'],['patMarca','Marca'],
+  ['patSerie','N.º de serie'],['patEscala','Escala'],['patExact','Clase de exactitud'],
+  ['patFecha','Fecha de calibración'],['patCert','Certificado n.º']
+];
 let PLAN_OK={};   // {cliente: {f, por}} — planes que el cliente aprobó
 
 const MESES_C=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
@@ -6146,6 +6192,70 @@ function psvSenalarFaltas(){
   if(primera){primera.scrollIntoView({block:'center'}); primera.focus({preventScroll:true})}
   return f;
 }
+/* El patrón se enseña puesto y en gris: es el instrumento de la casa,
+   el mismo para todas las máquinas. Cambiarlo es decir que este
+   certificado se midió con otro aparato, así que pide la contraseña de
+   gerencia — igual que dar de baja una válvula. */
+function bloquePatron(t){
+  const puedeCambiar=S.rol==='admin'||S.rol==='tec';
+  const igualQueLaCasa=CAMPOS_PATRON.every(([k])=>(t[k]||'')===(PATRON[k]||''));
+  return `<h4 class="snc-sec">Equipo patrón de calibración
+      <span class="opc">${igualQueLaCasa?'el de siempre, ya puesto':'cambiado sólo para este trabajo'}</span></h4>
+    <div class="pat-caja ${igualQueLaCasa?'':'otro'}">
+      <div class="dt">${CAMPOS_PATRON.map(([k,l])=>
+        `<div class="dt-i"><span>${l}</span><b>${t[k]?esc(t[k]):'<span class="muted">—</span>'}</b></div>`).join('')}</div>
+      ${puedeCambiar?`<button class="btn quiet xs" onclick="cambiarPatron()">Cambiar el patrón de este trabajo</button>`:''}
+    </div>`;
+}
+function cambiarPatron(){
+  if(!PSV_TMP)return;
+  const t=PSV_TMP;
+  MODAL_PATRON=true;
+  $('#mTitle').textContent='Cambiar el equipo patrón';
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>El patrón de la casa se pone solo en todos los trabajos. Cámbialo únicamente si esta orden
+       se midió de verdad con otro instrumento: el certificado dirá contra cuál se ensayó.</div></div>
+   <div class="two">${CAMPOS_PATRON.map(([k,l])=>
+     `<div class="fld"><label for="pt-${k}">${l}</label>
+       <input class="inp" id="pt-${k}" ${k==='patFecha'?'type="date"':''} value="${esc(t[k]||'')}"></div>`).join('')}</div>
+   <label class="set-row" style="cursor:pointer;margin-top:6px">
+     <div class="t"><b>Dejarlo como patrón de la casa</b>
+       <span>Se usará también en los próximos trabajos, de todas las máquinas.</span></div>
+     <input type="checkbox" id="ptDef" class="ck"></label>
+   <div class="fld" style="margin-top:10px"><label for="ptPass">Contraseña de autorización <span class="req-dot">*</span></label>
+     <input class="inp" id="ptPass" type="password" placeholder="la contraseña del gerente" autocomplete="off"></div>
+   <div id="ptErr" class="callout warn" style="display:none"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+     <div>La contraseña no coincide. El patrón no se cambió.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="volverAlMantenimiento()">Cancelar</button>
+    <button class="btn" onclick="guardarPatron()">Guardar el patrón</button>`;
+}
+let MODAL_PATRON=false;
+/* Volver es repintar el mantenimiento, que sigue entero en memoria. */
+function volverAlMantenimiento(){
+  MODAL_PATRON=false;
+  if(PSV_TMP)pintarPSV(); else closeModal();
+}
+function guardarPatron(){
+  const p=$('#ptPass');
+  if(!p||p.value!==CLAVE_BAJA){
+    if(p){p.value='';p.focus()}
+    const e=$('#ptErr'); if(e)e.style.display='flex';
+    toast('Contraseña incorrecta — el patrón no se cambió'); return;
+  }
+  const t=PSV_TMP; if(!t)return;
+  CAMPOS_PATRON.forEach(([k])=>{const e=$('#pt-'+k); if(e)t[k]=e.value.trim()});
+  const comoCasa=$('#ptDef')&&$('#ptDef').checked;
+  if(comoCasa){
+    CAMPOS_PATRON.forEach(([k])=>PATRON[k]=t[k]);
+    guardarLocal();
+    registrar('Patrón',`Nuevo patrón de la casa: ${PATRON.patMarca} ${PATRON.patModelo} · serie ${PATRON.patSerie||'—'}`);
+  }else{
+    registrar('Patrón',`${t.patMarca} ${t.patModelo} sólo en este trabajo`);
+  }
+  toast(comoCasa?'Patrón guardado · se usará en todos los trabajos':'Patrón cambiado sólo en este trabajo');
+  volverAlMantenimiento();
+}
 function psvVeredicto(c){
   const set=num(c.setEsp), u=c.und||'psi';
   const t=valoresDisparo(c);
@@ -6187,7 +6297,19 @@ function psvVeredicto(c){
    Se usa el promedio de los disparos as-left que de verdad se midieron;
    si todavía no hay ninguno, se cae a la presión de ajuste requerida,
    que es lo que debería dar cuando esté ajustada. */
+/* Si el cierre sale solo de la presión de ajuste —que es lo normal
+   ahora— no hay una presión de recierre MEDIDA, y el blowdown no se
+   puede calcular. Antes de este cambio el número salía de un dato que
+   el técnico escribía; si ahora se calculara sobre el valor heredado,
+   el certificado publicaría un porcentaje que nadie tomó. */
+function cierreEsAutomatico(c){
+  const set=String(c.setEsp||'').trim();
+  if(!set)return false;
+  const l=disparosDe(c).filter(t=>String(t.pc||'').trim());
+  return l.length>0 && l.every(t=>String(t.pc).trim()===set);
+}
 function psvBlowdown(c){
+  if(cierreEsAutomatico(c))return null;   // no medido, no se publica
   const l=disparosDe(c);
   const abre=l.map(t=>num(t.v)).filter(x=>isFinite(x)&&x>0);
   const base=abre.length ? abre.reduce((a,b)=>a+b,0)/abre.length : num(c.setEsp);
@@ -6226,11 +6348,10 @@ function psvNuevo(actId){
   return {
     id:'', act:a.id, tipo:'psv', cli:a.cli,
     os:prev?prev.os:'', contacto:prev?prev.contacto:'', fecha:h,
-    // equipo patrón: casi nunca cambia, así que se hereda del anterior
-    patDesc:prev?prev.patDesc:'Manovacuómetro digital', patModelo:prev?prev.patModelo:'681',
-    patMarca:prev?prev.patMarca:'ADDITEL', patSerie:prev?prev.patSerie:'',
-    patEscala:prev?prev.patEscala:'0.1 psi', patExact:prev?prev.patExact:'0,2 % FS',
-    patFecha:prev?prev.patFecha:'', patCert:prev?prev.patCert:'',
+    /* El patrón de la casa, ya puesto. Si el trabajo anterior de ESTA
+       válvula se hizo con otro, manda el de la casa igual: el que vale
+       es con el que se va a medir hoy. */
+    ...PATRON,
     // disparo
     setEsp:a.setPress||'', und:a.setUnd||'psi', asFound:'', fluidoP:'Nitrógeno',
     /* Tres disparos de salida, que es lo que pide el formato; se añaden
@@ -6298,9 +6419,19 @@ function openPSV(actId,edit,seccion){
 /* En cuanto la casilla deja de estar vacía, se le quita el naranja: si
    se quedara puesto hasta el siguiente repintado parecería un error. */
 const quitarFalta=id=>{const e=document.getElementById(id); if(e)e.classList.remove('falta')};
+/* El cierre no se escribe: es el mismo número que la presión de ajuste
+   requerida, y el técnico ya lo puso una vez arriba. Copiarlo a mano en
+   cada disparo es tres oportunidades de equivocarse en un dato que no
+   cambia. Se rellena solo y se enseña bloqueado. */
+function cierreDesdeSet(){
+  const t=PSV_TMP; if(!t)return;
+  const set=String(t.setEsp||'').trim();
+  disparosDe(t).forEach(d=>{d.pc=set});
+}
 const psvCampo=(k,v)=>{
   PSV_TMP[k]=v;
   if(String(v||'').trim())quitarFalta('pv-'+k);
+  if(k==='setEsp'){cierreDesdeSet(); pintarDisparos()}
   /* En taller el pie va diciendo qué falta para poder pasar a
      mantenimiento, así que se refresca con cada dato. En
      mantenimiento, lo que cambia el resultado repinta el veredicto. */
@@ -6322,7 +6453,7 @@ function pintarPSV(){
      en vez de la válvula. Los rellena, sí, quien programa el trabajo.  */
   const cabeceraMia=S.rol!=='tec';
   const L=(k,lbl,vacio)=>`<div class="dt-i"><span>${lbl}</span><b>${t[k]?esc(t[k]):`<span class="muted">${vacio||'—'}</span>`}</b></div>`;
-  const faltaCab=[['os','orden de servicio'],['contacto','contacto'],['fecha','fecha'],
+  const faltaCab=[['os','orden de servicio'],['fecha','fecha'],
     ['patDesc','equipo patrón'],['patSerie','serie del patrón'],['patCert','certificado del patrón']]
     .filter(([k])=>!t[k]).map(([,l])=>l);
 
@@ -6346,36 +6477,20 @@ function pintarPSV(){
       ${cabeceraMia?`
       <div class="two">
         ${F('os','Orden de servicio','JA10138289')}
-        ${F('contacto','Contacto del cliente','FARID ROJAS')}
         ${F('fecha','Fecha del ensayo','','date')}
         <div class="fld"><label for="pv-fluidoP">Fluido de prueba</label>
           <select class="inp" id="pv-fluidoP" onchange="psvCampo('fluidoP',this.value)">
             ${['Nitrógeno','Aire','Agua','Vapor'].map(f=>`<option ${t.fluidoP===f?'selected':''}>${f}</option>`).join('')}</select></div>
       </div>
-      <h4 class="snc-sec">Equipo patrón de calibración</h4>
-      <div class="two">
-        ${F('patDesc','Descripción','Manovacuómetro digital')}
-        ${F('patModelo','Modelo','681')}
-        ${F('patMarca','Marca','ADDITEL')}
-        ${F('patSerie','N.º de serie','211H15450046')}
-        ${F('patEscala','Escala','0.1 psi')}
-        ${F('patExact','Clase de exactitud','0,2 % FS')}
-        ${F('patFecha','Fecha de calibración','','date')}
-        ${F('patCert','Certificado n.º','EP-0099-2025')}
-      </div>`
+      ${bloquePatron(t)}`
       :`<div class="callout" style="margin-bottom:12px"><svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
          <div>Esta parte la completa el supervisor. Aquí se lee para saber contra qué patrón se ensaya;
            no se cambia desde el taller.${faltaCab.length?` <b style="color:var(--due)">Falta ${esc(faltaCab.join(', '))}</b> — pídeselo antes de firmar.`:''}</div></div>
        <div class="dt">
-         ${L('os','Orden de servicio','sin O.S.')}${L('contacto','Contacto del cliente')}
-         ${L('fecha','Fecha del ensayo')}${L('fluidoP','Fluido de prueba')}
+         ${L('os','Orden de servicio','sin O.S.')}${L('fecha','Fecha del ensayo')}
+         ${L('fluidoP','Fluido de prueba')}
        </div>
-       <h4 class="snc-sec">Equipo patrón de calibración</h4>
-       <div class="dt">
-         ${L('patDesc','Descripción')}${L('patModelo','Modelo')}${L('patMarca','Marca')}
-         ${L('patSerie','N.º de serie')}${L('patEscala','Escala')}${L('patExact','Clase de exactitud')}
-         ${L('patFecha','Fecha de calibración')}${L('patCert','Certificado n.º')}
-       </div>`}
+       ${bloquePatron(t)}`}
     </div></details>
 
     <details class="psv-sec" open><summary>2 · Cómo llegó y disparos
@@ -6439,6 +6554,7 @@ function pintarPSV(){
 
   pintarPSVPie();
   /* Un solo formulario: se pintan todas sus partes. */
+  cierreDesdeSet();
   pintarAsFound(); pintarDisparos(); pintarPSVResultado(); pintarFirmaPSV();
   pintarPSVFotos();
   /* Cuando la válvula todavía está EN TALLER lo que toca es el desarme:
@@ -6470,9 +6586,10 @@ function psvDisparo(i,k,v){
   if(k==='v'||k==='pc')pintarPSVResultado(); else pintarDisparos();
 }
 function psvAgregarDisparo(){
+  /* el nuevo nace con el cierre ya puesto, como los demás */
   const l=disparosDe(PSV_TMP);
   if(l.length>=12){toast('Doce disparos es el tope');return}
-  l.push({v:'',pc:'',foto:'',nota:''});
+  l.push({v:'',pc:String(PSV_TMP.setEsp||'').trim(),foto:'',fotos:[],nota:''});
   pintarDisparos(); pintarPSVResultado();
 }
 function psvQuitarDisparo(i){
@@ -6481,16 +6598,32 @@ function psvQuitarDisparo(i){
   l.splice(i,1);
   pintarDisparos(); pintarPSVResultado();
 }
-function psvFotoDisparo(files,i){
-  const f=(files||[])[0];
-  if(!f){return}
-  comprimirFoto(f)
-    .then(d=>{const l=disparosDe(PSV_TMP); if(l[i]){l[i].foto=d;pintarDisparos();toast(`Foto del test ${i+1} guardada`)}})
-    .catch(()=>toast('No se pudo leer la foto'));
+/* Un disparo puede necesitar más de una foto: el manómetro, el banco,
+   la fuga que se ve al abrir. Se guardan en una lista; la primera sigue
+   siendo `foto`, que es la que imprime el certificado. */
+function fotosDisparo(t){
+  if(!t)return [];
+  if(!Array.isArray(t.fotos)) t.fotos = t.foto ? [t.foto] : [];
+  return t.fotos;
 }
-function psvBorrarFotoDisparo(i){
-  const l=disparosDe(PSV_TMP); if(!l[i])return;
-  l[i].foto=''; pintarDisparos();
+const sincronizarFotoDisparo=t=>{ t.foto=fotosDisparo(t)[0]||''; };
+
+function psvFotoDisparo(files,i){
+  const l=[...(files||[])]; if(!l.length)return;
+  const d=disparosDe(PSV_TMP)[i]; if(!d)return;
+  Promise.all(l.map(f=>comprimirFoto(f).catch(()=>null))).then(ds=>{
+    const buenas=ds.filter(Boolean);
+    if(!buenas.length){toast('No se pudo leer la foto');return}
+    fotosDisparo(d).push(...buenas);
+    sincronizarFotoDisparo(d); pintarDisparos();
+    toast(buenas.length===1?`Foto del test ${i+1} guardada`:`${buenas.length} fotos del test ${i+1} guardadas`);
+  });
+}
+function psvBorrarFotoDisparo(i,j){
+  const d=disparosDe(PSV_TMP)[i]; if(!d)return;
+  const fs=fotosDisparo(d);
+  if(j==null)fs.length=0; else fs.splice(j,1);
+  sincronizarFotoDisparo(d); pintarDisparos();
 }
 /* Sólo el semáforo de cada fila, sin tocar el DOM de los campos. */
 function colorearDisparos(){
@@ -6512,7 +6645,8 @@ function pintarDisparos(){
   const l=disparosDe(PSV_TMP), u=PSV_TMP.und||'psi';
   const set=num(PSV_TMP.setEsp), tol=tolPSV(set,u);
   const lim=tol?(tol.tipo==='abs'?tol.psi/factorU(u):set*tol.pct/100):null;
-  const conFoto=l.filter(t=>t.foto).length;
+  const conFoto=l.filter(t=>fotosDisparo(t).length).length;
+  const totalFotos=l.reduce((n,t)=>n+fotosDisparo(t).length,0);
   caja.innerHTML=`<div class="dsp">${l.map((t,i)=>{
     const v=num(t.v), hay=isFinite(v)&&v>0;
     const dentro=hay&&lim!=null?Math.abs(v-set)<=lim+1e-9:null;
@@ -6524,16 +6658,19 @@ function pintarDisparos(){
           placeholder="—" oninput="psvDisparo(${i},'v',this.value)"></div>
       <div class="dsp-c">
         <label for="dsp-p${i}">Cierre <span class="u">${esc(u)}</span></label>
-        <input class="inp mono" id="dsp-p${i}" inputmode="decimal" value="${esc(t.pc||'')}"
-          placeholder="—" oninput="psvDisparo(${i},'pc',this.value)"></div>
+        <input class="inp mono bloq" id="dsp-p${i}" value="${esc(t.pc||'')}" readonly tabindex="-1"
+          title="Sale solo de la presión de ajuste requerida" placeholder="—"></div>
       <div class="dsp-foto">
-        ${t.foto
-          ? `<img src="${t.foto}" alt="Foto del test ${i+1}">
-             <button class="dsp-x" onclick="psvBorrarFotoDisparo(${i})" aria-label="Quitar la foto del test ${i+1}">×</button>`
-          : `<label class="dsp-cam" for="dspF${i}" title="Foto de este disparo, ahora mismo">
-               <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-               <span>Foto</span></label>`}
-        <input id="dspF${i}" type="file" accept="image/*" capture="environment" style="display:none"
+        ${fotosDisparo(t).map((d,j)=>`<span class="dsp-una">
+            <img src="${d}" alt="Foto ${j+1} del test ${i+1}">
+            <button class="dsp-x" onclick="psvBorrarFotoDisparo(${i},${j})" aria-label="Quitar esta foto">×</button>
+          </span>`).join('')}
+        <label class="dsp-cam" for="dspF${i}" title="Otra foto de este disparo">
+          <svg viewBox="0 0 24 24">${fotosDisparo(t).length
+            ? '<path d="M12 5v14M5 12h14"/>'
+            : '<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/>'}</svg>
+          <span>${fotosDisparo(t).length?'Otra':'Foto'}</span></label>
+        <input id="dspF${i}" type="file" accept="image/*" capture="environment" multiple style="display:none"
           onchange="psvFotoDisparo(this.files,${i});this.value=''"></div>
       <input class="inp dsp-nota" value="${esc(t.nota||'')}" placeholder="Nota de este disparo"
         oninput="psvDisparo(${i},'nota',this.value)" aria-label="Nota del test ${i+1}">
@@ -6544,7 +6681,8 @@ function pintarDisparos(){
     <div class="dsp-pie">
       <button class="btn sec xs" onclick="psvAgregarDisparo()">
         <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar otro disparo</button>
-      <span class="muted">${l.length} disparos · ${conFoto} con foto${l.length>3?' · el formato pide tres como mínimo':''}</span>
+      <span class="muted">${l.length} disparos · ${conFoto} con foto${
+        totalFotos>conFoto?` (${totalFotos} fotos)`:''}${l.length>3?' · el formato pide tres como mínimo':''}</span>
     </div>
     <div class="crit">
       <span>Criterios del ensayo</span>
@@ -6787,24 +6925,68 @@ function psvFotosHTML(c){
 }
 /* La foto del disparo inicial: cómo llegó, con el manómetro puesto.
    Va aparte de las piezas porque no es un par antes/después. */
-function psvFotoAsFound(files){
-  const f=(files||[])[0]; if(!f||!PSV_TMP)return;
-  comprimirFoto(f).then(d=>{PSV_TMP.fotoAsFound=d;pintarAsFound();toast('Foto de la prueba inicial guardada')})
-    .catch(()=>toast('No se pudo leer la foto'));
+/* Cómo llegó la válvula no cabe en una foto. Está el manómetro en el
+   momento de abrir, pero también la corrosión, el precinto roto, la
+   brida golpeada — y cada una hay que poder decir qué es, o dentro de
+   seis meses nadie sabrá qué se estaba mirando.
+   Las fotos viven en una lista; la de siempre —fotoAsFound— sigue en
+   su sitio y es la primera, para no romper los certificados ya hechos
+   ni el Word que la imprime. */
+function fotosLlegada(t){
+  if(!t)return [];
+  if(!Array.isArray(t.fotosLlego)){
+    t.fotosLlego = t.fotoAsFound ? [{d:t.fotoAsFound,n:'Prueba inicial'}] : [];
+  }
+  return t.fotosLlego;
 }
-function psvBorrarAsFound(){if(PSV_TMP){PSV_TMP.fotoAsFound='';pintarAsFound()}}
+/* La primera foto sigue siendo «la» foto de la prueba inicial. */
+function sincronizarAsFound(t){ t.fotoAsFound=(fotosLlegada(t)[0]||{}).d||''; }
+
+function psvFotoAsFound(files){
+  const l=[...(files||[])]; if(!l.length||!PSV_TMP)return;
+  const t=PSV_TMP;
+  Promise.all(l.map(f=>comprimirFoto(f).catch(()=>null))).then(ds=>{
+    const buenas=ds.filter(Boolean);
+    if(!buenas.length){toast('No se pudo leer la foto');return}
+    const arr=fotosLlegada(t);
+    buenas.forEach(d=>arr.push({d,n:''}));
+    sincronizarAsFound(t); pintarAsFound();
+    toast(buenas.length===1?'Foto guardada · ponle qué es':`${buenas.length} fotos guardadas · ponles qué son`);
+  });
+}
+function psvBorrarAsFound(i){
+  if(!PSV_TMP)return;
+  const arr=fotosLlegada(PSV_TMP);
+  if(i==null)arr.length=0; else arr.splice(i,1);
+  sincronizarAsFound(PSV_TMP); pintarAsFound();
+}
+function psvNotaAsFound(i,v){
+  if(!PSV_TMP)return;
+  const arr=fotosLlegada(PSV_TMP);
+  if(arr[i])arr[i].n=v;
+}
 function pintarAsFound(){
   const c=$('#psvAsFound'); if(!c||!PSV_TMP)return;
-  const d=PSV_TMP.fotoAsFound||'';
+  const fs=fotosLlegada(PSV_TMP);
+  const sinNota=fs.filter(x=>!String(x.n||'').trim()).length;
   c.innerHTML=`<div class="af-caja">
-    <div class="af-t"><b>Foto de la prueba inicial</b>
-      <span>El manómetro en el momento en que abrió, o la válvula tal como llegó.</span></div>
-    ${d?`<div class="af-img"><img src="${d}" alt="Prueba inicial">
-        <button class="dsp-x" onclick="psvBorrarAsFound()" aria-label="Quitar la foto">×</button></div>`
-      :`<label class="dsp-cam af-cam" for="afFoto">
-         <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-         <span>Tomar la foto</span></label>`}
-    <input id="afFoto" type="file" accept="image/*" capture="environment" style="display:none"
+    <div class="af-t"><b>Fotos de cómo llegó</b>
+      <span>El manómetro en el momento en que abrió, y todo lo que traiga puesto: corrosión,
+        precintos, golpes. Una foto por cosa, con su descripción.</span></div>
+    <div class="af-grid">
+      ${fs.map((f,i)=>`<div class="af-i">
+        <div class="af-img"><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
+          <button class="dsp-x" onclick="psvBorrarAsFound(${i})" aria-label="Quitar esta foto">×</button></div>
+        <input class="inp af-nota" value="${esc(f.n||'')}" placeholder="Qué se ve — p. ej. manómetro al abrir"
+          oninput="psvNotaAsFound(${i},this.value)" aria-label="Descripción de la foto ${i+1}"></div>`).join('')}
+      <label class="af-mas" for="afFoto">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <b>${fs.length?'Otra foto':'Tomar la foto'}</b>
+        <span>${fs.length?'las que hagan falta':'y las que hagan falta después'}</span></label>
+    </div>
+    ${fs.length&&sinNota?`<div class="af-pie">${sinNota===fs.length?'Ponle a cada foto qué se ve':
+      `${sinNota} foto${sinNota===1?'':'s'} sin descripción`} — es lo que se lee en el informe.</div>`:''}
+    <input id="afFoto" type="file" accept="image/*" capture="environment" multiple style="display:none"
       onchange="psvFotoAsFound(this.files);this.value=''">
   </div>`;
 }
@@ -7425,7 +7607,7 @@ function psvDocumento(id){
 
   <div class="par">
     <div><h2>DATOS DEL SERVICIO</h2><table>
-      ${fila('EMPRESA',e.n)}${fila('CONTACTO',c.contacto)}${fila('TAG N°',a.tag)}
+      ${fila('EMPRESA',e.n)}${c.contacto?fila('CONTACTO',c.contacto):''}${fila('TAG N°',a.tag)}
       ${fila('UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}${fila('FLUIDO DE OPERACIÓN',a.fluido)}
       ${fila('FECHA',fPE(c.fecha))}</table></div>
     <div><h2>INFORMACIÓN DE LA VÁLVULA</h2><table>
@@ -7468,7 +7650,8 @@ function psvDocumento(id){
       return `<div class="disp-c ${dentro===null?'':dentro?'ok':'no'}">
         <div class="disp-h"><b>Test ${i+1}</b><i>${hay?n2(val):'—'}</i></div>
         <small>${esc(u)}${t.pc?` · cierre ${esc(t.pc)}`:''}${hay&&v.set?` · ${((val-v.set)/v.set*100)>0?'+':''}${n2((val-v.set)/v.set*100)} %`:''}</small>
-        ${t.foto?`<img src="${t.foto}" alt="Foto del test ${i+1}">`:''}
+        ${(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[]))
+          .map((d,j)=>`<img src="${d}" alt="Foto ${j+1} del test ${i+1}">`).join('')}
         ${t.nota?`<div class="nota">${esc(t.nota)}</div>`:''}
       </div>`}).join('')}</div>
     ${v.estado!=='incompleto'?`<table class="res" style="margin-top:7px">
@@ -7480,7 +7663,8 @@ function psvDocumento(id){
   <table class="res" style="margin-top:4px">
     ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
     ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
-    ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+`  %  (se espera ≤ ${n2(b.lim)} %)`:'—')}
+    ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+`  %  (se espera ≤ ${n2(b.lim)} %)`
+            :(cierreEsAutomatico(c)?'no se midió la presión de recierre':'—'))}
     ${v.dispersos?fila('OBSERVACIÓN DE REPETIBILIDAD',
       v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.'):''}
   </table>
@@ -7498,11 +7682,19 @@ function psvDocumento(id){
     const pares=paresFoto(c).filter(p=>p.a||p.d);
     /* La foto de cómo llegó abre el registro: es el estado en que el
        cliente mandó la válvula, y va antes que ninguna pieza. */
-    const llego=c.fotoAsFound?`<h2>CÓMO LLEGÓ</h2>
-      <table class="fpar"><tr class="fpar-f">
-        <td><span class="fc-l">Prueba inicial</span><img src="${c.fotoAsFound}" alt="Cómo llegó"></td>
-        <td><span class="fc-l">Observación</span>
-          <div style="font-size:9.5px;padding:2px 0">${esc(c.recep||'—')}</div></td></tr></table>`:'';
+    /* Todas las fotos de la llegada, no sólo la primera: se tomaron
+       una por una y con su descripción, y el informe es donde sirven. */
+    const fll=Array.isArray(c.fotosLlego)&&c.fotosLlego.length
+      ? c.fotosLlego : (c.fotoAsFound?[{d:c.fotoAsFound,n:'Prueba inicial'}]:[]);
+    const llego=fll.length?`<h2>CÓMO LLEGÓ</h2>
+      <table class="fpar">
+        ${(()=>{const fs=[];for(let i=0;i<fll.length;i+=2)fs.push(fll.slice(i,i+2));
+          return fs.map(par=>`<tr class="fpar-f">${par.map((f,j)=>
+            `<td><span class="fc-l">${esc(f.n||'Cómo llegó')}</span><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}"></td>`
+          ).join('')}${par.length===1?'<td></td>':''}</tr>`).join('')})()}
+        <tr class="fpar-f"><td colspan="2"><span class="fc-l">Observación</span>
+          <div style="font-size:9.5px;padding:2px 0">${esc(c.recep||'—')}</div></td></tr>
+      </table>`:'';
     if(!pares.length)return llego+`<h2>REGISTRO FOTOGRÁFICO · ANTES Y DESPUÉS</h2>
       <table><tr><td>No se registraron fotos del desarme para esta válvula.</td></tr></table>`;
     const celda=(src,lbl,i)=>`<td><span class="fc-l">${lbl}</span>${
@@ -13151,7 +13343,8 @@ const NUBE_MAESTROS=[
  {k:'MODELOS',    obj:()=>MODELOS},   {k:'BOM',        obj:()=>BOM},
  {k:'PRECIOS',    obj:()=>PRECIOS},   {k:'PART_PHOTO', obj:()=>PART_PHOTO},
  {k:'PRECIOS_HOJA',obj:()=>PRECIOS_HOJA},
- {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA}
+ {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA},
+ {k:'PATRON',     obj:()=>PATRON}
 ];
 /* Lo único que un cliente puede escribir. Coincide con la política de
    la base: si el navegador se equivoca, Postgres lo rechaza igual. */
