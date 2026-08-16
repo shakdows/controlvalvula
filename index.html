@@ -574,10 +574,27 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    cuando NO es el de la casa, que es justo lo que hay que notar. */
 /* Las fotos de la llegada, en rejilla, con su descripción debajo y el
    «+» al final — el mismo patrón que el desarme, que ya se entendía. */
-.af-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
+.af-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-top:10px}
 .af-i{display:flex;flex-direction:column;gap:6px}
-.af-i .af-img img{width:100%;height:104px;object-fit:contain;background:var(--surface-3);
-  border-radius:var(--r-1);display:block;border:1px solid var(--line-2)}
+.af-i .af-img img{width:100%;height:170px;object-fit:contain;background:var(--surface-3);
+  border-radius:var(--r-1);display:block;border:1px solid var(--line-2);cursor:zoom-in}
+.af-i .af-img img:hover{border-color:var(--sel)}
+/* «Toca para verla en grande»: sin esto nadie descubre que se puede. */
+/* El visor. Va por encima del propio modal del mantenimiento, que ya
+   está en z-index alto: si se quedara debajo no se vería nada. */
+.fvisor{position:fixed;inset:0;z-index:calc(var(--z-modal, 900) + 40);display:none}
+.fvisor.on{display:block}
+.fv-fondo{position:absolute;inset:0;background:oklch(0 0 0 /.78);backdrop-filter:blur(2px)}
+.fv-caja{position:relative;margin:0;height:100%;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;padding:20px}
+.fv-caja img{max-width:min(1100px,94vw);max-height:72vh;width:auto;height:auto;object-fit:contain;
+  border-radius:var(--r-2);background:#0b0f14;box-shadow:0 30px 70px oklch(0 0 0 /.5)}
+.fv-caja figcaption{color:#fff;font-size:13px;font-weight:600;text-align:center;max-width:90vw}
+.fv-acc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.fv-acc .btn{cursor:pointer}
+@media(max-width:560px){.fv-caja img{max-height:62vh}.fv-acc{width:100%}.fv-acc .btn{flex:1;justify-content:center}}
+.af-lupa{position:absolute;left:6px;bottom:6px;background:oklch(0 0 0 /.62);color:#fff;
+  border-radius:var(--r-pill);font-size:10px;padding:2px 8px;pointer-events:none;letter-spacing:.02em}
 .af-nota{font-size:12px;padding:7px 9px}
 .af-mas{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   min-height:112px;padding:14px;cursor:pointer;text-align:center;
@@ -2251,14 +2268,16 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 @media(max-width:520px){.pv-par-d{grid-template-columns:1fr}}
 .pv-par-d .inp{font-size:12.5px}
 /* La foto de cómo llegó */
-.af-caja{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;padding:11px 12px;
+/* El título arriba y las fotos debajo, a todo el ancho. En fila
+   quedaban en una columna de 150 px: el técnico no podía comprobar lo
+   que acababa de subir sin abrir la galería del celular. */
+.af-caja{margin-top:12px;padding:11px 12px;
   border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2)}
-.af-t{flex:1;min-width:180px}
+.af-t{margin-bottom:2px}
 .af-t b{display:block;font-size:12.5px}
 .af-t span{font-size:11.5px;color:var(--ink-3);line-height:1.45}
 .af-cam{width:150px;height:56px;border-radius:var(--r-1)}
-.af-img{position:relative;width:150px}
-.af-img img{width:150px;height:56px;object-fit:cover;border-radius:var(--r-1);display:block;border:1px solid var(--line-2)}
+.af-img{position:relative}
 .pie-falta{font-size:11.5px;color:var(--due);margin-right:6px}
 .pv-par-n{margin-top:9px;font-size:12.5px}
 .pv-par-vacio,.pv-par-pie{margin-top:11px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
@@ -6775,8 +6794,9 @@ function pintarDisparos(){
           title="Sale solo de la presión de ajuste requerida" placeholder="—"></div>
       <div class="dsp-foto">
         ${fotosDisparo(t).map((d,j)=>`<span class="dsp-una">
-            <img src="${d}" alt="Foto ${j+1} del test ${i+1}">
-            <button class="dsp-x" onclick="psvBorrarFotoDisparo(${i},${j})" aria-label="Quitar esta foto">×</button>
+            <img src="${d}" alt="Foto ${j+1} de la prueba ${i+1}"
+              onclick="verFotoPSV('disparo',${i},${j})" title="Tócala para verla en grande">
+            <button class="dsp-x" onclick="event.stopPropagation();psvBorrarFotoDisparo(${i},${j})" aria-label="Quitar esta foto">×</button>
           </span>`).join('')}
         <label class="dsp-cam" for="dspF${i}" title="Otra foto de este disparo">
           <svg viewBox="0 0 24 24">${fotosDisparo(t).length
@@ -7088,6 +7108,62 @@ function psvNotaAsFound(i,v){
   const arr=fotosLlegada(PSV_TMP);
   if(arr[i])arr[i].n=v;
 }
+/* ── VER LA FOTO EN GRANDE ───────────────────────────────────
+   Una miniatura de 170 px no sirve para comprobar si la foto salió
+   movida o si se lee el manómetro, que es justo lo que hay que saber
+   ANTES de cerrar la válvula. Se abre a pantalla completa y desde ahí
+   se cambia o se quita, sin salir del mantenimiento.
+   ============================================================ */
+let FOTO_VIENDO=null;
+function fotoPSVDe(grupo,i,j){
+  const t=PSV_TMP; if(!t)return null;
+  if(grupo==='llego'){const f=fotosLlegada(t)[i]; return f?{src:f.d,pie:f.n||'Sin descripción'}:null}
+  if(grupo==='disparo'){const d=disparosDe(t)[i]; const src=d&&fotosDisparo(d)[j];
+    return src?{src,pie:`Prueba ${i+1} · foto ${j+1}`}:null}
+  return null;
+}
+function verFotoPSV(grupo,i,j){
+  const f=fotoPSVDe(grupo,i,j); if(!f)return;
+  FOTO_VIENDO={grupo,i,j};
+  const cap=document.getElementById('fotoVisor');
+  const caja=cap||document.body.appendChild(Object.assign(document.createElement('div'),{id:'fotoVisor',className:'fvisor'}));
+  caja.innerHTML=`<div class="fv-fondo" onclick="cerrarFotoPSV()"></div>
+    <figure class="fv-caja">
+      <img src="${f.src}" alt="${esc(f.pie)}">
+      <figcaption>${esc(f.pie)}</figcaption>
+      <div class="fv-acc">
+        <label class="btn sec" for="fvNueva">Cambiar la foto</label>
+        <button class="btn sec" onclick="quitarFotoPSV()">Quitar</button>
+        <button class="btn" onclick="cerrarFotoPSV()">Cerrar</button>
+      </div>
+      <input id="fvNueva" type="file" accept="image/*" capture="environment" style="display:none"
+        onchange="cambiarFotoPSV(this.files);this.value=''">
+    </figure>`;
+  caja.classList.add('on');
+}
+function cerrarFotoPSV(){
+  const c=document.getElementById('fotoVisor'); if(c)c.classList.remove('on');
+  FOTO_VIENDO=null;
+}
+function cambiarFotoPSV(files){
+  const f=(files||[])[0]; if(!f||!FOTO_VIENDO||!PSV_TMP)return;
+  const {grupo,i,j}=FOTO_VIENDO;
+  comprimirFoto(f).then(d=>{
+    if(grupo==='llego'){const a=fotosLlegada(PSV_TMP); if(a[i])a[i].d=d; sincronizarAsFound(PSV_TMP); pintarAsFound()}
+    else{const dd=disparosDe(PSV_TMP)[i]; const fs=dd&&fotosDisparo(dd);
+      if(fs&&fs[j]!=null){fs[j]=d; sincronizarFotoDisparo(dd)} pintarDisparos()}
+    toast('Foto cambiada');
+    verFotoPSV(grupo,i,j);
+  }).catch(()=>toast('No se pudo leer la foto'));
+}
+function quitarFotoPSV(){
+  if(!FOTO_VIENDO)return;
+  const {grupo,i,j}=FOTO_VIENDO;
+  if(grupo==='llego')psvBorrarAsFound(i); else psvBorrarFotoDisparo(i,j);
+  cerrarFotoPSV(); toast('Foto quitada');
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&FOTO_VIENDO)cerrarFotoPSV()});
+
 function pintarAsFound(){
   const c=$('#psvAsFound'); if(!c||!PSV_TMP)return;
   const fs=fotosLlegada(PSV_TMP);
@@ -7098,8 +7174,10 @@ function pintarAsFound(){
         precintos, golpes. Una foto por cosa, con su descripción.</span></div>
     <div class="af-grid">
       ${fs.map((f,i)=>`<div class="af-i">
-        <div class="af-img"><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
-          <button class="dsp-x" onclick="psvBorrarAsFound(${i})" aria-label="Quitar esta foto">×</button></div>
+        <div class="af-img"><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}"
+            onclick="verFotoPSV('llego',${i})" title="Tócala para verla en grande">
+          <span class="af-lupa">tocar para ampliar</span>
+          <button class="dsp-x" onclick="event.stopPropagation();psvBorrarAsFound(${i})" aria-label="Quitar esta foto">×</button></div>
         <input class="inp af-nota" value="${esc(f.n||'')}" placeholder="Qué se ve — p. ej. manómetro al abrir"
           oninput="psvNotaAsFound(${i},this.value)" aria-label="Descripción de la foto ${i+1}"></div>`).join('')}
       <label class="af-mas" for="afFoto">
