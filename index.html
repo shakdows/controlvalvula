@@ -571,6 +571,9 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    discontinuo suave. No es un error —nadie se equivocó— es que queda
    por hacer, y se distingue de una que ya tiene algo escrito. */
 /* Cuántas cosas quedan en cada paso, en la propia cabecera. */
+/* La firma que se viene a poner, señalada. Naranja: no es un error,
+   es lo que queda por hacer. */
+.firma-box.espera{outline:2px solid var(--due);outline-offset:3px;border-radius:var(--r-2)}
 .psv-pend{display:inline-block;margin-left:7px;font-size:10.5px;font-weight:700;letter-spacing:.02em;
   color:var(--late);background:color-mix(in oklch,var(--late) 12%,transparent);
   border-radius:var(--r-pill);padding:1px 8px;vertical-align:middle}
@@ -2338,7 +2341,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 @media(max-width:560px){.eq-i{grid-template-columns:1fr 1fr 32px}}
 .psv-graf-fila{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .psv-graf-svg{flex:1 1 320px;min-width:0}
-.crit-lado{flex:0 0 178px;flex-direction:column;align-items:flex-start;gap:5px}
+.crit-lado{flex:0 0 190px;flex-direction:column;align-items:flex-start;gap:5px}
+.crit-lado .crit-ok{color:var(--ok)}
+.crit-lado .crit-mal{color:var(--late)}
 .crit-lado b{display:block}
 @media(max-width:640px){.crit-lado{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:center}}
 .inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
@@ -7722,9 +7727,21 @@ function verPSV(id){
 
     ${v.estado!=='incompleto'?`
     <section class="pd-b"><h5>Pruebas de disparo</h5>
-      ${psvGrafica(v)}
-      <p class="pd-pie">${esc(v.tol.txt)} · ${esc(v.tol.regla)}
-        ${b?` · blowdown ${n2(b.pct)} % (se espera ≤ ${n2(b.lim)} %)${b.dentro?' ✓':' · fuera de rango'}`:''}</p>
+      <div class="psv-graf-fila">
+        <div class="psv-graf-svg">${psvGrafica(v)}</div>
+        ${/* Contra qué se juzga, al lado del dibujo: el hueco de la
+             derecha estaba vacío y la banda admisible sin nombre. */''}
+        <div class="crit crit-lado">
+          <span>Contra qué se mide</span>
+          <b>Tolerancia ${esc(v.tol.txt)}</b>
+          <b>Rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</b>
+          <b>Requerido ${n2(v.set)} ${esc(u)}</b>
+          <b>Promedio ${n2(v.prom)} ${esc(u)}</b>
+          <b class="${Math.abs(v.desv)<=v.tol.pct?'crit-ok':'crit-mal'}">Desviación ${v.desv>0?'+':''}${n2(v.desv)} %</b>
+          ${b?`<b>Blowdown ${n2(b.pct)} %${b.dentro?' ✓':' · fuera'}</b>`:''}
+          <span class="crit-lock">${esc(v.tol.regla)}</span>
+        </div>
+      </div>
       ${v.dispersos?`<p class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
         pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</p>`:''}
     </section>`:''}
@@ -7757,12 +7774,28 @@ function verPSV(id){
                ${cliente?'':`<button class="btn sec xs" onclick="openFirma('${c.id}','${rol}')">Firmar</button>`}`}
         </div>`}).join('')}
     </div></section>`;
+  /* El visto bueno de gerencia es lo último que le falta al
+     certificado: si no está, es LA acción de esta pantalla. */
+  const faltaVb=!cliente&&S.rol==='admin'&&!(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img);
   $('#mFoot').innerHTML=`
     ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
-    ${cliente?'':`<button class="btn" onclick="openPSV(null,'${c.id}')">Editar</button>`}`;
+    ${cliente?'':`<button class="btn ${faltaVb?'sec':''}" onclick="openPSV(null,'${c.id}')">Editar</button>`}
+    ${faltaVb?`<button class="btn" onclick="openFirma('${c.id}','vbAdo')">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Firmar el visto bueno</button>`:''}`;
   $('#modal').classList.add('on');
+  /* Si se vino a firmar, se baja hasta las firmas y se señala la que
+     falta, para no tener que buscarla en toda la hoja. */
+  if(FIRMAR_AL_VER){
+    const rol=FIRMAR_AL_VER; FIRMAR_AL_VER=null;
+    setTimeout(()=>{
+      const cajas=$$('#mBody .firma-box');
+      const i=FIRMA_ROLES.findIndex(([r])=>r===rol);
+      const caja=cajas[i]||cajas[cajas.length-1];
+      if(caja){caja.classList.add('espera');caja.scrollIntoView({block:'center'})}
+    },140);
+  }
 }
 
 /* ── El certificado impreso · AXAD-088 V.2 ───────────────────
@@ -9972,8 +10005,16 @@ function revisarYFirmar(idLinea){
     toast('Esta válvula todavía no tiene el mantenimiento registrado');
     verEquipo(o.act); return;
   }
-  openPSV(o.act,c.id,'firmas');
+  /* El resumen, no la ficha de la válvula ni el formulario de edición:
+     el jefe viene a LEER lo que hizo el taller —resultado, disparos,
+     patrón, fotos— y a poner su visto bueno. Editar está ahí por si
+     algo hay que corregir, pero no es lo que viene a hacer. */
+  FIRMAR_AL_VER='vbAdo';
+  verPSV(c.id);
 }
+/* Cuando se entra a revisar, la firma que falta se marca y se sube
+   hasta ella: es el único paso que da el gerente. */
+let FIRMAR_AL_VER=null;
 function registrarEnsayoDeOrden(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
   const a=ACTIVOS.find(x=>x.id===o.act);
