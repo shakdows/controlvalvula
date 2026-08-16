@@ -1369,6 +1369,51 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .ch.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
 .ch.on b{color:var(--surface)}
 .cola-l{border-top:1px solid var(--line-2)}
+/* Un bloque por cliente: su nombre arriba y, dentro, el estado de sus
+   válvulas como subtítulo. */
+.cola-b{border-bottom:6px solid var(--surface-2)}
+.cola-b:last-child{border-bottom:0}
+.cola-c{display:flex;align-items:baseline;gap:10px;padding:12px var(--sp-4) 8px;background:var(--surface-2)}
+.cola-c b{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.cola-c span{font-size:11.5px;color:var(--ink-3);margin-left:auto;flex:0 0 auto}
+.cola-s{display:flex;align-items:center;gap:8px;padding:9px var(--sp-4) 5px;
+  font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3)}
+.cola-s .pt{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.cola-s b{font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.cola-s i{font-style:normal;font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;
+  color:var(--ink-3);opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+/* La línea de avance: rojo lo que espera, naranja lo abierto, verde lo
+   terminado — en ese orden, que es como avanza el trabajo. */
+.cola-av{padding:10px var(--sp-4) 12px}
+.cola-av.gen{border-top:1px solid var(--line-2);background:var(--surface-2)}
+.cola-av-t{display:flex;align-items:baseline;gap:8px;margin-bottom:7px}
+.cola-av-t b{font-size:12.5px;font-weight:600}
+.cola-av-t span{font-size:11px;color:var(--ink-3)}
+.cola-av-t em{margin-left:auto;font-style:normal;font-weight:700;font-size:14px;
+  font-family:'IBM Plex Mono';letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cola-av-b{display:flex;height:9px;border-radius:var(--r-pill);overflow:hidden;background:var(--surface-3)}
+.cola-av-b span{display:block;transition:width 620ms var(--ease-out)}
+.cola-av-l{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:7px;font-size:11px;color:var(--ink-3)}
+.cola-av-l span{display:inline-flex;align-items:center;gap:6px}
+.cola-av-l i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+.cola-mas-t{padding:9px var(--sp-4) 12px;font-size:11.5px;color:var(--ink-3)}
+
+/* ── El resumen general, un bloque por empresa ───────────────
+   El nombre del cliente hace de cabecera de sección, con su línea de
+   avance debajo: se ve de quién es cada gráfico sin leer la leyenda. */
+.rg{margin-bottom:var(--sp-5)}
+.rg-h{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);
+  flex-wrap:wrap;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+.rg-h h2{font-size:var(--t-4);letter-spacing:-.01em}
+.rg-h p{font-size:var(--t-2);color:var(--ink-3);margin-top:3px}
+.rg-av{margin-bottom:var(--sp-3)}
+.rg-av-b{display:flex;height:10px;border-radius:var(--r-pill);overflow:hidden;background:var(--surface-3)}
+.rg-av-b span{display:block;transition:width 620ms var(--ease-out)}
+.rg-av-l{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;margin-top:7px;font-size:11.5px;color:var(--ink-3)}
+.rg-av-l b{font-size:14px;font-weight:700;font-family:'IBM Plex Mono';letter-spacing:-.02em;
+  color:var(--ink);font-variant-numeric:tabular-nums}
+.rg-av-l span{display:inline-flex;align-items:center;gap:6px}
+.rg-av-l i{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
 .cola-i{display:grid;grid-template-columns:10px minmax(0,1.15fr) minmax(0,1fr) auto;gap:var(--sp-3);
   align-items:center;padding:11px var(--sp-4);border-bottom:1px solid var(--line-2);
   cursor:pointer;transition:background var(--fast)}
@@ -11863,12 +11908,18 @@ function gauge(pct,label){
    urgencia, y pone al lado el botón que la ejecuta. El panel deja de
    describir el parque y pasa a decir qué hacer.
    ============================================================ */
+/* Los tres colores del taller, que son los que pregunta el jefe:
+   ROJO lo que llegó y nadie ha tocado, NARANJA lo que está abierto en
+   el banco, VERDE lo que ya salió. Los demás grupos son avisos del
+   parque, no del trabajo de hoy. */
 const GRUPOS=[
- {k:'venc', n:'Vencidas',        tono:'late'},
- {k:'mant',n:'En mantenimiento',tono:'due'},
- {k:'prox', n:'Vencen pronto',   tono:'due'},
- {k:'ficha',n:'Ficha incompleta',tono:'due'},
- {k:'sol',  n:'Solicitudes',     tono:'due'}
+ {k:'venc',  n:'Calibración vencida',   tono:'late'},
+ {k:'espera',n:'En lista de espera',    tono:'late', d:'llegó la orden y todavía no se toca en el taller'},
+ {k:'taller',n:'En mantenimiento',      tono:'due',  d:'abiertas en el banco ahora mismo'},
+ {k:'listo', n:'Mantenimiento terminado',tono:'ok',  d:'ya salieron del taller'},
+ {k:'sol',   n:'Solicitudes',           tono:'due'},
+ {k:'prox',  n:'Vencen pronto',         tono:'due'},
+ {k:'ficha', n:'Ficha incompleta',      tono:'due'}
 ];
 function colaTrabajo(){
   const vs=visibles(), cliente=S.rol==='cliente', out=[];
@@ -11878,7 +11929,7 @@ function colaTrabajo(){
     const donde=`${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)} · ${esc(area(a))}`;
     const pr=prioridad(a);
     if(e.k==='vencido')
-      out.push({pr,p:1,g:'venc',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:1,g:'venc',id:a.id,cliId:a.cli,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Calibración vencida hace <em>${Math.abs(d)} d</em>`,
         /* Desde el panel no se ensaya. El ensayo se hace con la válvula
            delante, dentro de una orden; aquí sólo se decide qué hacer con
@@ -11888,21 +11939,41 @@ function colaTrabajo(){
           :{t:'Ver la válvula',f:`verEquipo('${a.id}')`}});
     else if(e.k==='mant'){
       const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final');
-      out.push({pr,p:2,g:'mant',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      /* Rojo si sólo llegó la orden y nadie la ha tocado; naranja en
+         cuanto entra al banco. Es la pregunta que hace el jefe cada
+         mañana: cuáles siguen esperando. */
+      const enBanco=o.et==='mant';
+      out.push({pr,p:enBanco?3:2,g:enBanco?'taller':'espera',id:a.id,cliId:a.cli,
+        tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
         ac:{t:'Ver orden',f:`verOrden('${a.id}',1)`}});
     }
     else if(e.k==='porvencer'&&d<=60)
-      out.push({pr,p:3,g:'prox',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:5,g:'prox',id:a.id,cliId:a.cli,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Vence en <em>${d} d</em> · ${esc(a.prox)}`,
         ac:cliente?null:{t:'Programar',f:`openWO('${a.id}','Calibración')`}});
     if(e.k==='incompleto')
-      out.push({pr,p:4,g:'ficha',id:a.id,tit:a.tag||a.ser||'Sin tag',sub:donde,
+      out.push({pr,p:6,g:'ficha',id:a.id,cliId:a.cli,tit:a.tag||a.ser||'Sin tag',sub:donde,
         q:`Falta <em>${!a.tag?'tag':''}${!a.tag&&!a.ser?' y ':''}${!a.ser?'n.º de serie':''}</em>`,
         ac:cliente?null:{t:'Completar',f:`gotoAsset('${a.id}')`}});
   });
+  /* Lo que YA salió del taller, pero sólo de trabajos que siguen
+     abiertos: es la parte verde de la barra —«de las cinco, tres
+     hechas»—. Un trabajo cerrado entero desaparece del panel: ya no
+     hay nada que seguir. */
+  ORDENES.filter(o=>o.et==='final').forEach(o=>{
+    const a=ACTIVOS.find(x=>x.id===o.act); if(!a||!mio(o)||!vs.includes(a))return;
+    if(!lineasDe(o).some(l=>l.et!=='final'))return;         // el trabajo entero ya cerró
+    /* Si esa misma válvula tiene otro trabajo abierto, manda el
+       abierto: sale una vez, en naranja o en rojo. Verla dos veces en
+       el mismo bloque —«terminada» y «en el banco»— no se entiende. */
+    if(out.some(x=>x.id===a.id&&(x.g==='espera'||x.g==='taller')))return;
+    out.push({pr:prioridad(a),p:7,g:'listo',id:a.id,cliId:a.cli,
+      tit:a.tag||a.ser||'Sin tag',sub:`${esc(MODELOS[a.mod]?.m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)} · ${esc(area(a))}`,
+      q:`Terminada · orden <em>${esc(o.n)}</em>`});
+  });
   SOLICITUDES.filter(x=>!S.cli||x.cli===S.cli).filter(x=>!['cerrada','ejecucion'].includes(x.est)).forEach(x=>{
-    out.push({p:2.5,g:'sol',solId:x.id,cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
+    out.push({p:4,g:'sol',solId:x.id,cliId:x.cli,tit:x.n,sub:`${esc(cli(x.cli).n)} · ${x.items.length} posiciones`,
       q:`<em>${esc(pasoDe(x.est).n)}</em> · ${esc(pasoDe(x.est).r)}`,
       ac:{t:cliente&&x.est==='cotizada'?'Aprobar':cliente?'Ver':'Atender',f:`verSol('${x.id}')`}});
   });
@@ -11911,37 +11982,105 @@ function colaTrabajo(){
   return out.sort((a,b)=>a.p-b.p||(a.pr??999)-(b.pr??999));
 }
 function setCola(g){S.cola=S.cola===g?'':g;renderHome()}
+/* ── Lo pendiente, ordenado por CLIENTE ──────────────────────
+   Antes era una sola lista corrida por urgencia. Se leía bien para
+   decidir «qué toca ahora», pero no para lo que de verdad se hace en
+   la oficina: llamar a un cliente y hablar de TODO lo suyo de una vez.
+   Con la lista mezclada había que ir saltando entre filas para juntar
+   lo de una misma empresa.
+   Ahora cada cliente es un bloque, y dentro del bloque el estado de
+   sus válvulas es el subtítulo. Los clientes van del peor al mejor:
+   el que tiene algo vencido primero. */
 function colaHtml(){
   const todo=colaTrabajo();
-  const cuenta=g=>todo.filter(x=>x.g===g).length;
-  const activos=GRUPOS.filter(g=>cuenta(g.k));
-  const lista=todo;
-  const tope=10;
   const cliente=S.rol==='cliente';
+  /* El cliente ve una sola empresa —la suya—: repetirle su nombre en
+     cada bloque sería ruido. Para él sólo van los subtítulos. */
+  const porCliente=!cliente;
+
+  const bloques=[];
+  todo.forEach(x=>{
+    const k=porCliente?(x.cliId||''):'*';
+    let b=bloques.find(y=>y.id===k);
+    if(!b){b={id:k, n:porCliente?(cli(k).n||'Sin cliente asignado'):'', its:[]}; bloques.push(b)}
+    b.its.push(x);
+  });
+  /* Primero el cliente con lo más urgente; a igual urgencia, el que
+     más cosas tiene esperando. */
+  const peor=b=>Math.min(...b.its.map(i=>i.p));
+  bloques.sort((a,b)=>peor(a)-peor(b)||b.its.length-a.its.length||a.n.localeCompare(b.n,'es'));
+
   const cab=`<div class="cola-h">
       <div><h2>${cliente?'Lo que necesita tu planta':'Tu trabajo'}</h2>
-        <p>${todo.length?`${todo.length} ${todo.length===1?'cosa pendiente':'cosas pendientes'} · en orden de urgencia`
+        <p>${todo.length
+          ?`${todo.length} ${todo.length===1?'cosa pendiente':'cosas pendientes'}`+
+           (porCliente?` · ${bloques.length} ${bloques.length===1?'cliente':'clientes'}`:' · en orden de urgencia')
           :'Nada pendiente ahora mismo'}</p></div>
     </div>`;
   if(!todo.length) return `<section class="cola">${cab}
     <div class="cola-vacio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12.5l2.6 2.6L16 9.5"/></svg>
       <div><b>Todo al día</b><span>Ninguna válvula espera calibración, orden ni repuesto.</span></div></div></section>`;
-  /* Los mismos grupos, pero como cuenta, no como filtro: en el panel
-     no se pulsa nada. */
-  const chips=`<div class="cola-chips">
-    ${activos.map(g=>`<span class="ch">
-      <span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)} <b>${cuenta(g.k)}</b></span>`).join('')}
-  </div>`;
-  const filas=lista.slice(0,tope).map(x=>{
+
+  const TOPE=6;   // por cliente: más que esto y el panel deja de ser un vistazo
+  const fila=x=>{
     const tono=(GRUPOS.find(g=>g.k===x.g)||{}).tono;
     const abrir=x.id?`verEquipo('${x.id}')`:`verSol('${x.solId}')`;
     return `<div class="cola-i" onclick="${abrir}">
       <span class="pt" style="background:var(--${tono})"></span>
       <span class="t"><b>${esc(x.tit)}</b><small>${x.sub}</small></span>
-      <span class="q">${x.q}</span></div>`}).join('');
-  const mas=lista.length>tope
-    ? `<div class="cola-mas-t">y ${lista.length-tope} más · están en su sección del menú</div>` : '';
-  return `<section class="cola">${cab}${chips}<div class="cola-l">${filas}</div>${mas}</section>`;
+      <span class="q">${x.q}</span></div>`;
+  };
+
+  const cuerpo=bloques.map(b=>{
+    /* Dentro del cliente, un subtítulo por estado —vencidas, en
+       mantenimiento, vencen pronto…— en el mismo orden de siempre. */
+    let quedan=TOPE;
+    const tramos=GRUPOS.map(g=>{
+      const its=b.its.filter(x=>x.g===g.k);
+      if(!its.length||quedan<=0)return '';
+      const ver=its.slice(0,quedan); quedan-=ver.length;
+      return `<h4 class="cola-s"><span class="pt" style="background:var(--${g.tono})"></span>${esc(g.n)}
+        <b>${its.length}</b>${g.d?`<i>${esc(g.d)}</i>`:''}</h4>${ver.map(fila).join('')}`;
+    }).join('');
+    const ocultas=b.its.length-Math.min(TOPE,b.its.length);
+    const mas=ocultas?`<div class="cola-mas-t">y ${ocultas} más de este cliente · están en su sección del menú</div>`:'';
+    const cabCli=porCliente?`<header class="cola-c">
+      <b>${esc(b.n)}</b><span>${b.its.length} ${b.its.length===1?'pendiente':'pendientes'}</span></header>`:'';
+    return `<div class="cola-b">${cabCli}${barraTaller(b.its)}${tramos}${mas}</div>`;
+  }).join('');
+
+  return `<section class="cola">${cab}${barraTaller(todo,true)}<div class="cola-l">${cuerpo}</div></section>`;
+}
+/* ── La línea de avance del taller ───────────────────────────
+   Una sola barra con los tres colores en el orden en que avanza el
+   trabajo: rojo lo que espera, naranja lo que está abierto, verde lo
+   que ya salió. El porcentaje es el verde sobre el total, que es lo
+   que se responde cuando preguntan «¿cómo vamos?».
+   Sólo cuenta lo que está dentro de una orden: una válvula que vence
+   en dos meses no es trabajo del taller y falsearía el avance. */
+function barraTaller(its,general){
+  const n=k=>its.filter(x=>x.g===k).length;
+  const esp=n('espera'), tal=n('taller'), fin=n('listo'), tot=esp+tal+fin;
+  if(!tot) return '';
+  const pc=v=>(v/tot*100);
+  const pct=Math.round(pc(fin));
+  const trozo=(v,tono,t)=>v?`<span style="width:${pc(v).toFixed(2)}%;background:var(--${tono})" title="${t}"></span>`:'';
+  return `<div class="cola-av${general?' gen':''}">
+    <div class="cola-av-t">
+      <b>${fin} de ${tot} ${tot===1?'terminada':'terminadas'}</b>
+      <span>${general?'en total':'avance del taller'}</span>
+      <em>${pct}%</em>
+    </div>
+    <div class="cola-av-b" role="img"
+      aria-label="${fin} terminadas, ${tal} en mantenimiento y ${esp} esperando, de ${tot}.">
+      ${trozo(fin,'ok','Terminadas: '+fin)}${trozo(tal,'due','En mantenimiento: '+tal)}${trozo(esp,'late','En lista de espera: '+esp)}
+    </div>
+    <div class="cola-av-l">
+      ${fin?`<span><i style="background:var(--ok)"></i>${fin} terminada${fin===1?'':'s'}</span>`:''}
+      ${tal?`<span><i style="background:var(--due)"></i>${tal} en mantenimiento</span>`:''}
+      ${esp?`<span><i style="background:var(--late)"></i>${esp} en lista de espera</span>`:''}
+    </div>
+  </div>`;
 }
 
 /* ============================================================
@@ -12490,6 +12629,109 @@ function resumenClientesHtml(){
     `<span class="count">${totalPend} válvula${totalPend===1?'':'s'} por atender</span>`);
 }
 
+/* ── El resumen general, empresa por empresa ─────────────────
+   Los gráficos del fondo del panel sumaban las tres empresas en una
+   sola cifra: «5 PSV de resorte» no decía de quién. En una casa de
+   servicio eso no se usa nunca — se llama a un cliente y se habla de
+   SU parque. Ahora cada empresa tiene su propio juego de gráficos, con
+   su línea de avance del taller arriba, y el peor cliente va primero.
+   El único que sigue siendo común es la actividad reciente: es un
+   diario en orden de fecha y partirlo por empresa lo deja inservible. */
+function dashDeCliente(cid){
+  const vs=visibles().filter(a=>a.cli===cid);
+  const st=k=>vs.filter(a=>estado(a).k===k).length;
+  const conProg=vs.filter(a=>a.prox);
+
+  const estadoSegs=[
+    {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
+    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'due'},
+    {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
+
+  const tipoCount={},tipoFam={};
+  vs.forEach(a=>{const t=MODELOS[a.mod]?.t;if(!t)return;tipoCount[t]=(tipoCount[t]||0)+1;tipoFam[t]=famDe(a)});
+  const porTipo=Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).slice(0,8)
+    .map(([t,v])=>({label:t,value:v,tone:famColor(tipoFam[t]),tip:`${t} · ${CL[tipoFam[t]]}: ${v} válvulas de ${cli(cid).n}`,
+      go:`verFiltradasDe('${jsq(cid)}','fTipo','${jsq(t)}')`}));
+
+  const modCount={};vs.forEach(a=>modCount[a.mod]=(modCount[a.mod]||0)+1);
+  const porMod=Object.entries(modCount).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([m,v])=>({
+    label:`${MODELOS[m]?.m||''} ${m}`.trim(),value:v,tone:famColor(MODELOS[m]?.c||'control'),
+    tip:`${MODELOS[m]?.m||''} ${m} — ${MODELOS[m]?.t||''}: ${v} válvulas de ${cli(cid).n}`,
+    go:`verFiltradasDe('${jsq(cid)}','fMod','${jsq(m)}')`}));
+
+  const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
+  for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
+    colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');
+      return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
+
+  const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===cid});
+  const porEtapa=ETAPAS.map(([k,l])=>({label:l,value:ords.filter(o=>o.et===k).length,
+    tone:k==='final'?'ok':k==='mant'?'due':'late',tip:`${l}: ${ords.filter(o=>o.et===k).length} órdenes`}));
+  const abiertas=ords.filter(o=>o.et!=='final').length;
+
+  return `<div class="dash">
+    <div class="span-5">${panel('Estado del parque',donut(estadoSegs,vs.length,'válvulas'))}</div>
+    <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
+    <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
+    <div class="span-5">${panel('Órdenes por etapa',hbars(porEtapa),`<span class="count">${abiertas} abierta${abiertas===1?'':'s'}</span>`)}</div>
+    <div class="span-12">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
+  </div>`;
+}
+/* Igual que verFiltradas, pero sabiendo de qué empresa se pulsó: si se
+   toca la barra de Los Andes se entra a Los Andes, sin preguntar. */
+function verFiltradasDe(cid,campo,valor){
+  S.fFam='';S.fTipo='';S.fMod='';S[campo]=valor;S.view='todos';S.focus=0;
+  if(S.cli){go('assets');renderAssets();return}
+  enterClient(cid,'assets');
+  S.fFam='';S.fTipo='';S.fMod='';S[campo]=valor;
+  renderAssets();
+}
+/* El avance del taller de una empresa: cuántas de las que entraron ya
+   salieron. Es la misma cuenta de la línea de «Tu trabajo», pero aquí
+   mirando TODAS sus órdenes, no sólo las de trabajos abiertos. */
+function avanceCliente(cid){
+  const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===cid});
+  const esp=ords.filter(o=>o.et==='oc').length, tal=ords.filter(o=>o.et==='mant').length,
+        fin=ords.filter(o=>o.et==='final').length, tot=esp+tal+fin;
+  return {esp,tal,fin,tot,pct:tot?Math.round(fin/tot*100):0};
+}
+function resumenGeneralHtml(){
+  const vs=visibles();
+  const ids=(S.cli?[S.cli]:CLIENTES.map(c=>c.id)).filter(id=>vs.some(a=>a.cli===id));
+  if(!ids.length) return '';
+  /* Primero el que peor está: vencidas pesan más que por vencer. */
+  const peso=id=>{const de=vs.filter(a=>a.cli===id);
+    return de.filter(a=>estado(a).k==='vencido').length*100
+         + de.filter(a=>estado(a).k==='mant').length*10
+         + de.filter(a=>estado(a).k==='porvencer').length;};
+  ids.sort((a,b)=>peso(b)-peso(a)||cli(a).n.localeCompare(cli(b).n,'es'));
+
+  return ids.map(id=>{
+    const de=vs.filter(a=>a.cli===id);
+    const marcas=new Set(de.map(a=>MODELOS[a.mod]?.m).filter(Boolean)).size;
+    const av=avanceCliente(id);
+    const pc=v=>(v/av.tot*100).toFixed(2);
+    const trozo=(v,tono,t)=>v?`<span style="width:${pc(v)}%;background:var(--${tono})" title="${t}"></span>`:'';
+    const barra=av.tot?`<div class="rg-av">
+        <div class="rg-av-b" role="img" aria-label="${av.fin} de ${av.tot} órdenes terminadas.">
+          ${trozo(av.fin,'ok','Terminadas: '+av.fin)}${trozo(av.tal,'due','En mantenimiento: '+av.tal)}${trozo(av.esp,'late','En lista de espera: '+av.esp)}
+        </div>
+        <div class="rg-av-l">
+          <b>${av.pct}%</b><span>${av.fin} de ${av.tot} ${av.tot===1?'orden terminada':'órdenes terminadas'}</span>
+          ${av.tal?`<span><i style="background:var(--due)"></i>${av.tal} en mantenimiento</span>`:''}
+          ${av.esp?`<span><i style="background:var(--late)"></i>${av.esp} en lista de espera</span>`:''}
+        </div></div>`:'';
+    return `<section class="rg">
+      <header class="rg-h">
+        <div><h2>${esc(cli(id).n)}</h2>
+          <p>${de.length} válvula${de.length===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${cli(id).fac?' · '+esc(cli(id).fac):''}</p></div>
+      </header>
+      ${barra}
+      ${dashDeCliente(id)}
+    </section>`;
+  }).join('');
+}
+
 function renderHome(){
   if(S.rol==='cliente') return renderHomeCliente();
   if(S.rol==='tec')     return renderHomeTaller();
@@ -12522,29 +12764,8 @@ function renderHome(){
      d:cumpl>=90?'en meta (≥90%)':'bajo meta',go:"go('rep')"}
   ];
   const kpiHtml=`<div class="kpis">${kpis.map(x=>`<div class="kpi"><span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span><span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
-  const estadoSegs=[
-    {label:'Operativos',value:st('ok'),tone:'ok'},{label:'Por vencer (≤90 d)',value:st('porvencer'),tone:'due'},
-    {label:'Calibración vencida',value:st('vencido'),tone:'late'},{label:'Con trabajo abierto',value:st('mant'),tone:'due'},
-    {label:'Ficha incompleta',value:st('incompleto'),tone:'ink-3'}];
-  // Cantidad de válvulas por tipo constructivo y por modelo.
-  // El color viene de la familia del equipo (no del ranking), así una barra
-  // naranja siempre es seguridad, aquí y en las tarjetas de arriba.
-  const tipoCount={},tipoFam={};
-  vs.forEach(a=>{const t=MODELOS[a.mod]?.t;if(!t)return;tipoCount[t]=(tipoCount[t]||0)+1;tipoFam[t]=famDe(a)});
-  const porTipo=Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).slice(0,8)
-    .map(([t,v])=>({label:t,value:v,tone:famColor(tipoFam[t]),tip:`${t} · ${CL[tipoFam[t]]}: ${v} válvulas`,
-      go:`verFiltradas('fTipo','${jsq(t)}','${jsq(t)}')`}));
-  const modCount={};vs.forEach(a=>modCount[a.mod]=(modCount[a.mod]||0)+1);
-  const porMod=Object.entries(modCount).sort((a,b)=>b[1]-a[1]).slice(0,7).map(([m,v])=>({
-    label:`${MODELOS[m]?.m||''} ${m}`.trim(),value:v,tone:famColor(MODELOS[m]?.c||'control'),
-    tip:`${MODELOS[m]?.m||''} ${m} — ${MODELOS[m]?.t||''}: ${v} válvulas`,
-    go:`verFiltradas('fMod','${jsq(m)}','${jsq(m)}')`}));
-  const colRows=[{x:'Venc.',value:conProg.filter(a=>dias(a.prox)<0).length,tone:'late'}];
-  for(let i=0;i<6;i++){const d=new Date(HOY.getFullYear(),HOY.getMonth()+i,1),y=d.getFullYear(),mo=d.getMonth();
-    colRows.push({x:MESES3[mo],value:conProg.filter(a=>{const p=new Date(a.prox+'T00:00:00');return dias(a.prox)>=0&&p.getFullYear()===y&&p.getMonth()===mo}).length,tone:'due'})}
-  const ordScope=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli});
-  const porEtapa=ETAPAS.map(([k,l])=>({label:l,value:ordScope.filter(o=>o.et===k).length,
-    tone:k==='final'?'ok':k==='mant'?'sel':'',tip:`${l}: ${ordScope.filter(o=>o.et===k).length} órdenes`}));
+  /* Los gráficos del resumen los arma dashDeCliente(), uno por
+     empresa: aquí sólo quedan las cifras de arriba y el diario. */
   const sev=a=>({vencido:0,taller:1,porvencer:2,incompleto:3})[estado(a).k]??9;
   const ICON={Preventivo:'⟳',Correctivo:'✚',Calibración:'◎',Inspección:'◍',Overhaul:'⚙','Puesta en marcha':'▸'};
   const acts=[...ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return !S.cli||a?.cli===S.cli}).map(o=>({f:o.f,type:'wo',o})),
@@ -12574,8 +12795,10 @@ function renderHome(){
      titulo:esc(S.cli?cli(S.cli).n:'Adolphus S.A.')+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
      sub:`${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}`,
      cifra:cola.length, pct:cola.length?Math.min(1,cola.length/12):0,
-     cifraTono:cola.length?(cola.some(x=>x.g==='venc')?'late':'due'):'ok',
-     cifraPie:['Cosas pendientes',cola.length?'en orden de urgencia':'nada espera por ti'],
+     cifraTono:cola.length?(cola.some(x=>x.g==='venc'||x.g==='espera')?'late':'due'):'ok',
+     cifraPie:['Cosas pendientes',cola.length
+       ?`en ${new Set(cola.map(x=>x.cliId||'')).size} cliente${new Set(cola.map(x=>x.cliId||'')).size===1?'':'s'}`
+       :'nada espera por ti'],
      urgente:urg,
    })+`
    ${colaHtml()}
@@ -12584,13 +12807,11 @@ function renderHome(){
    ${kpiHtml}
    ${resumenClientesHtml()}
    ${famHtml}
+   ${/* El resumen ya no suma las tres empresas en un solo gráfico: cada
+        una tiene el suyo, con su avance de taller arriba. */''}
+   ${resumenGeneralHtml()}
    <div class="dash">
-     <div class="span-7">${panel('Calibraciones · próximos 6 meses',columns(colRows),`<span class="count">${conProg.length} con programa</span>`)}</div>
-     <div class="span-5">${panel('Estado del parque',donut(estadoSegs,total,'válvulas'))}</div>
-     <div class="span-7">${panel('Cantidad de válvulas por tipo',hbars(porTipo),famLeyenda())}</div>
-     <div class="span-5">${panel('Cantidad de válvulas por modelo',hbars(porMod),`<span class="count">top ${porMod.length}</span>`)}</div>
-     <div class="span-7">${panel('Actividad reciente',feedHtml)}</div>
-     <div class="span-5">${panel('Órdenes por etapa',hbars(porEtapa),`<span class="count">${ordAb} abiertas</span>`)}</div>
+     <div class="span-12">${panel('Actividad reciente',feedHtml,'<span class="count">de todas las empresas</span>')}</div>
    </div>`;
 }
 
