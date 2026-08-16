@@ -576,6 +576,8 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    «+» al final — el mismo patrón que el desarme, que ya se entendía. */
 .af-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:10px}
 .af-i{display:flex;flex-direction:column;gap:6px}
+.af-i .af-img img{width:100%;height:104px;object-fit:contain;background:var(--surface-3);
+  border-radius:var(--r-1);display:block;border:1px solid var(--line-2)}
 .af-nota{font-size:12px;padding:7px 9px}
 .af-mas{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   min-height:112px;padding:14px;cursor:pointer;text-align:center;
@@ -2238,7 +2240,8 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   background:var(--surface);padding:8px;min-height:126px;display:flex;flex-direction:column;gap:6px}
 .pv-hueco.con{border-style:solid}
 .pv-hueco-t{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
-.pv-hueco img{width:100%;height:104px;object-fit:cover;border-radius:var(--r-1);display:block}
+.pv-hueco img{width:100%;height:104px;object-fit:contain;background:var(--surface-3);
+  border-radius:var(--r-1);display:block}
 .pv-hueco-b{display:flex;gap:6px;justify-content:flex-end}
 .pv-hueco-v{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
   cursor:pointer;color:var(--ink-3);font-size:11.5px;border-radius:var(--r-1);transition:background var(--fast)}
@@ -2265,7 +2268,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .pf-par figcaption{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
 .pf-g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pf-c span{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px}
-.pf-c img{width:100%;height:150px;object-fit:cover;border-radius:var(--r-1);border:1px solid var(--line-2);display:block}
+.pf-c img{width:100%;height:150px;object-fit:contain;background:var(--surface-3);border-radius:var(--r-1);border:1px solid var(--line-2);display:block}
 .pf-sin{height:150px;border:1px dashed var(--line);border-radius:var(--r-1);display:grid;place-items:center;
   font-size:11.5px;color:var(--ink-3)}
 /* La gráfica dentro del formulario, mientras se escriben los disparos */
@@ -2304,8 +2307,8 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .crit-lado b{display:block}
 @media(max-width:640px){.crit-lado{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:center}}
 .inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
-.dsp-una img{width:56px;height:52px;object-fit:cover;border-radius:var(--r-1);display:block;
-  border:1px solid var(--line-2)}
+.dsp-una img{width:56px;height:52px;object-fit:contain;background:var(--surface-3);
+  border-radius:var(--r-1);display:block;border:1px solid var(--line-2)}
 .dsp-cam{height:52px;min-width:52px;flex:0 0 auto;border:1px dashed var(--line);border-radius:var(--r-1);display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;
   color:var(--ink-3);font-size:10.5px;transition:background var(--fast)}
@@ -7710,7 +7713,11 @@ function psvDocumento(id){
   .disp-h b{font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c}
   .disp-h i{font-style:normal;margin-left:auto;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums}
   .disp-c small{display:block;font-size:8.2px;color:#8a929c}
-  .disp-c img{width:100%;height:64px;object-fit:cover;border-radius:4px;margin-top:5px;border:1px solid #edeff1}
+  /* «cover» recortaba la foto para llenar el hueco: se perdía justo lo
+     que el técnico quería enseñar. «contain» la mete entera, con el
+     alto que le toque. */
+  .disp-c img{width:100%;height:auto;max-height:70px;object-fit:contain;border-radius:4px;margin-top:5px;
+    border:1px solid #edeff1;background:#f4f6f8}
   .disp-c .nota{font-size:8.5px;color:#5b6470;margin-top:3px}
   /* Quién lo hizo */
   .quien{display:flex;gap:0;border:1px solid #e4e7ea;border-radius:7px;overflow:hidden;margin-top:5px}
@@ -7726,7 +7733,8 @@ function psvDocumento(id){
     color:#5b6470;padding:9px 0 3px}
   .fpar-f td{width:50%;padding:0 5px 9px 0;vertical-align:top;page-break-inside:avoid}
   .fpar-f .fc-l{display:block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8a929c;margin-bottom:2px}
-  .fpar-f img{width:100%;max-height:120px;object-fit:cover;border-radius:2px;border:1px solid #e4e7ea}
+  .fpar-f img{width:100%;height:auto;max-height:120px;object-fit:contain;border-radius:2px;
+    border:1px solid #e4e7ea;background:#f4f6f8}
   .fpar-f .fc-sin{height:60px;border:1px dashed #cfd4d9;border-radius:2px;display:flex;
     align-items:center;justify-content:center;font-size:8.5px;color:#9aa2ab}
   .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
@@ -7747,7 +7755,10 @@ function psvDocumento(id){
   .anexo-g{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
   .anexo-g.dos{grid-template-columns:1fr}
   .anexo-g figure{margin:0;border:1px solid #d7dbe0;border-radius:3px;padding:5px;page-break-inside:avoid;break-inside:avoid}
-  .anexo-g img{width:100%;max-height:74mm;object-fit:contain;display:block;background:#f4f6f8}
+  /* En el anexo la foto manda: se le da toda la hoja que necesite y
+     nunca se recorta. Es lo que se manda como prueba del trabajo. */
+  .anexo-g img{width:100%;height:auto;max-height:110mm;object-fit:contain;display:block;background:#f4f6f8}
+  .anexo-g.dos .par-i img{max-height:88mm}
   .anexo-g figcaption{font-size:9px;color:#101418;padding-top:4px;font-weight:600}
   .anexo-g .pz{display:block;font-size:9.5px;font-weight:700;color:#16306b;padding-bottom:4px}
   .par-i{display:grid;grid-template-columns:1fr 1fr;gap:8px}
