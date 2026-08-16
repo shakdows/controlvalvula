@@ -2295,6 +2295,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    pudiera, alguien lo cambiaría y el certificado diría dos cosas. */
 /* El gráfico y sus criterios, uno al lado del otro. En pantalla
    estrecha se apilan: el dibujo primero, que es lo que se mira. */
+.eq-l{display:flex;flex-direction:column;gap:8px}
+.eq-i{display:grid;grid-template-columns:1fr 1fr 32px;gap:8px;align-items:center}
+@media(max-width:560px){.eq-i{grid-template-columns:1fr 1fr 32px}}
 .psv-graf-fila{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .psv-graf-svg{flex:1 1 320px;min-width:0}
 .crit-lado{flex:0 0 178px;flex-direction:column;align-items:flex-start;gap:5px}
@@ -4509,6 +4512,16 @@ function verOrden(idOrAct,esActivo){
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
     ${enEspera||varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
     ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
+    ${!cliente&&etC==='final'&&certificadosDeOrden(o.id).length?(()=>{
+      /* El jefe es el último que mira. Una orden de dos válvulas son
+         dos certificados; se los puede llevar sueltos o en un solo
+         documento, según lo que le pida el cliente. */
+      const n=certificadosDeOrden(o.id).length;
+      return n>1
+        ? `<button class="btn sec" onclick="imprimirCertificadosOrden('${o.id}','separado')">${n} certificados por separado</button>
+           <button class="btn" onclick="imprimirCertificadosOrden('${o.id}','junto')">Todo en un documento</button>`
+        : `<button class="btn" onclick="imprimirCertificadosOrden('${o.id}','separado')">Ver el certificado</button>`;
+    })():''}
     ${!cliente&&!varias&&etC==='mant'
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
     ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
@@ -6218,6 +6231,36 @@ function faltaParaEmitir(c){
   return f.length ? f[0].que+(f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:'') : '';
 }
 
+/* Quien más estuvo en el trabajo. No es el responsable —ese firma—,
+   pero sale en el certificado: en una parada, tres personas abren la
+   misma válvula y el cliente pregunta quiénes fueron. */
+function equipoDe(t){ if(!Array.isArray(t.equipo))t.equipo=[]; return t.equipo }
+function psvAgregarPersona(){
+  if(!PSV_TMP)return;
+  equipoDe(PSV_TMP).push({n:'',area:''});
+  pintarEquipoPSV();
+  const l=document.querySelectorAll('#pvEquipo .eq-n');
+  if(l.length)l[l.length-1].focus();
+}
+function psvQuitarPersona(i){ if(!PSV_TMP)return; equipoDe(PSV_TMP).splice(i,1); pintarEquipoPSV(); }
+function psvPersona(i,k,v){ if(!PSV_TMP)return; const e=equipoDe(PSV_TMP)[i]; if(e)e[k]=v; }
+function pintarEquipoPSV(){
+  const c=$('#pvEquipo'); if(!c||!PSV_TMP)return;
+  const l=equipoDe(PSV_TMP);
+  c.innerHTML=`${l.length?`<h4 class="snc-sec">También trabajaron
+      <span class="opc">salen en el certificado, debajo del responsable</span></h4>
+    <div class="eq-l">${l.map((x,i)=>`<div class="eq-i">
+      <input class="inp eq-n" value="${esc(x.n||'')}" placeholder="Nombre y apellido"
+        oninput="psvPersona(${i},'n',this.value)" aria-label="Nombre de la persona ${i+1}">
+      <input class="inp" list="areasAdolphus" value="${esc(x.area||'')}" placeholder="Área"
+        oninput="psvPersona(${i},'area',this.value)" aria-label="Área de la persona ${i+1}">
+      <button class="icon-btn" onclick="psvQuitarPersona(${i})" aria-label="Quitar a esta persona">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>`).join('')}</div>`:''}
+    <button class="btn quiet xs" style="margin-top:${l.length?'8':'12'}px" onclick="psvAgregarPersona()">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar otra persona</button>`;
+}
+
 /* Pinta en naranja las casillas que faltan y sube a la primera. */
 function psvSenalarFaltas(){
   const t=PSV_TMP; if(!t)return null;
@@ -6405,9 +6448,23 @@ function psvNuevo(actId){
        certificado. Los ensayos viejos que las traigan las conservan en
        su registro; simplemente ya no se piden ni se imprimen. */
     coment:'', pares:[], fotos:[], firmas:[],
-    /* Quién lo hizo y de qué área: va firmado al pie del certificado. */
-    respNombre:'', respArea:''
+    /* Quién lo hizo y de qué área: va firmado al pie del certificado.
+       El nombre ya se escribió una vez, al pasar la orden a
+       mantenimiento; volver a pedirlo es preguntar dos veces lo mismo.
+       Se trae de la orden, y si no hay, del último que trabajó en este
+       equipo. */
+    respNombre:quienTomo(a.id), respArea:'Taller de válvulas',
+    /* Casi siempre trabaja uno; cuando son dos o tres, se añaden. */
+    equipo:[]
   };
+}
+
+/* Quién se hizo cargo de la válvula: primero la orden abierta, luego
+   el nombre que quedó guardado en este equipo. */
+function quienTomo(actId){
+  const o=ORDENES.find(x=>x.act===actId&&x.et!=='final');
+  if(o&&(o.ing||o.tec)&&(o.ing||o.tec)!=='Por asignar')return o.ing||o.tec;
+  try{return localStorage.getItem(LS_ING)||''}catch(e){return ''}
 }
 
 let PSV_ABRIR_EN=null;      // 'fotos' cuando se entra a documentar el desarme
@@ -6586,20 +6643,22 @@ function pintarPSV(){
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento</label>
           <input class="inp" id="pv-resp" value="${esc(t.respNombre||'')}" placeholder="Nombre y apellido"
-            oninput="psvCampo('respNombre',this.value)"></div>
+            oninput="psvCampo('respNombre',this.value)">
+          <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
         <div class="fld"><label for="pv-area">Área a la que pertenece</label>
           <input class="inp" id="pv-area" list="areasAdolphus" value="${esc(t.respArea||'')}"
             placeholder="Taller de válvulas" oninput="psvCampo('respArea',this.value)">
           <datalist id="areasAdolphus">${AREAS_ADOLPHUS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
       </div>
       <div id="pvFirma"></div>
+      <div id="pvEquipo"></div>
     </div></details>
    </div>`;
 
   pintarPSVPie();
   /* Un solo formulario: se pintan todas sus partes. */
   cierreDesdeSet();
-  pintarAsFound(); pintarDisparos(); pintarPSVResultado(); pintarFirmaPSV();
+  pintarAsFound(); pintarDisparos(); pintarPSVResultado(); pintarFirmaPSV(); pintarEquipoPSV();
   pintarPSVFotos();
   /* Cuando la válvula todavía está EN TALLER lo que toca es el desarme:
      abrir por los disparos sería pedirle al técnico que ensaye una
@@ -7767,7 +7826,11 @@ function psvDocumento(id){
     <div><span>Encargado del mantenimiento</span><b>${esc(c.respNombre||'—')}</b></div>
     <div><span>Área</span><b>${esc(c.respArea||'—')}</b></div>
     <div><span>Fecha</span><b>${fPE(c.fecha)}</b></div>
-  </div>`:''}
+  </div>
+  ${(c.equipo||[]).filter(x=>String(x.n||'').trim()).length?`<table style="margin-top:5px">
+    <tr><th style="width:38%">TAMBIÉN TRABAJARON</th><td>${
+      (c.equipo||[]).filter(x=>String(x.n||'').trim())
+        .map(x=>esc(x.n)+(x.area?` · ${esc(x.area)}`:'')).join('<br>')}</td></tr></table>`:''}`:''}
 
   <div class="firmas">
     ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
@@ -7988,11 +8051,52 @@ function fichaClienteWord(id){
    Word para retocarlo antes de mandárselo al cliente. Se arma una
    sola vez; si se escribiera dos veces acabarían diciendo cosas
    distintas. */
+/* ── LOS CERTIFICADOS DE UNA ORDEN TERMINADA ─────────────────
+   El último que mira es el jefe. Una orden de dos válvulas son dos
+   certificados —cada válvula se ensayó por separado y cada una lleva
+   su número—, pero al cliente a veces se le manda un solo documento.
+   Las dos formas, y que elija él.
+   ============================================================ */
+function certificadosDeOrden(idOrden){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o)return [];
+  return lineasDe(o).filter(x=>x.calib&&CALIBS.some(c=>c.id===x.calib));
+}
+function imprimirCertificadosOrden(idOrden,modo){
+  const ls=certificadosDeOrden(idOrden);
+  if(!ls.length){toast('Todavía no hay ningún certificado emitido en esta orden');return}
+  closeModal();
+  if(modo==='separado'){
+    /* Uno por ventana. Se abren de golpe: si se encadenaran, el
+       navegador bloquearía todas menos la primera. */
+    let n=0;
+    ls.forEach(l=>{ if(imprimirPSV(l.calib))n++ });
+    toast(n?`${n} certificado${n===1?'':'s'} abierto${n===1?'':'s'} para imprimir`
+           :'Permite las ventanas emergentes para imprimir');
+    return;
+  }
+  // todo junto: un solo documento, cada certificado en su hoja
+  const docs=ls.map(l=>psvDocumento(l.calib)).filter(Boolean);
+  if(!docs.length)return;
+  const cuerpo=docs.map((d,i)=>{
+    const m=/<body[^>]*>([\s\S]*)<\/body>/i.exec(d.html);
+    const dentro=m?m[1]:d.html;
+    return `<div class="hoja"${i?' style="page-break-before:always"':''}>${dentro}</div>`;
+  }).join('');
+  const cab=/^[\s\S]*?<body[^>]*>/i.exec(docs[0].html);
+  const html=(cab?cab[0]:'<!doctype html><html><head><meta charset="utf-8"></head><body>')
+    + cuerpo + '</body></html>';
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),380);
+  toast(`${docs.length} certificados en un solo documento`);
+}
+
 function imprimirPSV(id){
-  const d=psvDocumento(id); if(!d)return;
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  const d=psvDocumento(id); if(!d)return false;
+  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return false}
   w.document.write(d.html);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+  return true;
 }
 function psvWord(id){
   const d=psvDocumento(id); if(!d)return;
