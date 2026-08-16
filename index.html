@@ -567,6 +567,17 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
    borde, pero punteado, para que se lea como «aquí va la siguiente». */
 /* La casilla que falta, en el mismo naranja que todo lo que hay que
    mirar. No es un error —nadie se ha equivocado—: es lo que queda. */
+/* Una casilla que aún no se ha llenado y hace falta: un borde
+   discontinuo suave. No es un error —nadie se equivocó— es que queda
+   por hacer, y se distingue de una que ya tiene algo escrito. */
+/* Cuántas cosas quedan en cada paso, en la propia cabecera. */
+.psv-pend{display:inline-block;margin-left:7px;font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  color:var(--late);background:color-mix(in oklch,var(--late) 12%,transparent);
+  border-radius:var(--r-pill);padding:1px 8px;vertical-align:middle}
+.psv-ok{display:inline-block;margin-left:7px;font-size:10.5px;font-weight:700;
+  color:var(--ok);background:color-mix(in oklch,var(--ok) 12%,transparent);
+  border-radius:var(--r-pill);padding:1px 8px;vertical-align:middle}
+.inp.falta-sutil{border-style:dashed;border-color:color-mix(in oklch,var(--due) 55%,var(--line))}
 #pvFotos.falta,#pvFirma.falta{outline:2px solid var(--due);outline-offset:4px;border-radius:var(--r-2)}
 .inp.falta{border-color:var(--due);background:color-mix(in oklch,var(--due) 8%,var(--surface));box-shadow:0 0 0 3px color-mix(in oklch,var(--due) 16%,transparent)}
 .inp.falta::placeholder{color:color-mix(in oklch,var(--due) 70%,var(--ink-3))}
@@ -593,6 +604,11 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .fv-acc{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .fv-acc .btn{cursor:pointer}
 @media(max-width:560px){.fv-caja img{max-height:62vh}.fv-acc{width:100%}.fv-acc .btn{flex:1;justify-content:center}}
+/* Rojo lo que falta, verde lo que está. En una orden de varias
+   válvulas es lo único que se mira. */
+.ord-m small.pendiente{color:var(--late);font-weight:500}
+.ord-m small.pendiente b{font-weight:700}
+.ord-m small.lista{color:var(--ok);font-weight:600}
 .af-lupa{position:absolute;left:6px;bottom:6px;background:oklch(0 0 0 /.62);color:#fff;
   border-radius:var(--r-pill);font-size:10px;padding:2px 8px;pointer-events:none;letter-spacing:.02em}
 .af-nota{font-size:12px;padding:7px 9px}
@@ -4497,7 +4513,17 @@ function verOrden(idOrAct,esActivo){
           return `<div class="ord-i ${x.et==='final'?'ok':''}">
             <div class="ord-m"><b>${esc(v.tag||v.ser||'sin tag')}</b>
               <p>${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')}${v.ar?' · '+esc(area(v)):''}</p>
-              ${x.et!=='final'&&f.falta.length?`<small>${esc(f.falta[0])}</small>`:''}</div>
+              ${(()=>{
+                /* De un vistazo: cuál quedó a medias porque el técnico
+                   se fue a otra válvula, y cuál ya está. Antes decía
+                   «Nada: se puede registrar y finalizar», que parece
+                   que falta algo llamado «Nada». */
+                if(x.et==='final')return '<small class="lista">Finalizada · con su certificado</small>';
+                if(f.listo)return '<small class="lista">Lista para finalizar</small>';
+                const n=f.falta.length;
+                return `<small class="pendiente"><b>Falta agregar datos</b>${
+                  n>1?` · ${n} cosas`:''}: ${esc(f.falta[0].replace(/^Del mantenimiento falta /,''))}</small>`;
+              })()}</div>
             <span class="tag ${x.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(et[1])}</span>
             ${S.rol==='cliente'?''
               /* Mientras la válvula no ha llegado no hay nada que
@@ -6161,7 +6187,17 @@ function editarCriterios(){
    ${critPorDefecto()?'':`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>Ahora mismo no están los de fábrica (± ${CRIT_DEF.pct} %, ${CRIT_DEF.abs} psig, blowdown ${CRIT_DEF.bd} %).
        <button class="btn quiet xs" onclick="restaurarCriterios()">Volver a los de fábrica</button></div></div>`}`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+  // el aviso de que hay trabajo detrás, para que nadie dude
+  if(PSV_TMP)$('#mBody').insertAdjacentHTML('afterbegin',
+    `<div class="callout ok" style="margin-bottom:10px"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+      <div>El mantenimiento que estabas llenando <b>sigue guardado</b>. Al volver lo tienes tal cual lo dejaste.</div></div>`);
+  /* Si se entró desde un mantenimiento a medio llenar, «Cancelar» tiene
+     que DEVOLVER a ese mantenimiento, no cerrar la ventana: el ensayo
+     vive en este mismo modal y cerrarlo se llevaba por delante todo lo
+     escrito —fotos incluidas—. */
+  const desdeEnsayo=!!PSV_TMP;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="${desdeEnsayo?'volverAlMantenimiento()':'closeModal()'}">${
+      desdeEnsayo?'Volver sin cambiar nada':'Cancelar'}</button>
     <button class="btn" onclick="guardarCriterios()">Guardar los criterios</button>`;
   $('#modal').classList.add('on');
   const p=$('#crPass');
@@ -6180,13 +6216,19 @@ function guardarCriterios(){
              corte:n('#crCorte',CRIT_DEF.corte), bd:n('#crBd',CRIT_DEF.bd)};
   try{localStorage.setItem('adolphus.criterios',JSON.stringify(CRITERIOS))}catch(e){}
   registrar('Criterios',`± ${CRITERIOS.pct} % · ${CRITERIOS.abs} psig · corte ${CRITERIOS.corte} · blowdown ${CRITERIOS.bd} %`);
-  closeModal(); renderAll();
   toast('Criterios guardados · rigen para los ensayos nuevos');
+  /* Igual que al cancelar: si veníamos de un mantenimiento, se vuelve a
+     él con todo lo escrito en su sitio y el veredicto ya recalculado
+     con los criterios nuevos. */
+  if(PSV_TMP){renderAll();volverAlMantenimiento();return}
+  closeModal(); renderAll();
 }
 function restaurarCriterios(){
   CRITERIOS={...CRIT_DEF};
   try{localStorage.setItem('adolphus.criterios',JSON.stringify(CRITERIOS))}catch(e){}
-  closeModal(); renderAll(); toast('Criterios de fábrica restaurados');
+  renderAll(); toast('Criterios de fábrica restaurados');
+  if(PSV_TMP){volverAlMantenimiento();return}
+  closeModal();
 }
 
 /* El veredicto: promedio de los tres disparos contra la tolerancia.
@@ -6279,9 +6321,9 @@ function pintarEquipoPSV(){
   c.innerHTML=`${l.length?`<h4 class="snc-sec">También trabajaron
       <span class="opc">salen en el certificado, debajo del responsable</span></h4>
     <div class="eq-l">${l.map((x,i)=>`<div class="eq-i">
-      <input class="inp eq-n" value="${esc(x.n||'')}" placeholder="Nombre y apellido"
+      <input class="inp eq-n" value="${esc(x.n||'')}" title="Nombre y apellido"
         oninput="psvPersona(${i},'n',this.value)" aria-label="Nombre de la persona ${i+1}">
-      <input class="inp" list="areasAdolphus" value="${esc(x.area||'')}" placeholder="Área"
+      <input class="inp" list="areasAdolphus" value="${esc(x.area||'')}" title="Área de Adolphus"
         oninput="psvPersona(${i},'area',this.value)" aria-label="Área de la persona ${i+1}">
       <button class="icon-btn" onclick="psvQuitarPersona(${i})" aria-label="Quitar a esta persona">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -6347,7 +6389,16 @@ let MODAL_PATRON=false;
 /* Volver es repintar el mantenimiento, que sigue entero en memoria. */
 function volverAlMantenimiento(){
   MODAL_PATRON=false;
-  if(PSV_TMP)pintarPSV(); else closeModal();
+  if(!PSV_TMP){closeModal();return}
+  /* El título se quedaba en «Criterios del ensayo»: pintarPSV dibuja el
+     cuerpo, no la cabecera. */
+  const a=ACTIVOS.find(x=>x.id===PSV_TMP.act)||{};
+  $('#mTitle').textContent='Mantenimiento · '+(a.tag||a.ser||'');
+  pintarPSV();
+  /* Y se guarda el borrador de paso: si el técnico salió a mirar los
+     criterios o el patrón, lo escrito hasta aquí ya no depende de que
+     acabe el ensayo. */
+  if(psvVeredicto(PSV_TMP).estado==='incompleto')guardarPSV(false,true);
 }
 function guardarPatron(){
   const p=$('#ptPass');
@@ -6568,9 +6619,14 @@ const psvCampo=(k,v)=>{
 function pintarPSV(){
   const t=PSV_TMP; if(!t)return;
   const a=ACTIVOS.find(x=>x.id===t.act)||{}, m=MODELOS[a.mod]||{};
-  const F=(k,lbl,ph,tipo)=>`<div class="fld"><label for="pv-${k}">${lbl}</label>
+  /* El texto de ejemplo dentro de la casilla se confunde con un dato ya
+     escrito: se mira el formulario, se ve gris claro donde tendría que
+     haber un número, y se pasa de largo creyendo que está puesto. La
+     explicación se va al «?» de al lado, que sólo aparece si se busca. */
+  const ayuda=txt=>txt?` <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="${esc(txt)}">?</span>`:'';
+  const F=(k,lbl,ph,tipo)=>`<div class="fld"><label for="pv-${k}">${lbl}${ayuda(ph)}</label>
     <input class="inp" id="pv-${k}" ${tipo?`type="${tipo}"`:''} value="${esc(t[k]==null?'':t[k])}"
-      placeholder="${esc(ph||'')}" oninput="psvCampo('${k}',this.value)"></div>`;
+      oninput="psvCampo('${k}',this.value)"></div>`;
 
   /* La primera parte del formato —servicio, contacto, y el equipo
      patrón con su certificado— la llena el supervisor o el gerente,
@@ -6580,6 +6636,10 @@ function pintarPSV(){
      en vez de la válvula. Los rellena, sí, quien programa el trabajo.  */
   const cabeceraMia=S.rol!=='tec';
   const L=(k,lbl,vacio)=>`<div class="dt-i"><span>${lbl}</span><b>${t[k]?esc(t[k]):`<span class="muted">${vacio||'—'}</span>`}</b></div>`;
+  /* Cuántas cosas quedan por paso, para no tener que abrirlos todos. */
+  const pend=psvFaltantes(t);
+  const cuenta=ids=>pend.filter(x=>ids.some(p=>String(x.id).startsWith(p)||x.paso===p)).length;
+  const marca=n=>n?` <span class="psv-pend">faltan ${n}</span>`:' <span class="psv-ok">completo</span>';
   const faltaCab=[['os','orden de servicio'],['fecha','fecha'],
     ['patDesc','equipo patrón'],['patSerie','serie del patrón'],['patCert','certificado del patrón']]
     .filter(([k])=>!t[k]).map(([,l])=>l);
@@ -6604,7 +6664,7 @@ function pintarPSV(){
         tres bloques mezclados y el desarme quedaba después de las
         pruebas, que es justo al revés de como pasa en el banco. */''}
    <div class="psv-secs">
-    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Orden de compra y equipo de medición
+    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(['pv-os',1]))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
       ${cabeceraMia?`
       <div class="two">
@@ -6625,15 +6685,15 @@ function pintarPSV(){
        ${bloquePatron(t)}`}
     </div></details>
 
-    <details class="psv-sec" open><summary>2 · Desarme
+    <details class="psv-sec" open><summary>2 · Desarme${marca(cuenta(['pvFotos']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
           y qué se le va a hacer. Cuando montes la nueva, vuelves aquí y le pones su foto del «después».
           Una vez armada, ese antes ya no se puede tomar.</div></div>
-      <div class="fld"><label for="pv-recep">Cómo llegó · lo que se ve por fuera</label>
-        <textarea class="inp" id="pv-recep" rows="2" oninput="psvCampo('recep',this.value)"
-          placeholder="Corrosión, fugas, golpes, precintos, lo que traiga puesto.">${esc(t.recep||'')}</textarea></div>
+      <div class="fld"><label for="pv-recep">Cómo llegó · lo que se ve por fuera${
+        ayuda('Corrosión, fugas, golpes, precintos: lo que traiga puesto al llegar. Sale en el certificado.')}</label>
+        <textarea class="inp" id="pv-recep" rows="2" oninput="psvCampo('recep',this.value)">${esc(t.recep||'')}</textarea></div>
       <div id="psvAsFound"></div>
       <h4 class="snc-sec">Pieza por pieza
         <span class="opc">foto del antes ahora, la del después al montarla</span></h4>
@@ -6643,11 +6703,12 @@ function pintarPSV(){
       <div id="pvFotos"></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>3 · Prueba de disparo
+    <details class="psv-sec" open><summary>3 · Prueba de disparo${marca(cuenta(['pv-setEsp','dsp-v']))}
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="two">
-        <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span></label>
-          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" placeholder="150" oninput="psvCampo('setEsp',this.value)"></div>
+        <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span>${
+          ayuda('La presión a la que la válvula TIENE que abrir, según la placa o la hoja del cliente. Es la referencia contra la que se juzgan los disparos.')}</label>
+          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" oninput="psvCampo('setEsp',this.value)"></div>
         <div class="fld"><label for="pv-und">Unidad</label>
           <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
             ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
@@ -6659,24 +6720,26 @@ function pintarPSV(){
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>4 · Conclusiones
+    <details class="psv-sec" open><summary>4 · Conclusiones${marca(cuenta(['pv-coment']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
-      <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento</label>
-        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)"
-          placeholder="Qué se encontró, qué se cambió y en qué estado queda la válvula. Esto sale como «Conclusiones» en el certificado y en el Word.">${esc(t.coment||'')}</textarea>
+      <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
+        ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
+        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea>
         <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>5 · Firmas
+    <details class="psv-sec" open><summary>5 · Firmas${marca(cuenta(['pv-resp','pvFirma']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
-        <div class="fld"><label for="pv-resp">Encargado del mantenimiento</label>
-          <input class="inp" id="pv-resp" value="${esc(t.respNombre||'')}" placeholder="Nombre y apellido"
+        <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
+          ayuda('Nombre y apellido de quien hizo el trabajo. Viene puesto de quien tomó la orden.')}</label>
+          <input class="inp" id="pv-resp" value="${esc(t.respNombre||'')}"
             oninput="psvCampo('respNombre',this.value)">
           <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
-        <div class="fld"><label for="pv-area">Área a la que pertenece</label>
+        <div class="fld"><label for="pv-area">Área a la que pertenece${
+          ayuda('El área de Adolphus a la que pertenece quien hizo el trabajo. Sale en el certificado.')}</label>
           <input class="inp" id="pv-area" list="areasAdolphus" value="${esc(t.respArea||'')}"
-            placeholder="Taller de válvulas" oninput="psvCampo('respArea',this.value)">
+            oninput="psvCampo('respArea',this.value)">
           <datalist id="areasAdolphus">${AREAS_ADOLPHUS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
       </div>
       <div id="pvFirma"></div>
@@ -6787,11 +6850,11 @@ function pintarDisparos(){
       <div class="dsp-c">
         <label for="dsp-v${i}">Disparo <span class="u">${esc(u)}</span></label>
         <input class="inp mono" id="dsp-v${i}" inputmode="decimal" value="${esc(t.v||'')}"
-          placeholder="—" oninput="psvDisparo(${i},'v',this.value)"></div>
+          oninput="psvDisparo(${i},'v',this.value)"></div>
       <div class="dsp-c">
         <label for="dsp-p${i}">Cierre <span class="u">${esc(u)}</span></label>
         <input class="inp mono bloq" id="dsp-p${i}" value="${esc(t.pc||'')}" readonly tabindex="-1"
-          title="Sale solo de la presión de ajuste requerida" placeholder="—"></div>
+          title="Sale solo de la presión de ajuste requerida"></div>
       <div class="dsp-foto">
         ${fotosDisparo(t).map((d,j)=>`<span class="dsp-una">
             <img src="${d}" alt="Foto ${j+1} de la prueba ${i+1}"
@@ -6805,8 +6868,8 @@ function pintarDisparos(){
           <span>${fotosDisparo(t).length?'Otra':'Foto'}</span></label>
         <input id="dspF${i}" type="file" accept="image/*" capture="environment" multiple style="display:none"
           onchange="psvFotoDisparo(this.files,${i});this.value=''"></div>
-      <input class="inp dsp-nota" value="${esc(t.nota||'')}" placeholder="Nota de este disparo"
-        oninput="psvDisparo(${i},'nota',this.value)" aria-label="Nota del test ${i+1}">
+      <input class="inp dsp-nota" value="${esc(t.nota||'')}" title="Opcional: qué pasó en este disparo"
+        oninput="psvDisparo(${i},'nota',this.value)" aria-label="Nota de la prueba ${i+1}">
       <button class="icon-btn dsp-del" onclick="psvQuitarDisparo(${i})"
         aria-label="Quitar el test ${i+1}" ${l.length<=3?'disabled title="El formato pide tres como mínimo"':''}>
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -6879,7 +6942,10 @@ function pintarPSVPie(){
      único botón de la aplicación que no tiene vuelta atrás. */
   const orden=ORDEN_ACTIVA?ORDENES.find(x=>x.id===ORDEN_ACTIVA):ordenAbiertaDe(PSV_TMP.act);
   const hermanas=orden?lineasDe(orden).length:1;
-  p.innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
+  /* «Cancelar» pasa por el aviso: quien lo pulsa por costumbre no
+     pierde una hora de trabajo, y quien quiere irse tiene «Guardar y
+     salir» ahí mismo. */
+  p.innerHTML=`<button class="btn quiet" onclick="cerrarModalPidiendo()">Cancelar</button>
     <span style="flex:1"></span>
     ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
     <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
@@ -7178,8 +7244,10 @@ function pintarAsFound(){
             onclick="verFotoPSV('llego',${i})" title="Tócala para verla en grande">
           <span class="af-lupa">tocar para ampliar</span>
           <button class="dsp-x" onclick="event.stopPropagation();psvBorrarAsFound(${i})" aria-label="Quitar esta foto">×</button></div>
-        <input class="inp af-nota" value="${esc(f.n||'')}" placeholder="Qué se ve — p. ej. manómetro al abrir"
-          oninput="psvNotaAsFound(${i},this.value)" aria-label="Descripción de la foto ${i+1}"></div>`).join('')}
+        <input class="inp af-nota ${String(f.n||'').trim()?'':'falta-sutil'}" value="${esc(f.n||'')}"
+          title="Qué se ve en la foto — p. ej. manómetro al abrir, precinto roto"
+          oninput="psvNotaAsFound(${i},this.value);this.classList.toggle('falta-sutil',!this.value.trim())"
+          aria-label="Descripción de la foto ${i+1}"></div>`).join('')}
       <label class="af-mas" for="afFoto">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
         <b>${fs.length?'Otra foto':'Tomar la foto'}</b>
@@ -11691,7 +11759,7 @@ function renderHomeCliente(){
 function faltaParaFinalizar(o){
   if(!o) return {listo:false, falta:[]};
   if(o.et==='final') return {listo:true, falta:[]};
-  if(o.et==='oc')    return {listo:false, falta:['Ingresarla a taller — todavía no llegó la válvula']};
+  if(o.et==='oc')    return {listo:false, falta:['Pasarla a mantenimiento — todavía no llegó la válvula']};
 
   /* En mantenimiento: aquí sí se mira el trabajo. */
   const falta=[];
@@ -11716,8 +11784,10 @@ function faltaParaFinalizar(o){
   }else if(!c.verdict){
     falta.push('Cerrar la calibración con su resultado');
   }
-  if(!falta.length) falta.push('Nada: se puede registrar y finalizar');
-  return {listo:falta[0].startsWith('Nada'), falta};
+  /* El estado no puede depender de que el primer texto empiece por una
+     palabra concreta: si falta algo, la lista lo dice; si no, está
+     lista. Punto. */
+  return {listo:!falta.length, falta};
 }
 
 /* ── Panel del taller ────────────────────────────────────────
