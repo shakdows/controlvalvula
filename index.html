@@ -7718,7 +7718,9 @@ function psvDocumento(id){
      los lados, y una apaisada recortada. Sin alto fijo y con
      width:auto cada una ocupa lo suyo: ni se recorta, ni se estira,
      ni sobra fondo. */
-  .disp-c img{max-width:100%;max-height:80px;width:auto;height:auto;object-fit:contain;
+  /* 80 px dejaba una foto vertical en un sello de correos. La tarjeta
+     ocupa un tercio de la hoja: que la foto la aproveche. */
+  .disp-c img{max-width:100%;max-height:230px;width:auto;height:auto;object-fit:contain;
     border-radius:4px;margin-top:5px;border:1px solid #edeff1;display:inline-block}
   .disp-c{text-align:center}
   .disp-c .disp-h,.disp-c small,.disp-c .nota{text-align:left}
@@ -7737,7 +7739,7 @@ function psvDocumento(id){
     color:#5b6470;padding:9px 0 3px}
   .fpar-f td{width:50%;padding:0 5px 9px 0;vertical-align:top;page-break-inside:avoid}
   .fpar-f .fc-l{display:block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8a929c;margin-bottom:2px}
-  .fpar-f img{max-width:100%;max-height:120px;width:auto;height:auto;object-fit:contain;
+  .fpar-f img{max-width:100%;max-height:170px;width:auto;height:auto;object-fit:contain;
     border-radius:2px;border:1px solid #e4e7ea;display:inline-block}
   .fpar-f td{text-align:center}
   .fpar-f .fc-sin{height:60px;border:1px dashed #cfd4d9;border-radius:2px;display:flex;
@@ -7749,7 +7751,7 @@ function psvDocumento(id){
   .grafc{border:1px solid #e4e7ea;border-radius:7px;padding:6px 10px 2px;margin-top:8px;
     page-break-inside:avoid;background:#fff}
   .grafc h4{margin:0;font-size:8.2px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c;font-weight:600}
-  .psv-graf{display:block;max-width:470px;margin:2px auto 4px}
+  .psv-graf{display:block;width:100%;max-width:100%;margin:2px auto 4px}
   /* Cada anexo empieza en hoja nueva. El certificado se firma en la
      primera y no lo empuja ninguna foto. */
   .anexo{page-break-before:always;break-before:page;padding-top:4mm}
@@ -7768,7 +7770,7 @@ function psvDocumento(id){
   /* En el anexo la foto manda: entera, sin recortar y sin estirar. El
      alto lo pone ella; lo único que se le impone es no pasarse de la
      hoja. */
-  .anexo-g img{max-width:100%;max-height:105mm;width:auto;height:auto;object-fit:contain;
+  .anexo-g img{max-width:100%;max-height:125mm;width:auto;height:auto;object-fit:contain;
     display:inline-block;vertical-align:top}
   .anexo-g figcaption{font-size:9px;color:#101418;padding-top:5px;font-weight:600;text-align:left}
   .anexo-g .pz{display:block;font-size:9.5px;font-weight:700;color:#16306b;
@@ -7779,7 +7781,7 @@ function psvDocumento(id){
   .par-i>div{text-align:center}
   .par-i .fc-l{display:block;text-align:left;font-size:8px;letter-spacing:.08em;
     text-transform:uppercase;color:#8a929c;margin-bottom:3px}
-  .par-i img{max-height:80mm}
+  .par-i img{max-height:95mm}
   .anexo-p{page-break-inside:avoid;break-inside:avoid;margin-bottom:10px}
   .anexo-p h3{font-size:10px;margin:8px 0 0;color:#101418}
   @page{size:A4;margin:11mm}
