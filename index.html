@@ -7705,7 +7705,15 @@ function psvDocumento(id){
   h3.fh{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6470;margin:9px 0 4px;page-break-after:avoid}
   /* Los disparos, uno por tarjeta, con su foto: lo mismo que ve el
      técnico en pantalla. */
+  /* Sin fotos, las tres pruebas caben en fila y se leen de un vistazo.
+     Con fotos no: un tercio de hoja deja la imagen del tamaño de un
+     sello. Entonces se pone una prueba por línea y la foto ocupa el
+     ancho que necesita. */
   .disp{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:5px}
+  .disp.confoto{grid-template-columns:1fr;gap:9px}
+  .disp.confoto .disp-c{display:grid;grid-template-columns:145px 1fr;gap:12px;align-items:start;text-align:left}
+  .disp.confoto .disp-c .fotos{grid-column:2;grid-row:1 / span 4;text-align:center}
+  .disp.confoto .disp-c img{max-height:95mm;max-width:100%;margin-top:0}
   .disp-c{border:1px solid #e4e7ea;border-radius:7px;padding:7px 9px;page-break-inside:avoid;
     border-left:3px solid #cfd4d9}
   .disp-c.ok{border-left-color:#1a7f52} .disp-c.no{border-left-color:#c0392b}
@@ -7772,6 +7780,9 @@ function psvDocumento(id){
      hoja. */
   .anexo-g img{max-width:100%;max-height:125mm;width:auto;height:auto;object-fit:contain;
     display:inline-block;vertical-align:top}
+  /* Una sola foto en el grupo: la hoja entera para ella. */
+  .anexo-g.ancha{grid-template-columns:1fr}
+  .anexo-g.ancha img{max-height:165mm}
   .anexo-g figcaption{font-size:9px;color:#101418;padding-top:5px;font-weight:600;text-align:left}
   .anexo-g .pz{display:block;font-size:9.5px;font-weight:700;color:#16306b;
     padding-bottom:5px;text-align:left;border-bottom:1px solid #edeff1;margin-bottom:6px}
@@ -7838,14 +7849,16 @@ function psvDocumento(id){
        que el certificado se pueda auditar sin llamar a nadie. */
     const l=disparosDe(c);
     const lim=v.estado!=='incompleto'?v.limite:null;
-    return `<div class="disp">${l.map((t,i)=>{
+    const conFoto=l.some(t=>(Array.isArray(t.fotos)&&t.fotos.length)||t.foto);
+    return `<div class="disp ${conFoto?'confoto':''}">${l.map((t,i)=>{
       const val=num(t.v), hay=isFinite(val)&&val>0;
       const dentro=hay&&lim!=null?Math.abs(val-v.set)<=lim+1e-9:null;
       return `<div class="disp-c ${dentro===null?'':dentro?'ok':'no'}">
         <div class="disp-h"><b>Prueba ${i+1}</b><i>${hay?n2(val):'—'}</i></div>
         <small>${esc(u)}${t.pc?` · cierre ${esc(t.pc)}`:''}${hay&&v.set?` · ${((val-v.set)/v.set*100)>0?'+':''}${n2((val-v.set)/v.set*100)} %`:''}</small>
-        ${(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[]))
-          .map((d,j)=>`<img src="${d}" alt="Foto ${j+1} del test ${i+1}">`).join('')}
+        ${(()=>{const fs=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[]));
+          return fs.length?`<div class="fotos">${fs.map((d,j)=>
+            `<img src="${d}" alt="Foto ${j+1} de la prueba ${i+1}">`).join('')}</div>`:''})()}
         ${t.nota?`<div class="nota">${esc(t.nota)}</div>`:''}
       </div>`}).join('')}</div>
     ${v.estado!=='incompleto'?`<table class="res" style="margin-top:7px">
@@ -7907,7 +7920,7 @@ function psvDocumento(id){
 
     if(fll.length)anexos.push(`${cab(anexos.length+1,'CÓMO LLEGÓ LA VÁLVULA','estado en que la mandó el cliente')}
       ${c.recep?`<table><tr><th style="width:28%">OBSERVACIÓN</th><td>${esc(c.recep)}</td></tr></table>`:''}
-      <div class="anexo-g">${fll.map(f=>`<figure><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
+      <div class="anexo-g ${fll.length===1?'ancha':''}">${fll.map(f=>`<figure><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
         <figcaption>${esc(f.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>`);
 
     anexos.push(`${cab(anexos.length+1,'DESARME · ANTES Y DESPUÉS','pieza por pieza')}
@@ -7923,7 +7936,7 @@ function psvDocumento(id){
     if(disp.length)anexos.push(`${cab(anexos.length+1,'PRUEBAS DE DISPARO','cada prueba con sus fotos')}
       ${disp.map(d=>`<div class="anexo-p"><h3>Prueba ${d.i+1}${d.v?` · disparó a ${esc(d.v)} ${esc(u)}`:''}${
         d.nota?` — ${esc(d.nota)}`:''}</h3>
-        <div class="anexo-g">${d.fs.map((src,j)=>`<figure><img src="${src}" alt="Prueba ${d.i+1} foto ${j+1}">
+        <div class="anexo-g ${d.fs.length===1?'ancha':''}">${d.fs.map((src,j)=>`<figure><img src="${src}" alt="Prueba ${d.i+1} foto ${j+1}">
           <figcaption>Prueba ${d.i+1} · foto ${j+1}</figcaption></figure>`).join('')}</div></div>`).join('')}`);
 
     return anexos.map(x=>`<section class="anexo">${x}</section>`).join('');
