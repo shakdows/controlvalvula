@@ -4687,7 +4687,7 @@ ${ETIQUETA_CSS}
 @media print{.barra{display:none}}
 @page{size:A4;margin:6mm}
 </style></head><body>${trozos.join('')}${BARRA_IMPRIMIR}</body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),350);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
   registrar('Etiqueta',`${trozos.length} etiquetas impresas`);
 }
 /* El mismo CSS en pantalla y en el papel: si se escribiera dos veces,
@@ -5675,7 +5675,7 @@ function imprimirCot(id){
      <div class="g"><span>Total</span><b>${usd(tot)}</b></div></div>
    ${c.nota?`<div class="nota">${esc(c.nota)}</div>`:''}
    </body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 
 /* ============================================================
@@ -5980,7 +5980,7 @@ function imprimirPlan(){
    <div class="pie">La frecuencia sale de la criticidad de cada válvula y la calibración se ancla a la fecha ya programada
      en la ficha del equipo. Los importes son referenciales y no constituyen una oferta en firme.</div>
    </body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 
 /* ── Valvulario ──────────────────────────────────────────────
@@ -6054,7 +6054,7 @@ function valvulario(cliId){
      Documento generado desde el parque instalado registrado en el portal; refleja el estado al ${fPE(hoyS)}.</div>
    <div class="firma"><div>Por Adolphus S.A. — nombre, cargo y fecha</div><div>Por ${esc(c.n)} — nombre, cargo y fecha</div></div>
    </body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 
 /* ============================================================
@@ -7586,9 +7586,40 @@ function verPSV(id){
    otra pestaña. En una tablet no hay Ctrl+P, así que el botón tiene
    que estar en la propia hoja; y tiene que desaparecer al imprimir
    para no acabar en el papel. */
-const BARRA_IMPRIMIR=`<div class="barra">
+/* Imprimir con las fotos a medio cargar sale un PDF con los huecos en
+   blanco: el navegador imprime lo que hay dibujado en ese momento, y
+   una foto de dos megas en base64 tarda en decodificarse aunque no
+   viaje por la red. Se espera a que TODAS estén listas —con un tope,
+   para no quedarse colgado si alguna viene rota— y entonces se llama a
+   imprimir. Es la causa de que el PDF saliera sin imágenes. */
+const ESPERAR_FOTOS=`<script>
+window.fotosListas=function(){
+  var im=[].slice.call(document.images);
+  var faltan=im.filter(function(x){return !x.complete||!x.naturalWidth});
+  if(!faltan.length)return Promise.resolve();
+  return Promise.race([
+    Promise.all(faltan.map(function(x){return new Promise(function(ok){
+      x.addEventListener('load',ok,{once:true});
+      x.addEventListener('error',ok,{once:true});
+    })})),
+    new Promise(function(ok){setTimeout(ok,8000)})
+  ]);
+};
+window.imprimirCuandoEsteTodo=function(){
+  var b=document.querySelector('.barra .p');
+  if(b){b.disabled=true;b.textContent='Preparando las fotos…'}
+  window.fotosListas().then(function(){
+    if(b){b.disabled=false;b.innerHTML=window.__btnHtml||'Imprimir o guardar PDF'}
+    setTimeout(function(){window.print()},120);
+  });
+};
+document.addEventListener('DOMContentLoaded',function(){
+  var b=document.querySelector('.barra .p'); if(b)window.__btnHtml=b.innerHTML;
+});
+<\/script>`;
+const BARRA_IMPRIMIR=ESPERAR_FOTOS+`<div class="barra">
   <button onclick="window.close()">Cerrar</button>
-  <button class="p" onclick="window.print()">
+  <button class="p" onclick="imprimirCuandoEsteTodo()">
     <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
     Imprimir o guardar PDF</button>
 </div>`;
@@ -7706,6 +7737,22 @@ function psvDocumento(id){
     page-break-inside:avoid;background:#fff}
   .grafc h4{margin:0;font-size:8.2px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c;font-weight:600}
   .psv-graf{display:block;max-width:470px;margin:2px auto 4px}
+  /* Cada anexo empieza en hoja nueva. El certificado se firma en la
+     primera y no lo empuja ninguna foto. */
+  .anexo{page-break-before:always;break-before:page;padding-top:4mm}
+  .anexo-h{border-bottom:1.5px solid #16306b;padding-bottom:5px;margin-bottom:9px}
+  .anexo-h span{font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:#5b6470;font-weight:700}
+  .anexo-h h2{border:0;padding:0;margin:1px 0 2px}
+  .anexo-h p{margin:0;font-size:9px;color:#5b6470}
+  .anexo-g{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
+  .anexo-g.dos{grid-template-columns:1fr}
+  .anexo-g figure{margin:0;border:1px solid #d7dbe0;border-radius:3px;padding:5px;page-break-inside:avoid;break-inside:avoid}
+  .anexo-g img{width:100%;max-height:74mm;object-fit:contain;display:block;background:#f4f6f8}
+  .anexo-g figcaption{font-size:9px;color:#101418;padding-top:4px;font-weight:600}
+  .anexo-g .pz{display:block;font-size:9.5px;font-weight:700;color:#16306b;padding-bottom:4px}
+  .par-i{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .anexo-p{page-break-inside:avoid;break-inside:avoid;margin-bottom:10px}
+  .anexo-p h3{font-size:10px;margin:8px 0 0;color:#101418}
   @page{size:A4;margin:11mm}
   </style></head><body>
   <div class="cab">
@@ -7789,38 +7836,6 @@ function psvDocumento(id){
   <div class="grafc"><h4>Los disparos frente a la banda admisible</h4>${psvGrafica(v,660)}</div>`:''}
 
   ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
-  ${(()=>{
-    /* Las fotos salen EMPAREJADAS: antes a la izquierda, después a la
-       derecha, en la misma fila y con su pieza y qué se le hizo. Es lo
-       que hace que el par pruebe algo — dos montones sueltos no.
-       La sección sale SIEMPRE: si falta, el certificado tiene que
-       decirlo, no callárselo. */
-    const pares=paresFoto(c).filter(p=>p.a||p.d);
-    /* La foto de cómo llegó abre el registro: es el estado en que el
-       cliente mandó la válvula, y va antes que ninguna pieza. */
-    /* Todas las fotos de la llegada, no sólo la primera: se tomaron
-       una por una y con su descripción, y el informe es donde sirven. */
-    const fll=Array.isArray(c.fotosLlego)&&c.fotosLlego.length
-      ? c.fotosLlego : (c.fotoAsFound?[{d:c.fotoAsFound,n:'Prueba inicial'}]:[]);
-    const llego=fll.length?`<h2>CÓMO LLEGÓ</h2>
-      <table class="fpar">
-        ${(()=>{const fs=[];for(let i=0;i<fll.length;i+=2)fs.push(fll.slice(i,i+2));
-          return fs.map(par=>`<tr class="fpar-f">${par.map((f,j)=>
-            `<td><span class="fc-l">${esc(f.n||'Cómo llegó')}</span><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}"></td>`
-          ).join('')}${par.length===1?'<td></td>':''}</tr>`).join('')})()}
-        <tr class="fpar-f"><td colspan="2"><span class="fc-l">Observación</span>
-          <div style="font-size:9.5px;padding:2px 0">${esc(c.recep||'—')}</div></td></tr>
-      </table>`:'';
-    if(!pares.length)return llego+`<h2>REGISTRO FOTOGRÁFICO · ANTES Y DESPUÉS</h2>
-      <table><tr><td>No se registraron fotos del desarme para esta válvula.</td></tr></table>`;
-    const celda=(src,lbl,i)=>`<td><span class="fc-l">${lbl}</span>${
-      src?`<img src="${src}" alt="${lbl} de la comparación ${i+1}">`:'<div class="fc-sin">sin foto</div>'}</td>`;
-    return llego+`<h2>REGISTRO FOTOGRÁFICO · ANTES Y DESPUÉS</h2>
-      <table class="fpar">${pares.map((p,i)=>`
-        <tr class="fpar-t"><th colspan="2">${p.nota?esc(p.nota):`Pieza ${i+1}`}${p.accion?' — '+esc(p.accion):''}</th></tr>
-        <tr class="fpar-f">${celda(p.a,'Antes',i)}${celda(p.d,'Después',i)}</tr>`).join('')}</table>`;
-  })()}
-
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
   <div class="quien">
     <div><span>Encargado del mantenimiento</span><b>${esc(c.respNombre||'—')}</b></div>
@@ -7840,6 +7855,48 @@ function psvDocumento(id){
           <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
           <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
   </div>
+
+  ${(()=>{
+    /* ── LOS ANEXOS ─────────────────────────────────────────
+       El certificado es UNA hoja: identificación, patrón, resultados,
+       conclusiones y firmas. Es lo que se firma y lo que se archiva.
+       Las fotos van detrás, completas y agrupadas por tipo — cómo
+       llegó, el desarme, las pruebas—, cada anexo en su propia hoja.
+       Antes iban intercaladas en medio del documento y empujaban las
+       firmas a la segunda página: el papel que se firma no puede
+       depender de cuántas fotos se tomaron ese día. */
+    const fll=Array.isArray(c.fotosLlego)&&c.fotosLlego.length
+      ? c.fotosLlego : (c.fotoAsFound?[{d:c.fotoAsFound,n:'Prueba inicial'}]:[]);
+    const pares=paresFoto(c).filter(p=>p.a||p.d);
+    const disp=disparosDe(c).map((t,i)=>({i,fs:(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[])),nota:t.nota,v:t.v}))
+                            .filter(x=>x.fs.length);
+    const anexos=[];
+    const cab=(n,tit,sub)=>`<div class="anexo-h"><span>Anexo ${n}</span><h2>${tit}</h2>
+      <p>${sub} · ${esc(a.tag||a.ser||'')} · certificado ${esc(c.cert||'—')}</p></div>`;
+
+    if(fll.length)anexos.push(`${cab(anexos.length+1,'CÓMO LLEGÓ LA VÁLVULA','estado en que la mandó el cliente')}
+      ${c.recep?`<table><tr><th style="width:28%">OBSERVACIÓN</th><td>${esc(c.recep)}</td></tr></table>`:''}
+      <div class="anexo-g">${fll.map(f=>`<figure><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
+        <figcaption>${esc(f.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>`);
+
+    anexos.push(`${cab(anexos.length+1,'DESARME · ANTES Y DESPUÉS','pieza por pieza')}
+      ${pares.length
+        ? `<div class="anexo-g dos">${pares.map((pz,i)=>`<figure class="par">
+            <span class="pz">${pz.nota?esc(pz.nota):`Pieza ${i+1}`}${pz.accion?' — '+esc(pz.accion):''}</span>
+            <div class="par-i">
+              <div><span class="fc-l">Antes</span>${pz.a?`<img src="${pz.a}" alt="Antes">`:'<div class="fc-sin">sin foto</div>'}</div>
+              <div><span class="fc-l">Después</span>${pz.d?`<img src="${pz.d}" alt="Después">`:'<div class="fc-sin">sin foto</div>'}</div>
+            </div></figure>`).join('')}</div>`
+        : '<table><tr><td>No se registraron fotos del desarme para esta válvula.</td></tr></table>'}`);
+
+    if(disp.length)anexos.push(`${cab(anexos.length+1,'PRUEBAS DE DISPARO','cada prueba con sus fotos')}
+      ${disp.map(d=>`<div class="anexo-p"><h3>Prueba ${d.i+1}${d.v?` · disparó a ${esc(d.v)} ${esc(u)}`:''}${
+        d.nota?` — ${esc(d.nota)}`:''}</h3>
+        <div class="anexo-g">${d.fs.map((src,j)=>`<figure><img src="${src}" alt="Prueba ${d.i+1} foto ${j+1}">
+          <figcaption>Prueba ${d.i+1} · foto ${j+1}</figcaption></figure>`).join('')}</div></div>`).join('')}`);
+
+    return anexos.map(x=>`<section class="anexo">${x}</section>`).join('');
+  })()}
 
   <div class="pie"><span>AXAD-088 · Versión 2</span>
     <span>Adolphus S.A. · Control de fluidos · Lima</span>
@@ -8033,7 +8090,7 @@ function fichaParaCliente(actId){
 function fichaClientePDF(id){
   const d=fichaClienteDoc(id); if(!d)return;
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(d.html); w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+  w.document.write(d.html); w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 function fichaClienteWord(id){
   const d=fichaClienteDoc(id); if(!d)return;
@@ -8087,7 +8144,8 @@ function imprimirCertificadosOrden(idOrden,modo){
     + cuerpo + '</body></html>';
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(html); w.document.close(); w.focus(); setTimeout(()=>w.print(),380);
+  w.document.write(html); w.document.close(); w.focus();
+  imprimirCuandoCarguen(w);
   toast(`${docs.length} certificados en un solo documento`);
 }
 
@@ -8095,8 +8153,23 @@ function imprimirPSV(id){
   const d=psvDocumento(id); if(!d)return false;
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return false}
   w.document.write(d.html);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),320);
+  w.document.close(); w.focus();
+  imprimirCuandoCarguen(w);
   return true;
+}
+/* Espera a que la ventana tenga sus fotos dibujadas y entonces imprime.
+   Sin esto el PDF salía con los recuadros vacíos. */
+function imprimirCuandoCarguen(w){
+  const t0=Date.now();
+  const listas=()=>{
+    try{ return [...w.document.images].every(i=>i.complete&&(i.naturalWidth>0||i.src.startsWith('data:image/svg'))) }
+    catch(e){ return true }
+  };
+  const mirar=()=>{
+    if(listas()||Date.now()-t0>8000){ try{w.print()}catch(e){} return }
+    setTimeout(mirar,120);
+  };
+  setTimeout(mirar,150);
 }
 function psvWord(id){
   const d=psvDocumento(id); if(!d)return;
@@ -8545,7 +8618,7 @@ function imprimirSNC(id){
    <div class="sub">${esc(cli(r.cli).n)}${a?' · '+esc(a.tag):''} · abierto el ${r.f} por ${esc(r.por)} · Adolphus S.A.</div>
    <ol>${campos.map(([t,v])=>`<li><div><b>${esc(t)}</b><p${v?'':' class="vacio"'}>${v?esc(v):'Pendiente'}</p></div></li>`).join('')}</ol>
    ${BARRA_IMPRIMIR}</body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),260);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 
 function renderReq(){
@@ -9069,7 +9142,7 @@ function informePDF(id){
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>Informe OC ${esc(p.oc)}</title><style>${INFORME_CSS}</style></head><body>${informeHTML(id)}</body></html>`);
-  w.document.close(); w.focus(); setTimeout(()=>w.print(),300);
+  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
 }
 /* Word abre sin problema un HTML con extensión .doc. Es lo que hace
    media industria y evita cargar una librería de 500 KB para generar
