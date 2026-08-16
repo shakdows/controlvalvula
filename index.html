@@ -825,6 +825,17 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .hero-copy h2{font-size:clamp(21px,3.1vh,30px);line-height:1.14;font-weight:700;letter-spacing:-.02em;max-width:18ch;margin:0 auto;color:#fff}
 .hero-copy p{font-size:clamp(12.5px,1.6vh,14.5px);line-height:1.55;color:oklch(1 0 0 /.88);margin:clamp(8px,1.5vh,14px) auto 0;max-width:52ch}
 .hero-meta{display:flex;gap:clamp(20px,3.4vw,34px);margin-top:clamp(14px,2.6vh,26px);justify-content:center}
+/* El botón que abre el acceso en celular y tablet. En computadora no
+   pinta nada: las dos mitades ya están una al lado de la otra. */
+.hero-entrar{display:none;width:min(96%,420px);height:52px;border:0;border-radius:var(--r-2);
+  cursor:pointer;font:600 15.5px/1 inherit;color:oklch(0.30 0.06 240);background:#fff;
+  align-items:center;justify-content:center;gap:9px;flex:0 0 auto;
+  box-shadow:0 12px 30px oklch(0 0 0 /.32);transition:transform var(--fast) var(--ease)}
+.hero-entrar:active{transform:scale(.985)}
+.cover-volver{display:none;align-items:center;gap:6px;background:none;border:0;cursor:pointer;
+  font:600 13px/1 inherit;color:var(--ink-3);padding:6px 0;margin-bottom:6px}
+.cover-volver svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hero-entrar svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 /* En pantallas bajas se recorta lo accesorio para que la portada nunca
    quede cortada: primero las cifras, luego el párrafo. */
 @media(max-height:760px){.hero-meta{display:none}}
@@ -1259,9 +1270,32 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cat-avisos{padding:var(--sp-3) var(--sp-4) 0;display:flex;flex-direction:column;gap:8px}
 .cat-avisos:empty{display:none}
 
+/* ── LA PORTADA EN CELULAR Y TABLET ──────────────────────────
+   En computadora las dos mitades caben juntas: presentación a la
+   izquierda, acceso a la derecha. En una pantalla angosta no caben,
+   y antes se resolvía escondiendo la presentación —el video, la
+   marca y todo— para dejar sólo el formulario.
+   Ahora se ven las dos, pero una detrás de otra: primero la
+   presentación a pantalla completa con su botón «Entrar», y al
+   pulsarlo, el acceso. */
 @media(max-width:820px){
   .cover{grid-template-columns:1fr}
-  .cover-hero{display:none}
+  .cover-hero{display:flex}
+  .cover-panel{display:none}
+  .cover.paso2 .cover-hero{display:none}
+  .cover.paso2 .cover-panel{display:flex}
+  .hero-entrar{display:flex}
+  .cover.paso2 .cover-volver{display:flex}
+  /* La presentación tiene que poder desplazarse si no cabe entera:
+     con justify-content:center y desbordamiento, lo de arriba queda
+     fuera de alcance. Los márgenes automáticos centran igual y sí
+     dejan llegar al principio. */
+  .cover-hero{justify-content:flex-start;overflow-y:auto;overscroll-behavior:contain;
+    padding-top:max(18px,env(safe-area-inset-top));
+    padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  .cover-hero>.hero-brand{margin-top:auto}
+  .cover-hero>.hero-entrar{margin-bottom:auto}
+  .hero-video{max-height:min(38vh,320px)}
 }
 
 /* ============================================================
@@ -2086,12 +2120,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   #tip{max-width:calc(100vw - 24px)}
 
   /* ── ACCESO ─────────────────────────────────────────────────
-     Sin el panel azul de la izquierda, el logo se queda con toda la
-     pantalla y el formulario cae por debajo del pliegue. Aquí la
-     marca se achica a lo justo para identificar, y lo primero que
-     se ve es el campo del correo. */
-  .cover{grid-template-columns:1fr}
-  .cover-hero{display:none}
+     El acceso llega después de la presentación (ver arriba). Ya sin
+     el panel azul al lado, la marca se achica a lo justo para
+     identificar y lo primero que se ve es el campo del correo. */
   .cover-panel{padding:22px 18px 34px}
   .cover-card .logo-full{width:104px;margin:0 auto 14px}
   .cover-card h1{font-size:21px}
@@ -2135,6 +2166,34 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   .pl-leg{flex-wrap:wrap}
   .pl-leg>div:first-of-type{flex:1 0 100%}
   .pl-leg-n{text-align:left;min-width:0}
+}
+
+/* ── HISTORIAL DE CERTIFICADOS ───────────────────────────────
+   Una tarjeta por válvula con su expediente debajo. La cabecera
+   tiene que leerse de un vistazo aunque la tabla sea larga: tag
+   grande, cuántos certificados lleva y cómo salió el último. */
+.hst-l{display:grid;gap:var(--sp-3);margin-top:var(--sp-4)}
+.hst{border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
+.hst-h{display:flex;align-items:center;gap:var(--sp-3);padding:12px 14px;
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.hst-id{flex:1;min-width:0}
+.hst-id b{display:block;font-size:14px;letter-spacing:-.01em}
+.hst-id span{display:block;font-size:11.5px;color:var(--ink-3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hst-n{text-align:right;flex:0 0 auto}
+.hst-n b{display:block;font-size:17px;font-weight:700;letter-spacing:-.02em;font-family:'IBM Plex Mono'}
+.hst-n span{font-size:10.5px;color:var(--ink-3)}
+.hst-t{width:100%}
+.hst-t td,.hst-t th{white-space:nowrap}
+.hst-t tr{cursor:default}
+.hst-acc{text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.hst-vacio{padding:14px;font-size:12.5px;color:var(--ink-3);margin:0}
+@media(max-width:760px){
+  .hst-h{flex-wrap:wrap}
+  .hst-id{flex:1 0 100%}
+  /* La tabla se desplaza sola en vez de aplastar las columnas: en un
+     celular, «Rechazado» partido en dos líneas no se lee. */
+  .hst>.hst-t{display:block;overflow-x:auto}
 }
 
 
@@ -2629,9 +2688,17 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div><b>100%</b><span>Trazabilidad por serie</span></div>
       </div>
     </div>
+    <!-- En celular y tablet la presentación ocupa la pantalla entera y
+         este botón es el que abre el acceso. En computadora no aparece:
+         ahí las dos mitades ya se ven a la vez. -->
+    <button class="hero-entrar" id="heroEntrar" onclick="abrirAcceso()">Entrar
+      <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
   </div>
   <div class="cover-panel">
     <div class="cover-card" id="authCard">
+      <!-- Sólo en celular y tablet: devuelve a la presentación. -->
+      <button class="cover-volver" onclick="cerrarAcceso()">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>Volver</button>
       <div class="logo-full" data-logo-full></div>
       <h1 id="authTitle">Gestión de Válvulas</h1>
       <p class="lede" id="authLede">Trazabilidad por serie, calibraciones y repuestos · Adolphus</p>
@@ -2894,6 +2961,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
 
       <!-- ═══ PLAN ANUAL DE MANTENIMIENTO ═══ -->
       <section class="page" id="p-plan"><div class="view-pad" id="planView"></div></section>
+      <section class="page" id="p-hist"><div class="view-pad" id="histView"></div></section>
 
       <!-- ═══ RECLAMOS / SNC ═══ -->
       <section class="page" id="p-snc"><div class="view-pad">
@@ -3622,7 +3690,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',stk:'Stock de almacén',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',hist:'Historial de certificados',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',stk:'Stock de almacén',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 /* ============================================================
    EL BOTÓN «ATRÁS» DEL CELULAR
    ------------------------------------------------------------
@@ -3653,6 +3721,11 @@ function loQueEstaEncima(){
   if(on('drawer'))return 'drawer';
   if(on('notifPop'))return 'notif';
   if(document.getElementById('app')?.classList.contains('rail-open'))return 'menu';
+  /* En celular la portada tiene dos pasos: la presentación y el
+     acceso. «Atrás» desde el acceso vuelve a la presentación, no
+     cierra la aplicación. */
+  const cv=document.getElementById('cover');
+  if(cv&&!cv.classList.contains('gone')&&cv.classList.contains('paso2'))return 'portada';
   return '';
 }
 /* Cerrar el ensayo con «atrás» no puede costarle el trabajo a nadie:
@@ -3680,6 +3753,7 @@ function cerrarLoDeEncima(q){
   else if(q==='drawer')closeDrawer();
   else if(q==='notif')closeNotif();
   else if(q==='menu')document.getElementById('app').classList.remove('rail-open');
+  else if(q==='portada')volverALaPresentacion();
 }
 function volverA(sitio){
   PILA_QUIETA=true;
@@ -4440,7 +4514,7 @@ function confirmarBajaClientes(){
    al que se llega por dos caminos distintos se acaba usando mal.
    Al entrar por el botón de arriba, la lista se filtra igual por la
    empresa en la que estés. */
-const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
+const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['hist','Historial'],['plan','Plan anual'],['wo','Órdenes de trabajo'],['parts','Repuestos'],['req','Solicitudes'],['imp','Importar']];
 /* Las nueve secciones existen para todos, pero no todos entran a un
    cliente a hacer lo mismo. El taller entra a ver qué válvulas de esa
    empresa hay que trabajar; el comercial entra a cotizar. Enseñarle al
@@ -4448,8 +4522,8 @@ const CLI_TABS=[['assets','Válvulas'],['cal','Calibraciones'],['plan','Plan anu
    ruido hace que la que sí importa se encuentre más tarde.
    Se ordena por lo que cada uno abre primero. */
 const CLI_TABS_ROL={
-  tec:['wo','assets','cal','parts','plan'],
-  com:['req','parts','assets']
+  tec:['wo','assets','cal','hist','parts','plan'],
+  com:['req','parts','assets','hist']
 };
 function cliTabs(){
   const orden=CLI_TABS_ROL[S.rol];
@@ -4472,6 +4546,7 @@ function enterClient(id,page){
      saber por qué —lo peor de un filtro es el que no se ve—. */
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.repCli='';S.homeCli='';
   S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.fMarca='';S.cliPend=false;S.focus=0;
+  S.histQ='';
   S.picked.clear();
   const fm=$('#fMarca'); if(fm)fm.value='';
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
@@ -5893,6 +5968,115 @@ function planDe(cliId){
 }
 
 const planFoco=()=>S.cli||S.inCli||null;
+
+/* ── Historial de certificados ───────────────────────────────
+   La hoja que faltaba: TODAS las válvulas del cliente y, colgando de
+   cada una, TODOS los certificados que se le han emitido, del más
+   nuevo al más viejo. Es el expediente del parque en una pantalla.
+
+   Antes esto sólo se veía válvula por válvula, entrando a su ficha:
+   para saber cuántos trabajos llevaba un cliente había que abrir
+   veinte fichas y sumar a mano. */
+const HIST_ORDEN=(x,y)=>String(histFecha(y)).localeCompare(String(histFecha(x)));
+const histFecha=c=>c.tipo==='psv'?(c.fecha||''):((c.fin||c.ini||'').slice(0,10));
+/* Un certificado del cliente: los borradores son trabajo en curso y no
+   se le enseñan —un papel a medio llenar no es un certificado—, pero
+   el ingeniero sí tiene que verlos para retomarlos. */
+const histDe=a=>CALIBS.filter(c=>c.act===a.id)
+  .filter(c=>S.rol!=='cliente'||c.tipo!=='psv'||psvListoParaEmitir(c))
+  .sort(HIST_ORDEN);
+
+function histEstado(c){
+  if(c.tipo==='psv'){
+    const v=psvVeredicto(c);
+    if(v.estado==='incompleto'||!psvListoParaEmitir(c))return {t:'Sin terminar',c:'due',listo:false};
+    return v.estado==='aprobado'?{t:'Aprobado',c:'ok',listo:true}:{t:'Rechazado',c:'late',listo:true};
+  }
+  const ok=Math.abs(c.devAl)<=(c.tol||3);
+  return ok?{t:'Conforme',c:'ok',listo:true}:{t:'No conforme',c:'late',listo:true};
+}
+const histDoc=c=>c.tipo==='psv'?('AXAD-088'+(c.os?' · '+c.os:'')):(c.cert||'—');
+const histResp=c=>c.tipo==='psv'?(c.respNombre||''):(c.tec||'');
+
+function histBuscar(v){ S.histQ=v; renderHistorial() }
+
+function renderHistorial(){
+  const caja=$('#histView'); if(!caja) return;
+  const foco=planFoco();
+  if(!foco){
+    caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1>
+      <p>El expediente se arma por cliente: sus válvulas y todos los certificados de cada una. Entra a un cliente para verlo.</p></div></div>
+      <div class="panel"><div class="empty"><b>Elige un cliente</b>Cada historial sale del parque de esa empresa.</div></div>`;
+    return;
+  }
+  const c=cli(foco);
+  const q=(S.histQ||'').trim().toLowerCase();
+  const parque=ACTIVOS.filter(a=>a.cli===foco)
+    .sort((x,y)=>String(x.tag||'').localeCompare(String(y.tag||''),'es'));
+  const filas=parque.map(a=>({a,cs:histDe(a)}));
+  const total=filas.reduce((s,f)=>s+f.cs.length,0);
+  const conCert=filas.filter(f=>f.cs.length).length;
+  const ultimo=filas.flatMap(f=>f.cs).sort(HIST_ORDEN)[0];
+
+  const visto=q?filas.filter(({a})=>[a.tag,a.ser,a.mod,(MODELOS[a.mod]||{}).m,area(a)]
+      .some(x=>String(x||'').toLowerCase().includes(q))):filas;
+
+  if(!parque.length){
+    caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1><p>${esc(c.n)}</p></div></div>
+      <div class="panel"><div class="empty"><b>Todavía no hay válvulas registradas</b>
+        Registra el parque de ${esc(c.n)} y aquí queda el historial de cada una.</div></div>`;
+    return;
+  }
+
+  const tarjetas=visto.map(({a,cs})=>{
+    const m=MODELOS[a.mod]||{};
+    const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:'',area(a)].filter(Boolean).join(' · ');
+    const ult=cs[0]?histEstado(cs[0]):null;
+    const cuerpo=cs.length?`<table class="grid hst-t">
+      <thead><tr><th>Fecha</th><th>Documento</th><th class="num">Presión de ajuste</th>
+        <th>Resultado</th><th>Responsable</th><th></th></tr></thead>
+      <tbody>${cs.map(x=>{
+        const e=histEstado(x);
+        const set=x.tipo==='psv'?`${esc(x.setEsp||'—')} ${esc(x.und||'')}`:`${x.nom} ${esc(x.uni||'')}`;
+        const acc=x.tipo==='psv'
+          ? (e.listo
+              ? `<button class="btn sec xs" onclick="verPSV('${x.id}')">Ver</button>
+                 <button class="btn quiet xs" onclick="imprimirPSV('${x.id}')" title="Imprimir o guardar en PDF"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button>
+                 ${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="psvWord('${x.id}')" title="Descargar en Word para editarlo">Word</button>`:''}`
+              : `<button class="btn sec xs" onclick="openPSV(null,'${x.id}')">Seguir</button>`)
+          : `<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${x.id}'))">Ver</button>`;
+        return `<tr><td class="mono">${esc(fPE(histFecha(x)))}</td>
+          <td class="mono muted">${esc(histDoc(x))}</td>
+          <td class="num">${set}</td>
+          <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
+          <td>${esc(histResp(x)||'—')}</td>
+          <td class="hst-acc">${acc}</td></tr>`;
+      }).join('')}</tbody></table>`
+      :`<p class="hst-vacio">Sin certificados todavía. El primero se emite al finalizar su mantenimiento.</p>`;
+    return `<article class="hst">
+      <header class="hst-h">
+        <div class="hst-id"><b class="mono">${esc(a.tag||a.ser||'(sin tag)')}</b><span>${esc(sub)}</span></div>
+        ${ult?`<span class="tag ${ult.c}"><span class="dot"></span>${ult.t}</span>`:''}
+        <div class="hst-n"><b>${cs.length}</b><span>certificado${cs.length===1?'':'s'}</span></div>
+        <button class="btn quiet xs" onclick="openAsset('${a.id}')">Abrir la ficha</button>
+      </header>
+      ${cuerpo}</article>`;
+  }).join('');
+
+  caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1>
+      <p>${esc(c.n)} · todas sus válvulas y los certificados emitidos a cada una.</p></div>
+      <input class="inp" id="histQ" style="height:34px;max-width:250px" placeholder="Buscar por tag, serie o modelo"
+        value="${esc(S.histQ||'')}" oninput="histBuscar(this.value)" aria-label="Buscar una válvula del historial"></div>
+    <div class="stats">
+      <div class="stat" style="cursor:default"><span class="v">${parque.length}</span><span class="k">Válvulas del cliente</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${total}</span><span class="k">Certificados emitidos</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${conCert}</span><span class="k">Con historial</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${parque.length-conCert}</span><span class="k">Sin ningún certificado</span></div>
+      <div class="stat" style="cursor:default"><span class="v mono" style="font-size:17px">${esc(ultimo?fPE(histFecha(ultimo)):'—')}</span><span class="k">Último emitido</span></div>
+    </div>
+    <div class="hst-l">${visto.length?tarjetas
+      :`<div class="panel"><div class="empty"><b>Ninguna válvula coincide</b>Prueba con otro tag, serie o modelo.</div></div>`}</div>`;
+}
 
 function renderPlan(){
   const caja=$('#planView'); if(!caja) return;
@@ -13789,7 +13973,7 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderPlan();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -15333,6 +15517,35 @@ function abrirSesion(c,recordar,aviso){
   entrarAlPanel();
   toast(aviso?aviso.replace(/<[^>]+>/g,''):`Hola, ${c.n.split(' ')[0]}`);
 }
+/* ── La portada en dos pasos (celular y tablet) ──────────────
+   En una pantalla angosta la presentación y el acceso no caben lado
+   a lado: primero se ve la presentación entera —marca, video y lo
+   que hace el portal— y el botón «Entrar» abre el acceso. En
+   computadora nunca se llama a esto: las dos mitades ya se ven.  */
+function abrirAcceso(){
+  const c=$('#cover'); if(!c)return;
+  c.classList.add('paso2');
+  const v=document.getElementById('promoVid');
+  if(v){v.pause();v.muted=true;setSoundIcon(true)}   // el video no sigue sonando detrás del formulario
+  $('.cover-panel').scrollTop=0;
+  anclarHistorial();                                  // «atrás» vuelve a la presentación
+  /* No se enfoca el correo a propósito: el teclado saltando solo tapa
+     media pantalla y esconde el botón de entrar. */
+}
+/* El botón «Volver» retrocede en el historial en lugar de cambiar la
+   clase a mano: así este botón y el «atrás» del celular dejan la pila
+   exactamente igual, y no queda un paso fantasma. */
+function cerrarAcceso(){
+  const c=$('#cover'); if(!c)return;
+  try{ history.back() }catch(e){}
+  setTimeout(()=>{ if(c.classList.contains('paso2'))volverALaPresentacion() },350);
+}
+function volverALaPresentacion(){
+  const c=$('#cover'); if(!c)return;
+  c.classList.remove('paso2');
+  const v=document.getElementById('promoVid');
+  if(v){v.play().catch(()=>{})}
+}
 function entrarAlPanel(){
   const v=document.getElementById('promoVid');
   if(v){v.pause();v.muted=true;setSoundIcon(true)}
@@ -15353,7 +15566,7 @@ function logout(){
   nubeSalir();
   SES=null;try{localStorage.removeItem(LS_SES)}catch(e){}
   resetAuth();authTab('in');pintarSesionGuardada();
-  const c=$('#cover');c.style.display='';
+  const c=$('#cover');c.style.display='';c.classList.remove('paso2');   // se vuelve a la presentación
   requestAnimationFrame(()=>c.classList.remove('gone'));
   const v=document.getElementById('promoVid');
   if(v){v.muted=true;try{v.currentTime=0}catch(e){}v.play().catch(()=>{});setSoundIcon(true)}
