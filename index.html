@@ -2341,7 +2341,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 @media(max-width:560px){.eq-i{grid-template-columns:1fr 1fr 32px}}
 .psv-graf-fila{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
 .psv-graf-svg{flex:1 1 320px;min-width:0}
-.crit-lado{flex:0 0 178px;flex-direction:column;align-items:flex-start;gap:5px}
+.crit-lado{flex:0 0 190px;flex-direction:column;align-items:flex-start;gap:5px}
+.crit-lado .crit-ok{color:var(--ok)}
+.crit-lado .crit-mal{color:var(--late)}
 .crit-lado b{display:block}
 @media(max-width:640px){.crit-lado{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:center}}
 .inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
@@ -7725,9 +7727,21 @@ function verPSV(id){
 
     ${v.estado!=='incompleto'?`
     <section class="pd-b"><h5>Pruebas de disparo</h5>
-      ${psvGrafica(v)}
-      <p class="pd-pie">${esc(v.tol.txt)} · ${esc(v.tol.regla)}
-        ${b?` · blowdown ${n2(b.pct)} % (se espera ≤ ${n2(b.lim)} %)${b.dentro?' ✓':' · fuera de rango'}`:''}</p>
+      <div class="psv-graf-fila">
+        <div class="psv-graf-svg">${psvGrafica(v)}</div>
+        ${/* Contra qué se juzga, al lado del dibujo: el hueco de la
+             derecha estaba vacío y la banda admisible sin nombre. */''}
+        <div class="crit crit-lado">
+          <span>Contra qué se mide</span>
+          <b>Tolerancia ${esc(v.tol.txt)}</b>
+          <b>Rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</b>
+          <b>Requerido ${n2(v.set)} ${esc(u)}</b>
+          <b>Promedio ${n2(v.prom)} ${esc(u)}</b>
+          <b class="${Math.abs(v.desv)<=v.tol.pct?'crit-ok':'crit-mal'}">Desviación ${v.desv>0?'+':''}${n2(v.desv)} %</b>
+          ${b?`<b>Blowdown ${n2(b.pct)} %${b.dentro?' ✓':' · fuera'}</b>`:''}
+          <span class="crit-lock">${esc(v.tol.regla)}</span>
+        </div>
+      </div>
       ${v.dispersos?`<p class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
         pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</p>`:''}
     </section>`:''}
