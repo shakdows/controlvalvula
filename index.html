@@ -6929,7 +6929,7 @@ function psvNuevo(actId){
        vuelve a preguntar. Lo de la entrega —guía, ítem de la OC— sí es
        de este trabajo y arranca en blanco. */
     ...Object.fromEntries(RECEP_VALVULA.map(([k])=>[k,a[k]||''])),
-    rcSsv:'', rcGr:'', rcItOc:'', rcPernoIni:'', rcPernoFin:'',
+    rcPernoIni:'', rcPernoFin:'',
     rcVeredicto:'', rcMotivo:'', rcComent:'',
     /* Quién la recibió y qué día se probó: se apuntaron al mover la
        tarjeta a «Prueba de entrada», no se vuelven a preguntar. */
@@ -7075,12 +7075,9 @@ const RECEP_VALVULA=[
  ['rcConexion','Conexión','Bridada, roscada NPT, soldada.'],
  ['rcCdpt',    'CDPT','El código de punto del cliente, si lo maneja.']
 ];
-/* Cambian en cada recepción: son del papeleo de esta entrega. */
-const RECEP_TRABAJO=[
- ['rcSsv',  'SSV n.º','El número de la guía o del vale con el que entró la válvula.'],
- ['rcGr',   'GR CL / orden de entrega','La guía de remisión o la orden de entrega del cliente.'],
- ['rcItOc', 'Ítem de la OC del cliente','Qué número de línea es esta válvula dentro de la orden de compra.']
-];
+/* El papeleo de la entrega —SSV, guía de remisión, ítem de la OC— se
+   quitó: nadie lo llenaba. El número que sí reconoce el cliente es la
+   orden de servicio, y ésa ya sale sola en la cabecera. */
 /* Todo lo que el sistema puede responder solo. Se calcula al pintar y
    se vuelve a calcular al imprimir: nunca se guarda copiado, para que
    corregir la placa corrija también el protocolo. */
@@ -7143,11 +7140,10 @@ function bloqueRecepcion(t,a,ayuda,F){
       <span class="opc">se guarda en su ficha: la próxima vez ya sale puesto</span></h4>
     <div class="two">${RECEP_VALVULA.map(([k,l,p])=>campo(k,l,p)).join('')}</div>
 
-    <h4 class="snc-sec">Papeles de esta entrega</h4>
+    <h4 class="snc-sec">Quién la probó y cuándo</h4>
     <div class="two">
       ${F('rcRecibe','Mecánico que hizo la prueba','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
       ${F('rcFecha','Fecha en que se probó','El día en que se le dio el disparo de entrada. Va al protocolo.','date')}
-      ${RECEP_TRABAJO.map(([k,l,p])=>campo(k,l,p)).join('')}
     </div>
 
     <h4 class="snc-sec">Perno de regulación
@@ -8612,8 +8608,7 @@ function documentoRecepcion(c){
   const auto=recepAuto(c,a);
   /* La guía y la orden de entrega ya van en la cabecera: repetirlas
      abajo llenaba la rejilla con lo mismo dos veces. */
-  const man=[...RECEP_VALVULA,['rcItOc','Ítem de la OC del cliente']]
-    .map(([k,l])=>[l,c[k]!=null&&c[k]!==''?c[k]:a[k]]);
+  const man=RECEP_VALVULA.map(([k,l])=>[l,c[k]!=null&&c[k]!==''?c[k]:a[k]]);
   const todo=[...auto,...man];
   const rec=(c.firmas||[]).find(f=>f.rol==='recep');
   const vd=c.rcVeredicto;
@@ -8672,7 +8667,6 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 <h2>Identificación</h2>
 <div class="rej">
   ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
-  ${cel('SSV n.º',c.rcSsv)}${cel('GR CL / orden de entrega',c.rcGr)}
   ${todo.map(([k,v])=>cel(k,v)).join('')}
 </div>
 <h2>Perno de regulación</h2>
