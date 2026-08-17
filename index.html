@@ -7279,11 +7279,24 @@ const avanceEtapa=et=>{
   const i=ETAPAS.findIndex(e=>e[0]===et);
   return i<0?0:Math.round((i+1)*100/ETAPAS.length);
 };
-const etapaDeValvula=actId=>{
-  const o=ORDENES.filter(x=>x.act===actId).sort((p,q)=>
-    ETAPAS.findIndex(e=>e[0]===p.et)-ETAPAS.findIndex(e=>e[0]===q.et))[0];
-  return o?o.et:null;
-};
+/* En qué columna está esa válvula. Manda la orden ABIERTA más
+   avanzada: si tiene una en mantenimiento y tres finalizadas de
+   trabajos viejos, lo que se está haciendo hoy es el mantenimiento.
+   Las órdenes con una etapa que ya no existe —de versiones
+   anteriores— se ignoran: antes una de ésas se colaba primero y
+   dejaba el formulario entero a la vista. */
+function etapaDeValvula(actId){
+  const idx=o=>ETAPAS.findIndex(e=>e[0]===o.et);
+  const ls=ORDENES.filter(x=>x.act===actId&&idx(x)>=0);
+  const abiertas=ls.filter(o=>o.et!=='final');
+  const cual=(abiertas.length?abiertas:ls).sort((p,q)=>idx(q)-idx(p))[0];
+  if(cual)return cual.et;
+  /* Sin orden que mirar —un ensayo suelto—, lo dice el propio papel:
+     si la entrada ya está firmada y aceptada, lo que toca es el
+     mantenimiento. */
+  const c=recepDe(actId);
+  return c&&recepcionAcepta(c)?'mant':'ent';
+}
 function verTodosLosPasos(){
   document.querySelectorAll('#mBody .psv-sec.oculto').forEach(d=>d.classList.remove('oculto'));
   const av=$('#psvVerTodo'); if(av)av.remove();
@@ -15694,6 +15707,11 @@ async function nubeBajar(reemplazar){
     if(f.borrado){if(i>=0)a.splice(i,1); return}
     if(i>=0)a[i]=f.datos; else a.push(f.datos);
   });
+  /* Lo que baja de la nube puede venir de un equipo que todavía tiene
+     la versión anterior: una orden con una etapa que aquí ya no
+     existe se queda fuera de todas las columnas. La traducción se
+     hacía sólo al arrancar; ahora también después de cada bajada. */
+  migrarEtapas();
   return filas.length;
 }
 
