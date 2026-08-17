@@ -374,6 +374,47 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
 /* El rótulo de cada tira de válvulas: «En la casa», «Piden turno». */
 .rc-tit{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   color:var(--ink-3);align-self:center;flex:0 0 auto;margin-right:2px}
+/* ── El árbol: empresa arriba, sus servicios dentro ──────────
+   La empresa se despliega y enseña sus trabajos, uno por orden. */
+.rc-det{display:block;padding:0}
+.rc-sum{display:grid;grid-template-columns:minmax(150px,1.1fr) auto;gap:6px var(--sp-4);
+  align-items:start;padding:12px var(--sp-4) 12px 34px;cursor:pointer;position:relative;
+  list-style:none;transition:background var(--fast) var(--ease)}
+.rc-sum::-webkit-details-marker{display:none}
+.rc-sum:hover{background:var(--surface-2)}
+.rc-sum::before{content:'';position:absolute;left:15px;top:19px;width:7px;height:7px;
+  border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
+  transform:rotate(-45deg);transition:transform var(--fast) var(--ease)}
+.rc-det[open]>.rc-sum::before{transform:rotate(45deg)}
+.rc-det[open]>.rc-sum{background:var(--surface-2)}
+.rc-body{padding:4px var(--sp-4) 14px 34px;border-top:1px solid var(--line-2)}
+.rc-svs{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+/* Un servicio: código, válvulas, etapa, barra y aviso. */
+.rc-sv{display:grid;grid-template-columns:auto minmax(0,1.4fr) auto minmax(60px,90px) auto auto;
+  gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line-2);
+  border-left:3px solid var(--line);border-radius:var(--r-2);background:var(--surface);
+  cursor:pointer;transition:border-color var(--fast),background var(--fast)}
+.rc-sv:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.rc-sv.t-oc{border-left-color:var(--ink-3)} .rc-sv.t-ent{border-left-color:var(--late)}
+.rc-sv.t-mant{border-left-color:var(--due)} .rc-sv.t-cert{border-left-color:var(--sel)}
+.rc-sv.t-final{border-left-color:var(--ok)}
+.rc-sv>b.mono{font-size:11.5px;color:var(--ink-2)}
+.rc-sv-v{font-size:12.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc-sv-v small{font-weight:400;color:var(--ink-3);font-size:11px}
+.rc-sv-b{display:block;height:5px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
+.rc-sv-b i{display:block;height:100%;transition:width 620ms var(--ease-out)}
+.rc-sv-p{font-size:11.5px;font-family:'IBM Plex Mono';letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--ink-2)}
+.rc-sv-f{font-size:11px;font-weight:700;color:var(--late);white-space:nowrap}
+.rc-sv-c{font-size:11px;font-weight:600;color:var(--ok);white-space:nowrap}
+.rc-nada{font-size:12px;color:var(--ink-3);margin:10px 0}
+.rc-tab{margin-top:6px}
+.rc-tab svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+@media (max-width:760px){
+  .rc-sum{grid-template-columns:1fr}
+  .rc-sv{grid-template-columns:auto 1fr;gap:6px 9px}
+  .rc-sv-b{grid-column:1/-1}
+}
 .rc-c small{font-size:11.5px;color:var(--ink-3)}
 .rc-n{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .rc-l{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
@@ -2490,7 +2531,8 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    sitio y donde se ve sin buscarlo. */
 .pv-par-acc{height:30px;width:auto;min-width:150px;flex:0 0 auto;font-size:12px;padding:0 28px 0 9px;
   background-position:calc(100% - 12px) 13px,calc(100% - 7px) 13px}
-.pv-par-d{display:grid;grid-template-columns:1fr;gap:8px;margin-top:9px}
+.pv-par-d{display:grid;grid-template-columns:1fr 190px;gap:8px;margin-top:9px}
+@media(max-width:520px){.pv-par-d{grid-template-columns:1fr}}
 /* Un comentario por foto: el de la de antes y el de la de después. */
 .pv-hueco-n{height:30px;font-size:11.5px;margin-top:auto}
 @media(max-width:520px){
@@ -4790,8 +4832,8 @@ function verOrden(idOrAct,esActivo){
               :x.et==='oc' ? ''
               /* Recibida: lo que toca es el protocolo de entrada, una
                  por una — cada válvula se recibe por separado. */
-              :x.et==='ent' ? `<button class="btn ${recepcionAcepta(recepDe(x.act))?'quiet':'sec'} xs" onclick="closeModal();pruebaDeEntrada('${x.act}')">${
-                  recepcionAcepta(recepDe(x.act))?'Ver la entrada ✓':'Prueba de entrada'}</button>`
+              :x.et==='ent' ? `<button class="btn ${recepcionCerrada(recepDe(x.act))?'quiet':'sec'} xs" onclick="closeModal();pruebaDeEntrada('${x.act}')">${
+                  recepcionCerrada(recepDe(x.act))?'Ver la entrada ✓':'Prueba de entrada'}</button>`
               /* Terminada: el jefe entra a LEER lo que puso el taller
                  y a poner su visto bueno. Es el último paso antes del
                  certificado. */
@@ -7276,6 +7318,9 @@ function recepcionCerrada(c){
       && (c.rcVeredicto!=='rechaza'||!!String(c.rcMotivo||'').trim())
       && (c.firmas||[]).some(f=>f.rol==='recep'&&f.img);
 }
+/* Aceptada de verdad. Se sigue usando para contar y para avisar, pero
+   ya no corta el paso: una válvula rechazada recorre las mismas
+   columnas y su rechazo viaja escrito en el protocolo. */
 const recepcionAcepta=c=>recepcionCerrada(c)&&c.rcVeredicto==='acepta';
 /* El papel de entrada de una válvula: el borrador que haya, o el
    ensayo que cuelgue de su orden. Es el mismo que abre openPSV. */
@@ -7350,7 +7395,7 @@ function etapaDeValvula(actId){
      si la entrada ya está firmada y aceptada, lo que toca es el
      mantenimiento. */
   const c=recepDe(actId);
-  return c&&recepcionAcepta(c)?'mant':'ent';
+  return c&&recepcionCerrada(c)?'mant':'ent';
 }
 /* Abrir los pasos que no le tocan al técnico pide la contraseña del
    jefe. No es desconfianza: el paso 1 es contra qué se mide y el 2 es
@@ -7954,16 +7999,26 @@ function psvParBorrarFoto(i,lado){
   p[lado==='d'?'d':'a']='';
   pintarPSVFotos();
 }
-function psvParNota(i,v){
-  if(!PSV_TMP)return;
-  const p=paresFoto(PSV_TMP)[i]; if(p)p.nota=v;
-}
+
 /* Qué se le hace a la pieza: cambiarla no es lo mismo que limpiarla, y
    el cliente paga cosas distintas. Va en el informe al lado del par. */
+/* NO REPINTAR AL ESCRIBIR. Esto redibujaba el bloque entero en cada
+   tecla: se escribía a trompicones, se perdía el cursor —el campo que
+   estabas usando dejaba de existir— y, ya sin foco, la siguiente letra
+   se la comía el atajo de teclado. Pulsar la «d» de «disco» cambiaba
+   el portal a modo noche. Ahora sólo se guarda el dato; lo único que
+   se refresca es el título de la pieza, que va en la cabecera. */
 function psvParCampo(i,k,v){
   if(!PSV_TMP)return;
   const p=paresFoto(PSV_TMP)[i]; if(!p)return;
-  p[k]=v; pintarPSVFotos();
+  p[k]=v;
+}
+function psvParNota(i,v){
+  if(!PSV_TMP)return;
+  const p=paresFoto(PSV_TMP)[i]; if(!p)return;
+  p.nota=v;
+  const t=document.querySelector(`#pvFotos .pv-par:nth-of-type(${i+1}) .pv-par-h > b`);
+  if(t)t.textContent=v.trim()||`Pieza ${i+1}`;
 }
 /* El registro fotográfico tal como sale en el certificado, el PDF y el
    Word: cada pareja en su fila, antes a la izquierda y después a la
@@ -8175,17 +8230,17 @@ function pintarPSVFotos(){
         ${p.a&&p.d?'<span class="tag ok"><span class="dot"></span>completa</span>'
           :`<span class="tag due"><span class="dot"></span>falta la de ${p.a?'después':'antes'}</span>`}
         <span class="spacer" style="flex:1"></span>
-        <select class="inp pv-par-acc" onchange="psvParCampo(${i},'accion',this.value)"
-                aria-label="Qué se le hace a la pieza ${i+1}">
-          <option value="">¿Qué se le hace?</option>
-          ${ACCIONES.map(x=>`<option ${p.accion===x?'selected':''}>${x}</option>`).join('')}
-        </select>
         <button class="icon-btn" onclick="psvParQuitar(${i})" aria-label="Quitar la comparación ${i+1}">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="pv-par-g">${hueco(i,'a')}${hueco(i,'d')}</div>
       <div class="pv-par-d">
         <input class="inp" value="${esc(p.nota||'')}" placeholder="Qué pieza es — p. ej. tobera, asiento, resorte"
                oninput="psvParNota(${i},this.value)" aria-label="Pieza de la comparación ${i+1}">
+        <select class="inp" onchange="psvParCampo(${i},'accion',this.value)"
+                aria-label="Qué se le hace a la pieza ${i+1}">
+          <option value="">¿Qué se le hace?</option>
+          ${ACCIONES.map(x=>`<option ${p.accion===x?'selected':''}>${x}</option>`).join('')}
+        </select>
       </div>
     </div>`).join('')}${masFotos}</div>
     <div class="pv-par-pie">${completas} de ${pares.length} ${pares.length===1?'comparación completa':'comparaciones completas'} · sólo las completas se ven emparejadas en el certificado. Cada pieza se quita con la <b>✕</b> de su cabecera.</div>`;
@@ -8373,7 +8428,7 @@ function guardarPlaca(id){
    Los tres disparos contra la banda de tolerancia. De un vistazo
    se ve si el promedio quedó dentro y con cuánto margen — que es
    lo que el cliente mira primero. */
-function psvGrafica(v,ancho){
+function psvGrafica(v,ancho,alto){
   if(!v||v.estado==='incompleto')return '';
   /* ── EL GRÁFICO QUE VE EL CLIENTE ────────────────────────────
      Es la única página del certificado que se entiende sin ser del
@@ -8385,7 +8440,7 @@ function psvGrafica(v,ancho){
      Sigue siendo un SVG sin librerías: entra en el PDF, en el Word y
      en un celular sin señal.
      ============================================================ */
-  const W=ancho||520, H=248, L=62, R=18, T=30, B=64;
+  const W=ancho||520, H=alto||248, L=62, R=18, T=30, B=64;
   const uni=esc(v.und||'psi');
   const gw=W-L-R, gh=H-T-B;
   const margen=Math.max((v.max-v.min)*0.22, Math.abs(v.prom-v.set)*0.40, v.set*0.004);
@@ -9125,9 +9180,15 @@ li{margin-bottom:2px}
 .par-no{display:flex;align-items:center;justify-content:center;min-height:40mm;border:1px dashed #cfd4d9;
   border-radius:5px;font-size:8.4px;color:#8a929c;background:#fafbfc}
 /* Las firmas del final */
-.fir{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;page-break-inside:avoid}
-.fir .b{text-align:center}
-.fir img{max-height:40px;max-width:100%;object-fit:contain;display:block;margin:0 auto 3px}
+/* Las tres firmas a la misma altura. La rúbrica va ENCIMA de la línea,
+   dentro de un hueco de alto fijo: así el que firmó y el que todavía no
+   tienen la raya y el nombre al mismo nivel, y no queda una columna
+   colgando más abajo que las otras. */
+.fir{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;
+  align-items:end;page-break-inside:avoid}
+.fir .b{text-align:center;display:flex;flex-direction:column;justify-content:flex-end}
+.fir .sg{height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}
+.fir img{max-height:44px;max-width:100%;object-fit:contain;display:block;margin:0 auto}
 .fir .l{border-top:1px solid #1a1d21;padding-top:4px;font-size:9px}
 .fir .l b{display:block;font-size:9.8px}
 .fir .l span{color:#8a929c;font-size:8.4px}
@@ -9141,10 +9202,20 @@ li{margin-bottom:2px}
 .hoja{break-after:page;page-break-after:always}
 .hoja:last-of-type{break-after:auto;page-break-after:auto}
 @media screen{.hoja{border:0;margin:0 auto 18px;padding:13mm 12mm}}
+/* La carátula respira como la del Word: el membrete arriba, el bloque
+   del servicio a un tercio de la hoja, el cuadro de firmas abajo y el
+   pie al ras del papel. Los huecos crecen para repartir lo que sobra,
+   así la hoja nunca queda con todo apelmazado en la cabecera. */
 .caratula{display:flex;flex-direction:column;min-height:247mm}
-.caratula .port{margin-top:auto;padding:0 0 26px}
+.caratula .hueco{flex:1 1 auto}
+.caratula .hueco.a{flex-grow:2;min-height:24mm}
+.caratula .hueco.b{flex-grow:3;min-height:32mm}
+.caratula .port{margin:0;padding:0 0 26px}
+.caratula .port h1{margin:10px 0 22px}
+.caratula .port .me{margin-top:14px}
+.caratula .port .ref{margin-top:24px}
 .caratula .roles{margin-bottom:0}
-.cara-pie{margin-top:auto;padding-top:14px;font-size:8.2px;color:#8a929c;text-align:center}
+.cara-pie{padding-top:16px;font-size:8.2px;color:#8a929c;text-align:center}
 /* Ni un título al final de una hoja con su contenido en la siguiente,
    ni una tabla partida por la mitad. */
 h2{break-after:avoid;page-break-after:avoid}
@@ -9169,6 +9240,8 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   </div>
 </div>
 
+<div class="hueco a"></div>
+
 <div class="port">
   <div class="s">Servicio</div>
   <h1>Calibración de válvulas de seguridad</h1>
@@ -9177,6 +9250,8 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   <div class="ref">Referencia Adolphus · orden de servicio <b>${esc(os)}</b>${
     o.oc?` · OC del cliente <b>${esc(o.oc)}</b>`:''}</div>
 </div>
+
+<div class="hueco b"></div>
 
 <table class="roles">
   <tr><th class="c">Usuario final</th><th class="c">Cliente</th><th class="c">Orden de compra</th></tr>
@@ -9239,11 +9314,6 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 </section>
 
 <section class="hoja pliego">
-<h2>Registro fotográfico</h2>
-${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
-</section>
-
-<section class="hoja pliego">
 
 <h2>Herramientas utilizadas</h2>
 <p>${INFORME_HERRAM}</p>
@@ -9277,15 +9347,27 @@ ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
   `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
 
 <div class="fir">
-  <div class="b">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}
+  <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}</div>
     <div class="l"><b>${ejec?esc(ejec.n):'&nbsp;'}</b><span>Elaborado por · Asesor técnico</span></div></div>
-  <div class="b">${vb&&vb.img?`<img src="${vb.img}" alt="">`:''}
+  <div class="b"><div class="sg">${vb&&vb.img?`<img src="${vb.img}" alt="">`:''}</div>
     <div class="l"><b>${vb?esc(vb.n):'&nbsp;'}</b><span>Revisado por · Coordinador de servicios</span></div></div>
-  <div class="b"><div class="l"><b>&nbsp;</b><span>Aprobado por · Key Account Manager</span></div></div>
+  <div class="b"><div class="sg"></div>
+    <div class="l"><b>&nbsp;</b><span>Aprobado por · Key Account Manager</span></div></div>
 </div>
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
   de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
+</section>
+
+<!-- Las fotos, SIEMPRE al final y como anexo. El informe se lee de
+     corrido —antecedentes, actividades, conclusiones y firmas— y quien
+     quiera ver la prueba gráfica se va al anexo. Antes las fotos se
+     metían en medio y partían la lectura justo antes de las
+     conclusiones. -->
+<section class="hoja pliego anexo">
+<h2>Anexo · Registro fotográfico</h2>
+${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
+<p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — Anexo fotográfico</p>
 </section>
 ${BARRA_IMPRIMIR}
 </body></html>`};
@@ -9346,8 +9428,12 @@ function psvDocumento(id){
   /* Los colores tienen que imprimirse: sin esto el navegador quita los
      fondos y la cabecera azul y el veredicto salen en blanco. */
   *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body{font:10.5px/1.5 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;
-    padding:12mm 11mm;background:#fff}
+  /* Todo el certificado en UNA hoja: es el papel que se firma y se
+     archiva. Por eso el cuerpo va compacto —tipografía de 9,5, celdas
+     estrechas y márgenes cortos— y las fotos, que son las que crecían
+     sin control, viven en los anexos del final. */
+  body{font:9.5px/1.42 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;
+    padding:7mm;background:#fff}
   /* En una tablet no hay Ctrl+P. La barra va fija, encima del papel, y
      desaparece al imprimir para no salir en la hoja. */
   .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;
@@ -9359,28 +9445,28 @@ function psvDocumento(id){
   .barra button.p{background:#102d69;border-color:#102d69;color:#fff}
   .barra button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
   @media print{.barra{display:none}}
-  .cab{display:flex;align-items:center;gap:13px;padding:10px 13px;margin-bottom:12px;
+  .cab{display:flex;align-items:center;gap:11px;padding:7px 11px;margin-bottom:8px;
     border-radius:8px;background:#102d69;color:#fff}
   .cab .mk{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-radius:6px;padding:5px 6px}
   .cab .ti{flex:1;min-width:0}
-  .cab h1{font-size:12.5px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff;line-height:1.32}
+  .cab h1{font-size:11.5px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff;line-height:1.32}
   .cab .emp{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:#a8bce0;margin-bottom:3px}
   .cab .cod{flex:0 0 auto;text-align:right;font-size:8px;color:#a8bce0;line-height:1.6}
   .cab .cod b{display:block;font-size:10.5px;color:#fff;letter-spacing:.05em}
-  .ident{display:flex;gap:0;flex-wrap:wrap;margin-bottom:13px;border:1px solid #e4e7ea;
+  .ident{display:flex;gap:0;flex-wrap:wrap;margin-bottom:9px;border:1px solid #e4e7ea;
     border-radius:7px;overflow:hidden}
-  .ident span{flex:1;min-width:110px;padding:7px 11px;font-size:8.5px;letter-spacing:.07em;
+  .ident span{flex:1;min-width:110px;padding:5px 9px;font-size:8.2px;letter-spacing:.07em;
     text-transform:uppercase;color:#8a929c;border-right:1px solid #edeff1}
   .ident span:last-child{border-right:0}
-  .ident b{display:block;font-size:11px;color:#1a1d21;font-weight:600;letter-spacing:0;text-transform:none;margin-top:1px}
-  h2{font-size:8.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5b6470;
-     margin:14px 0 5px;padding:0}
+  .ident b{display:block;font-size:10px;color:#1a1d21;font-weight:600;letter-spacing:0;text-transform:none;margin-top:1px}
+  h2{font-size:8.2px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5b6470;
+     margin:8px 0 3px;padding:0}
   /* Cada tabla es una tarjeta */
-  table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.5px;
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:8.8px;
     border:1px solid #e4e7ea;border-radius:7px;overflow:hidden;background:#fff}
-  th,td{padding:5px 9px;text-align:left;vertical-align:top;border-bottom:1px solid #f1f3f5}
+  th,td{padding:2px 7px;text-align:left;vertical-align:top;border-bottom:1px solid #f1f3f5}
   tr:last-child th,tr:last-child td{border-bottom:0}
-  th{font-weight:500;width:36%;color:#8a929c;font-size:8.8px;letter-spacing:.03em;text-transform:uppercase}
+  th{font-weight:500;width:36%;color:#8a929c;font-size:8.2px;letter-spacing:.03em;text-transform:uppercase}
   td{color:#1a1d21;font-weight:500}
   .par{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
   .res th{width:28%}
@@ -9389,32 +9475,37 @@ function psvDocumento(id){
   .res tfoot th{background:#f7f9fb;font-weight:700;color:#1a1d21;width:auto}
   .res td{font-variant-numeric:tabular-nums}
   /* El veredicto: la pieza que se mira primero */
-  .vd{margin:14px 0 6px;padding:11px 14px;display:flex;align-items:center;gap:12px;
-    font-size:15.5px;font-weight:800;letter-spacing:.1em;border-radius:8px}
+  .vd{margin:8px 0 4px;padding:8px 12px;display:flex;align-items:center;gap:12px;
+    font-size:14px;font-weight:800;letter-spacing:.1em;border-radius:8px}
   .vd small{margin-left:auto;font-size:9px;font-weight:500;letter-spacing:.02em;text-transform:none}
   .vd.aprobado{color:#126b44;background:#e8f5ee;border:1px solid #a9d8be}
   .vd.rechazado{color:#a8291c;background:#fceceb;border:1px solid #eab5b0}
-  .firmas{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:20px}
-  .fb{font-size:9px;display:flex;flex-direction:column;min-height:82px}
+  /* El cuadro de firmas no se parte: o entra entero en la hoja o pasa
+     a la siguiente. Partido dejaba los rótulos «Ejecutado por» al pie
+     de una página y las rúbricas al principio de la otra, y parecía
+     que estaban dos veces. */
+  .firmas{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;margin-top:11px;
+    page-break-inside:avoid;break-inside:avoid}
+  .fb{font-size:8.8px;display:flex;flex-direction:column;min-height:58px;
+    page-break-inside:avoid;break-inside:avoid}
   .fb .rol{font-weight:700;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#8a929c;margin-bottom:2px}
-  .fb img{max-height:46px;max-width:150px;object-fit:contain;object-position:left bottom;margin-top:auto}
+  .fb img{max-height:32px;max-width:135px;object-fit:contain;object-position:left bottom;margin-top:auto}
   .fb .ln{border-top:1px solid #1a1d21;margin-top:3px;padding-top:3px}
   .fb b{font-size:9.5px;display:block}
   .fb span.cg{color:#5b6470}
   h3.fh{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6470;margin:9px 0 4px;page-break-after:avoid}
-  /* Los disparos, uno por tarjeta, con su foto: lo mismo que ve el
-     técnico en pantalla. */
-  /* Sin fotos, las tres pruebas caben en fila y se leen de un vistazo.
-     Con fotos no: un tercio de hoja deja la imagen del tamaño de un
-     sello. Entonces se pone una prueba por línea y la foto ocupa el
-     ancho que necesita. */
+  /* Los disparos, uno por tarjeta: sólo el número, la desviación y un
+     aviso de cuántas fotos hay. Las fotos NO se repiten aquí: van
+     enteras en el anexo del final. Antes salían dos veces —pequeñas
+     en la tarjeta y grandes en el anexo— y empujaban el certificado
+     a tres hojas. */
   .disp{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:5px}
-  .disp.confoto{grid-template-columns:1fr;gap:9px}
-  .disp.confoto .disp-c{display:grid;grid-template-columns:145px 1fr;gap:12px;align-items:start;text-align:left}
-  .disp.confoto .disp-c .fotos{grid-column:2;grid-row:1 / span 4;text-align:center}
-  .disp.confoto .disp-c img{max-height:95mm;max-width:100%;margin-top:0}
-  .disp-c{border:1px solid #e4e7ea;border-radius:7px;padding:7px 9px;page-break-inside:avoid;
+  .disp-c{border:1px solid #e4e7ea;border-radius:7px;padding:5px 8px;page-break-inside:avoid;
     border-left:3px solid #cfd4d9}
+  .ref-anx{font-size:8px;color:#9aa2ab;margin-top:3px;letter-spacing:.03em}
+  /* El procedimiento es el mismo en todos los certificados: va en
+     letra pequeña, que lo importante de la hoja son los resultados. */
+  .proc td{font-size:8.2px;line-height:1.4;color:#5b6470}
   .disp-c.ok{border-left-color:#1a7f52} .disp-c.no{border-left-color:#c0392b}
   .disp-h{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
   .disp-h b{font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c}
@@ -9434,10 +9525,10 @@ function psvDocumento(id){
   .disp-c .nota{font-size:8.5px;color:#5b6470;margin-top:3px}
   /* Quién lo hizo */
   .quien{display:flex;gap:0;border:1px solid #e4e7ea;border-radius:7px;overflow:hidden;margin-top:5px}
-  .quien div{flex:1;padding:7px 11px;border-right:1px solid #edeff1}
+  .quien div{flex:1;padding:5px 9px;border-right:1px solid #edeff1}
   .quien div:last-child{border-right:0}
   .quien span{display:block;font-size:8.2px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c}
-  .quien b{font-size:10.5px}
+  .quien b{font-size:9.6px}
   /* Antes y después, uno al lado del otro. En tabla y no en grid
      porque Word no entiende grid y desarmaba el par al abrirlo. */
   .fpar{margin-top:6px;border-collapse:collapse;width:100%}
@@ -9451,11 +9542,11 @@ function psvDocumento(id){
   .fpar-f td{text-align:center}
   .fpar-f .fc-sin{height:60px;border:1px dashed #cfd4d9;border-radius:2px;display:flex;
     align-items:center;justify-content:center;font-size:8.5px;color:#9aa2ab}
-  .pie{margin-top:20px;padding-top:7px;border-top:1px solid #e4e7ea;display:flex;
+  .pie{margin-top:10px;padding-top:6px;border-top:1px solid #e4e7ea;display:flex;
     justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
   /* la gráfica es una ilustración, no la página: se le pone techo o
      se estira hasta comerse un folio entero */
-  .grafc{border:1px solid #e4e7ea;border-radius:7px;padding:6px 10px 2px;margin-top:8px;
+  .grafc{border:1px solid #e4e7ea;border-radius:7px;padding:5px 9px 2px;margin-top:6px;
     page-break-inside:avoid;background:#fff}
   .grafc h4{margin:0;font-size:8.2px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c;font-weight:600}
   .psv-graf{display:block;width:100%;max-width:100%;margin:2px auto 4px}
@@ -9494,7 +9585,7 @@ function psvDocumento(id){
   .par-i img{max-height:95mm}
   .anexo-p{page-break-inside:avoid;break-inside:avoid;margin-bottom:10px}
   .anexo-p h3{font-size:10px;margin:8px 0 0;color:#101418}
-  @page{size:A4;margin:11mm}
+  @page{size:A4;margin:7mm}
   </style></head><body>
   <section class="pliego">
   <div class="cab">
@@ -9510,13 +9601,16 @@ function psvDocumento(id){
     ${c.os?`<span>Orden de servicio<b>${esc(c.os)}</b></span>`:''}
   </div>
 
+  ${/* Empresa, TAG y fecha ya están arriba en la barra de identificación:
+       repetirlos aquí gastaba tres renglones de la hoja. Y las dos
+       columnas van parejas —seis y seis— en vez de tres y nueve, que
+       dejaba media columna en blanco y estiraba el bloque. */''}
   <div class="par">
     <div><h2>DATOS DEL SERVICIO</h2><table>
-      ${fila('EMPRESA',e.n)}${c.contacto?fila('CONTACTO',c.contacto):''}${fila('TAG N°',a.tag)}
+      ${c.contacto?fila('CONTACTO',c.contacto):''}
       ${fila('UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}${fila('FLUIDO DE OPERACIÓN',a.fluido)}
-      ${fila('FECHA',fPE(c.fecha))}</table></div>
+      ${fila('MARCA',m.m)}${fila('MODELO',a.mod)}${fila('N° SERIE',a.ser)}</table></div>
     <div><h2>INFORMACIÓN DE LA VÁLVULA</h2><table>
-      ${fila('MARCA',m.m)}${fila('MODELO',a.mod)}${fila('N° SERIE',a.ser)}
       ${fila('ORIFICIO / LIFT',a.orif)}${fila('SET PRESS REQUERIDO',(c.setEsp?c.setEsp+' '+u:''))}
       ${fila('Ø ENT × Ø SALIDA',a.medida)}${fila('CAPACIDAD',a.capac)}
       ${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA DE PRUEBA',a.norma)}</table></div>
@@ -9530,54 +9624,62 @@ function psvDocumento(id){
     ${fila('FECHA DE CALIBRACIÓN',fPE(c.patFecha))}${fila('CERTIF. NUM',c.patCert)}</table></div>
 
   <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
-  <table><tr><td>
+  <table class="proc"><tr><td>
     <b>1.</b> Presión de disparo (seteo) inicial — <i>as found</i>, para verificar el punto de disparo actual de la válvula.<br>
     <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.<br>
     <b>3.</b> Verificación final del punto de disparo. Se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.
   </td></tr></table>
 
   <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
-  <table class="res">
-    ${fila('PRESIÓN DE DISPARO INICIAL (AS FOUND)',c.asFound?c.asFound+' '+u:'')}
-    ${c.recep?fila('CÓMO LLEGÓ',c.recep):''}
-    ${fila('SET PRESS ESPERADO',(c.setEsp?c.setEsp+' '+u:''))}
-    ${fila('FLUIDO DE PRUEBA',c.fluidoP)}
-  </table>
+  ${/* Tira horizontal: los tres datos de cabecera en un renglón. Y el
+       «cómo llegó» no se repite aquí —está entero en el anexo 1, con
+       sus fotos—, que era lo que empujaba las firmas a la segunda
+       hoja. */''}
+  <div class="quien">
+    <div><span>Disparo inicial · as found</span><b>${c.asFound?esc(c.asFound+' '+u):'—'}</b></div>
+    <div><span>Set press esperado</span><b>${c.setEsp?esc(c.setEsp+' '+u):'—'}</b></div>
+    <div><span>Fluido de prueba</span><b>${esc(c.fluidoP||'—')}</b></div>
+  </div>
   ${(()=>{
     /* Un disparo por tarjeta, con SU foto. Es lo mismo que el técnico
        llenó en el banco, y la foto al lado del número es lo que hace
        que el certificado se pueda auditar sin llamar a nadie. */
     const l=disparosDe(c);
     const lim=v.estado!=='incompleto'?v.limite:null;
-    const conFoto=l.some(t=>(Array.isArray(t.fotos)&&t.fotos.length)||t.foto);
-    return `<div class="disp ${conFoto?'confoto':''}">${l.map((t,i)=>{
+    /* Cuatro disparos caben en una fila; con tres columnas fijas el
+       cuarto abría un renglón entero y empujaba las firmas fuera de
+       la hoja. */
+    return `<div class="disp" style="grid-template-columns:repeat(${l.length===4?4:3},1fr)">${l.map((t,i)=>{
       const val=num(t.v), hay=isFinite(val)&&val>0;
       const dentro=hay&&lim!=null?Math.abs(val-v.set)<=lim+1e-9:null;
       return `<div class="disp-c ${dentro===null?'':dentro?'ok':'no'}">
         <div class="disp-h"><b>Prueba ${i+1}</b><i>${hay?n2(val):'—'}</i></div>
         <small>${esc(u)}${t.pc?` · cierre ${esc(t.pc)}`:''}${hay&&v.set?` · ${((val-v.set)/v.set*100)>0?'+':''}${n2((val-v.set)/v.set*100)} %`:''}</small>
-        ${(()=>{const fs=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[]));
-          return fs.length?`<div class="fotos">${fs.map((d,j)=>
-            `<img src="${d}" alt="Foto ${j+1} de la prueba ${i+1}">`).join('')}</div>`:''})()}
+        ${(()=>{const n=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos.length:(t.foto?1:0));
+          return n?`<div class="ref-anx">${n} foto${n===1?'':'s'} en el anexo</div>`:''})()}
         ${t.nota?`<div class="nota">${esc(t.nota)}</div>`:''}
       </div>`}).join('')}</div>
-    ${v.estado!=='incompleto'?`<table class="res" style="margin-top:7px">
-      <tr><th>PROMEDIO DE LOS ${l.filter(t=>num(t.v)>0).length} DISPAROS</th>
-        <th>${n2(v.prom)} ${esc(u)}</th><th>Cierre ${b?n2(b.prom)+' '+u:'—'}</th>
-        <th>Desviación ${v.desv>0?'+':''}${n2(v.desv)} %</th></tr></table>`:''}`;
+    ${/* El promedio y la desviación salen en la franja de la gráfica;
+         aquí sólo el dato que allí no cabe: la presión de recierre. */''}
+    ${v.estado!=='incompleto'&&b?`<table class="res" style="margin-top:6px">
+      <tr><th>PRESIÓN DE RECIERRE (CIERRE)</th><th>${n2(b.prom)} ${esc(u)}</th></tr></table>`:''}`;
   })()}
   ${v.estado!=='incompleto'?`
-  <table class="res" style="margin-top:4px">
-    ${fila('TOLERANCIA APLICADA',v.tol.txt+'  ('+v.tol.regla+')')}
-    ${fila('RANGO ADMISIBLE',n2(v.min)+' – '+n2(v.max)+' '+u)}
-    ${fila('BLOWDOWN SEGÚN API',b?n2(b.pct)+`  %  (se espera ≤ ${n2(b.lim)} %)`
-            :(cierreEsAutomatico(c)?'no se midió la presión de recierre':'—'))}
-    ${v.dispersos?fila('OBSERVACIÓN DE REPETIBILIDAD',
-      v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.'):''}
-  </table>
+  <div class="quien" style="margin-top:4px">
+    <div><span>Tolerancia aplicada</span><b>${esc(v.tol.txt)} · ${esc(v.tol.regla)}</b></div>
+    <div><span>Rango admisible</span><b>${n2(v.min)} – ${n2(v.max)} ${esc(u)}</b></div>
+    <div><span>Blowdown según API</span><b>${b?n2(b.pct)+' % (se espera ≤ '+n2(b.lim)+' %)'
+            :(cierreEsAutomatico(c)?'no se midió el recierre':'—')}</b></div>
+  </div>
+  ${v.dispersos?`<table class="res" style="margin-top:4px">${fila('OBSERVACIÓN DE REPETIBILIDAD',
+      v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.')}</table>`:''}
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}
     <small>${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
-  <div class="grafc"><h4>Los disparos frente a la banda admisible</h4>${psvGrafica(v,660)}</div>`:''}
+  <div class="grafc"><h4>Los disparos frente a la banda admisible</h4>${
+    /* Más ancha de lienzo = más baja de papel: con el mismo dibujo, un
+       viewBox apaisado ocupa la mitad de alto y deja sitio para las
+       conclusiones y las firmas en la misma hoja. */
+    psvGrafica(v,1020,180)}</div>`:''}
 
   ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
@@ -10748,20 +10850,25 @@ function tomarOrden(id,grupo){
      de siempre en el mostrador: se recibe, se le da un disparo tal
      como vino, se firma y ahí se decide si pasa o se devuelve. Sin ese
      papel no hay con qué comparar el trabajo después. */
-  const sinPapel=ls.filter(x=>!recepcionAcepta(recepDe(x.act)));
+  /* Lo que hace falta es que la prueba de entrada esté HECHA y
+     firmada, no que salga aceptada. Una válvula rechazada en la
+     recepción sigue el mismo camino —taller, verificación final y
+     certificado—: el rechazo queda escrito en su protocolo y en el
+     certificado, que es donde tiene que estar. Cortarle el paso aquí
+     dejaba el trabajo sin papeles y a la válvula en tierra de nadie. */
+  const sinPapel=ls.filter(x=>!recepcionCerrada(recepDe(x.act)));
   if(sinPapel.length){
     const v=ACTIVOS.find(x=>x.id===sinPapel[0].act)||{};
-    const r=recepDe(sinPapel[0].act);
-    if(r&&r.rcVeredicto==='rechaza'&&recepcionCerrada(r)){
-      toast(`${v.tag||v.ser||'Esa válvula'} está RECHAZADA en la recepción — se devuelve, no entra al taller`);
-      return;
-    }
     toast(sinPapel.length>1
       ? `Faltan ${sinPapel.length} pruebas de entrada · empieza por ${v.tag||v.ser||''}`
       : `Primero la prueba de entrada de ${v.tag||v.ser||''}`);
     pruebaDeEntrada(sinPapel[0].act);
     return;
   }
+  const rechazadas=ls.filter(x=>{const r=recepDe(x.act);return r&&r.rcVeredicto==='rechaza'});
+  if(rechazadas.length)
+    setTimeout(()=>toast(`Ojo: ${rechazadas.length} válvula${rechazadas.length===1?'':'s'} llegó${
+      rechazadas.length===1?'':'aron'} RECHAZADA${rechazadas.length===1?'':'S'} en la recepción — consta en su protocolo`),900);
   TOMAR_GRUPO=ls.length>1?grupo:null;
   let yo=''; try{yo=localStorage.getItem(LS_ING)||''}catch(e){}
   $('#mTitle').textContent=`Tomar ${o.mat||o.n}`;
@@ -11490,14 +11597,14 @@ function renderWO(){
                como vino, la firma de quien la recibe y decidir si pasa
                o se devuelve—. Hasta ahí no hay taller. */
             const est=ls.map(x=>recepDe(x.act));
-            const listas=est.filter(recepcionAcepta).length;
+            const listas=est.filter(recepcionCerrada).length;
             const rech=est.filter(c=>c&&c.rcVeredicto==='rechaza'&&recepcionCerrada(c)).length;
             const todo=listas===ls.length;
             return `<button class="btn ${todo?'quiet':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`pruebaDeEntrada('${o.act}')`}">
               <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
               Prueba de entrada${ls.length>1?` · ${listas} de ${ls.length}`:todo?' ✓':''}</button>
-              ${rech?`<div class="wo-tarde"><span class="dot"></span>${rech} rechazada${rech===1?'':'s'} en recepción — se devuelve${rech===1?'':'n'}</div>`:''}`;
+              ${rech?`<div class="wo-tarde"><span class="dot"></span>${rech} llegó${rech===1?'':'aron'} rechazada${rech===1?'':'s'} — consta en el protocolo</div>`:''}`;
           })():''}
           ${G.et==='mant'&&S.rol!=='cliente'?(()=>{
             /* En mantenimiento se desarma, se fotografía y se ensaya:
@@ -11543,9 +11650,7 @@ function renderWO(){
             }
             if(G.et==='ent'){
               const est=ls.map(x=>recepDe(x.act));
-              if(est.every(c=>c&&c.rcVeredicto==='rechaza'&&recepcionCerrada(c)))
-                return `<div class="wo-parte">Se devuelve al cliente · no entra al taller</div>`;
-              const listas=est.filter(recepcionAcepta).length;
+              const listas=est.filter(recepcionCerrada).length;
               if(listas<ls.length)
                 return `<div class="wo-parte">Falta${ls.length-listas===1?'':'n'} ${ls.length-listas} prueba${ls.length-listas===1?'':'s'} de entrada para pasar al taller</div>`;
             }
@@ -13192,6 +13297,10 @@ document.addEventListener('keydown',e=>{
     closeDrawer();closeNotif();closeQuote();return;
   }
   if(escribiendo)return;
+  /* Y con un formulario abierto tampoco: si el foco se pierde por lo
+     que sea, la siguiente letra no puede irse a cambiar el tema o a
+     saltar de página con el trabajo a medio escribir. */
+  if($('#modal').classList.contains('on')||$('#drawer').classList.contains('on'))return;
   if(gPend){
     gPend=false;
     const m={p:'home',a:'assets',c:'cal',o:'wo',s:'req',r:'rep',i:'imp',u:'users'}[e.key.toLowerCase()];
@@ -13655,8 +13764,6 @@ function faltaParaFinalizar(o){
   if(o.et==='oc')    return {listo:false, falta:['Recibir la válvula — todavía no ha llegado']};
   if(o.et==='ent'){
     const r=recepDe(o.act);
-    if(recepcionCerrada(r)&&r.rcVeredicto==='rechaza')
-      return {listo:false, falta:['Rechazada en la recepción — se devuelve al cliente']};
     const f=[];
     if(!String((r||{}).asFound||'').trim()) f.push('El disparo de entrada (as-found, TEST 1)');
     if(!(r||{}).rcVeredicto)                f.push('Decir si la válvula se acepta o se rechaza');
@@ -13878,6 +13985,12 @@ function renderHomeTaller(){
    desde «Tu trabajo», que está justo arriba y sí tiene acciones.
    Aparece igual para gerencia, taller y comercial: los tres necesitan
    saber qué empresa está peor, aunque cada uno actúe distinto. */
+/* Qué empresas quedan abiertas en el árbol. Se recuerda mientras dure
+   la sesión: el jefe abre la suya y sigue abierta al refrescar. */
+function arbolCliente(id,abierta){
+  S.arbol=S.arbol||{};
+  S.arbol[id]=abierta;
+}
 function resumenClientesHtml(){
   const ESTADOS=[
     {k:'vencido',   t:'Vencidas',        c:'late'},
@@ -13911,29 +14024,70 @@ function resumenClientesHtml(){
   /* Cada etapa con su color, en el orden en que avanza el trabajo. */
   const TONO={oc:'ink-3', ent:'late', mant:'due', cert:'sel', final:'ok'};
 
-  const cuerpo=filas.map(f=>{
-    /* Las válvulas que están AQUÍ, con la etapa en que están y quién
-       las tiene. Esto es «el avance de los trabajadores»: quién tiene
-       qué y desde cuándo. Van primero las que llevan más tiempo
-       paradas. */
-    const enCasa=f.ords.filter(o=>o.et!=='final')
-      .sort((x,y)=>String(entroEn(x)).localeCompare(String(entroEn(y))))
-      .slice(0,6)
-      .map(o=>{
-        const a=ACTIVOS.find(z=>z.id===o.act)||{};
-        const et=ETAPAS.find(e=>e[0]===o.et)||['',o.et];
-        const quien=o.et==='mant'?o.ing : o.et==='ent'?o.recibe : '';
-        const desde=o.et==='mant'?o.tomada : o.et==='ent'?o.recibida : entroEn(o);
-        return `<span class="rc-v" title="${esc(a.tag||a.ser||'sin tag')} · ${esc(et[1])}${
-            quien?' · '+esc(quien):''}${desde?' · desde '+fPE(desde):''}">
-          <i class="dot" style="color:var(--${TONO[o.et]||'ink-3'})"></i>
-          <b>${esc(a.tag||a.ser||'sin tag')}</b><small>${esc(et[1].toLowerCase())}${
-            quien?' · '+esc(quien):''}</small></span>`;
-      }).join('');
-    const restoCasa=f.ords.filter(o=>o.et!=='final').length-Math.min(6,f.ords.filter(o=>o.et!=='final').length);
+  /* ── Empresa → servicios, desplegable ──────────────────────
+     Una línea por empresa y, dentro, una por SERVICIO —cada orden con
+     su código MAT, sus válvulas, la etapa en que está y su avance—.
+     Antes esto era una tira de válvulas sueltas: se veía qué había en
+     la casa, pero no de qué trabajo era ninguna, y para saberlo había
+     que entrar al tablero. Ahora se abre la empresa y ahí está.
+     Lo que espera una firma sale marcado y manda en el orden. */
+  const firmado=c=>!!c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img);
+  const esperaFirma=o=>o.et==='cert'&&!firmado(recepDe(o.act));
+  const soyJefe=S.rol==='admin';
 
-    /* Y lo que no está en la casa pero pide turno: vencidas, por
-       vencer y fichas a medias. */
+  const cuerpo=filas.map(f=>{
+    /* Los servicios: un renglón por grupo de orden, no por válvula.
+       Una OC de seis válvulas es UN trabajo con un número, que es como
+       lo nombra el cliente cuando llama. */
+    const grupos=[];
+    f.ords.forEach(o=>{
+      const g=grupoDe(o);
+      let x=grupos.find(y=>y.g===g);
+      if(!x){x={g,ls:[]};grupos.push(x)}
+      x.ls.push(o);
+    });
+    const orden=k=>ETAPAS.findIndex(e=>e[0]===k);
+    grupos.forEach(x=>{
+      x.et=etapaGrupo(x.ls);
+      x.o=x.ls.find(y=>y.et===x.et)||x.ls[0];
+      x.fin=x.ls.filter(y=>y.et==='final').length;
+      x.pct=Math.round(x.ls.reduce((n,y)=>n+avanceEtapa(y.et),0)/x.ls.length);
+      x.firma=x.ls.filter(esperaFirma).length;
+      x.cerrable=x.ls.some(y=>y.et==='cert'&&firmado(recepDe(y.act)));
+      x.abierto=x.ls.some(y=>y.et!=='final');
+    });
+    /* Primero lo que espera firma, después lo que está por cerrar, y
+       lo terminado al fondo. */
+    grupos.sort((a,b)=>(b.firma?1:0)-(a.firma?1:0)||(b.cerrable?1:0)-(a.cerrable?1:0)
+      ||(b.abierto?1:0)-(a.abierto?1:0)||orden(a.et)-orden(b.et));
+
+    const servicios=grupos.slice(0,8).map(x=>{
+      const a=ACTIVOS.find(z=>z.id===x.o.act)||{};
+      const tags=x.ls.map(y=>{const v=ACTIVOS.find(z=>z.id===y.act);return v?(v.tag||v.ser||'—'):'—'});
+      const et=ETAPAS.find(e=>e[0]===x.et)||['',x.et];
+      const quien=x.o.ing||x.o.recibe||'';
+      const ir=x.firma&&soyJefe ? `revisarYFirmar('${x.ls.find(esperaFirma).id}')`
+                                : `verOrden('${x.o.id}')`;
+      return `<div class="rc-sv t-${x.et}" role="link" tabindex="0"
+          onclick="event.stopPropagation();${ir}"
+          onkeydown="if(event.key==='Enter'){event.stopPropagation();${ir}}"
+          title="${esc(x.o.mat||x.o.n)} · ${esc(et[1])}${quien?' · '+esc(quien):''}">
+        <b class="mono">${esc(x.o.mat||x.o.n)}</b>
+        <span class="rc-sv-v">${x.ls.length>1
+          ? `${x.ls.length} válvulas <small>${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</small>`
+          : `${esc(tags[0]||'—')} <small>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}</small>`}</span>
+        <span class="tag ${x.et==='final'?'ok':x.et==='cert'?'sel':x.et==='ent'?'late':x.et==='mant'?'due':''}">
+          <i class="dot"></i>${esc(et[1])}</span>
+        <span class="rc-sv-b"><i style="width:${x.pct}%;background:var(--${
+          x.et==='final'?'ok':x.et==='cert'?'sel':'due'})"></i></span>
+        <b class="rc-sv-p">${x.pct}%</b>
+        ${x.firma?`<span class="rc-sv-f">${soyJefe?'Necesita tu firma':'Esperando al jefe'}</span>`
+          :x.cerrable?'<span class="rc-sv-c">Lista para cerrar</span>':''}
+      </div>`;
+    }).join('');
+    const masSv=grupos.length>8?`<div class="rc-mas">y ${grupos.length-8} trabajos más</div>`:'';
+
+    /* Lo que todavía no tiene orden pero pide turno. */
     const fuera=[...f.por.vencido,...f.por.porvencer,...f.por.incompleto]
       .filter(a=>!f.ords.some(o=>o.act===a.id&&o.et!=='final'))
       .slice(0,4)
@@ -13953,33 +14107,40 @@ function resumenClientesHtml(){
         ${trozo(f.av.fin,'ok')}${trozo(f.av.tal,'due')}${trozo(f.av.esp,'late')}</div>
       <span class="rc-pct">${f.av.pct}% <small>${f.av.fin} de ${f.av.tot}</small></span>`:'';
 
-    /* El nombre del cliente lleva a SU tablero de órdenes. Es lo que
-       se busca al mirar este bloque: ver qué se está trabajando de esa
-       empresa. Antes había que ir a Clientes, entrar, y buscar la
-       pestaña — tres clics para llegar a lo que ya se está mirando. */
-    const ir=`enterClient('${f.c.id}','wo')`;
-    return `<div class="rc-f rc-go" role="link" tabindex="0" onclick="${ir}"
-        onkeydown="if(event.key==='Enter'){${ir}}"
-        title="Ver el tablero de órdenes de ${esc(f.c.n)}">
-      <div class="rc-c">
-        <b class="rc-ir">${esc(f.c.n)}
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></b>
-        <small>${f.eq.length} válvula${f.eq.length===1?'':'s'}${f.c.fac?' · '+esc(f.c.fac):''}</small>
+    const nFirma=f.ords.filter(esperaFirma).length;
+    const abiertos=grupos.filter(x=>x.abierto).length;
+    /* Se abre sola la empresa que espera una firma: es lo que hay que
+       mirar hoy. Las demás, cerradas, y el que las abre manda. */
+    const abierta=S.arbol?S.arbol[f.c.id]!==false:!!nFirma;
+    return `<details class="rc-f rc-det" ${abierta||nFirma?'open':''}
+        ontoggle="arbolCliente('${f.c.id}',this.open)">
+      <summary class="rc-sum">
+        <div class="rc-c">
+          <b class="rc-ir">${esc(f.c.n)}</b>
+          <small>${f.eq.length} válvula${f.eq.length===1?'':'s'} · ${abiertos} trabajo${abiertos===1?'':'s'} abierto${abiertos===1?'':'s'}${
+            f.c.fac?' · '+esc(f.c.fac):''}</small>
+        </div>
+        <div class="rc-n">
+          ${nFirma?`<span class="tag late"><i class="dot"></i>${nFirma} espera${nFirma===1?'':'n'} tu firma</span>`:''}
+          ${ETAPAS.filter(([k])=>f.eta[k].length).map(([k,l])=>
+            `<span class="tag ${k==='final'?'ok':k==='ent'?'late':k==='cert'?'sel':k==='mant'?'due':''}"
+               title="${esc(l)}"><i class="dot"></i>${f.eta[k].length} ${esc(l.toLowerCase())}</span>`).join('')}
+          ${ESTADOS.filter(e=>e.k!=='mant'&&f.por[e.k].length).map(e=>
+            `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
+               title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')}
+          ${!f.ords.length&&!f.pend?'<span class="tag ok"><i class="dot"></i>todas al día</span>':''}
+        </div>
+        ${barra?`<div class="rc-av">${barra}</div>`:''}
+      </summary>
+      <div class="rc-body">
+        ${servicios?`<div class="rc-svs">${servicios}${masSv}</div>`
+          :'<p class="rc-nada">Esta empresa no tiene ningún trabajo abierto ni cerrado en el portal.</p>'}
+        ${fuera?`<div class="rc-l"><span class="rc-tit">Piden turno</span>${fuera}</div>`:''}
+        <button class="btn quiet xs rc-tab" onclick="event.stopPropagation();enterClient('${f.c.id}','wo')">
+          Abrir el tablero de ${esc(f.c.n)}
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </div>
-      <div class="rc-n">
-        ${ETAPAS.filter(([k])=>f.eta[k].length).map(([k,l])=>
-          `<span class="tag ${k==='final'?'ok':k==='ent'?'late':k==='mant'||k==='cert'?'due':''}"
-             title="${esc(l)}"><i class="dot"></i>${f.eta[k].length} ${esc(l.toLowerCase())}</span>`).join('')}
-        ${ESTADOS.filter(e=>e.k!=='mant'&&f.por[e.k].length).map(e=>
-          `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
-             title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')}
-        ${!f.ords.length&&!f.pend?'<span class="tag ok"><i class="dot"></i>todas al día</span>':''}
-      </div>
-      ${barra?`<div class="rc-av">${barra}</div>`:''}
-      ${enCasa?`<div class="rc-l"><span class="rc-tit">En la casa</span>${enCasa}${
-        restoCasa>0?`<span class="rc-mas">y ${restoCasa} más</span>`:''}</div>`:''}
-      ${fuera?`<div class="rc-l"><span class="rc-tit">Piden turno</span>${fuera}</div>`:''}
-    </div>`;
+    </details>`;
   }).join('');
 
   const enCasaT=filas.reduce((n,f)=>n+f.ords.filter(o=>o.et!=='final').length,0);
