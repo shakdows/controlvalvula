@@ -590,6 +590,16 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 @media(min-width:1400px){.kb{min-width:0}}
 .kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
 .kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
+/* Cada columna vale un quinto: se dice en su cabecera para que se vea
+   cuánto se ha andado sin abrir ninguna tarjeta. */
+.kb-pct{font-size:10.5px;font-weight:700;font-family:'IBM Plex Mono';letter-spacing:-.02em;
+  color:var(--ink-3);font-variant-numeric:tabular-nums;margin-left:2px}
+/* Y la misma cifra en la tarjeta, con su barra. */
+.wo-pc{display:flex;align-items:center;gap:8px;margin-top:6px}
+.wo-pc-b{flex:1;height:5px;border-radius:var(--r-pill);background:var(--surface-3);overflow:hidden}
+.wo-pc-b i{display:block;height:100%;transition:width 620ms var(--ease-out)}
+.wo-pc b{font-size:11px;font-weight:700;font-family:'IBM Plex Mono';letter-spacing:-.02em;
+  color:var(--ink-2);font-variant-numeric:tabular-nums}
 .kb-h{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:600;color:var(--ink-2)}
 .kb-h .n{margin-left:auto;font-family:'IBM Plex Mono';color:var(--ink-3);font-weight:500}
 .kb-b{padding:8px;display:flex;flex-direction:column;gap:7px;min-height:60px}
@@ -2340,6 +2350,14 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    pone todo junto. Va en secciones plegables: se abre la que
    toca y las demás no estorban. */
 .psv-secs{display:flex;flex-direction:column;gap:8px}
+/* Los pasos que no toca llenar en esta columna: no se borran —el
+   técnico puede querer mirar el patrón o a qué presión llegó— pero
+   no estorban. */
+.psv-sec.oculto{display:none}
+.psv-hay{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;
+  padding:9px 12px;border:1px dashed var(--line);border-radius:var(--r-2);
+  background:var(--surface-2);font-size:12px;color:var(--ink-3)}
+.psv-hay span{flex:1;min-width:180px}
 .psv-sec{border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
 .psv-sec>summary{padding:11px 14px;font-size:13.5px;font-weight:600;cursor:pointer;
   display:flex;align-items:center;gap:9px;list-style:none;background:var(--surface-2);
@@ -6711,7 +6729,12 @@ function psvSenalarFaltas(){
   /* Un paso plegado esconde lo que falta: se abren TODOS los que
      tengan algo pendiente, porque si no, «llevarte» a una casilla
      dentro de un bloque cerrado no lleva a ninguna parte. */
-  eles.forEach(e=>{const d=e.closest('details'); if(d)d.open=true});
+  /* Y si lo que falta está en un paso que esta columna no enseña, se
+     enseña: «llevarte» a algo escondido es no llevarte a ninguna
+     parte. */
+  eles.forEach(e=>{const d=e.closest('details');
+    if(d){d.open=true; if(d.classList.contains('oculto')){d.classList.remove('oculto');
+      const av=document.getElementById('psvVerTodo'); if(av)av.remove()}}});
   const primera=eles[0];
   if(primera){
     /* Y se sube a ella de verdad: el que hace scroll es el cuerpo del
@@ -7235,9 +7258,45 @@ function recepDe(actId){
    se hace en el mostrador, con la válvula recién bajada del camión. */
 function pruebaDeEntrada(actId){ openPSV(actId,null,'entrada') }
 
+/* ── Qué se llena en cada columna ────────────────────────────
+   El formulario tiene los seis pasos siempre, pero enseñárselos todos
+   al técnico que está en el banco es pedirle que adivine cuáles le
+   tocan. En «En mantenimiento» lo suyo es desarmar, disparar,
+   concluir y firmar: los pasos 1 y 2 ya los hizo otro y ya están
+   completos. Se pliegan y se guardan detrás de una línea; si necesita
+   mirarlos —el patrón, a qué presión llegó— los abre de un toque.  */
+const PASOS_ETAPA={
+  oc:  [1,2],
+  ent: [1,2],
+  mant:[3,4,5,6],
+  cert:[1,2,3,4,5,6],
+  final:[1,2,3,4,5,6]
+};
+/* Cada columna vale un quinto del trabajo: llegó la OC, llegó la
+   válvula, se hizo el mantenimiento, lo revisó el jefe, salió con su
+   certificado. 20, 40, 60, 80, 100. */
+const avanceEtapa=et=>{
+  const i=ETAPAS.findIndex(e=>e[0]===et);
+  return i<0?0:Math.round((i+1)*100/ETAPAS.length);
+};
+const etapaDeValvula=actId=>{
+  const o=ORDENES.filter(x=>x.act===actId).sort((p,q)=>
+    ETAPAS.findIndex(e=>e[0]===p.et)-ETAPAS.findIndex(e=>e[0]===q.et))[0];
+  return o?o.et:null;
+};
+function verTodosLosPasos(){
+  document.querySelectorAll('#mBody .psv-sec.oculto').forEach(d=>d.classList.remove('oculto'));
+  const av=$('#psvVerTodo'); if(av)av.remove();
+}
+
 function pintarPSV(){
   const t=PSV_TMP; if(!t)return;
   const a=ACTIVOS.find(x=>x.id===t.act)||{}, m=MODELOS[a.mod]||{};
+  /* La etapa en la que está esa válvula manda lo que se enseña. */
+  const etapa=etapaDeValvula(t.act);
+  const tocan=PASOS_ETAPA[etapa]||[1,2,3,4,5,6];
+  const paso=n=>tocan.includes(n)?'':' oculto';
+  const escondidos=[1,2,3,4,5,6].filter(n=>!tocan.includes(n));
   /* El texto de ejemplo dentro de la casilla se confunde con un dato ya
      escrito: se mira el formulario, se ve gris claro donde tendría que
      haber un número, y se pasa de largo creyendo que está puesto. La
@@ -7282,8 +7341,13 @@ function pintarPSV(){
         vino, se firma esa recepción y ahí se decide si entra o se
         devuelve; se abre y se fotografía lo que viene mal; se prueba;
         se concluye; y se firma. */''}
+   ${escondidos.length?`<div class="psv-hay" id="psvVerTodo">
+     <span>Los pasos ${escondidos.map(n=>n).join(' y ')} ya están hechos —
+       ${etapa==='mant'?'aquí te toca el mantenimiento':'aquí te toca lo tuyo'}.</span>
+     <button class="btn quiet xs" onclick="verTodosLosPasos()">Ver todo el formulario</button>
+   </div>`:''}
    <div class="psv-secs">
-    <details class="psv-sec" ${cabeceraMia?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(['pv-os',1]))}
+    <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(['pv-os',1]))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
       ${cabeceraMia?`
       <div class="two">
@@ -7304,12 +7368,12 @@ function pintarPSV(){
        ${bloquePatron(t)}`}
     </div></details>
 
-    <details class="psv-sec" open><summary>2 · Prueba de entrada${marca(cuenta(['pv-asFound','pv-rc','pvFirmaRec']))}
+    <details class="psv-sec${paso(2)}" ${tocan.includes(2)?'open':''}><summary>2 · Prueba de entrada${marca(cuenta(['pv-asFound','pv-rc','pvFirmaRec']))}
       <span class="psv-req">decide si entra al taller</span></summary><div class="psv-b">
       ${bloqueRecepcion(t,a,ayuda,F)}
     </div></details>
 
-    <details class="psv-sec" open><summary>3 · Desarme${marca(cuenta(['pvFotos']))}
+    <details class="psv-sec${paso(3)}" ${tocan.includes(3)?'open':''}><summary>3 · Desarme${marca(cuenta(['pvFotos']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
@@ -7326,7 +7390,7 @@ function pintarPSV(){
       <div id="pvFotos"></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>4 · Prueba de disparo${marca(cuenta(['pv-setEsp','dsp-v']))}
+    <details class="psv-sec${paso(4)}" ${tocan.includes(4)?'open':''}><summary>4 · Prueba de disparo${marca(cuenta(['pv-setEsp','dsp-v']))}
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span>${
@@ -7345,7 +7409,7 @@ function pintarPSV(){
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>5 · Conclusiones${marca(cuenta(['pv-coment']))}
+    <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary>5 · Conclusiones${marca(cuenta(['pv-coment']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
       <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
         ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
@@ -7353,7 +7417,7 @@ function pintarPSV(){
         <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
     </div></details>
 
-    <details class="psv-sec" open><summary>6 · Firmas${marca(cuenta(['pv-resp','pvFirma']))}
+    <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary>6 · Firmas${marca(cuenta(['pv-resp','pvFirma']))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
@@ -11111,7 +11175,9 @@ function renderWO(){
   $('#kanban').innerHTML=ETAPAS.map(([k,l])=>{
     const cs=grupos.filter(g=>g.et===k).map(g=>Object.assign({},g.jefe,{__g:g}));
     return `<div class="kb-col" data-et="${k}" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="dropWO(event,'${k}')">
-      <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':cs.some(o=>tonoOrden(o.__g.ls)==='late')?'late':'due'})"></span>${l}<span class="n">${cs.length}</span></div>
+      <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':cs.some(o=>tonoOrden(o.__g.ls)==='late')?'late':'due'})"></span>${l}
+        <span class="kb-pct" title="Llegar hasta aquí es el ${avanceEtapa(k)}% del trabajo">${avanceEtapa(k)}%</span>
+        <span class="n">${cs.length}</span></div>
       <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
         const G=o.__g, ls=G.ls, varias=ls.length>1, nx=WO_NEXT[G.et];
         const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
@@ -11125,13 +11191,22 @@ function renderWO(){
             ? `${ls.length} válvulas <span class="wo-tags">${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</span>`
             : esc(a?.tag||a?.ser||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono" title="Cuándo entró a esta etapa">${esc(entroEn(o))}</span></div>
+          ${(()=>{const pc=avanceEtapa(G.et);
+            return `<div class="wo-pc" title="${pc}% del recorrido: ${ETAPAS.findIndex(e=>e[0]===G.et)+1} de ${ETAPAS.length} etapas">
+              <div class="wo-pc-b"><i style="width:${pc}%;background:var(--${G.et==='final'?'ok':G.et==='cert'?'sel':'due'})"></i></div>
+              <b>${pc}%</b></div>`})()}
           ${G.todas.length>1?(()=>{
             /* Cuántas de TODA la orden van finalizadas, no sólo de esta
                columna: es lo que pregunta el cliente. */
             const finT=G.todas.filter(x=>x.et==='final').length;
             const resto=restoDeLaOrden(G.todas,G.et);
-            return `<div class="wo-av"><i style="width:${Math.round(finT*100/G.todas.length)}%"></i>
-              <span>${finT} de ${G.todas.length} finalizadas</span></div>
+            /* El avance de TODA la orden: la media de lo andado por
+               cada válvula, con las etapas valiendo un quinto cada
+               una. Antes sólo contaba las finalizadas, así que una
+               orden con las cinco en prueba final marcaba 0 %. */
+            const avT=Math.round(G.todas.reduce((n,x)=>n+avanceEtapa(x.et),0)/G.todas.length);
+            return `<div class="wo-av"><i style="width:${avT}%"></i>
+              <span>${avT}% · ${finT} de ${G.todas.length} finalizadas</span></div>
               ${resto.length?`<div class="wo-parte"><b>${ls.length} de ${G.todas.length}</b> de esta orden${
                 ` · ${resto.map(x=>`${x.n} ${x.l.toLowerCase()}`).join(' · ')}`}</div>`:''}`;
           })():''}
