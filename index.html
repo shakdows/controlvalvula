@@ -2358,6 +2358,12 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   padding:9px 12px;border:1px dashed var(--line);border-radius:var(--r-2);
   background:var(--surface-2);font-size:12px;color:var(--ink-3)}
 .psv-hay span{flex:1;min-width:180px}
+/* Los papeles que salen de este formulario, al pie del todo. */
+.psv-docs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;
+  padding:11px 13px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2)}
+.psv-docs .t{flex:1;min-width:200px}
+.psv-docs .t b{display:block;font-size:13px}
+.psv-docs .t span{display:block;font-size:11.5px;color:var(--ink-3)}
 .psv-sec{border:1px solid var(--line-2);border-radius:var(--r-2);background:var(--surface);overflow:hidden}
 .psv-sec>summary{padding:11px 14px;font-size:13.5px;font-weight:600;cursor:pointer;
   display:flex;align-items:center;gap:9px;list-style:none;background:var(--surface-2);
@@ -7508,6 +7514,16 @@ function pintarPSV(){
       <div id="pvFirma"></div>
       <div id="pvEquipo"></div>
     </div></details>
+   </div>
+   ${/* El informe técnico de la orden, desde aquí mismo: es el papel
+        de esta etapa, igual que el protocolo lo es de la anterior.
+        Se abre para revisarlo; se imprime desde su propio botón. */''}
+   <div class="psv-docs">
+     <div class="t"><b>Informe técnico de la orden</b>
+       <span>DVAD-SER-002 · con todas las válvulas de este trabajo, su desarme y sus pruebas.</span></div>
+     <button class="btn sec xs" onclick="informeDeValvula(false)">
+       <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Ver e imprimir</button>
+     <button class="btn quiet xs" onclick="informeDeValvula(true)">Word</button>
    </div>`;
 
   pintarPSVPie();
@@ -8672,7 +8688,29 @@ document.addEventListener('DOMContentLoaded',function(){
   var b=document.querySelector('.barra .p'); if(b)window.__btnHtml=b.innerHTML;
 });
 <\/script>`;
-const BARRA_IMPRIMIR=ESPERAR_FOTOS+`<div class="barra">
+/* ── El papel, en pantalla ───────────────────────────────────
+   Lo que se ve antes de imprimir tiene que ser lo que sale de la
+   impresora. Cada bloque que en el papel empieza en hoja nueva se
+   dibuja como una hoja A4 suelta, con sus márgenes y su sombra: así
+   se revisa el reparto —qué cae en cada hoja— antes de gastar tinta.
+   Al imprimir, las hojas vuelven a ser flujo normal y manda el salto
+   de página de siempre. */
+const HOJA_CSS=`
+@media screen{
+  body{background:#e9ecef!important;padding:20px 0 96px!important}
+  .pliego{width:210mm;max-width:calc(100vw - 20px);min-height:297mm;margin:0 auto 18px;
+    background:#fff;box-shadow:0 4px 18px rgba(16,45,105,.16);
+    padding:13mm 12mm;position:relative;overflow:hidden}
+  .pliego-n{position:absolute;right:9mm;bottom:6mm;font-size:8px;color:#aab1b8;letter-spacing:.09em}
+}
+@media print{
+  body{background:#fff!important;padding:0!important}
+  .pliego{width:auto;max-width:none;min-height:0;margin:0;padding:0;box-shadow:none;
+    break-after:page;page-break-after:always;overflow:visible}
+  .pliego:last-of-type{break-after:auto;page-break-after:auto}
+  .pliego-n{display:none}
+}`;
+const BARRA_IMPRIMIR=ESPERAR_FOTOS+`<style>${HOJA_CSS}</style><div class="barra">
   <button onclick="window.close()">Cerrar</button>
   <button class="p" onclick="imprimirCuandoEsteTodo()">
     <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
@@ -8745,7 +8783,7 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 .pie{margin-top:6px;font-size:7.6px;color:#8a929c;display:flex;justify-content:space-between}
 /* El anexo empieza en hoja nueva y cada foto se ve ENTERA: nada de
    recortar, que lo que se fotografía es justo el detalle. */
-.anx{page-break-before:always;break-before:page;padding-top:2mm}
+.anx{padding-top:0}
 .anx h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#102d69;
   margin:0 0 2px;padding-bottom:4px;border-bottom:2px solid #102d69}
 .anx-s{font-size:9px;color:#5b6470;margin:0 0 10px}
@@ -8757,6 +8795,7 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 .anx-g figcaption b{color:#1a1d21}
 @media print{.anx{padding-top:0}}
 </style></head><body>
+<section class="pliego">
 <div class="cab">
   <span class="mk">${marca}</span>
   <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
@@ -8796,8 +8835,10 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 <p class="nota">Se realizó pruebas de SETEO de acuerdo a los parámetros y procedimientos que establece
   la norma ASME acorde a estándares API 527 y 576.</p>
 <div class="pie"><span>AXAD-084 v.2</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+<div class="pliego-n">Hoja 1${fotos.length?' de 2':''}</div>
+</section>
 
-${fotos.length?`<section class="anx">
+${fotos.length?`<section class="anx pliego">
   <h2>Anexo fotográfico · cómo llegó la válvula</h2>
   <p class="anx-s">${esc(a.tag||a.ser||'')} · ${esc(e.n||'')} · recepción del ${esc(fPE(c.rcFecha||c.fecha||''))}${
     c.rcRecibe?' · '+esc(c.rcRecibe):''}</p>
@@ -8805,6 +8846,7 @@ ${fotos.length?`<section class="anx">
     <img src="${x.d}" alt="${esc(x.n||('Foto '+(i+1)))}">
     <figcaption><b>${i+1}.</b> ${esc(x.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>
   <div class="pie"><span>AXAD-084 v.2 · anexo fotográfico</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+  <div class="pliego-n">Hoja 2 de 2</div>
 </section>`:''}
 ${BARRA_IMPRIMIR}
 </body></html>`};
@@ -8819,7 +8861,6 @@ function imprimirRecepcion(id){
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   w.document.write(d.html); w.document.close(); w.focus();
-  imprimirCuandoCarguen(w);
 }
 /* ════════════════════════════════════════════════════════════
    INFORME TÉCNICO DVAD-SER-002
@@ -9078,6 +9119,7 @@ li{margin-bottom:2px}
    entrega firmado. */
 .hoja{break-after:page;page-break-after:always}
 .hoja:last-of-type{break-after:auto;page-break-after:auto}
+@media screen{.hoja{border:0;margin:0 auto 18px;padding:13mm 12mm}}
 .caratula{display:flex;flex-direction:column;min-height:247mm}
 .caratula .port{margin-top:auto;padding:0 0 26px}
 .caratula .roles{margin-bottom:0}
@@ -9095,7 +9137,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 @media print{.hoja{border:0;margin:0;padding:0}}
 </style></head><body>
 
-<section class="hoja caratula">
+<section class="hoja caratula pliego">
 <div class="mem">
   <span class="lg">${marca}</span>
   <div class="ti">VÁLVULAS DE SEGURIDAD<br>INFORME TÉCNICO DE MANTENIMIENTO Y CALIBRACIÓN</div>
@@ -9126,7 +9168,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 <div class="cara-pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')}</div>
 </section>
 
-<section class="hoja">
+<section class="hoja pliego">
 <div class="dat">
   <span>Dirigido</span><b>${raya(c.n)}</b>
   <span>Ubicación</span><b>${raya(c.dir||c.fac)}</b>
@@ -9175,12 +9217,12 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 
 </section>
 
-<section class="hoja">
+<section class="hoja pliego">
 <h2>Registro fotográfico</h2>
 ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
 </section>
 
-<section class="hoja">
+<section class="hoja pliego">
 
 <h2>Herramientas utilizadas</h2>
 <p>${INFORME_HERRAM}</p>
@@ -9233,7 +9275,21 @@ function imprimirInforme(idOrden){
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   w.document.write(d.html); w.document.close(); w.focus();
-  imprimirCuandoCarguen(w);
+}
+/* Desde el propio formulario del taller: el informe de la orden a la
+   que pertenece esta válvula. */
+const ordenDeValvula=actId=>{
+  const idx=o=>ETAPAS.findIndex(e=>e[0]===o.et);
+  const ls=ORDENES.filter(x=>x.act===actId&&idx(x)>=0);
+  const ab=ls.filter(o=>o.et!=='final');
+  return (ab.length?ab:ls).sort((p,q)=>idx(q)-idx(p))[0]||null;
+};
+function informeDeValvula(word){
+  if(!PSV_TMP)return;
+  guardarPSV(false,true);                       // que el papel lleve lo último escrito
+  const o=ordenDeValvula(PSV_TMP.act);
+  if(!o){toast('Esta válvula no está en ninguna orden');return}
+  (word?informeWord:imprimirInforme)(o.id);
 }
 function informeWord(idOrden){
   const d=documentoInforme(idOrden);
@@ -9384,7 +9440,7 @@ function psvDocumento(id){
   .psv-graf{display:block;width:100%;max-width:100%;margin:2px auto 4px}
   /* Cada anexo empieza en hoja nueva. El certificado se firma en la
      primera y no lo empuja ninguna foto. */
-  .anexo{page-break-before:always;break-before:page;padding-top:4mm}
+  .anexo{padding-top:0}
   .anexo-h{border-bottom:1.5px solid #16306b;padding-bottom:5px;margin-bottom:9px}
   .anexo-h span{font-size:8.5px;letter-spacing:.09em;text-transform:uppercase;color:#5b6470;font-weight:700}
   .anexo-h h2{border:0;padding:0;margin:1px 0 2px}
@@ -9419,6 +9475,7 @@ function psvDocumento(id){
   .anexo-p h3{font-size:10px;margin:8px 0 0;color:#101418}
   @page{size:A4;margin:11mm}
   </style></head><body>
+  <section class="pliego">
   <div class="cab">
     <span class="mk">${marca}</span>
     <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
@@ -9521,6 +9578,8 @@ function psvDocumento(id){
           <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
           <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
   </div>
+  <div class="pliego-n">Certificado · hoja 1</div>
+  </section>
 
   ${(()=>{
     /* ── LOS ANEXOS ─────────────────────────────────────────
@@ -9561,7 +9620,8 @@ function psvDocumento(id){
         <div class="anexo-g ${d.fs.length===1?'ancha':''}">${d.fs.map((src,j)=>`<figure><img src="${src}" alt="Prueba ${d.i+1} foto ${j+1}">
           <figcaption>Prueba ${d.i+1} · foto ${j+1}</figcaption></figure>`).join('')}</div></div>`).join('')}`);
 
-    return anexos.map(x=>`<section class="anexo">${x}</section>`).join('');
+    return anexos.map((x,i)=>`<section class="anexo pliego">${x}
+      <div class="pliego-n">Anexo ${i+1} de ${anexos.length}</div></section>`).join('');
   })()}
 
   <div class="pie"><span>AXAD-088 · Versión 2</span>
@@ -9811,7 +9871,6 @@ function imprimirCertificadosOrden(idOrden,modo){
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   w.document.write(html); w.document.close(); w.focus();
-  imprimirCuandoCarguen(w);
   toast(`${docs.length} certificados en un solo documento`);
 }
 
@@ -9820,7 +9879,6 @@ function imprimirPSV(id){
   const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return false}
   w.document.write(d.html);
   w.document.close(); w.focus();
-  imprimirCuandoCarguen(w);
   return true;
 }
 /* Espera a que la ventana tenga sus fotos dibujadas y entonces imprime.
