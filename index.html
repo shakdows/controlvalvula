@@ -701,6 +701,7 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .pv-mas:hover b{color:var(--sel)}
 .wo-parte{font-size:11px;color:var(--ink-3);margin-top:4px;line-height:1.4}
 .wo-parte b{color:var(--ink-2);font-weight:600}
+.wo-parte.ok{color:var(--ok);font-weight:600}
 .wo-tarde{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--late);font-weight:600;margin:-2px 0 5px}
 .wo-tarde .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
 .wo:hover{box-shadow:var(--shadow-pop)}
@@ -11526,17 +11527,23 @@ function renderWO(){
             return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`;
           })():''}
           ${G.et==='cert'?(()=>{
-            /* Verificación final: el trabajo del taller está firmado y espera
-               al jefe. Es lo único que se puede hacer aquí. */
+            /* Verificación final: el trabajo del taller está firmado y le
+               toca al jefe. El botón para entrar a revisar y firmar está
+               SIEMPRE — antes, si el rol no era gerencia, sólo salía una
+               nota y no había por dónde poner la firma. */
             const firmadas=ls.filter(x=>{const c=recepDe(x.act);
               return c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)}).length;
-            if(S.rol!=='admin')
-              return `<div class="wo-parte">Esperando el visto bueno de gerencia${
-                firmadas?` · ${firmadas} de ${ls.length} ya firmada${firmadas===1?'':'s'}`:''}</div>`;
-            return `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+            const todas=firmadas===ls.length;
+            const jefe=S.rol==='admin';
+            const nota=todas
+              ? `<div class="wo-parte ok">Visto bueno puesto · lista para cerrar</div>`
+              : `<div class="wo-parte">Falta${ls.length-firmadas===1?'':'n'} ${ls.length-firmadas} firma${
+                  ls.length-firmadas===1?'':'s'} de gerencia${jefe?'':' — la pone el jefe'}</div>`;
+            return `<button class="btn ${jefe&&!todas?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
-              <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Revisar y firmar${
-                ls.length>1?` · ${firmadas} de ${ls.length}`:firmadas?' ✓':''}</button>`;
+              <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
+                jefe ? (todas?'Revisar y rehacer la firma':'Revisar y firmar') : 'Ver lo que se hizo'}${
+                ls.length>1?` · ${firmadas} de ${ls.length}`:''}</button>${nota}`;
           })():''}
           ${(G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();imprimirInforme('${o.id}')" title="El informe técnico DVAD-SER-002 de toda la orden">
@@ -11679,11 +11686,14 @@ function advanceWO(id){
 function revisarYFirmar(idLinea){
   const o=ORDENES.find(x=>x.id===idLinea)||ORDENES.find(x=>x.act===idLinea);
   if(!o){toast('No encuentro esa válvula en la orden');return}
-  const c=o.calib?CALIBS.find(x=>x.id===o.calib):null;
+  /* El enlace de la orden si lo hay y, si no, el ensayo de la válvula:
+     el enlace sólo se pone al cerrar, y aquí se viene ANTES de cerrar. */
+  const c=(o.calib&&CALIBS.find(x=>x.id===o.calib))||recepDe(o.act);
   if(!c){
     toast('Esta válvula todavía no tiene el mantenimiento registrado');
     verEquipo(o.act); return;
   }
+  if(!o.calib)o.calib=c.id;
   /* El resumen, no la ficha de la válvula ni el formulario de edición:
      el jefe viene a LEER lo que hizo el taller —resultado, disparos,
      patrón, fotos— y a poner su visto bueno. Editar está ahí por si
