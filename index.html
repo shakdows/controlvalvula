@@ -2479,8 +2479,17 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   cursor:pointer;color:var(--ink-3);font-size:11.5px;border-radius:var(--r-1);transition:background var(--fast)}
 .pv-hueco-v:hover{background:var(--surface-2);color:var(--ink-2)}
 .pv-hueco-v svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6}
-.pv-par-d{display:grid;grid-template-columns:1fr 190px;gap:8px;margin-top:9px}
-@media(max-width:520px){.pv-par-d{grid-template-columns:1fr}}
+/* El desplegable, en la cabecera y a la derecha: es donde quedaba
+   sitio y donde se ve sin buscarlo. */
+.pv-par-acc{height:30px;width:auto;min-width:150px;flex:0 0 auto;font-size:12px;padding:0 28px 0 9px;
+  background-position:calc(100% - 12px) 13px,calc(100% - 7px) 13px}
+.pv-par-d{display:grid;grid-template-columns:1fr;gap:8px;margin-top:9px}
+/* Un comentario por foto: el de la de antes y el de la de después. */
+.pv-hueco-n{height:30px;font-size:11.5px;margin-top:auto}
+@media(max-width:520px){
+  .pv-par-h{flex-wrap:wrap}
+  .pv-par-acc{flex:1 1 100%;min-width:0;order:9}
+}
 .pv-par-d .inp{font-size:12.5px}
 /* La foto de cómo llegó */
 /* El título arriba y las fotos debajo, a todo el ancho. En fila
@@ -2511,7 +2520,7 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    foto se queda pegada a su disparo, que es lo único que no puede
    confundirse. */
 .dsp{display:flex;flex-direction:column;gap:8px}
-.dsp-f{display:grid;grid-template-columns:30px 1fr 1fr 84px minmax(120px,1.3fr) 30px;gap:9px;
+.dsp-f{display:grid;grid-template-columns:30px 1fr 1fr minmax(150px,2fr) 30px;gap:9px;
   align-items:end;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-2);
   background:var(--surface-2);border-left:3px solid var(--line)}
 .dsp-f.ok{border-left-color:var(--ok)} .dsp-f.no{border-left-color:var(--late)}
@@ -2522,11 +2531,11 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .dsp-c label{display:block;font-size:11px;color:var(--ink-3);margin-bottom:3px}
 .dsp-c label .u{color:var(--ink-3);opacity:.75}
 .dsp-c .inp{height:34px}
-.dsp-nota{height:34px;font-size:12.5px}
+
 /* Varias fotos por disparo: en fila, y el «+» al final. Antes era una
    sola casilla, y un disparo puede necesitar el manómetro, el banco y
    la fuga que se ve al abrir. */
-.dsp-foto{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-height:52px}
+.dsp-foto{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:74px}
 .dsp-una{position:relative;display:inline-flex;flex:0 0 auto}
 /* Lo que sale solo se enseña en gris y no se puede escribir: si se
    pudiera, alguien lo cambiaría y el certificado diría dos cosas. */
@@ -2543,9 +2552,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .crit-lado b{display:block}
 @media(max-width:640px){.crit-lado{flex:1 1 100%;flex-direction:row;flex-wrap:wrap;align-items:center}}
 .inp.bloq{background:var(--surface-3);color:var(--ink-3);cursor:default;border-color:var(--line-2)}
-.dsp-una img{width:56px;height:52px;object-fit:contain;background:var(--surface-3);
-  border-radius:var(--r-1);display:block;border:1px solid var(--line-2)}
-.dsp-cam{height:52px;min-width:52px;flex:0 0 auto;border:1px dashed var(--line);border-radius:var(--r-1);display:flex;
+.dsp-una img{width:82px;height:74px;object-fit:contain;background:var(--surface-3);
+  border-radius:var(--r-1);display:block;border:1px solid var(--line-2);cursor:zoom-in}
+.dsp-cam{height:74px;min-width:64px;flex:0 0 auto;border:1px dashed var(--line);border-radius:var(--r-1);display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;
   color:var(--ink-3);font-size:10.5px;transition:background var(--fast)}
 .dsp-cam:hover{background:var(--surface-3);color:var(--ink-2)}
@@ -2559,9 +2568,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .dsp-pie .muted{font-size:11.5px}
 @media(max-width:720px){
   .dsp-f{grid-template-columns:30px 1fr 1fr 30px;grid-template-areas:
-    'n v p d' 'f f nota nota'}
+    'n v p d' 'f f f f'}
   .dsp-n{grid-area:n} .dsp-c:nth-of-type(1){grid-area:v} .dsp-c:nth-of-type(2){grid-area:p}
-  .dsp-foto{grid-area:f} .dsp-nota{grid-area:nota} .dsp-del{grid-area:d}
+  .dsp-foto{grid-area:f} .dsp-del{grid-area:d}
 }
 /* Los criterios, siempre a la vista y bajo llave */
 /* ── Una orden con varias válvulas ───────────────────────────
@@ -3536,7 +3545,7 @@ let ORDENES=[
    mostrador, no en el taller— y porque nada pasa de ahí sin el
    protocolo de entrada firmado. */
 const ETAPAS=[['oc','OC recibida'],['ent','Prueba de entrada'],['mant','En mantenimiento'],
-              ['cert','Prueba final · certificación'],['final','Finalizado']];
+              ['cert','Verificación final'],['final','Finalizado']];
 const DOCS=[
  {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
  {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
@@ -6653,7 +6662,7 @@ const valoresDisparo=c=>disparosDe(c).map(t=>num(t.v)).filter(x=>isFinite(x)&&x>
 function psvFaltantes(c){
   const out=[];
   /* 1 · contra qué se mide */
-  if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio'});
+  if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio',paso:1});
   if(!String(c.patSerie||'').trim())out.push({id:'patCaja', que:'la serie del equipo patrón',paso:1});
   if(!String(c.patCert||'').trim()) out.push({id:'patCaja', que:'el certificado del patrón',paso:1});
   /* 2 · la prueba de entrada: el disparo tal como llegó, el veredicto
@@ -6669,26 +6678,33 @@ function psvFaltantes(c){
     out.push({id:'pvFirmaRec', que:'la firma del mecánico que hizo la prueba de entrada', paso:2});
   /* 3 · el desarme: al menos una pieza fotografiada */
   if(!paresFoto(c).filter(x=>x.a||x.d).length)
-    out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme'});
+    out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme',paso:3});
   /* 4 · la prueba */
   const set=num(c.setEsp);
   if(!isFinite(set)||set<=0)
-    out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press)'});
+    out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press)',paso:4});
   const llenos=valoresDisparo(c).length;
   if(llenos<3)disparosDe(c).forEach((t,i)=>{
     const v=num(t.v);
-    if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`});
+    if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`,paso:4});
   });
   /* 5 · conclusiones */
   if(!String(c.coment||'').trim())
-    out.push({id:'pv-coment', que:'las conclusiones del mantenimiento'});
+    out.push({id:'pv-coment', que:'las conclusiones del mantenimiento',paso:5});
   /* 6 · la firma de quien lo hizo */
   if(!String(c.respNombre||'').trim())
-    out.push({id:'pv-resp', que:'el nombre de quien hizo el trabajo'});
+    out.push({id:'pv-resp', que:'el nombre de quien hizo el trabajo',paso:6});
   if(!(c.firmas||[]).some(f=>f.rol==='ejec'&&f.img))
-    out.push({id:'pvFirma', que:'la firma del ejecutante'});
+    out.push({id:'pvFirma', que:'la firma del ejecutante',paso:6});
   return out;
 }
+/* Lo que le falta AL TALLER: pasos 3, 4, 5 y su firma. El paso 1 lo
+   llena el supervisor y el 2 lo firmó quien recibió la válvula; el
+   técnico ni siquiera los ve. Exigírselos para mover la tarjeta era
+   pedirle algo que no puede hacer — y era lo que le impedía pasar a
+   verificación final teniéndolo todo suyo listo. */
+const faltaDelTaller=c=>psvFaltantes(c).filter(x=>(x.paso||9)>=3);
+const tallerListo=c=>psvVeredicto(c).estado!=='incompleto'&&faltaDelTaller(c).length===0;
 /* El veredicto lo dan las presiones —y con eso se dibuja el gráfico en
    cuanto hay disparos, que es cuando sirve—. Emitir el certificado es
    otra cosa: para eso tienen que estar los seis pasos. */
@@ -6715,9 +6731,14 @@ function psvAgregarPersona(){
 }
 function psvQuitarPersona(i){ if(!PSV_TMP)return; equipoDe(PSV_TMP).splice(i,1); pintarEquipoPSV(); }
 function psvPersona(i,k,v){ if(!PSV_TMP)return; const e=equipoDe(PSV_TMP)[i]; if(e)e[k]=v; }
+/* «Agregar otra persona» se quitó: en el certificado firma quien hizo
+   el trabajo, y punto. Los ensayos viejos que traigan acompañantes
+   los siguen enseñando —y los siguen imprimiendo—, pero no se añaden
+   nuevos. */
 function pintarEquipoPSV(){
   const c=$('#pvEquipo'); if(!c||!PSV_TMP)return;
   const l=equipoDe(PSV_TMP);
+  if(!l.length){c.innerHTML='';return}
   c.innerHTML=`${l.length?`<h4 class="snc-sec">También trabajaron
       <span class="opc">salen en el certificado, debajo del responsable</span></h4>
     <div class="eq-l">${l.map((x,i)=>`<div class="eq-i">
@@ -6727,9 +6748,7 @@ function pintarEquipoPSV(){
         oninput="psvPersona(${i},'area',this.value)" aria-label="Área de la persona ${i+1}">
       <button class="icon-btn" onclick="psvQuitarPersona(${i})" aria-label="Quitar a esta persona">
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-    </div>`).join('')}</div>`:''}
-    <button class="btn quiet xs" style="margin-top:${l.length?'8':'12'}px" onclick="psvAgregarPersona()">
-      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar otra persona</button>`;
+    </div>`).join('')}</div>`:''}`;
 }
 
 /* Pinta en naranja las casillas que faltan y sube a la primera. */
@@ -7306,10 +7325,43 @@ function etapaDeValvula(actId){
   const c=recepDe(actId);
   return c&&recepcionAcepta(c)?'mant':'ent';
 }
+/* Abrir los pasos que no le tocan al técnico pide la contraseña del
+   jefe. No es desconfianza: el paso 1 es contra qué se mide y el 2 es
+   lo que se firmó con el cliente al recibir la válvula. Si eso se
+   toca desde el banco, el ensayo puede cuadrarse moviendo la
+   referencia en vez de la válvula. Para mirar sin tocar, ahí está el
+   certificado. */
+let PSV_ABIERTO_TODO=false;
 function verTodosLosPasos(){
-  document.querySelectorAll('#mBody .psv-sec.oculto').forEach(d=>d.classList.remove('oculto'));
-  const av=$('#psvVerTodo'); if(av)av.remove();
+  if(PSV_ABIERTO_TODO)return mostrarTodosLosPasos();
+  const cuerpo=$('#mBody'); if(!cuerpo)return;
+  const av=$('#psvVerTodo'); if(!av)return;
+  av.innerHTML=`<span>Los pasos 1 y 2 los llena y los firma otro. Para abrirlos hace falta
+      la contraseña del jefe.</span>
+    <input class="inp" id="psvPassPasos" type="password" placeholder="Contraseña" autocomplete="off"
+      style="max-width:170px;height:34px" onkeydown="if(event.key==='Enter')abrirPasosConClave()">
+    <button class="btn sec xs" onclick="abrirPasosConClave()">Abrir</button>
+    <button class="btn quiet xs" onclick="pintarPSV()">Cancelar</button>`;
+  const el=$('#psvPassPasos'); if(el)setTimeout(()=>el.focus(),60);
 }
+function abrirPasosConClave(){
+  const el=$('#psvPassPasos');
+  if(!el||el.value!==CLAVE_BAJA){
+    if(el){el.classList.add('pend');el.value='';el.focus()}
+    toast('Contraseña incorrecta — los pasos siguen cerrados');
+    return;
+  }
+  PSV_ABIERTO_TODO=true;
+  mostrarTodosLosPasos();
+  registrar('Mantenimiento','Se abrieron los pasos 1 y 2 con la contraseña del jefe');
+}
+function mostrarTodosLosPasos(){
+  document.querySelectorAll('#mBody .psv-sec.oculto').forEach(d=>d.classList.remove('oculto'));
+  const av=$('#psvVerTodo');
+  if(av)av.innerHTML=`<span>Estás viendo el formulario entero, incluidos los pasos 1 y 2.</span>
+    <button class="btn quiet xs" onclick="ocultarLosPasos()">Ocultar los pasos 1 y 2</button>`;
+}
+function ocultarLosPasos(){ PSV_ABIERTO_TODO=false; pintarPSV() }
 
 function pintarPSV(){
   const t=PSV_TMP; if(!t)return;
@@ -7317,8 +7369,8 @@ function pintarPSV(){
   /* La etapa en la que está esa válvula manda lo que se enseña. */
   const etapa=etapaDeValvula(t.act);
   const tocan=PASOS_ETAPA[etapa]||[1,2,3,4,5,6];
-  const paso=n=>tocan.includes(n)?'':' oculto';
-  const escondidos=[1,2,3,4,5,6].filter(n=>!tocan.includes(n));
+  const paso=n=>(PSV_ABIERTO_TODO||tocan.includes(n))?'':' oculto';
+  const escondidos=PSV_ABIERTO_TODO?[]:[1,2,3,4,5,6].filter(n=>!tocan.includes(n));
   /* El texto de ejemplo dentro de la casilla se confunde con un dato ya
      escrito: se mira el formulario, se ve gris claro donde tendría que
      haber un número, y se pasa de largo creyendo que está puesto. La
@@ -7596,8 +7648,10 @@ function pintarDisparos(){
           <span>${fotosDisparo(t).length?'Otra':'Foto'}</span></label>
         <input id="dspF${i}" type="file" accept="image/*" capture="environment" multiple style="display:none"
           onchange="psvFotoDisparo(this.files,${i});this.value=''"></div>
-      <input class="inp dsp-nota" value="${esc(t.nota||'')}" title="Opcional: qué pasó en este disparo"
-        oninput="psvDisparo(${i},'nota',this.value)" aria-label="Nota de la prueba ${i+1}">
+      ${/* La casilla de nota se quitó: nadie la llenaba y se comía el
+           ancho que necesita la foto. Lo que haya que contar del
+           disparo va en las conclusiones, que sí salen en el
+           certificado. */''}
       <button class="icon-btn dsp-del" onclick="psvQuitarDisparo(${i})"
         aria-label="Quitar el test ${i+1}" ${l.length<=3?'disabled title="El formato pide tres como mínimo"':''}>
         <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -7636,18 +7690,20 @@ function pintarFirmaPSV(){
   /* El visto bueno lo pone gerencia y sólo gerencia: para el taller la
      casilla ni aparece, y en cuanto está firmado lo ve todo el mundo
      —es la prueba de que el trabajo pasó por el jefe—. */
+  /* Aquí firma el técnico y nadie más. El visto bueno del jefe llega
+     después, en «Verificación final», y desde ahí se pone: mientras no
+     esté, esta casilla ni aparece — enseñarla vacía hacía creer al
+     taller que le faltaba algo suyo. En cuanto está firmado sí se ve,
+     porque es la prueba de que el trabajo pasó por gerencia. */
   const soyJefe=S.rol==='admin';
-  const bloqueVb = (soyJefe||vb) ? `
-    <div class="fpsv ${vb?'ok':'jefe'}" style="margin-top:10px">
-      <div class="fpsv-t"><b>Visto bueno de gerencia${vb?'':' · sólo tú puedes ponerlo'}</b>
-        <span>${vb?`Firmado por ${esc(vb.n)}${vb.cargo?' · '+esc(vb.cargo):''} el ${fPE(vb.f)}`
-               :'El certificado no sale hasta que lo revises y lo firmes.'}</span></div>
-      ${vb?`<img class="fpsv-img" src="${vb.img}" alt="Visto bueno de ${esc(vb.n)}">`:''}
-      <div class="fpsv-b">
-        ${!soyJefe?'' : vb
-          ? `<button class="btn quiet xs" onclick="firmarVistoBueno()">Rehacer</button>
-             <button class="btn quiet xs" onclick="quitarVistoBueno()">Quitar</button>`
-          : `<button class="btn sec xs" onclick="firmarVistoBueno()">Firmar el visto bueno</button>`}
+  const bloqueVb = vb ? `
+    <div class="fpsv ok" style="margin-top:10px">
+      <div class="fpsv-t"><b>Visto bueno de gerencia</b>
+        <span>Firmado por ${esc(vb.n)}${vb.cargo?' · '+esc(vb.cargo):''} el ${fPE(vb.f)}</span></div>
+      <img class="fpsv-img" src="${vb.img}" alt="Visto bueno de ${esc(vb.n)}">
+      <div class="fpsv-b">${soyJefe
+        ? `<button class="btn quiet xs" onclick="firmarVistoBueno()">Rehacer</button>
+           <button class="btn quiet xs" onclick="quitarVistoBueno()">Quitar</button>`:''}
       </div></div>` : '';
   caja.innerHTML=`<div class="fpsv ${f?'ok':''}">
     <div class="fpsv-t"><b>Firma del personal de mantenimiento</b>
@@ -8048,8 +8104,12 @@ function pintarPSVFotos(){
     return;
   }
   const ACCIONES=['Se cambia','Mantenimiento','Limpieza','Se recupera','Sólo se revisa'];
+  /* Cada foto con SU comentario: el antes dice cómo venía y el después
+     qué se le hizo, y no son la misma frase. Antes había una sola nota
+     para las dos y el que leía el informe no sabía a cuál iba. */
   const hueco=(i,l)=>{
     const p=pares[i], src=p[l], id=`pvPar${l}${i}`;
+    const k=l==='a'?'notaA':'notaD';
     return `<div class="pv-hueco ${src?'con':''}">
       <span class="pv-hueco-t">${l==='a'?'Antes':'Después'}</span>
       ${src
@@ -8061,27 +8121,34 @@ function pintarPSVFotos(){
         : `<label class="pv-hueco-v" for="${id}">
              <svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
              <span>Subir la foto de ${LADO[l]}</span></label>`}
+      <input class="inp pv-hueco-n" value="${esc(p[k]||'')}"
+        placeholder="${l==='a'?'Cómo venía — p. ej. picado, con óxido':'Qué se le hizo — p. ej. lapeado, se cambió'}"
+        oninput="psvParCampo(${i},'${k}',this.value)"
+        aria-label="Comentario de la foto de ${LADO[l]} de la pieza ${i+1}">
       <input id="${id}" type="file" accept="image/*" capture="environment" style="display:none"
              onchange="psvParSubir(this.files,${i},'${l}');this.value=''">
     </div>`;
   };
   c.innerHTML=`<div class="pv-pares">${pares.map((p,i)=>`
     <div class="pv-par">
+      ${/* El desplegable sube a la cabecera, al hueco que quedaba
+           vacío a la derecha: ahí se ve, y abajo queda sitio para los
+           comentarios de cada foto. */''}
       <div class="pv-par-h"><b>${p.nota?esc(p.nota):`Pieza ${i+1}`}</b>
-        ${p.accion?`<span class="tag sel">${esc(p.accion)}</span>`:''}
         ${p.a&&p.d?'<span class="tag ok"><span class="dot"></span>completa</span>'
           :`<span class="tag due"><span class="dot"></span>falta la de ${p.a?'después':'antes'}</span>`}
         <span class="spacer" style="flex:1"></span>
+        <select class="inp pv-par-acc" onchange="psvParCampo(${i},'accion',this.value)"
+                aria-label="Qué se le hace a la pieza ${i+1}">
+          <option value="">¿Qué se le hace?</option>
+          ${ACCIONES.map(x=>`<option ${p.accion===x?'selected':''}>${x}</option>`).join('')}
+        </select>
         <button class="icon-btn" onclick="psvParQuitar(${i})" aria-label="Quitar la comparación ${i+1}">
           <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
       <div class="pv-par-g">${hueco(i,'a')}${hueco(i,'d')}</div>
       <div class="pv-par-d">
         <input class="inp" value="${esc(p.nota||'')}" placeholder="Qué pieza es — p. ej. tobera, asiento, resorte"
                oninput="psvParNota(${i},this.value)" aria-label="Pieza de la comparación ${i+1}">
-        <select class="inp" onchange="psvParCampo(${i},'accion',this.value)" aria-label="Qué se le hace a la pieza ${i+1}">
-          <option value="">¿Qué se le hace?</option>
-          ${ACCIONES.map(x=>`<option ${p.accion===x?'selected':''}>${x}</option>`).join('')}
-        </select>
       </div>
     </div>`).join('')}${masFotos}</div>
     <div class="pv-par-pie">${completas} de ${pares.length} ${pares.length===1?'comparación completa':'comparaciones completas'} · sólo las completas se ven emparejadas en el certificado. Cada pieza se quita con la <b>✕</b> de su cabecera.</div>`;
@@ -8907,9 +8974,12 @@ function documentoInforme(idOrden){
       cab('Desarme · antes y después',[e.recep,e.rcComent].filter(Boolean).join(' ')||'Piezas desarmadas.')}
       <tr><td colspan="3" class="fot">${pares.map(x=>{
         const n=x.n||x.nota||'Pieza';
-        return `<div class="par"><div class="par-t">${esc(n)}</div><div class="par-g">
-          ${x.a?fig(x.a,'Antes'):'<div class="par-no">sin foto del antes</div>'}
-          ${x.d?fig(x.d,'Después'):'<div class="par-no">sin foto del después</div>'}
+        const pieA=['Antes',x.notaA].filter(Boolean).join(' · ');
+        const pieD=['Después',x.notaD].filter(Boolean).join(' · ');
+        return `<div class="par"><div class="par-t">${esc(n)}${
+            x.accion?` <span class="par-ac">${esc(x.accion)}</span>`:''}</div><div class="par-g">
+          ${x.a?fig(x.a,pieA):'<div class="par-no">sin foto del antes</div>'}
+          ${x.d?fig(x.d,pieD):'<div class="par-no">sin foto del después</div>'}
         </div></div>`}).join('')}</td></tr></table>`:'';
     /* 3 · los disparos */
     const disp=disparosDe(e).flatMap((t,i)=>fotosDisparo(t).map(d=>({src:d,pie:`Prueba ${i+1}${t.v?' · '+t.v+' '+(e.und||'psi'):''}`})));
@@ -8985,6 +9055,7 @@ li{margin-bottom:2px}
 .par:last-child{margin-bottom:0}
 .par-t{font-size:8.6px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   color:#102d69;margin-bottom:4px}
+.par-ac{font-weight:500;letter-spacing:0;text-transform:none;color:#5b6470;font-size:8.4px}
 .par-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .par-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
 .par-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
@@ -10356,7 +10427,7 @@ function renderCal(){
    ============================================================ */
 const WO_NEXT={oc:  ['ent',  'Recibir la válvula'],
                ent: ['mant', 'Pasar a mantenimiento'],
-               mant:['cert', 'Pasar a prueba final'],
+               mant:['cert', 'Pasar a verificación final'],
                cert:['final','Finalizar y emitir el certificado']};
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
@@ -11322,7 +11393,7 @@ function renderWO(){
             /* El avance de TODA la orden: la media de lo andado por
                cada válvula, con las etapas valiendo un quinto cada
                una. Antes sólo contaba las finalizadas, así que una
-               orden con las cinco en prueba final marcaba 0 %. */
+               orden con las cinco en verificación final marcaba 0 %. */
             const avT=Math.round(G.todas.reduce((n,x)=>n+avanceEtapa(x.et),0)/G.todas.length);
             return `<div class="wo-av"><i style="width:${avT}%"></i>
               <span>${avT}% · ${finT} de ${G.todas.length} finalizadas</span></div>
@@ -11383,7 +11454,7 @@ function renderWO(){
             return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`;
           })():''}
           ${G.et==='cert'?(()=>{
-            /* Prueba final: el trabajo del taller está firmado y espera
+            /* Verificación final: el trabajo del taller está firmado y espera
                al jefe. Es lo único que se puede hacer aquí. */
             const firmadas=ls.filter(x=>{const c=recepDe(x.act);
               return c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)}).length;
@@ -11458,26 +11529,29 @@ function advanceWO(id){
   if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   /* Recibir la válvula tiene nombre y fecha: van al protocolo. */
   if(nx[0]==='ent'){recibirOrden(id);return}
-  /* De mantenimiento a prueba final: el trabajo del taller tiene que
+  /* De mantenimiento a verificación final: el trabajo del taller tiene que
      estar entero —desarme, disparos, conclusiones y la firma del
      técnico—. Lo que falta a partir de ahí es el jefe. */
   if(nx[0]==='cert'){
     const c=recepDe(o.act);
-    if(!c||!psvListoParaEmitir(c)){
+    if(!c||!tallerListo(c)){
       const a=ACTIVOS.find(x=>x.id===o.act)||{};
-      toast(c?`Falta ${faltaParaEmitir(c)} · ${a.tag||a.ser||''}`
-             :`${a.tag||a.ser||'Esa válvula'} no tiene mantenimiento registrado`);
+      const f=c?faltaDelTaller(c):[];
+      const v=c?psvVeredicto(c):null;
+      toast(!c ? `${a.tag||a.ser||'Esa válvula'} no tiene mantenimiento registrado`
+        : f.length ? `Falta ${f[0].que}${f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:''} · ${a.tag||a.ser||''}`
+        : `Falta ${v.falta} · ${a.tag||a.ser||''}`);
       openPSV(o.act,null,'fotos'); return;
     }
     moverLinea(o,'cert'); renderAll();
-    registrar('Orden',`${o.mat||o.n} · a prueba final, esperando el visto bueno`);
-    toast('A prueba final · le toca al jefe revisar y firmar');
+    registrar('Orden',`${o.mat||o.n} · a verificación final, esperando el visto bueno`);
+    toast('A verificación final · le toca al jefe revisar y firmar');
     return;
   }
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
     /* El certificado no sale sin el visto bueno del jefe. Es el
-       sentido de la columna «Prueba final»: el trabajo está hecho y
+       sentido de la columna «Verificación final»: el trabajo está hecho y
        firmado por el taller, y falta que gerencia lo revise. */
     if(o.et==='cert'){
       const c=recepDe(o.act);
@@ -11622,7 +11696,7 @@ function avanzarGrupo(g,etapa){
   }
   if(nx[0]==='ent'){recibirOrden(mueven[0].id,g);return}
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
-  /* A prueba final entra cada válvula por su cuenta: cada una tiene su
+  /* A verificación final entra cada válvula por su cuenta: cada una tiene su
      propio ensayo y su propia firma. */
   if(nx[0]==='cert'){ mueven.forEach(x=>advanceWO(x.id)); return }
   mueven.forEach(x=>moverLinea(x,nx[0]));
