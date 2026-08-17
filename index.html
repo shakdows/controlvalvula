@@ -8612,6 +8612,12 @@ function documentoRecepcion(c){
   const todo=[...auto,...man];
   const rec=(c.firmas||[]).find(f=>f.rol==='recep');
   const vd=c.rcVeredicto;
+  /* Las fotos de la recepción van DETRÁS, desde la segunda hoja: la
+     primera es el protocolo que se firma y tiene que caber en un A4
+     —es lo que se archiva y lo que se pide—. Las fotos son el anexo
+     que lo respalda: el manómetro en el momento en que abrió, el
+     precinto roto, el golpe con el que llegó. */
+  const fotos=fotosLlegada(c).filter(x=>x&&x.d);
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   const cel=(k,v)=>`<div class="c"><span>${esc(k)}</span><b>${v==null||String(v).trim()===''?'—':esc(String(v))}</b></div>`;
   return {titulo:`Protocolo de recepcion ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -8657,6 +8663,19 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 .fir .l b{display:block;font-size:9.6px;color:#1a1d21;letter-spacing:0;text-transform:none}
 .nota{margin-top:11px;font-size:8.2px;color:#5b6470;line-height:1.5;text-align:center;border-top:1px solid #edeff1;padding-top:7px}
 .pie{margin-top:6px;font-size:7.6px;color:#8a929c;display:flex;justify-content:space-between}
+/* El anexo empieza en hoja nueva y cada foto se ve ENTERA: nada de
+   recortar, que lo que se fotografía es justo el detalle. */
+.anx{page-break-before:always;break-before:page;padding-top:2mm}
+.anx h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#102d69;
+  margin:0 0 2px;padding-bottom:4px;border-bottom:2px solid #102d69}
+.anx-s{font-size:9px;color:#5b6470;margin:0 0 10px}
+.anx-g{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.anx-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:6px;overflow:hidden;
+  background:#fafbfc;page-break-inside:avoid;break-inside:avoid}
+.anx-g img{display:block;width:auto;height:auto;max-width:100%;max-height:105mm;margin:0 auto;object-fit:contain}
+.anx-g figcaption{font-size:8.6px;color:#5b6470;padding:5px 8px;border-top:1px solid #eef0f2;text-align:center}
+.anx-g figcaption b{color:#1a1d21}
+@media print{.anx{padding-top:0}}
 </style></head><body>
 <div class="cab">
   <span class="mk">${marca}</span>
@@ -8697,6 +8716,16 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 <p class="nota">Se realizó pruebas de SETEO de acuerdo a los parámetros y procedimientos que establece
   la norma ASME acorde a estándares API 527 y 576.</p>
 <div class="pie"><span>AXAD-084 v.2</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+
+${fotos.length?`<section class="anx">
+  <h2>Anexo fotográfico · cómo llegó la válvula</h2>
+  <p class="anx-s">${esc(a.tag||a.ser||'')} · ${esc(e.n||'')} · recepción del ${esc(fPE(c.rcFecha||c.fecha||''))}${
+    c.rcRecibe?' · '+esc(c.rcRecibe):''}</p>
+  <div class="anx-g">${fotos.map((x,i)=>`<figure>
+    <img src="${x.d}" alt="${esc(x.n||('Foto '+(i+1)))}">
+    <figcaption><b>${i+1}.</b> ${esc(x.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>
+  <div class="pie"><span>AXAD-084 v.2 · anexo fotográfico</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+</section>`:''}
 ${BARRA_IMPRIMIR}
 </body></html>`};
 }
