@@ -8861,27 +8861,47 @@ function documentoInforme(idOrden){
      emparejado antes/después y los disparos. Cada bloque con su fecha
      y su descripción, como en el formato. */
   let nFoto=0;
+  /* Cada cosa en su bloque y nada mezclado. La prueba inicial es la
+     prueba inicial; el desarme son PAREJAS —el antes y el después de
+     la misma pieza— y tienen que ir juntas, una al lado de la otra.
+     Antes iban todas seguidas en una rejilla de dos columnas y la
+     foto de la prueba inicial corría la fila: el «después» de una
+     pieza acababa debajo del «antes» de la siguiente. */
   const registro=items.map(({a,e})=>{
     if(!e)return '';
-    const bloque=(titulo,desc,fotos)=>{
-      const fs=fotos.filter(x=>x&&x.src);
-      if(!fs.length&&!String(desc||'').trim())return '';
+    const cab=(titulo,desc)=>{
       nFoto++;
-      return `<table class="reg"><tr><th class="n">N.º</th><th class="fe">Fecha</th><th>${esc(titulo)}</th></tr>
+      return `<tr><th class="n">N.º</th><th class="fe">Fecha</th><th>${esc(titulo)}</th></tr>
         <tr><td class="n">${nFoto}</td><td class="fe">${esc(fPE(e.fecha||fecha))}</td>
-          <td>${esc(a.tag||a.ser||'')} — ${desc?esc(desc):'<span class="ln"></span>'}</td></tr>
-        ${fs.length?`<tr><td colspan="3" class="fot"><div class="fot-g">${fs.map(x=>
-          `<figure><img src="${x.src}" alt="${esc(x.pie||'')}"><figcaption>${esc(x.pie||'')}</figcaption></figure>`).join('')}</div></td></tr>`:''}
+          <td>${esc(a.tag||a.ser||'')} — ${desc?esc(desc):'<span class="ln"></span>'}</td></tr>`;
+    };
+    const fig=(src,pie)=>`<figure><img src="${src}" alt="${esc(pie||'')}"><figcaption>${esc(pie||'')}</figcaption></figure>`;
+    const sueltas=(titulo,desc,fotos)=>{
+      const fs=fotos.filter(x=>x&&x.src);
+      if(!fs.length)return '';
+      return `<table class="reg">${cab(titulo,desc)}
+        <tr><td colspan="3" class="fot"><div class="fot-g">${fs.map(x=>fig(x.src,x.pie)).join('')}</div></td></tr>
       </table>`;
     };
-    const llego=fotosLlegada(e).map(x=>({src:x.d,pie:x.n||'Cómo llegó'}));
-    const pares=paresFoto(e).filter(x=>x.a||x.d).flatMap(x=>[
-      x.a?{src:x.a,pie:(x.n||x.nota||'Pieza')+' · antes'}:null,
-      x.d?{src:x.d,pie:(x.n||x.nota||'Pieza')+' · después'}:null].filter(Boolean));
+    /* La prueba inicial NO va aquí: es del protocolo de entrada
+       AXAD-084, que es otro papel y ya la lleva en su anexo. Por eso
+       son tres formatos y no uno: entrada, certificado e informe.
+       Repetirla aquí era mezclar el estado en que llegó con el
+       trabajo que se hizo. */
+    /* 1 · el desarme, pieza por pieza, cada pareja en su propia fila */
+    const pares=paresFoto(e).filter(x=>x.a||x.d);
+    const desarme=pares.length?`<table class="reg">${
+      cab('Desarme · antes y después',[e.recep,e.rcComent].filter(Boolean).join(' ')||'Piezas desarmadas.')}
+      <tr><td colspan="3" class="fot">${pares.map(x=>{
+        const n=x.n||x.nota||'Pieza';
+        return `<div class="par"><div class="par-t">${esc(n)}</div><div class="par-g">
+          ${x.a?fig(x.a,'Antes'):'<div class="par-no">sin foto del antes</div>'}
+          ${x.d?fig(x.d,'Después'):'<div class="par-no">sin foto del después</div>'}
+        </div></div>`}).join('')}</td></tr></table>`:'';
+    /* 3 · los disparos */
     const disp=disparosDe(e).flatMap((t,i)=>fotosDisparo(t).map(d=>({src:d,pie:`Prueba ${i+1}${t.v?' · '+t.v+' '+(e.und||'psi'):''}`})));
-    return bloque('Mantenimiento de válvula de seguridad',
-             [e.recep,e.rcComent].filter(Boolean).join(' ')||'Recepción y desarme.',llego.concat(pares))
-         + bloque('Pruebas de calibración final',
+    return desarme
+         + sueltas('Pruebas de calibración final',
              e.coment||'Calibración en banco de pruebas.',disp);
   }).join('');
 
@@ -8934,7 +8954,11 @@ li{margin-bottom:2px}
 .dat span{color:#5b6470}
 .dat b{font-weight:600}
 /* El registro fotográfico */
-.reg{page-break-inside:avoid;margin-bottom:10px}
+/* Cada bloque con su título y sus fotos en su propia hoja: así el
+   que lo lee ve el desarme de una válvula entero de un vistazo, sin
+   pasar página a media pareja. */
+.reg{margin-bottom:10px;break-before:page;page-break-before:always}
+.reg:first-of-type{break-before:auto;page-break-before:auto}
 .reg th.n,.reg td.n{width:34px;text-align:center}
 .reg th.fe,.reg td.fe{width:78px;text-align:center;white-space:nowrap}
 .fot{padding:8px}
@@ -8942,6 +8966,18 @@ li{margin-bottom:2px}
 .fot-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
 .fot-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
 .fot-g figcaption{font-size:8.4px;color:#5b6470;padding:4px 6px;border-top:1px solid #eef0f2;text-align:center}
+/* El antes y el después de la MISMA pieza, siempre juntos y en la
+   misma fila. Cada pareja es un bloque que no se parte. */
+.par{margin-bottom:9px;break-inside:avoid;page-break-inside:avoid}
+.par:last-child{margin-bottom:0}
+.par-t{font-size:8.6px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:#102d69;margin-bottom:4px}
+.par-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.par-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
+.par-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
+.par-g figcaption{font-size:8.4px;color:#5b6470;padding:4px 6px;border-top:1px solid #eef0f2;text-align:center}
+.par-no{display:flex;align-items:center;justify-content:center;min-height:40mm;border:1px dashed #cfd4d9;
+  border-radius:5px;font-size:8.4px;color:#8a929c;background:#fafbfc}
 /* Las firmas del final */
 .fir{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;page-break-inside:avoid}
 .fir .b{text-align:center}
@@ -8950,8 +8986,32 @@ li{margin-bottom:2px}
 .fir .l b{display:block;font-size:9.8px}
 .fir .l span{color:#8a929c;font-size:8.4px}
 .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eef0f2;font-size:8.2px;color:#8a929c;text-align:center}
+/* ── Que se respeten las hojas, como en el Word ──────────────
+   La carátula es UNA hoja: membrete, servicio, cliente y el cuadro de
+   firmas, y nada más. Lo que sigue empieza en la siguiente. Antes
+   todo iba de corrido y el «Dirigido a» se colaba debajo del cuadro
+   de firmas, que es justo lo que no puede pasar en un informe que se
+   entrega firmado. */
+.hoja{break-after:page;page-break-after:always}
+.hoja:last-of-type{break-after:auto;page-break-after:auto}
+.caratula{display:flex;flex-direction:column;min-height:247mm}
+.caratula .port{margin-top:auto;padding:0 0 26px}
+.caratula .roles{margin-bottom:0}
+.cara-pie{margin-top:auto;padding-top:14px;font-size:8.2px;color:#8a929c;text-align:center}
+/* Ni un título al final de una hoja con su contenido en la siguiente,
+   ni una tabla partida por la mitad. */
+h2{break-after:avoid;page-break-after:avoid}
+table{break-inside:avoid;page-break-inside:avoid}
+ul,p{break-inside:avoid;page-break-inside:avoid}
+@media screen{
+  /* En pantalla se ve dónde acaba cada hoja: se entrega en papel. */
+  .hoja{border-bottom:1px dashed #cfd4d9;margin-bottom:16px;padding-bottom:16px}
+  .hoja:last-of-type{border-bottom:0}
+}
+@media print{.hoja{border:0;margin:0;padding:0}}
 </style></head><body>
 
+<section class="hoja caratula">
 <div class="mem">
   <span class="lg">${marca}</span>
   <div class="ti">VÁLVULAS DE SEGURIDAD<br>INFORME TÉCNICO DE MANTENIMIENTO Y CALIBRACIÓN</div>
@@ -8979,7 +9039,10 @@ li{margin-bottom:2px}
       <td>${raya(vb?vb.n:'')}</td><td>${raya('')}</td></tr>
   <tr><td class="rol">Asesor técnico MARC</td><td class="rol">Coordinador de servicios</td><td class="rol">Key Account Manager</td></tr>
 </table>
+<div class="cara-pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')}</div>
+</section>
 
+<section class="hoja">
 <div class="dat">
   <span>Dirigido</span><b>${raya(c.n)}</b>
   <span>Ubicación</span><b>${raya(c.dir||c.fac)}</b>
@@ -9026,8 +9089,14 @@ li{margin-bottom:2px}
 <p>En el mantenimiento y la calibración final de la válvula se ejecutan las siguientes actividades:</p>
 <ul>${INFORME_ACTIVIDADES.map(x=>li(esc(x))).join('')}</ul>
 
+</section>
+
+<section class="hoja">
 <h2>Registro fotográfico</h2>
 ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
+</section>
+
+<section class="hoja">
 
 <h2>Herramientas utilizadas</h2>
 <p>${INFORME_HERRAM}</p>
@@ -9070,6 +9139,7 @@ ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
   de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
+</section>
 ${BARRA_IMPRIMIR}
 </body></html>`};
 }
