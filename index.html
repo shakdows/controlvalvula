@@ -7278,15 +7278,29 @@ function recepcionCerrada(c){
 const recepcionAcepta=c=>recepcionCerrada(c)&&c.rcVeredicto==='acepta';
 /* El papel de entrada de una válvula: el borrador que haya, o el
    ensayo que cuelgue de su orden. Es el mismo que abre openPSV. */
+/* AQUÍ ESTABA EL ATASCO. Se buscaba el ensayo «incompleto» y, si no,
+   el que colgara de la orden por su campo calib. Pero calib sólo se
+   pone al FINALIZAR, y en cuanto el técnico mete los tres disparos el
+   ensayo deja de ser incompleto —pasa a «aprobado»—. Resultado: con
+   el trabajo BIEN hecho no se encontraba el papel, la tarjeta decía
+   «no tiene mantenimiento registrado» y no había forma de moverla.
+   Cuanto mejor hacía su trabajo el técnico, más atascado quedaba.
+   Ahora, si no hay borrador ni enlace, se coge el ensayo más reciente
+   de esa válvula, que es el que se está haciendo. */
 function recepDe(actId){
-  let c=CALIBS.find(x=>x.act===actId&&x.tipo==='psv'&&x.veredicto==='incompleto');
-  if(!c){
-    const o=ORDENES.filter(x=>x.act===actId)
-      .sort((p,q)=>String(q.f||'').localeCompare(String(p.f||'')))
-      .find(x=>x.et!=='final')||ORDENES.find(x=>x.act===actId&&x.calib);
-    if(o&&o.calib)c=CALIBS.find(x=>x.id===o.calib);
+  const mios=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv');
+  if(!mios.length)return null;
+  const c=mios.find(x=>x.veredicto==='incompleto');
+  if(c)return c;
+  const o=ORDENES.filter(x=>x.act===actId)
+    .sort((p,q)=>String(q.f||'').localeCompare(String(p.f||'')))
+    .find(x=>x.et!=='final')||ORDENES.find(x=>x.act===actId&&x.calib);
+  if(o&&o.calib){
+    const l=mios.find(x=>x.id===o.calib);
+    if(l)return l;
   }
-  return c||null;
+  return mios.slice().sort((x,y)=>
+    String(y.fecha||'').localeCompare(String(x.fecha||'')))[0]||null;
 }
 /* Abre el formulario directamente en la prueba de entrada. Es lo que
    se hace en el mostrador, con la válvula recién bajada del camión. */
@@ -11567,12 +11581,25 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
   /* El certificado de esta válvula queda guardado igual; lo que espera
      es el cierre de la orden, que es de todas. */
   if(!puedeFinalizar(o)){
-    registrar('Orden',`${o.n} · ensayo guardado, la orden sigue abierta`);
+    registrar('Orden',`${o.mat||o.n} · ensayo guardado, la orden sigue abierta`);
     toast(avisoNoFinaliza(o));
     return o;
   }
+  /* Guardar el ensayo YA NO CIERRA la orden. Desde que hay una columna
+     de verificación final, cerrarla aquí se saltaba al jefe: el taller
+     guardaba y el trabajo aparecía finalizado sin que nadie lo hubiera
+     revisado. Lo que hace es dejarla a punto — en verificación final —
+     y ahí espera la firma de gerencia. */
+  if(o.et!=='final'&&!(c=>c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))(CALIBS.find(x=>x.id===calibId))){
+    if(o.et!=='cert'){
+      moverLinea(o,'cert');
+      registrar('Orden',`${o.mat||o.n} · ensayo guardado, a verificación final`);
+      toast('Guardado · pasa a verificación final, le toca al jefe');
+    }
+    return o;
+  }
   moverLinea(o,'final');
-  registrar('Orden',`${o.n} cerrada con el ensayo`);
+  registrar('Orden',`${o.mat||o.n} cerrada con el ensayo`);
   return o;
 }
 
