@@ -15695,9 +15695,30 @@ async function nubeSalir(){
 /* ── Bajar ───────────────────────────────────────────────────
    La primera vez baja todo y reemplaza lo que hubiera en memoria:
    la nube manda. Después sólo pide lo que cambió desde la última vez. */
+/* ── El desfase que hacía perder cambios de los compañeros ───
+   Se bajaba «lo actualizado DESPUÉS de la última vez». Suena bien y
+   está mal: dos equipos escribiendo a la vez no llegan en orden. Si
+   el compañero guarda a las 10:00:03 y su fila todavía no es visible
+   cuando este equipo pregunta a las 10:00:04, el cursor avanza a
+   10:00:04 y esa fila NO SE PIDE NUNCA MÁS. El cambio existe en el
+   servidor, este equipo dice «al día», y en la pantalla la válvula se
+   queda donde estaba. Eso es exactamente lo que pasaba.
+
+   La cura es barata: se pide con dos minutos de solape. Volver a
+   aplicar una fila que ya estaba aplicada no cuesta nada —se escribe
+   lo mismo encima— y a cambio ninguna se pierde por unos segundos de
+   diferencia de reloj entre dos celulares. */
+const SOLAPE_MS=120000;
+function desdeConSolape(){
+  if(!NUBE_DESDE)return null;
+  const t=Date.parse(NUBE_DESDE);
+  if(!isFinite(t))return NUBE_DESDE;
+  return new Date(t-SOLAPE_MS).toISOString();
+}
 async function nubeBajar(reemplazar){
+  const desde=desdeConSolape();
   const q='/rest/v1/registros?select=coleccion,clave,empresa_id,datos,borrado,actualizado'+
-          '&order=actualizado.asc'+(NUBE_DESDE?'&actualizado=gt.'+encodeURIComponent(NUBE_DESDE):'');
+          '&order=actualizado.asc'+(desde?'&actualizado=gt.'+encodeURIComponent(desde):'');
   const filas=await nubeFetch(q);
   if(!filas)return 0;
   /* La otra cara del mismo fallo. Antes, si bajaba UNA fila cualquiera
@@ -16232,6 +16253,24 @@ function sincronizar(manual){
    que está y no se vuelve a mandar nunca. Vaciando el espejo, todo pasa
    a ser nuevo y sube otra vez. No puede borrar nada: los borrados van
    por su propio registro, y ese no se toca. */
+/* Pedir el archivo entero otra vez. No borra: sobrescribe con lo que
+   la nube tenga, que es la copia buena cuando falta algo de otro. */
+async function rebajarTodo(){
+  if(!enNube()){toast('Primero entra con tu cuenta');return}
+  if(!online()){toast('Hace falta conexión para traer los datos');return}
+  toast('Trayendo todo de la nube…');
+  const guardado=NUBE_DESDE;
+  NUBE_DESDE=null;
+  try{
+    const n=await nubeBajar(false);
+    guardarLocal(); renderAll(); pintarNet();
+    if($('#modal').classList.contains('on')&&$('#mTitle').textContent==='Conexión y sincronización')openSync();
+    toast(`${n} registro${n===1?'':'s'} traído${n===1?'':'s'} de la nube`);
+  }catch(e){
+    NUBE_DESDE=guardado;
+    toast('No se pudo traer: '+e.message);
+  }
+}
 async function resembrarNube(){
   if(!enNube()){toast('Primero entra con tu cuenta');return}
   if(!online()){toast('Hace falta conexión para volver a subir');return}
@@ -16312,7 +16351,11 @@ function openSync(){
        <span>Cuando este equipo tiene datos que en el servidor no están —porque se perdieron
          arriba, o porque se trabajó mucho tiempo sin cuenta—. No borra nada de ningún lado:
          sólo manda otra vez lo que hay aquí.</span></div>
-     <button class="btn sec xs" onclick="resembrarNube()">Subirlo todo</button></div>`:''}
+     <button class="btn sec xs" onclick="resembrarNube()">Subirlo todo</button></div>
+   <div class="set-row" style="margin-top:8px"><div class="t"><b>Volver a traer todo de la nube</b>
+       <span>Si crees que te falta algo que hizo un compañero. Vuelve a pedir el archivo
+         entero en vez de sólo lo último; no borra nada de este equipo.</span></div>
+     <button class="btn sec xs" onclick="rebajarTodo()">Traerlo todo</button></div>`:''}
    <div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
