@@ -6868,6 +6868,10 @@ function psvNuevo(actId){
     ...Object.fromEntries(RECEP_VALVULA.map(([k])=>[k,a[k]||''])),
     rcSsv:'', rcGr:'', rcItOc:'', rcPernoIni:'', rcPernoFin:'',
     rcVeredicto:'', rcMotivo:'', rcComent:'',
+    /* Quién la recibió y qué día se probó: se apuntaron al mover la
+       tarjeta a «Prueba de entrada», no se vuelven a preguntar. */
+    ...(()=>{const o=ORDENES.find(x=>x.act===a.id&&x.recibe);
+             return o?{rcRecibe:o.recibe, rcFecha:o.recibida||h}:{rcRecibe:'', rcFecha:h}})(),
     // disparo
     setEsp:a.setPress||'', und:a.setUnd||'psi', asFound:'', fluidoP:'Nitrógeno',
     /* Tres disparos de salida, que es lo que pide el formato; se añaden
@@ -7077,7 +7081,11 @@ function bloqueRecepcion(t,a,ayuda,F){
     <div class="two">${RECEP_VALVULA.map(([k,l,p])=>campo(k,l,p)).join('')}</div>
 
     <h4 class="snc-sec">Papeles de esta entrega</h4>
-    <div class="two">${RECEP_TRABAJO.map(([k,l,p])=>campo(k,l,p)).join('')}</div>
+    <div class="two">
+      ${F('rcRecibe','Quién recibió la válvula','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
+      ${F('rcFecha','Fecha en que se probó','El día en que se le dio el disparo de entrada. Va al protocolo.','date')}
+      ${RECEP_TRABAJO.map(([k,l,p])=>campo(k,l,p)).join('')}
+    </div>
 
     <h4 class="snc-sec">Perno de regulación
       <span class="opc">altura antes de tocarlo y al terminar</span></h4>
@@ -8542,11 +8550,12 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
   <span class="mk">${marca}</span>
   <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
     <h1>PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE VÁLVULAS DE SEGURIDAD</h1></div>
-  <div class="cod"><b>AXAD-084 v.2</b>OS ${esc(c.os||'—')}<br>${esc(fPE(c.fecha||''))}</div>
+  <div class="cod"><b>AXAD-084 v.2</b>OS ${esc(c.os||'—')}<br>Probada ${esc(fPE(c.rcFecha||c.fecha||''))}</div>
 </div>
 <h2>Identificación</h2>
 <div class="rej">
-  ${cel('Cliente',e.n)}${cel('SSV n.º',c.rcSsv)}${cel('GR CL / orden de entrega',c.rcGr)}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
+  ${cel('Cliente',e.n)}${cel('Recibida por',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
+  ${cel('SSV n.º',c.rcSsv)}${cel('GR CL / orden de entrega',c.rcGr)}
   ${todo.map(([k,v])=>cel(k,v)).join('')}
 </div>
 <h2>Perno de regulación</h2>
@@ -9942,6 +9951,65 @@ function guardarProyecto(){
    nombre no se avanza, porque el sentido de esta etapa es saber
    quién la tiene y desde cuándo. */
 const LS_ING='adolphus.ingeniero';
+const LS_RECIBE='adolphus.recibe';
+/* ── Recibir la válvula ──────────────────────────────────────
+   Pasar de «OC recibida» a «Prueba de entrada» es un hecho con nombre
+   y fecha: alguien bajó la válvula del camión y le dio el disparo de
+   entrada ese día. Sin esos dos datos el protocolo sale sin firmante
+   y sin cuándo se probó, que es justo lo que el cliente reclama
+   cuando discute un resultado meses después. */
+let RECIBIR_GRUPO=null;
+function recibirOrden(id,grupo){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  if(S.rol==='cliente'){toast('La recepción la hace Adolphus');return}
+  const a=ACTIVOS.find(x=>x.id===o.act)||{};
+  const ls=grupo?ORDENES.filter(x=>grupoDe(x)===grupo&&x.et===o.et):[o];
+  RECIBIR_GRUPO=ls.length>1?grupo:null;
+  let yo=''; try{yo=localStorage.getItem(LS_RECIBE)||localStorage.getItem(LS_ING)||''}catch(e){}
+  if(!yo&&typeof SES!=='undefined'&&SES)yo=SES.n||'';
+  $('#mTitle').textContent=`Recibir ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
+     <div>Vas a recibir ${ls.length>1
+       ? `<b>${ls.length} válvulas</b> de <b>${esc(cli(a.cli).n||'')}</b>`
+       : `<b>${esc(a.tag||a.ser||'')}</b> — ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}
+          de <b>${esc(cli(a.cli).n||'')}</b>`}. Tu nombre y esta fecha van al
+       <b>protocolo de entrada AXAD-084</b>: son quién la recibió y cuándo se probó.</div></div>
+   <div class="two">
+     <div class="fld"><label for="rcIng">Quién recibe la válvula <span class="req-dot">*</span></label>
+       <input class="inp" id="rcIng" value="${esc(yo)}" placeholder="p. ej. L. Palma" autocomplete="name"></div>
+     <div class="fld"><label for="rcFec">Fecha en que se probó</label>
+       <input class="inp" id="rcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="confirmarRecibir('${id}')">Recibir y hacer la prueba de entrada</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>{const el=$('#rcIng');if(el)el.focus()},80);
+}
+function confirmarRecibir(id){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const cQ=$('#rcIng'); if(!cQ)return;
+  const quien=cQ.value.trim();
+  if(!quien){toast('Escribe quién recibe la válvula');$('#rcIng').focus();return}
+  try{localStorage.setItem(LS_RECIBE,quien)}catch(e){}
+  const fec=$('#rcFec').value||HOY.toISOString().slice(0,10);
+  const ls=RECIBIR_GRUPO?ORDENES.filter(x=>grupoDe(x)===RECIBIR_GRUPO&&x.et===o.et):[o];
+  const hora=horaPeru();
+  ls.forEach(x=>{
+    x.recibe=quien; x.recibida=fec; x.recibidaH=hora;
+    moverLinea(x,'ent');
+    /* Si ya hay un papel empezado para esa válvula, se le pone el
+       nombre y la fecha ahora; si no, los recogerá al crearlo. */
+    const c=recepDe(x.act);
+    if(c){ c.rcRecibe=quien; c.rcFecha=fec; }
+  });
+  const n=ls.length; RECIBIR_GRUPO=null;
+  closeModal(); renderAll();
+  registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} recibida${n>1?'s':''} por ${quien} a las ${hora}`);
+  toast(n>1 ? `${n} válvulas recibidas · una prueba de entrada por cada una`
+            : `Recibida · ahora la prueba de entrada`);
+  pruebaDeEntrada(ls[0].act);
+}
 function tomarOrden(id,grupo){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
   if(S.rol==='cliente'){toast('El mantenimiento lo ejecuta Adolphus');return}
@@ -9992,7 +10060,8 @@ function tomarOrden(id,grupo){
 let TOMAR_GRUPO=null;
 function confirmarTomar(id){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
-  const ing=$('#toIng').value.trim();
+  const cIng=$('#toIng'); if(!cIng)return;      // el diálogo ya no está en pantalla
+  const ing=cIng.value.trim();
   if(!ing){toast('Escribe tu nombre: es lo que dice quién la tiene');return}
   try{localStorage.setItem(LS_ING,ing)}catch(e){}
   const fec=$('#toFec').value||HOY.toISOString().slice(0,10);
@@ -10673,7 +10742,10 @@ function renderWO(){
                 ` · ${resto.map(x=>`${x.n} ${x.l.toLowerCase()}`).join(' · ')}`}</div>`:''}`;
           })():''}
           ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
-          ${o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
+          ${G.et==='ent'
+            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Recibió ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}`:''}</div>`
+                       :`<div class="wo-ing libre">Sin recibir todavía</div>`)
+            : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
           ${G.et==='ent'&&S.rol!=='cliente'?(()=>{
             /* La válvula llegó: lo primero es recibirla —un disparo tal
@@ -10773,14 +10845,8 @@ function advanceWO(id){
      ingeniero antes de mover la tarjeta, que es el sentido de esta
      etapa —saber quién la tiene y desde cuándo. */
   if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
-  /* De «OC recibida» a «Prueba de entrada» no hay nada que pedir: la
-     válvula acaba de llegar. Se mueve y se abre el protocolo, que es
-     lo que toca hacer con ella en la mano. */
-  if(nx[0]==='ent'){
-    moverLinea(o,'ent'); renderAll();
-    registrar('Orden',`${o.mat||o.n} · válvula recibida`);
-    pruebaDeEntrada(o.act); return;
-  }
+  /* Recibir la válvula tiene nombre y fecha: van al protocolo. */
+  if(nx[0]==='ent'){recibirOrden(id);return}
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
     /* Una orden de calibración no se cierra con el parte genérico:
@@ -10905,6 +10971,7 @@ function avanzarGrupo(g,etapa){
     toast('Cada válvula se certifica con su propio ensayo');
     verOrden(mueven[0].id); return;
   }
+  if(nx[0]==='ent'){recibirOrden(mueven[0].id,g);return}
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
   mueven.forEach(x=>moverLinea(x,nx[0]));
   const et2=ETAPAS.find(e=>e[0]===nx[0])[1];
@@ -10925,6 +10992,7 @@ function dropWO(ev,et){
   const mueven=(ls.length?ls:[o]).filter(x=>x.et===prev);
   if(!mueven.length)return;
   if(et==='final'&&prev!=='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
+  if(et==='ent'&&prev==='oc'){recibirOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='mant'&&prev!=='mant'){tomarOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='final'&&prev!=='final'){
     /* Arrastrar hasta el final no puede certificar por sí solo: antes
