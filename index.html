@@ -349,6 +349,31 @@ textarea.inp{height:auto;padding:8px 10px;resize:vertical;font-family:inherit}
   align-items:start;padding:12px var(--sp-4);border-top:1px solid var(--line-2)}
 .rc-f:first-child{border-top:0}
 .rc-c b{font-size:13.5px;display:block;line-height:1.3}
+/* El nombre del cliente es un enlace a su tablero de órdenes: se marca
+   como tal —subrayado al pasar y una flecha— para que se vea que lleva
+   a algún sitio y no sea un clic que hay que descubrir. */
+.rc-ir{display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:5px}
+.rc-ir svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.45;transition:transform var(--fast) var(--ease),opacity var(--fast)}
+.rc-ir:hover{color:var(--sel);text-decoration:underline;text-underline-offset:3px}
+.rc-ir:hover svg{opacity:1;transform:translateX(2px)}
+.rc-ir:focus-visible{outline:2px solid var(--sel);outline-offset:3px}
+/* Toda la fila entra al tablero de esa empresa, no sólo el nombre. */
+.rc-go{cursor:pointer;transition:background var(--fast) var(--ease)}
+.rc-go:hover{background:var(--surface-2)}
+.rc-go:hover .rc-ir{color:var(--sel);text-decoration:underline;text-underline-offset:3px}
+.rc-go:hover .rc-ir svg{opacity:1;transform:translateX(2px)}
+.rc-go:focus-visible{outline:2px solid var(--sel);outline-offset:-2px;border-radius:var(--r-1)}
+/* La línea de avance de esa empresa, al lado del porcentaje. */
+.rc-av{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin-top:4px}
+.rc-bar{flex:1;display:flex;height:7px;border-radius:var(--r-pill);overflow:hidden;background:var(--surface-3);min-width:80px}
+.rc-bar span{display:block;transition:width 620ms var(--ease-out)}
+.rc-pct{flex:0 0 auto;font-size:12px;font-weight:700;font-family:'IBM Plex Mono';
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rc-pct small{font-weight:400;font-family:inherit;color:var(--ink-3);font-size:11px;margin-left:3px}
+/* El rótulo de cada tira de válvulas: «En la casa», «Piden turno». */
+.rc-tit{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);align-self:center;flex:0 0 auto;margin-right:2px}
 .rc-c small{font-size:11.5px;color:var(--ink-3)}
 .rc-n{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
 .rc-l{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
@@ -13115,50 +13140,104 @@ function resumenClientesHtml(){
     const eq=ACTIVOS.filter(a=>a.cli===c.id);
     const por={}; ESTADOS.forEach(e=>por[e.k]=eq.filter(a=>estado(a).k===e.k));
     const pend=ESTADOS.reduce((n,e)=>n+por[e.k].length,0);
-    return {c,eq,por,pend};
+    /* El trabajo que esa empresa tiene EN LA CASA, etapa por etapa.
+       Es lo primero que se pregunta al mirar este bloque: cuántas
+       válvulas suyas hay aquí y por dónde va cada una. */
+    const ords=ORDENES.filter(o=>eq.some(a=>a.id===o.act));
+    const eta={}; ETAPAS.forEach(([k])=>eta[k]=ords.filter(o=>o.et===k));
+    const av=avanceCliente(c.id);
+    return {c,eq,por,pend,ords,eta,av};
   }).filter(f=>f.eq.length)                       // empresas sin equipos no dicen nada
     .sort((a,b)=>{
-      // primero la que peor está: vencidas pesan más que por vencer
-      const p=f=>f.por.vencido.length*100+f.por.porvencer.length*10+f.pend;
-      return p(b)-p(a);
+      /* Primero la que más trabajo tiene aquí ahora mismo; a igualdad,
+         la que peor está de vencimientos. */
+      const abierto=f=>f.ords.filter(o=>o.et!=='final').length;
+      return abierto(b)-abierto(a)
+          || (b.por.vencido.length*100+b.por.porvencer.length*10+b.pend)
+           - (a.por.vencido.length*100+a.por.porvencer.length*10+a.pend);
     });
 
   if(!filas.length)return '';
 
+  /* Cada etapa con su color, en el orden en que avanza el trabajo. */
+  const TONO={oc:'ink-3', ent:'late', mant:'due', final:'ok'};
+
   const cuerpo=filas.map(f=>{
-    const alDia=!f.pend;
-    // las que hay que mirar, la más urgente primero
-    const lista=[...f.por.vencido,...f.por.porvencer,...f.por.mant,...f.por.incompleto]
+    /* Las válvulas que están AQUÍ, con la etapa en que están y quién
+       las tiene. Esto es «el avance de los trabajadores»: quién tiene
+       qué y desde cuándo. Van primero las que llevan más tiempo
+       paradas. */
+    const enCasa=f.ords.filter(o=>o.et!=='final')
+      .sort((x,y)=>String(entroEn(x)).localeCompare(String(entroEn(y))))
+      .slice(0,6)
+      .map(o=>{
+        const a=ACTIVOS.find(z=>z.id===o.act)||{};
+        const et=ETAPAS.find(e=>e[0]===o.et)||['',o.et];
+        const quien=o.et==='mant'?o.ing : o.et==='ent'?o.recibe : '';
+        const desde=o.et==='mant'?o.tomada : o.et==='ent'?o.recibida : entroEn(o);
+        return `<span class="rc-v" title="${esc(a.tag||a.ser||'sin tag')} · ${esc(et[1])}${
+            quien?' · '+esc(quien):''}${desde?' · desde '+fPE(desde):''}">
+          <i class="dot" style="color:var(--${TONO[o.et]||'ink-3'})"></i>
+          <b>${esc(a.tag||a.ser||'sin tag')}</b><small>${esc(et[1].toLowerCase())}${
+            quien?' · '+esc(quien):''}</small></span>`;
+      }).join('');
+    const restoCasa=f.ords.filter(o=>o.et!=='final').length-Math.min(6,f.ords.filter(o=>o.et!=='final').length);
+
+    /* Y lo que no está en la casa pero pide turno: vencidas, por
+       vencer y fichas a medias. */
+    const fuera=[...f.por.vencido,...f.por.porvencer,...f.por.incompleto]
+      .filter(a=>!f.ords.some(o=>o.act===a.id&&o.et!=='final'))
       .slice(0,4)
       .map(a=>{
-        const e=estado(a);
-        const d=a.prox?dias(a.prox):null;
-        const dice = e.k==='vencido'    ? `vencida hace ${Math.abs(d)} d`
-                   : e.k==='porvencer'  ? `vence en ${d} d`
-                   : e.k==='mant'       ? 'en taller'
+        const e=estado(a), d=a.prox?dias(a.prox):null;
+        const dice = e.k==='vencido' ? `vencida hace ${Math.abs(d)} d`
+                   : e.k==='porvencer' ? `vence en ${d} d`
                    : 'falta ficha';
         return `<span class="rc-v" title="${esc(a.tag||a.ser||'sin tag')} · ${esc(dice)}">
-          <i class="dot" style="color:var(--${e.k==='vencido'?'late':e.k==='porvencer'?'due':e.k==='mant'?'sel':'ink-3'})"></i>
+          <i class="dot" style="color:var(--${e.k==='vencido'?'late':e.k==='porvencer'?'due':'ink-3'})"></i>
           <b>${esc(a.tag||a.ser||'sin tag')}</b><small>${esc(dice)}</small></span>`;
       }).join('');
-    const resto=f.pend-Math.min(4,f.pend);
-    return `<div class="rc-f">
+
+    const pc=v=>f.av.tot?(v/f.av.tot*100).toFixed(2):0;
+    const trozo=(v,tono)=>v?`<span style="width:${pc(v)}%;background:var(--${tono})"></span>`:'';
+    const barra=f.av.tot?`<div class="rc-bar" title="${f.av.fin} de ${f.av.tot} órdenes terminadas">
+        ${trozo(f.av.fin,'ok')}${trozo(f.av.tal,'due')}${trozo(f.av.esp,'late')}</div>
+      <span class="rc-pct">${f.av.pct}% <small>${f.av.fin} de ${f.av.tot}</small></span>`:'';
+
+    /* El nombre del cliente lleva a SU tablero de órdenes. Es lo que
+       se busca al mirar este bloque: ver qué se está trabajando de esa
+       empresa. Antes había que ir a Clientes, entrar, y buscar la
+       pestaña — tres clics para llegar a lo que ya se está mirando. */
+    const ir=`enterClient('${f.c.id}','wo')`;
+    return `<div class="rc-f rc-go" role="link" tabindex="0" onclick="${ir}"
+        onkeydown="if(event.key==='Enter'){${ir}}"
+        title="Ver el tablero de órdenes de ${esc(f.c.n)}">
       <div class="rc-c">
-        <b>${esc(f.c.n)}</b>
+        <b class="rc-ir">${esc(f.c.n)}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></b>
         <small>${f.eq.length} válvula${f.eq.length===1?'':'s'}${f.c.fac?' · '+esc(f.c.fac):''}</small>
       </div>
-      <div class="rc-n">${ESTADOS.filter(e=>f.por[e.k].length).map(e=>
-        `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
-           title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')
-        || '<span class="tag ok"><i class="dot"></i>todas al día</span>'}</div>
-      <div class="rc-l">${lista}${resto>0?`<span class="rc-mas">y ${resto} más</span>`:''}</div>
+      <div class="rc-n">
+        ${ETAPAS.filter(([k])=>f.eta[k].length).map(([k,l])=>
+          `<span class="tag ${k==='final'?'ok':k==='ent'?'late':k==='mant'?'due':''}"
+             title="${esc(l)}"><i class="dot"></i>${f.eta[k].length} ${esc(l.toLowerCase())}</span>`).join('')}
+        ${ESTADOS.filter(e=>e.k!=='mant'&&f.por[e.k].length).map(e=>
+          `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
+             title="${esc(e.t)}"><i class="dot"></i>${f.por[e.k].length} ${esc(e.t.toLowerCase())}</span>`).join('')}
+        ${!f.ords.length&&!f.pend?'<span class="tag ok"><i class="dot"></i>todas al día</span>':''}
+      </div>
+      ${barra?`<div class="rc-av">${barra}</div>`:''}
+      ${enCasa?`<div class="rc-l"><span class="rc-tit">En la casa</span>${enCasa}${
+        restoCasa>0?`<span class="rc-mas">y ${restoCasa} más</span>`:''}</div>`:''}
+      ${fuera?`<div class="rc-l"><span class="rc-tit">Piden turno</span>${fuera}</div>`:''}
     </div>`;
   }).join('');
 
-  const totalPend=filas.reduce((n,f)=>n+f.pend,0);
+  const enCasaT=filas.reduce((n,f)=>n+f.ords.filter(o=>o.et!=='final').length,0);
+  const finT=filas.reduce((n,f)=>n+f.eta.final.length,0);
   return panel('Mantenimiento por cliente',
     `<div class="rc">${cuerpo}</div>`,
-    `<span class="count">${totalPend} válvula${totalPend===1?'':'s'} por atender</span>`);
+    `<span class="count">${enCasaT} en la casa · ${finT} finalizada${finT===1?'':'s'}</span>`);
 }
 
 /* ── El resumen general, empresa por empresa ─────────────────
