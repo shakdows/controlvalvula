@@ -586,8 +586,8 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 /* ---- kanban ---- */
 .kb-wrap{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px;
   scrollbar-width:thin;margin-inline:calc(var(--sp-5)*-1);padding-inline:var(--sp-5)}
-.kb{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:var(--sp-3);align-items:start;min-width:1000px}
-@media(min-width:1180px){.kb{min-width:0}}
+.kb{display:grid;grid-template-columns:repeat(5,minmax(215px,1fr));gap:var(--sp-3);align-items:start;min-width:1180px}
+@media(min-width:1400px){.kb{min-width:0}}
 .kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
 .kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
 .kb-h{display:flex;align-items:center;gap:7px;padding:10px 12px;border-bottom:1px solid var(--line-2);font-size:12px;font-weight:600;color:var(--ink-2)}
@@ -3517,7 +3517,8 @@ let ORDENES=[
    columna propia porque es un estado real —la válvula está en el
    mostrador, no en el taller— y porque nada pasa de ahí sin el
    protocolo de entrada firmado. */
-const ETAPAS=[['oc','OC recibida'],['ent','Prueba de entrada'],['mant','En mantenimiento'],['final','Finalizado']];
+const ETAPAS=[['oc','OC recibida'],['ent','Prueba de entrada'],['mant','En mantenimiento'],
+              ['cert','Prueba final · certificación'],['final','Finalizado']];
 const DOCS=[
  {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
  {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
@@ -3725,7 +3726,8 @@ function estado(a){
      va bien, naranja hay que mirarlo, rojo corre prisa— y una válvula
      abierta en el taller es exactamente «hay que mirarlo». Un cuarto
      color obliga a aprenderse otra clave. */
-  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='ent'?'En recepción':'Trabajo abierto',c:'due'};
+  if(o) return {k:'mant',t:o.et==='mant'?'En mantenimiento':o.et==='ent'?'En recepción'
+                          :o.et==='cert'?'Esperando el visto bueno':'Trabajo abierto',c:'due'};
   const d=a.prox?dias(a.prox):null;
   if(d!==null&&d<0) return {k:'vencido',t:'Calibración vencida',c:'late'};
   if(d!==null&&d<=90) return {k:'porvencer',t:`Vence en ${d} d`,c:'due'};
@@ -4749,7 +4751,7 @@ function verOrden(idOrAct,esActivo){
               /* Terminada: el jefe entra a LEER lo que puso el taller
                  y a poner su visto bueno. Es el último paso antes del
                  certificado. */
-              :x.et==='final' ? `<button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
+              :(x.et==='final'||x.et==='cert') ? `<button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
                   S.rol==='admin'?'Revisar y firmar':'Ver lo que se hizo'}</button>`
               :`<button class="btn quiet xs" onclick="closeModal();registrarEnsayoDeOrden('${x.id}')">Hacer el mantenimiento</button>`}
           </div>`}).join('')}</div>
@@ -4786,6 +4788,9 @@ function verOrden(idOrAct,esActivo){
     ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
     ${!cliente&&enRecepcion&&!varias?`<button class="btn sec" onclick="closeModal();pruebaDeEntrada('${o.act}')">Prueba de entrada</button>`:''}
     ${!cliente&&enRecepcion&&recepDe(o.act)?`<button class="btn sec" onclick="imprimirRecepcion('${recepDe(o.act).id}')">Imprimir el protocolo</button>`:''}
+    ${!cliente&&(etC==='final'||etC==='cert')?`<button class="btn sec" onclick="imprimirInforme('${o.id}')"
+       title="El informe DVAD-SER-002 con todas las válvulas de esta orden">Informe técnico</button>
+      <button class="btn sec" onclick="informeWord('${o.id}')" title="El mismo informe, en Word para editarlo">Informe en Word</button>`:''}
     ${!cliente&&etC==='final'&&certificadosDeOrden(o.id).length?(()=>{
       /* El jefe es el último que mira. Una orden de dos válvulas son
          dos certificados; se los puede llevar sueltos o en un solo
@@ -8636,6 +8641,359 @@ function imprimirRecepcion(id){
   w.document.write(d.html); w.document.close(); w.focus();
   imprimirCuandoCarguen(w);
 }
+/* ════════════════════════════════════════════════════════════
+   INFORME TÉCNICO DVAD-SER-002
+   ------------------------------------------------------------
+   El tercer papel de la casa, y el más gordo: el informe de todo el
+   servicio, no de una válvula. El cliente manda una OC con seis
+   válvulas y espera UN informe con las seis dentro — antecedentes,
+   normas, personal, actividades, el registro fotográfico de cada una
+   y las conclusiones.
+
+   Antes se escribía a mano en Word, copiando de los certificados. Se
+   tardaba una tarde y siempre había un número que no cuadraba con el
+   certificado. Aquí sale de lo mismo que ya está guardado: si el
+   ensayo dice 150 psi, el informe dice 150 psi.
+
+   Lo que es texto de norma —las referencias, las actividades del
+   banco, las herramientas, las recomendaciones— va fijo, porque es
+   fijo: es el procedimiento de la casa y no cambia de un trabajo a
+   otro. Lo que cambia sale de la aplicación.
+   ════════════════════════════════════════════════════════════ */
+const INFORME_COD='DVAD-SER-002';
+const INFORME_NORMAS=[
+ ['API 527','Hermeticidad del asiento de válvulas de alivio.'],
+ ['API 598','Inspección y pruebas de válvulas.'],
+ ['API 576','Inspección y mantenimiento de válvulas de seguridad y de alivio.'],
+ ['ISO 5208','Pruebas de presión de válvulas metálicas.'],
+ ['API 526','Válvulas de seguridad y alivio metálicas bridadas.'],
+ ['API 528','Nomenclatura de la placa de identificación de válvulas de alivio.'],
+ ['ASME B16.34','Válvulas con conexiones bridadas, roscadas y soldadas.']
+];
+const INFORME_SSMA=[
+ 'La empresa cuenta con conocimientos referentes a la ley 29783 de Seguridad y Salud en el Trabajo, planes de gestión, planes de manejo ambiental, gestión de residuos y documentación asociada a esta ley.',
+ 'Personal debidamente calificado, capacitado y con experiencia.',
+ 'Capacitaciones de Seguridad, Medio Ambiente y Salud Ocupacional.',
+ 'El personal cuenta con los EPP requeridos.'
+];
+const INFORME_ACTIVIDADES=[
+ 'Montaje vertical de la válvula al banco de pruebas.',
+ 'Abrir llaves de paso del banco de pruebas y abrir la llave del cilindro de gas nitrógeno de forma pausada para introducir gas.',
+ 'Verificación de fuga en la descarga de la válvula.',
+ 'Fijar la válvula, quitar la caperuza, medir la altura y liberar la compresión del resorte quitando el perno regulador.',
+ 'Quitar las tuercas de sujeción del bonete con el cuerpo y los componentes.',
+ 'Toma de medidas de los componentes internos.',
+ 'Lapeado de asiento y disco.',
+ 'Limpieza y pulido de los componentes internos.',
+ 'Arenado de cuerpo y bonete.',
+ 'Ensamble de los componentes limpios y pulidos.',
+ 'Ensamble de cuerpo y bonete; ajuste de las tuercas de fijación con torque según tabla.',
+ 'Colocar el perno regulador y verificar la altura inicial según medida.',
+ 'Montaje vertical de la válvula al banco de pruebas.',
+ 'Abrir llaves de paso del banco de pruebas y abrir la llave del cilindro de gas nitrógeno de forma pausada para introducir gas.',
+ 'Si el disparo es menor al requerido, dar vuelta al tensor para ajustar el resorte y elevar la presión.',
+ 'Introducir nuevamente gas nitrógeno para calibrar a la presión requerida.',
+ 'Al llegar a la presión requerida, fijar la contratuerca para que no se mueva el tensor y no se pierda la calibración.',
+ 'Liberar el nitrógeno de la válvula y de la manguera por medio de la llave de paso del banco de pruebas.',
+ 'Colocar caperuza, horqueta y pasador, verificando que la tuerca del vástago quede libre para el disparo y se pueda abrir de forma manual.',
+ 'Desmontaje de la válvula del banco de pruebas.',
+ 'Montaje de la placa de identificación de la calibración.',
+ 'Registro escrito y fotográfico de las pruebas obtenidas.'
+];
+const INFORME_HERRAM='Llaves mixtas, llaves francesas, llaves stilsón, llaves hexagonales, destornilladores, alicates, flexómetro, vernier, cuchillas, llaves de dado, ratchet, martillo de goma, amoladora y torquímetros.';
+const INFORME_EQUIPOS='Banco de pruebas BARBEE MOD TP-RVAS, equipo de arenado.';
+const INFORME_RECOM=[
+ 'Seguir siempre las instrucciones del manual de mantenimiento.',
+ 'Utilizar siempre repuestos originales y hacer la rutina de mantenimiento e inspección de acuerdo con los procedimientos del fabricante.',
+ 'Realizar como mínimo una prueba electrónica anual en todas las válvulas ASME secciones I y VIII para comprobar su funcionamiento y garantizar la operatividad.',
+ 'Cada dos años como máximo se debe desarmar la válvula para inspección y mantenimiento.',
+ 'El fabricante recomienda un correcto ajuste de anillos y pruebas de disparo efectivo para comprobar la operación de la válvula en su totalidad.'
+];
+const MES_LARGO=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+/* Los datos del informe: una orden (con todas sus válvulas) y el
+   ensayo de cada una. Se calcula aparte del dibujo para poder
+   probarlo sin abrir una ventana. */
+function datosInforme(idOrden){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o)return null;
+  const ls=lineasDe(o);
+  const c=cli((ACTIVOS.find(a=>a.id===o.act)||{}).cli)||{};
+  const items=ls.map(l=>{
+    const a=ACTIVOS.find(x=>x.id===l.act)||{};
+    /* El ensayo que cerró esa línea; si todavía no cerró, el que haya. */
+    const e=(l.calib&&CALIBS.find(x=>x.id===l.calib))||recepDe(l.act)||null;
+    return {l,a,e,m:MODELOS[a.mod]||{}};
+  });
+  const conE=items.filter(x=>x.e);
+  /* La fecha del informe: la del último trabajo cerrado, o hoy. */
+  const fechas=conE.map(x=>x.e.fecha||x.l.f).filter(Boolean).sort();
+  const fecha=fechas[fechas.length-1]||hoyISO();
+  /* Quién lo hizo y quién lo revisó, de las firmas de los ensayos. */
+  const firma=(rol)=>{
+    for(const x of conE){const f=(x.e.firmas||[]).find(y=>y.rol===rol&&y.n); if(f)return f}
+    return null;
+  };
+  const ejec=firma('ejec'), vb=firma('vbAdo');
+  /* El personal: el responsable de cada ensayo y quien más trabajó. */
+  const gente=[];
+  const meter=(n,cargo)=>{ n=String(n||'').trim(); if(!n)return;
+    if(!gente.some(g=>g.n.toLowerCase()===n.toLowerCase()))gente.push({n,cargo:cargo||''}) };
+  conE.forEach(x=>{ meter(x.e.respNombre,x.e.respArea||'Técnico de válvulas');
+    (x.e.equipo||[]).forEach(p=>meter(p.n,p.area)) });
+  ls.forEach(l=>meter(l.ing,'Técnico de válvulas'));
+  if(vb)meter(vb.n,vb.cargo||'Supervisor técnico');
+  /* El cuadro resumen: cuántas de cada medida. */
+  const porMedida={};
+  items.forEach(x=>{const k=x.a.medida||x.a.sz||'—'; porMedida[k]=(porMedida[k]||0)+1});
+  return {o,ls,c,items,conE,fecha,ejec,vb,gente,porMedida,
+          os:(conE[0]&&conE[0].e.os)||o.mat||o.n};
+}
+
+function documentoInforme(idOrden){
+  const D=datosInforme(idOrden); if(!D)return null;
+  const {o,c,items,conE,fecha,ejec,vb,gente,porMedida,os}=D;
+  const f=new Date(fecha+'T00:00:00');
+  const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
+  const li=a=>`<li>${a}</li>`;
+  const raya=v=>v==null||String(v).trim()===''?'<span class="ln"></span>':esc(String(v));
+
+  /* El registro fotográfico: por cada válvula, cómo llegó, el desarme
+     emparejado antes/después y los disparos. Cada bloque con su fecha
+     y su descripción, como en el formato. */
+  let nFoto=0;
+  const registro=items.map(({a,e})=>{
+    if(!e)return '';
+    const bloque=(titulo,desc,fotos)=>{
+      const fs=fotos.filter(x=>x&&x.src);
+      if(!fs.length&&!String(desc||'').trim())return '';
+      nFoto++;
+      return `<table class="reg"><tr><th class="n">N.º</th><th class="fe">Fecha</th><th>${esc(titulo)}</th></tr>
+        <tr><td class="n">${nFoto}</td><td class="fe">${esc(fPE(e.fecha||fecha))}</td>
+          <td>${esc(a.tag||a.ser||'')} — ${desc?esc(desc):'<span class="ln"></span>'}</td></tr>
+        ${fs.length?`<tr><td colspan="3" class="fot"><div class="fot-g">${fs.map(x=>
+          `<figure><img src="${x.src}" alt="${esc(x.pie||'')}"><figcaption>${esc(x.pie||'')}</figcaption></figure>`).join('')}</div></td></tr>`:''}
+      </table>`;
+    };
+    const llego=fotosLlegada(e).map(x=>({src:x.d,pie:x.n||'Cómo llegó'}));
+    const pares=paresFoto(e).filter(x=>x.a||x.d).flatMap(x=>[
+      x.a?{src:x.a,pie:(x.n||x.nota||'Pieza')+' · antes'}:null,
+      x.d?{src:x.d,pie:(x.n||x.nota||'Pieza')+' · después'}:null].filter(Boolean));
+    const disp=disparosDe(e).flatMap((t,i)=>fotosDisparo(t).map(d=>({src:d,pie:`Prueba ${i+1}${t.v?' · '+t.v+' '+(e.und||'psi'):''}`})));
+    return bloque('Mantenimiento de válvula de seguridad',
+             [e.recep,e.rcComent].filter(Boolean).join(' ')||'Recepción y desarme.',llego.concat(pares))
+         + bloque('Pruebas de calibración final',
+             e.coment||'Calibración en banco de pruebas.',disp);
+  }).join('');
+
+  const veredictos=conE.map(x=>psvVeredicto(x.e));
+  const aprobadas=veredictos.filter(v=>v.estado==='aprobado').length;
+  const rechazadas=veredictos.filter(v=>v.estado==='rechazado').length;
+
+  return {titulo:`Informe tecnico ${os} ${c.n||''}`.trim(), html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>${INFORME_COD} ${esc(os)}</title><style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font:10.5px/1.55 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm;background:#fff}
+.barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;background:rgba(255,255,255,.94);
+  padding:8px;border-radius:10px;box-shadow:0 6px 22px rgba(16,45,105,.18);border:1px solid #e4e7ea}
+.barra button{font:600 13px/1 'Helvetica Neue',Segoe UI,Roboto,sans-serif;cursor:pointer;border-radius:7px;
+  padding:11px 16px;border:1px solid #cfd4d9;background:#fff;color:#1a1d21;display:flex;align-items:center;gap:7px;min-height:44px}
+.barra button.p{background:#102d69;border-color:#102d69;color:#fff}
+.barra button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
+@media print{.barra{display:none}body{padding:12mm}}
+.ln{display:inline-block;min-width:120px;border-bottom:1px solid #9aa2ac;height:.9em;vertical-align:baseline}
+/* La cabecera del formato: título, código, versión y página */
+.mem{display:flex;align-items:stretch;border:1px solid #1a1d21;margin-bottom:16px}
+.mem .lg{flex:0 0 auto;display:flex;align-items:center;padding:8px 12px;border-right:1px solid #1a1d21}
+.mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 12px;
+  border-right:1px solid #1a1d21;font-weight:700;font-size:10.5px;letter-spacing:.02em;line-height:1.35}
+.mem .dt{flex:0 0 190px;display:grid;grid-template-columns:auto 1fr;font-size:8.6px}
+.mem .dt span{padding:4px 8px;border-bottom:1px solid #1a1d21;color:#5b6470}
+.mem .dt b{padding:4px 8px;border-bottom:1px solid #1a1d21;border-left:1px solid #1a1d21;font-weight:600}
+.mem .dt span:nth-last-child(2),.mem .dt b:last-child{border-bottom:0}
+/* La portada */
+.port{text-align:center;padding:22px 0 26px;border-bottom:2px solid #102d69;margin-bottom:16px}
+.port .s{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#8a929c}
+.port h1{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:6px 0 10px;color:#102d69}
+.port .cl{font-size:15px;font-weight:600}
+.port .me{font-size:11px;color:#5b6470;margin-top:3px;text-transform:uppercase;letter-spacing:.1em}
+.port .ref{font-size:10px;color:#5b6470;margin-top:10px}
+.port .ref b{font-family:'IBM Plex Mono',ui-monospace,monospace;color:#1a1d21}
+/* Tablas */
+table{width:100%;border-collapse:collapse;font-size:9.6px;margin-bottom:12px}
+th,td{border:1px solid #cfd4d9;padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#f1f4f8;font-weight:600;font-size:8.8px;letter-spacing:.04em;text-transform:uppercase;color:#5b6470}
+td.c,th.c{text-align:center}
+.roles td{text-align:center;height:34px}
+.roles .rol{font-size:8.4px;color:#8a929c;text-transform:uppercase;letter-spacing:.05em}
+h2{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#102d69;
+   margin:16px 0 6px;padding-bottom:3px;border-bottom:1px solid #dfe3e8}
+p{margin:0 0 7px}
+ul{margin:0 0 9px;padding-left:18px}
+li{margin-bottom:2px}
+.dat{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:10px;margin-bottom:12px}
+.dat span{color:#5b6470}
+.dat b{font-weight:600}
+/* El registro fotográfico */
+.reg{page-break-inside:avoid;margin-bottom:10px}
+.reg th.n,.reg td.n{width:34px;text-align:center}
+.reg th.fe,.reg td.fe{width:78px;text-align:center;white-space:nowrap}
+.fot{padding:8px}
+.fot-g{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.fot-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
+.fot-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
+.fot-g figcaption{font-size:8.4px;color:#5b6470;padding:4px 6px;border-top:1px solid #eef0f2;text-align:center}
+/* Las firmas del final */
+.fir{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;page-break-inside:avoid}
+.fir .b{text-align:center}
+.fir img{max-height:40px;max-width:100%;object-fit:contain;display:block;margin:0 auto 3px}
+.fir .l{border-top:1px solid #1a1d21;padding-top:4px;font-size:9px}
+.fir .l b{display:block;font-size:9.8px}
+.fir .l span{color:#8a929c;font-size:8.4px}
+.pie{margin-top:18px;padding-top:8px;border-top:1px solid #eef0f2;font-size:8.2px;color:#8a929c;text-align:center}
+</style></head><body>
+
+<div class="mem">
+  <span class="lg">${marca}</span>
+  <div class="ti">VÁLVULAS DE SEGURIDAD<br>INFORME TÉCNICO DE MANTENIMIENTO Y CALIBRACIÓN</div>
+  <div class="dt">
+    <span>Código</span><b>${INFORME_COD}</b>
+    <span>Versión</span><b>v1 · ${esc(fPE(fecha))}</b>
+    <span>Referencia</span><b>${esc(os)}</b>
+  </div>
+</div>
+
+<div class="port">
+  <div class="s">Servicio</div>
+  <h1>Calibración de válvulas de seguridad</h1>
+  <div class="cl">${esc(c.n||'')}</div>
+  <div class="me">${esc(MES_LARGO[f.getMonth()])} — ${f.getFullYear()}</div>
+  <div class="ref">Referencia Adolphus · orden de servicio <b>${esc(os)}</b>${
+    o.oc?` · OC del cliente <b>${esc(o.oc)}</b>`:''}</div>
+</div>
+
+<table class="roles">
+  <tr><th class="c">Usuario final</th><th class="c">Cliente</th><th class="c">Orden de compra</th></tr>
+  <tr><td>${raya(c.n)}</td><td>${raya(c.n)}</td><td>${raya(o.oc||o.mat||o.n)}</td></tr>
+  <tr><th class="c">Elaborado por</th><th class="c">Revisado por</th><th class="c">Aprobado por</th></tr>
+  <tr><td>${raya(ejec?ejec.n:(conE[0]&&conE[0].e.respNombre))}</td>
+      <td>${raya(vb?vb.n:'')}</td><td>${raya('')}</td></tr>
+  <tr><td class="rol">Asesor técnico MARC</td><td class="rol">Coordinador de servicios</td><td class="rol">Key Account Manager</td></tr>
+</table>
+
+<div class="dat">
+  <span>Dirigido</span><b>${raya(c.n)}</b>
+  <span>Ubicación</span><b>${raya(c.dir||c.fac)}</b>
+  <span>Atención</span><b>${raya(ejec?ejec.n:(conE[0]&&conE[0].e.respNombre))}</b>
+  <span>Asunto</span><b>Calibración de válvulas de seguridad</b>
+  <span>Fecha</span><b>${f.getDate()} de ${esc(MES_LARGO[f.getMonth()])} del ${f.getFullYear()}</b>
+  <span>Avance</span><b>${Math.round(conE.length*100/Math.max(1,items.length))}%</b>
+</div>
+
+<h2>Antecedentes</h2>
+<p>El área de mantenimiento de la empresa <b>${esc(c.n||'')}</b> requiere se realice el servicio de
+  mantenimiento y calibración de <b>${items.length}</b> válvula${items.length===1?'':'s'} de seguridad.</p>
+<p>El suministro de los repuestos necesarios para el mantenimiento de la válvula está a cargo de
+  <b>${esc(c.n||'')}</b>.</p>
+
+<h2>Detalle de válvulas a intervenir</h2>
+<table>
+  <tr><th>TAG</th><th>Descripción</th><th>Tamaño</th><th>Set de placa</th><th>Placa</th><th>Marca</th><th>N.º de serie</th></tr>
+  ${items.map(({a,m,e})=>`<tr>
+    <td>${raya(a.tag)}</td><td>${raya(m.t||CL[a.cl]||'')}</td><td>${raya(a.medida||a.sz)}</td>
+    <td>${raya(a.setPress?a.setPress+' '+(a.setUnd||'psi'):(e&&e.setEsp?e.setEsp+' '+(e.und||'psi'):''))}</td>
+    <td>${raya(a.cert)}</td><td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
+</table>
+
+<h2>Alcance</h2>
+<p>El presente informe se realiza con la finalidad de informar sobre los trabajos realizados en el
+  servicio de mantenimiento y calibración de válvulas de seguridad. Calibración en banco de pruebas.</p>
+
+<h2>Referencias normativas</h2>
+<p>El servicio de calibración y mantenimiento de válvulas de seguridad se realizó tomando como base
+  las normas correspondientes y las recomendaciones de los fabricantes.</p>
+<ul>${INFORME_NORMAS.map(([n,d])=>li(`<b>Norma ${esc(n)}</b> — ${esc(d)}`)).join('')}</ul>
+
+<h2>Personal asignado</h2>
+<table>
+  <tr><th>Nombre y apellido</th><th>Cargo</th></tr>
+  ${(gente.length?gente:[{n:'',cargo:''}]).map(g=>`<tr><td>${raya(g.n)}</td><td>${raya(g.cargo)}</td></tr>`).join('')}
+</table>
+
+<h2>Seguridad, salud y medio ambiente</h2>
+<ul>${INFORME_SSMA.map(x=>li(esc(x))).join('')}</ul>
+
+<h2>Actividades de mantenimiento, calibración y pruebas de la válvula</h2>
+<p>En el mantenimiento y la calibración final de la válvula se ejecutan las siguientes actividades:</p>
+<ul>${INFORME_ACTIVIDADES.map(x=>li(esc(x))).join('')}</ul>
+
+<h2>Registro fotográfico</h2>
+${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
+
+<h2>Herramientas utilizadas</h2>
+<p>${INFORME_HERRAM}</p>
+
+<h2>Equipos utilizados</h2>
+<p>${INFORME_EQUIPOS}${conE[0]&&conE[0].e.patDesc?` Patrón: ${esc(conE[0].e.patDesc)} ${esc(conE[0].e.patMarca||'')} ${esc(conE[0].e.patModelo||'')}${
+  conE[0].e.patSerie?', serie '+esc(conE[0].e.patSerie):''}${conE[0].e.patCert?', certificado '+esc(conE[0].e.patCert):''}.`:''}</p>
+
+<h2>Cuadro resumen de pruebas de calibración de las válvulas</h2>
+<table>
+  <tr><th>Tipo de servicio</th><th>Medida</th><th class="c">Cantidad</th></tr>
+  ${Object.entries(porMedida).map(([md,n])=>`<tr>
+    <td>Mantenimiento y calibración de válvulas de seguridad</td><td>${raya(md)}</td><td class="c">${n}</td></tr>`).join('')}
+</table>
+
+<h2>Problemas y acciones correctivas</h2>
+<p>${rechazadas
+  ? `${rechazadas} válvula${rechazadas===1?'':'s'} no alcanzó${rechazadas===1?'':'aron'} la tolerancia en el banco de pruebas. `+
+    esc(conE.filter((x,i)=>veredictos[i].estado==='rechazado').map(x=>`${(x.a.tag||x.a.ser||'')}: ${x.e.coment||'ver certificado'}`).join(' · '))
+  : 'No se encontraron problemas en los equipos. Se realizó la calibración en el banco de pruebas y se dejaron los equipos con el set de presión según placa.'}</p>
+
+<h2>Recomendaciones generales</h2>
+<ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
+
+<h2>Conclusiones</h2>
+<p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
+  de seguridad, dejándola${conE.length===1?'':'s'} con el set requerido según placa.
+  ${aprobadas?`${aprobadas} válvula${aprobadas===1?'':'s'} se encuentra${aprobadas===1?'':'n'} operativa${aprobadas===1?'':'s'}.`:''}
+  ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
+${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
+  `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
+
+<div class="fir">
+  <div class="b">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}
+    <div class="l"><b>${ejec?esc(ejec.n):'&nbsp;'}</b><span>Elaborado por · Asesor técnico</span></div></div>
+  <div class="b">${vb&&vb.img?`<img src="${vb.img}" alt="">`:''}
+    <div class="l"><b>${vb?esc(vb.n):'&nbsp;'}</b><span>Revisado por · Coordinador de servicios</span></div></div>
+  <div class="b"><div class="l"><b>&nbsp;</b><span>Aprobado por · Key Account Manager</span></div></div>
+</div>
+
+<p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
+  de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
+${BARRA_IMPRIMIR}
+</body></html>`};
+}
+function imprimirInforme(idOrden){
+  const d=documentoInforme(idOrden);
+  if(!d){toast('No encuentro esa orden');return}
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  w.document.write(d.html); w.document.close(); w.focus();
+  imprimirCuandoCarguen(w);
+}
+function informeWord(idOrden){
+  const d=documentoInforme(idOrden);
+  if(!d){toast('No encuentro esa orden');return}
+  const html=d.html.replace('<html lang="es">',
+    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
+    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
+  const url=URL.createObjectURL(new Blob(['﻿',html],{type:'application/msword'}));
+  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  toast('Informe descargado en Word · se puede editar antes de enviarlo');
+}
+
 function psvDocumento(id){
   const c=CALIBS.find(x=>x.id===id); if(!c)return;
   const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
@@ -9813,9 +10171,10 @@ function renderCal(){
 /* ============================================================
    8 · ÓRDENES DE TRABAJO (kanban)
    ============================================================ */
-const WO_NEXT={oc:['ent','Recibir la válvula'],
-               ent:['mant','Pasar a mantenimiento'],
-               mant:['final','Finalizar y emitir el certificado']};
+const WO_NEXT={oc:  ['ent',  'Recibir la válvula'],
+               ent: ['mant', 'Pasar a mantenimiento'],
+               mant:['cert', 'Pasar a prueba final'],
+               cert:['final','Finalizar y emitir el certificado']};
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
    ------------------------------------------------------------
@@ -10812,6 +11171,13 @@ function renderWO(){
             /* En la columna de recepción el botón sólo tira si la
                prueba de entrada está firmada y aceptada. Si está
                rechazada no hay «siguiente»: la válvula se devuelve. */
+            if(G.et==='cert'){
+              /* Aquí el paso que toca es la firma del jefe; el botón de
+                 cerrar sale cuando ya está puesta. */
+              const sin=ls.filter(x=>{const c=recepDe(x.act);
+                return !(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))});
+              if(sin.length)return '';
+            }
             if(G.et==='ent'){
               const est=ls.map(x=>recepDe(x.act));
               if(est.every(c=>c&&c.rcVeredicto==='rechaza'&&recepcionCerrada(c)))
@@ -10822,6 +11188,22 @@ function renderWO(){
             }
             return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`;
           })():''}
+          ${G.et==='cert'?(()=>{
+            /* Prueba final: el trabajo del taller está firmado y espera
+               al jefe. Es lo único que se puede hacer aquí. */
+            const firmadas=ls.filter(x=>{const c=recepDe(x.act);
+              return c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)}).length;
+            if(S.rol!=='admin')
+              return `<div class="wo-parte">Esperando el visto bueno de gerencia${
+                firmadas?` · ${firmadas} de ${ls.length} ya firmada${firmadas===1?'':'s'}`:''}</div>`;
+            return `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Revisar y firmar${
+                ls.length>1?` · ${firmadas} de ${ls.length}`:firmadas?' ✓':''}</button>`;
+          })():''}
+          ${(G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+            onclick="event.stopPropagation();imprimirInforme('${o.id}')" title="El informe técnico DVAD-SER-002 de toda la orden">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informe técnico</button>`:''}
           ${G.et==='final'&&S.rol==='admin'&&ls.some(x=>x.calib)?`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
             onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
             <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Revisar y firmar</button>`:''}
@@ -10882,8 +11264,46 @@ function advanceWO(id){
   if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   /* Recibir la válvula tiene nombre y fecha: van al protocolo. */
   if(nx[0]==='ent'){recibirOrden(id);return}
+  /* De mantenimiento a prueba final: el trabajo del taller tiene que
+     estar entero —desarme, disparos, conclusiones y la firma del
+     técnico—. Lo que falta a partir de ahí es el jefe. */
+  if(nx[0]==='cert'){
+    const c=recepDe(o.act);
+    if(!c||!psvListoParaEmitir(c)){
+      const a=ACTIVOS.find(x=>x.id===o.act)||{};
+      toast(c?`Falta ${faltaParaEmitir(c)} · ${a.tag||a.ser||''}`
+             :`${a.tag||a.ser||'Esa válvula'} no tiene mantenimiento registrado`);
+      openPSV(o.act,null,'fotos'); return;
+    }
+    moverLinea(o,'cert'); renderAll();
+    registrar('Orden',`${o.mat||o.n} · a prueba final, esperando el visto bueno`);
+    toast('A prueba final · le toca al jefe revisar y firmar');
+    return;
+  }
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
+    /* El certificado no sale sin el visto bueno del jefe. Es el
+       sentido de la columna «Prueba final»: el trabajo está hecho y
+       firmado por el taller, y falta que gerencia lo revise. */
+    if(o.et==='cert'){
+      const c=recepDe(o.act);
+      if(!c||!(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)){
+        if(S.rol!=='admin'){toast('El visto bueno lo pone gerencia');return}
+        const a=ACTIVOS.find(x=>x.id===o.act)||{};
+        toast(`Revisa y firma ${a.tag||a.ser||''} para emitir el certificado`);
+        if(c)revisarYFirmar(o.id); return;
+      }
+      /* Firmado por el jefe: el certificado queda emitido y la orden se
+         cierra con él colgado. No hay parte de cierre que llenar — el
+         ensayo ES el cierre. */
+      const a=ACTIVOS.find(x=>x.id===o.act)||{};
+      o.calib=c.id; o.f=c.fecha||hoyISO(); o.tec=c.respNombre||o.tec;
+      o.hall=`Certificado ${c.os||''} · ${psvVeredicto(c).estado==='aprobado'?'APROBADO':'RECHAZADO'}. ${c.coment||''}`.trim();
+      moverLinea(o,'final'); renderAll();
+      registrar('Orden',`${o.mat||o.n} finalizada · certificado de ${a.tag||a.ser||''}`);
+      toast(`${a.tag||a.ser||''} finalizada · certificado emitido`);
+      return;
+    }
     /* Una orden de calibración no se cierra con el parte genérico:
        se cierra con el ensayo. Si no, la válvula quedaba con la
        próxima calibración renovada un año SIN un solo certificado
@@ -11008,6 +11428,9 @@ function avanzarGrupo(g,etapa){
   }
   if(nx[0]==='ent'){recibirOrden(mueven[0].id,g);return}
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
+  /* A prueba final entra cada válvula por su cuenta: cada una tiene su
+     propio ensayo y su propia firma. */
+  if(nx[0]==='cert'){ mueven.forEach(x=>advanceWO(x.id)); return }
   mueven.forEach(x=>moverLinea(x,nx[0]));
   const et2=ETAPAS.find(e=>e[0]===nx[0])[1];
   registrar('Orden',`${mueven[0].n} · ${mueven.length} válvulas → ${et2}`);
@@ -11029,6 +11452,7 @@ function dropWO(ev,et){
   if(et==='final'&&prev!=='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   if(et==='ent'&&prev==='oc'){recibirOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='mant'&&prev!=='mant'){tomarOrden(mueven[0].id,ls.length>1?gArr:null);return}
+  if(et==='cert'&&prev==='mant'){ mueven.forEach(x=>advanceWO(x.id)); return }
   if(et==='final'&&prev!=='final'){
     /* Arrastrar hasta el final no puede certificar por sí solo: antes
        cerraba la orden, ponía una fecha fija escrita a mano y renovaba
@@ -12498,10 +12922,10 @@ function colaTrabajo(){
       /* Rojo si sólo llegó la orden y nadie la ha tocado; naranja en
          cuanto entra al banco. Es la pregunta que hace el jefe cada
          mañana: cuáles siguen esperando. */
-      const enBanco=o.et==='mant';
+      const enBanco=o.et==='mant'||o.et==='cert';
       out.push({pr,p:enBanco?3:2,g:enBanco?'taller':'espera',id:a.id,cliId:a.cli,
         tit:a.tag||a.ser||'Sin tag',sub:donde,
-        q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.n)}</em>`,
+        q:`${esc(ETAPAS.find(x=>x[0]===o.et)[1])} · orden <em>${esc(o.mat||o.n)}</em>`,
         ac:{t:'Ver orden',f:`verOrden('${a.id}',1)`}});
     }
     else if(e.k==='porvencer'&&d<=60)
@@ -12853,6 +13277,12 @@ function renderHomeCliente(){
 function faltaParaFinalizar(o){
   if(!o) return {listo:false, falta:[]};
   if(o.et==='final') return {listo:true, falta:[]};
+  if(o.et==='cert'){
+    const c=recepDe(o.act);
+    return (c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))
+      ? {listo:true, falta:[]}
+      : {listo:false, falta:['El visto bueno del jefe para emitir el certificado']};
+  }
   if(o.et==='oc')    return {listo:false, falta:['Recibir la válvula — todavía no ha llegado']};
   if(o.et==='ent'){
     const r=recepDe(o.act);
@@ -12993,7 +13423,7 @@ function renderHomeTaller(){
   }).sort((a,b)=>String(a.prox||'9999').localeCompare(String(b.prox||'9999')));
 
   const enOC     = ords.filter(o=>o.et==='oc'||o.et==='ent');
-  const enMant   = ords.filter(o=>o.et==='mant');
+  const enMant   = ords.filter(o=>o.et==='mant'||o.et==='cert');
   const reparando= enMant;   // «en taller» se fundió con mantenimiento
   const fin      = ords.filter(o=>o.et==='final');
   const activas  = enOC.length+reparando.length;
@@ -13110,7 +13540,7 @@ function resumenClientesHtml(){
   if(!filas.length)return '';
 
   /* Cada etapa con su color, en el orden en que avanza el trabajo. */
-  const TONO={oc:'ink-3', ent:'late', mant:'due', final:'ok'};
+  const TONO={oc:'ink-3', ent:'late', mant:'due', cert:'sel', final:'ok'};
 
   const cuerpo=filas.map(f=>{
     /* Las válvulas que están AQUÍ, con la etapa en que están y quién
@@ -13169,7 +13599,7 @@ function resumenClientesHtml(){
       </div>
       <div class="rc-n">
         ${ETAPAS.filter(([k])=>f.eta[k].length).map(([k,l])=>
-          `<span class="tag ${k==='final'?'ok':k==='ent'?'late':k==='mant'?'due':''}"
+          `<span class="tag ${k==='final'?'ok':k==='ent'?'late':k==='mant'||k==='cert'?'due':''}"
              title="${esc(l)}"><i class="dot"></i>${f.eta[k].length} ${esc(l.toLowerCase())}</span>`).join('')}
         ${ESTADOS.filter(e=>e.k!=='mant'&&f.por[e.k].length).map(e=>
           `<span class="tag ${e.c==='late'?'late':e.c==='ok'?'ok':'due'}"
@@ -13252,7 +13682,8 @@ function verFiltradasDe(cid,campo,valor){
    mirando TODAS sus órdenes, no sólo las de trabajos abiertos. */
 function avanceCliente(cid){
   const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===cid});
-  const esp=ords.filter(o=>o.et==='oc'||o.et==='ent').length, tal=ords.filter(o=>o.et==='mant').length,
+  const esp=ords.filter(o=>o.et==='oc'||o.et==='ent').length,
+        tal=ords.filter(o=>o.et==='mant'||o.et==='cert').length,
         fin=ords.filter(o=>o.et==='final').length, tot=esp+tal+fin;
   return {esp,tal,fin,tot,pct:tot?Math.round(fin/tot*100):0};
 }
