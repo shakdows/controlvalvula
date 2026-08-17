@@ -2968,7 +2968,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
     </header>
 
     <div class="cbar" id="cliBar" style="display:none">
-      <button class="cbar-back" onclick="exitClient()"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Clientes</button>
+      <button class="cbar-back" id="cbBack" onclick="exitClient()"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Clientes</button>
       <span class="cbar-mark" id="cbMark"></span>
       <div class="cbar-id"><b id="cbName"></b><span id="cbSub"></span></div>
       <nav class="cbar-tabs" id="cbTabs"></nav>
@@ -4667,10 +4667,15 @@ function resetImport(){
   const f=$('#file');if(f)f.value='';
   if(typeof paso==='function'&&$('#steps'))paso(1);
 }
+/* Salir de un cliente devuelve a donde trabaja cada uno. El taller no
+   administra la cartera de clientes: mira el panel y entra al tablero
+   de la empresa que toque. Sacarlo a la lista de clientes al
+   retroceder era mandarlo a una pantalla que no usa nunca. */
+const SALIDA_ROL={tec:'home'};
 function exitClient(){
   const sn=document.getElementById('subNav'); if(sn)sn.remove();
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.repCli='';S.homeCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
-  closeDrawer();renderAll();go('clients');
+  closeDrawer();renderAll();go(SALIDA_ROL[S.rol]||'clients');
 }
 /* Abre la ficha encima de lo que se esté viendo, sin cambiar de página:
    al cerrarla se vuelve exactamente al mismo sitio. */
@@ -5058,7 +5063,8 @@ function pintarSubNav(n){
     cliTabs().map(([p,l])=>`<a class="${S.page===p?'on':''}" onclick="go('${p}')">
       <span class="lbl">${l}</span>${n&&n[p]?`<span class="ct">${n[p]}</span>`:''}</a>`).join('')+
     `<button class="sub-salir" onclick="exitClient()">
-      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>Todos los clientes</button>`;
+      <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>${
+        SALIDA_ROL[S.rol]==='home'?'Volver al panel':'Todos los clientes'}</button>`;
 }
 function renderCliBar(){
   const t=$('#impTitle');
@@ -5085,6 +5091,9 @@ function renderCliBar(){
     if(inside){
       const ini=c.n.replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
       $('#cbMark').textContent=ini;$('#cbName').textContent=c.n;
+      /* El botón de atrás dice a dónde lleva, no de dónde vienes. */
+      const atras=$('#cbBack');
+      if(atras)atras.lastChild.textContent=SALIDA_ROL[S.rol]==='home'?'Panel':'Clientes';
       $('#cbSub').textContent=`${c.ruc?'RUC '+c.ruc+' · ':''}${c.ind} · ${c.fac}`;
     }
   }
