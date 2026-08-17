@@ -13013,61 +13013,13 @@ function renderHomeTaller(){
     urg={tono:'due',txt:`<b>${enOC.length} válvula${enOC.length===1?'':'s'}</b> con OC recibida esperando entrar al taller.`,
       btn:`<button class="btn" onclick="${S.inCli||S.cli?"go('wo')":"go('clients')"}">Ver las órdenes</button>`};
 
-  const filaOrden=(o,extra)=>{
-    const a=ACTIVOS.find(x=>x.id===o.act)||{};
-    const et=ETAPAS.find(e=>e[0]===o.et);
-    return `<div class="tw-i" onclick="verOrden('${o.id}')">
-      <div class="tw-m"><b>${esc(a.tag||a.ser||'sin tag')}</b>
-        <p>${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</p></div>
-      <div class="tw-r"><span class="tag ${o.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(et?et[1]:o.et)}</span>
-        <small class="mono">${esc(o.mat||o.n)}</small>${extra||''}</div></div>`;
-  };
-  const listaPorMandar=porMandar.length?`<div class="tw">${porMandar.slice(0,8).map(a=>{
-      const k=estado(a).k, d=a.prox?dias(a.prox):null;
-      const razon=sncAbiertos.some(r=>r.act===a.id)?'tiene un reclamo abierto'
-        :k==='vencido'?`calibración vencida hace ${-d} días`:`vence en ${d} días`;
-      return `<div class="tw-i" onclick="verEquipo('${a.id}')">
-        <div class="tw-m"><b>${esc(a.tag||a.ser||'sin tag')}</b><p>${esc(cli(a.cli).n)} · ${esc(razon)}</p></div>
-        <div class="tw-r"><span class="tag ${k==='vencido'?'late':'due'}"><span class="dot"></span>${k==='vencido'?'Vencida':'Por vencer'}</span></div></div>`}).join('')}
-      ${porMandar.length>8?`<div class="tw-mas">y ${porMandar.length-8} más</div>`:''}</div>`
-    :`<div class="empty" style="padding:26px"><b>Nada por mandar</b>Ninguna válvula sin orden pide mantenimiento.</div>`;
-
-  const listaReparando=reparando.length?`<div class="tw">${
-      enMant.slice(0,8).map(o=>filaOrden(o,o.ing?`<small>${esc(o.ing)}</small>`:'')).join('')}
-      ${reparando.length>8?`<div class="tw-mas">y ${reparando.length-8} más</div>`:''}</div>`
-    :`<div class="empty" style="padding:26px"><b>Sin trabajo abierto</b>No hay válvulas en el taller.</div>`;
-
-  const listaFin=fin.length?`<div class="tw">${fin.slice(0,8).map(o=>filaOrden(o,o.calib?`<small>con certificado</small>`:'')).join('')}
-      ${fin.length>8?`<div class="tw-mas">y ${fin.length-8} más</div>`:''}</div>`
-    :`<div class="empty" style="padding:26px"><b>Todavía nada entregado</b>Al finalizar una orden aparece aquí.</div>`;
-
-  const faltaHtml=pendientes.length?`<div class="fal">${pendientes.map(({o,f})=>{
-      const a=ACTIVOS.find(x=>x.id===o.act)||{};
-      return `<div class="fal-i ${f.listo?'ok':''}" onclick="verOrden('${o.id}')">
-        <div class="fal-h"><b>${esc(a.tag||a.ser||'sin tag')}</b>
-          <span class="mono">${esc(o.mat||o.n)}</span>
-          <span class="spacer" style="flex:1"></span>
-          <span class="tag ${f.listo?'ok':'due'}"><span class="dot"></span>${f.listo?'lista para cerrar':`falta${f.falta.length>1?'n '+f.falta.length+' cosas':' 1 cosa'}`}</span></div>
-        <ul class="fal-l">${f.falta.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`}).join('')}</div>`
-    :`<div class="empty" style="padding:26px"><b>Nada pendiente de cerrar</b>Cuando entre una válvula al taller, aquí sale qué le falta.</div>`;
-
-  /* El avance por OC: el cliente pregunta por su OC, no por una orden
-     suelta. Sólo salen las que todavía tienen algo abierto. */
-  const proys=PROYECTOS.filter(p=>{
-    const os=ordenesDe(p.id);
-    return os.length&&os.some(o=>mio(o))&&os.some(o=>o.et!=='final');
-  });
-  const proyHtml=proys.length?`<div class="pry-av">${proys.map(p=>{
-      const av=avanceProyecto(p.id);
-      return `<div class="pry-r" onclick="irCli('${p.cli}','wo')">
-        <div class="pry-t"><b class="mono">${esc(p.oc||p.n||'')}</b><span>${esc(cli(p.cli).n)}</span>
-          <span class="spacer" style="flex:1"></span><b>${av.pct}%</b></div>
-        <div class="pry-b"><i style="width:${av.pct}%"></i></div>
-        <div class="pry-s">${av.fin} de ${av.total} válvulas finalizadas${
-          av.cuenta.mant?` · ${av.cuenta.mant} en mantenimiento`:''}${
-          av.cuenta.taller?` · ${av.cuenta.taller} en taller`:''}${
-          av.cuenta.oc?` · ${av.cuenta.oc} por entrar`:''}</div></div>`}).join('')}</div>`
-    :`<div class="empty" style="padding:26px"><b>Sin OC abiertas</b>Las OC del cliente aparecen aquí con su avance.</div>`;
+  /* Las seis tablas del fondo —por mandar, en reparación, finalizadas,
+     qué le falta a cada una, avance por OC y etapas— se quitaron del
+     panel del taller. Repetían, en seis cajas y con otras palabras, lo
+     que ya dicen las cifras de arriba y el bloque por cliente; y lo
+     que hay que HACER se hace en el tablero de órdenes, no aquí.
+     Las cuentas siguen calculándose porque de ellas salen las cifras
+     y el aviso de arriba. */
 
   /* Las secciones de válvulas y órdenes viven dentro de un cliente: si
      todavía no hay uno elegido, el clic lleva a elegirlo, no a una
@@ -13108,18 +13060,7 @@ function renderHomeTaller(){
      <span class="count">${vs.length} válvula${vs.length===1?'':'s'} · ${ords.length} orden${ords.length===1?'':'es'}</span>
    </div>`}
    ${kpiHtml}
-   ${resumenClientesHtml()}
-   <div class="dash">
-     <div class="span-12">${panel('Qué le falta a cada válvula para finalizar',faltaHtml,
-       `<span class="count">${pendientes.length} en curso · ${listasParaCerrar} lista${listasParaCerrar===1?'':'s'}</span>`)}</div>
-     <div class="span-4">${panel('Por mandar a mantenimiento',listaPorMandar,`<span class="count">${porMandar.length}</span>`)}</div>
-     <div class="span-4">${panel('En reparación',listaReparando,`<span class="count">${reparando.length}</span>`)}</div>
-     <div class="span-4">${panel('Finalizadas',listaFin,`<span class="count">${fin.length}</span>`)}</div>
-     <div class="span-7">${panel('Avance por OC del cliente',proyHtml,`<span class="count">${proys.length} abierta${proys.length===1?'':'s'}</span>`)}</div>
-     <div class="span-5">${panel('En qué etapa está cada orden',
-       hbars(ETAPAS.map(([k,l])=>({label:l,value:ords.filter(o=>o.et===k).length,
-         tone:k==='final'?'ok':k==='mant'?'sel':''}))),`<span class="count">${ords.length} órdenes</span>`)}</div>
-   </div>`;
+   ${resumenClientesHtml()}`;
 }
 
 /* ── Resumen de mantenimiento por cliente ────────────────────
