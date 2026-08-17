@@ -6596,7 +6596,7 @@ function psvFaltantes(c){
   if(c.rcVeredicto==='rechaza'&&!String(c.rcMotivo||'').trim())
     out.push({id:'pv-rcMotivo', que:'el motivo del rechazo', paso:2});
   if(!(c.firmas||[]).some(f=>f.rol==='recep'&&f.img))
-    out.push({id:'pvFirmaRec', que:'la firma de quien recibió la válvula', paso:2});
+    out.push({id:'pvFirmaRec', que:'la firma del mecánico que hizo la prueba de entrada', paso:2});
   /* 3 · el desarme: al menos una pieza fotografiada */
   if(!paresFoto(c).filter(x=>x.a||x.d).length)
     out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme'});
@@ -6835,9 +6835,10 @@ function psvBlowdown(c){
 const FIRMA_ROLES=[
  ['ejec',  'Ejecutado por', 'Adolphus'],
  ['vbAdo', 'Revisado por',  'Adolphus'],
- /* Quien recibe la válvula firma el protocolo de entrada: es quien
-    responde de en qué estado llegó y de si se acepta o se devuelve. */
- ['recep', 'Recibido por',  'Adolphus']
+ /* El mecánico que hizo la prueba de entrada firma el protocolo: es
+    quien responde de a qué presión disparó al llegar y de si se
+    acepta o se devuelve. */
+ ['recep', 'Firma del mecánico que hizo la prueba', 'Adolphus']
 ];
 const firmantesDe=cliId=>{
   const c=cli(cliId);
@@ -7082,7 +7083,7 @@ function bloqueRecepcion(t,a,ayuda,F){
 
     <h4 class="snc-sec">Papeles de esta entrega</h4>
     <div class="two">
-      ${F('rcRecibe','Quién recibió la válvula','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
+      ${F('rcRecibe','Mecánico que hizo la prueba','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
       ${F('rcFecha','Fecha en que se probó','El día en que se le dio el disparo de entrada. Va al protocolo.','date')}
       ${RECEP_TRABAJO.map(([k,l,p])=>campo(k,l,p)).join('')}
     </div>
@@ -7143,15 +7144,15 @@ function pintarFirmaRecepcion(){
   const f=(PSV_TMP.firmas||[]).find(x=>x.rol==='recep');
   const vd=PSV_TMP.rcVeredicto;
   caja.innerHTML=`<div class="fpsv ${f?'ok':''}" id="pvFirmaRec" style="margin-top:12px">
-    <div class="fpsv-t"><b>Firma de quien recibió la válvula</b>
+    <div class="fpsv-t"><b>Firma del mecánico que hizo la prueba</b>
       <span>${f?`Firmada por ${esc(f.n)}${f.cargo?' · '+esc(f.cargo):''} el ${fPE(f.f)}`
         :vd==='rechaza'?'Firma la devolución: es la constancia de que la válvula se rechazó y por qué.'
-        :'Con esta firma la válvula queda recibida y puede entrar al taller.'}</span></div>
+        :'Quien le dio el disparo de entrada. Con su firma la válvula queda recibida y puede entrar al taller.'}</span></div>
     ${f?`<img class="fpsv-img" src="${f.img}" alt="Firma de ${esc(f.n)}">`:''}
     <div class="fpsv-b">
       ${f?`<button class="btn quiet xs" onclick="firmarRecepcion()">Rehacer</button>
            <button class="btn quiet xs" onclick="quitarFirmaRecepcion()">Quitar</button>`
-        :`<button class="btn sec xs" onclick="firmarRecepcion()">Firmar la recepción</button>`}
+        :`<button class="btn sec xs" onclick="firmarRecepcion()">Firmar la prueba de entrada</button>`}
     </div></div>`;
 }
 function firmarRecepcion(){
@@ -8554,7 +8555,7 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 </div>
 <h2>Identificación</h2>
 <div class="rej">
-  ${cel('Cliente',e.n)}${cel('Recibida por',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
+  ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
   ${cel('SSV n.º',c.rcSsv)}${cel('GR CL / orden de entrega',c.rcGr)}
   ${todo.map(([k,v])=>cel(k,v)).join('')}
 </div>
@@ -8579,7 +8580,7 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 <div class="txt">${esc(c.rcComent||'')||'&nbsp;'}</div>
 <div class="fir">
   <div class="b">${rec&&rec.img?`<img src="${rec.img}" alt="Firma de ${esc(rec.n)}">`:''}
-    <div class="l">Firma ADSA · recibido por<b>${rec?esc(rec.n)+(rec.cargo?' · '+esc(rec.cargo):''):'—'}</b>
+    <div class="l">Firma ADSA · mecánico que hizo la prueba<b>${rec?esc(rec.n)+(rec.cargo?' · '+esc(rec.cargo):''):'—'}</b>
       ${rec?esc(fPE(rec.f)):''}</div></div>
   <div class="b"><div class="l">Firma cliente<b>&nbsp;</b>&nbsp;</div></div>
 </div>
@@ -9974,9 +9975,9 @@ function recibirOrden(id,grupo){
        ? `<b>${ls.length} válvulas</b> de <b>${esc(cli(a.cli).n||'')}</b>`
        : `<b>${esc(a.tag||a.ser||'')}</b> — ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}
           de <b>${esc(cli(a.cli).n||'')}</b>`}. Tu nombre y esta fecha van al
-       <b>protocolo de entrada AXAD-084</b>: son quién la recibió y cuándo se probó.</div></div>
+       <b>protocolo de entrada AXAD-084</b>: son quién hizo la prueba y cuándo.</div></div>
    <div class="two">
-     <div class="fld"><label for="rcIng">Quién recibe la válvula <span class="req-dot">*</span></label>
+     <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span></label>
        <input class="inp" id="rcIng" value="${esc(yo)}" placeholder="p. ej. L. Palma" autocomplete="name"></div>
      <div class="fld"><label for="rcFec">Fecha en que se probó</label>
        <input class="inp" id="rcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
@@ -9990,7 +9991,7 @@ function confirmarRecibir(id){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
   const cQ=$('#rcIng'); if(!cQ)return;
   const quien=cQ.value.trim();
-  if(!quien){toast('Escribe quién recibe la válvula');$('#rcIng').focus();return}
+  if(!quien){toast('Escribe el nombre del mecánico que hace la prueba');cQ.focus();return}
   try{localStorage.setItem(LS_RECIBE,quien)}catch(e){}
   const fec=$('#rcFec').value||HOY.toISOString().slice(0,10);
   const ls=RECIBIR_GRUPO?ORDENES.filter(x=>grupoDe(x)===RECIBIR_GRUPO&&x.et===o.et):[o];
@@ -10743,8 +10744,8 @@ function renderWO(){
           })():''}
           ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
           ${G.et==='ent'
-            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Recibió ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}`:''}</div>`
-                       :`<div class="wo-ing libre">Sin recibir todavía</div>`)
+            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Probó ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}`:''}</div>`
+                       :`<div class="wo-ing libre">Sin probar todavía</div>`)
             : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
           ${G.et==='ent'&&S.rol!=='cliente'?(()=>{
@@ -12826,7 +12827,7 @@ function faltaParaFinalizar(o){
     const f=[];
     if(!String((r||{}).asFound||'').trim()) f.push('El disparo de entrada (as-found, TEST 1)');
     if(!(r||{}).rcVeredicto)                f.push('Decir si la válvula se acepta o se rechaza');
-    if(!((r||{}).firmas||[]).some(x=>x.rol==='recep'&&x.img)) f.push('La firma de quien recibió la válvula');
+    if(!((r||{}).firmas||[]).some(x=>x.rol==='recep'&&x.img)) f.push('La firma del mecánico que hizo la prueba');
     return {listo:false, falta:f.length?f:['Pasarla a mantenimiento']};
   }
 
