@@ -3915,7 +3915,13 @@ function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
   /* Las páginas de un cliente solo se abren desde su espacio de
      trabajo — salvo Reclamos, que también se ve de corrido. */
-  if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){go('clients');return}
+  /* Las páginas de un cliente necesitan un cliente. Si no hay
+     ninguno abierto se manda a elegirlo: a la lista de Clientes, o al
+     Panel para quien no tiene esa lista —el taller—, que es donde
+     están las empresas con lo que tienen aquí. */
+  if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){
+    go(SALIDA_ROL[S.rol]||'clients'); return;
+  }
   S.page=p;
   // cada visita a «Usuarios y accesos» vuelve a preguntar a la base:
   // entre una visita y otra puede haberse registrado alguien
@@ -4020,7 +4026,11 @@ function applyRole(v){
      cotiza ni da de alta usuarios, y los reportes de confiabilidad y
      los accesos son cosa de gerencia. */
   const FUERA_DE_CLIENTE=['assets','cal','plan','wo','req','parts','imp'];
-  const POR_ROL={tec:['cot','rep','users'], com:['rep','users']};
+  /* El taller tampoco administra la cartera: no da de alta empresas ni
+     las edita. Entra por el panel, que ya lista las empresas con lo que
+     tienen aquí, y de un clic está en SUS órdenes. «Clientes» le
+     sobraba: era un desvío para llegar a lo mismo. */
+  const POR_ROL={tec:['cot','rep','users','clients'], com:['rep','users']};
   const ocultas=c
     ? ['clients','cat','imp','users','snc','stk']
     : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
@@ -5072,7 +5082,10 @@ function gotoClientPage(page,cliId){
    se entiende de qué cuelgan: son las secciones DE ESE cliente, no
    otro sitio del programa. */
 function pintarSubNav(n){
-  const enlace=document.querySelector('#nav > a[data-p="clients"]');
+  /* Cuelga de «Clientes»; si ese enlace no está —el taller no lo
+     tiene— cuelga del Panel, que es por donde entra. */
+  const enlace=document.querySelector('#nav > a[data-p="clients"]:not([style*="display: none"])')
+            || document.querySelector('#nav > a[data-p="home"]');
   if(!enlace)return;
   let caja=$('#subNav');
   if(!S.inCli||S.rol==='cliente'){ if(caja)caja.remove(); return }
