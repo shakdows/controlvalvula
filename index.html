@@ -16004,16 +16004,27 @@ function exportCSV(){
 function pintarRescate(){
   const el=$('#rescate'); if(!el)return;
   const vacio=!CLIENTES.length&&!ACTIVOS.length&&!ORDENES.length&&!CALIBS.length;
-  if(!vacio||enNube()){el.style.display='none';el.innerHTML='';return}
+  if(!vacio){el.style.display='none';el.innerHTML='';return}
   el.style.display='';
+  /* Vacío y CON sesión: la nube tiene los datos y este equipo no; el
+     botón los pide otra vez desde cero. Vacío y sin sesión: primero
+     hay que entrar. En los dos casos lo importante es lo mismo —no se
+     ha borrado nada— y que la salida esté en el mismo renglón. */
   el.innerHTML=`<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
-    <div><b>Este equipo está vacío, pero tus datos NO se han borrado.</b>
-      Están en el servidor de Adolphus. Esta copia del portal todavía no ha entrado a la nube:
-      entra con tu correo y bajan solos.</div>
-    <div class="rescate-b">
-      <button class="btn sec" onclick="openSync()">Ver la conexión</button>
-      <button class="btn" onclick="logout()">Entrar con mi cuenta</button>
-    </div>`;
+    ${enNube()
+      ? `<div><b>Este equipo está vacío, pero tus datos NO se han borrado.</b>
+           Están en el servidor y tu sesión ya está abierta: pídelos otra vez y bajan enteros.</div>
+         <div class="rescate-b">
+           <button class="btn sec" onclick="openSync()">Ver la conexión</button>
+           <button class="btn" onclick="rebajarTodo()">Traer mis datos ahora</button>
+         </div>`
+      : `<div><b>Este equipo está vacío, pero tus datos NO se han borrado.</b>
+           Están en el servidor de Adolphus. Esta copia del portal todavía no ha entrado a la nube:
+           entra con tu correo y bajan solos.</div>
+         <div class="rescate-b">
+           <button class="btn sec" onclick="openSync()">Ver la conexión</button>
+           <button class="btn" onclick="logout()">Entrar con mi cuenta</button>
+         </div>`}`;
 }
 function renderAll(){pintarRescate();renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
@@ -16606,6 +16617,14 @@ async function nubeVuelta(primera){
   if(!await nubeVigente())return {bajadas:0,subidas:0,sinSesion:true};
   let bajadas=0, subidas=0;
   if(primera){
+    /* ── El cursor no vale si la caja está vacía ───────────────
+       La bajada normal pide «lo que cambió desde la última vez». Si
+       este equipo se quedó sin datos —copia recién descargada, caché
+       del navegador limpiada, sesión cerrada— pero conserva la marca
+       de la última bajada, esa pregunta devuelve CERO filas y el
+       equipo se queda vacío para siempre por muchas veces que se
+       entre. Sin datos, se pide el archivo entero. */
+    if(!CLIENTES.length&&!ACTIVOS.length){ NUBE_DESDE=null; ESPEJO={}; }
     bajadas=await nubeBajar(true);
     /* Si arriba no hay nada de lo importante y aquí sí, el espejo está
        mintiendo: se vacía para que suba todo en vez de quedarse callado
