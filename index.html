@@ -2339,6 +2339,16 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .hst-t tr{cursor:default}
 .hst-acc{text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
 .hst-vacio{padding:14px;font-size:12.5px;color:var(--ink-3);margin:0}
+/* La franja de rescate: sale sólo cuando el equipo está vacío y no hay
+   sesión en la nube. Es un aviso, no un error: lo que hay que hacer
+   está en el mismo renglón. */
+.rescate{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px 16px;margin:0;border-bottom:1px solid var(--line);
+  background:color-mix(in oklab,var(--due) 12%,var(--surface));font-size:13px}
+.rescate>svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--due);stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.rescate>div{flex:1;min-width:220px;line-height:1.5}
+.rescate-b{display:flex;gap:8px;flex-wrap:wrap}
 /* ── El historial, en dos pasos ──────────────────────────────
    Primero el parque de la empresa: una ficha por válvula con su
    foto, como se reconoce en el taller. Al abrir una, su línea de
@@ -3092,6 +3102,12 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <nav class="cbar-tabs" id="cbTabs"></nav>
     </div>
 
+    <!-- Si este equipo está vacío y no hay sesión en la nube, lo
+         primero que se ve no puede ser un panel en cero: es un susto
+         y no es verdad. Los datos están arriba; esto dice cómo
+         traerlos. -->
+    <div id="rescate" class="rescate" style="display:none"></div>
+
     <div class="view">
 
       <!-- ═══ PANEL ═══ -->
@@ -3306,6 +3322,11 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
     <div class="cmd-f"><span><span class="kbd">↑↓</span> navegar</span><span><span class="kbd">↵</span> abrir</span><span><span class="kbd">esc</span> cerrar</span></div>
   </div>
 </div>
+
+<!-- La copia de seguridad se elige con este campo: vive fuera de la
+     ventana porque el contenido de la ventana se vuelve a dibujar. -->
+<input type="file" id="fileCopia" accept=".json,application/json" style="display:none"
+  onchange="restaurarCopia(this)">
 
 <div class="modal" id="modal" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,cerrarModalPidiendo)">
   <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
@@ -15890,7 +15911,21 @@ function exportCSV(){
   const a=document.createElement('a');a.href=url;a.download='adolphus-activos.csv';a.click();
   toast(`${rows.length} equipos exportados`);
 }
-function renderAll(){renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function pintarRescate(){
+  const el=$('#rescate'); if(!el)return;
+  const vacio=!CLIENTES.length&&!ACTIVOS.length&&!ORDENES.length&&!CALIBS.length;
+  if(!vacio||enNube()){el.style.display='none';el.innerHTML='';return}
+  el.style.display='';
+  el.innerHTML=`<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v5h-5"/></svg>
+    <div><b>Este equipo está vacío, pero tus datos NO se han borrado.</b>
+      Están en el servidor de Adolphus. Esta copia del portal todavía no ha entrado a la nube:
+      entra con tu correo y bajan solos.</div>
+    <div class="rescate-b">
+      <button class="btn sec" onclick="openSync()">Ver la conexión</button>
+      <button class="btn" onclick="logout()">Entrar con mi cuenta</button>
+    </div>`;
+}
+function renderAll(){pintarRescate();renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -16554,6 +16589,59 @@ function fotoDatos(){
           CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
           SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS};
 }
+/* ── LA COPIA DE SEGURIDAD ───────────────────────────────────
+   Un archivo con TODO lo registrado, guardado donde el usuario
+   quiera: un USB, el correo, la carpeta de la empresa. La nube y la
+   caja del navegador son dos copias, pero las dos viven en sitios
+   que no controla él; ésta sí.
+   Al restaurarla NO se borra nada: lo que está en el archivo y no
+   está aquí se añade, y lo que está en los dos se queda con lo del
+   archivo. Nada desaparece por restaurar.
+   ════════════════════════════════════════════════════════════ */
+function copiaSeguridad(){
+  const d=fotoDatos();
+  d.marca='adolphus'; d.cuando=new Date().toISOString();
+  const url=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));
+  const el=document.createElement('a');
+  el.href=url; el.download=`adolphus-copia-${hoyISO()}.json`;
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  const n=CLIENTES.length+ACTIVOS.length+ORDENES.length+CALIBS.length;
+  toast(`Copia guardada · ${n} registros en el archivo`);
+}
+function pedirCopia(){ const i=$('#fileCopia'); if(i){i.value='';i.click()} }
+function restaurarCopia(inp){
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    let d; try{ d=JSON.parse(r.result) }catch(e){ toast('Ese archivo no es una copia del portal'); return }
+    if(!d||d.v!==1){ toast('Ese archivo no es una copia del portal'); return }
+    const n=fundirFoto(d);
+    guardarLocal(); renderAll();
+    toast(n?`Recuperados ${n} registros de la copia`:'La copia no traía nada que no estuviera ya');
+    if(enNube())sincronizar();
+  };
+  r.readAsText(f);
+}
+/* Funde la copia con lo que hay: por id, sin borrar nada. */
+function fundirFoto(d){
+  let n=0;
+  const lista=(dst,src)=>{ if(!Array.isArray(src))return;
+    src.forEach(x=>{ if(!x||x.id==null)return;
+      const i=dst.findIndex(y=>String(y.id)===String(x.id));
+      if(i>=0)dst[i]=x; else dst.push(x); n++; }) };
+  const dicc=(dst,src)=>{ if(!src||typeof src!=='object')return;
+    Object.keys(src).forEach(k=>{ if(!(k in dst))n++; dst[k]=src[k] }) };
+  lista(CLIENTES,d.CLIENTES); lista(ACTIVOS,d.ACTIVOS); lista(ORDENES,d.ORDENES);
+  lista(SOLICITUDES,d.SOLICITUDES); lista(RECLAMOS,d.RECLAMOS); lista(COTIZACIONES,d.COTIZACIONES);
+  lista(CALIBS,d.CALIBS); lista(SERVS,d.SERVS); lista(DOCS,d.DOCS); lista(PROYECTOS,d.PROYECTOS);
+  dicc(BOM,d.BOM); dicc(PRECIOS,d.PRECIOS); dicc(PART_PHOTO,d.PART_PHOTO);
+  dicc(MODELOS,d.MODELOS); dicc(MODELO_DEF,d.MODELO_DEF);
+  dicc(PLAN_TARIFA,d.PLAN_TARIFA); dicc(PLAN_OK,d.PLAN_OK);
+  migrarEtapas();
+  return n;
+}
+
 function aplicarFoto(d){
   if(!d||d.v!==1)return false;
   const arr=(dst,src)=>{if(Array.isArray(src)){dst.length=0;src.forEach(x=>dst.push(x))}};
@@ -16949,6 +17037,15 @@ function openSync(){
        <span>Si crees que te falta algo que hizo un compañero. Vuelve a pedir el archivo
          entero en vez de sólo lo último; no borra nada de este equipo.</span></div>
      <button class="btn sec xs" onclick="rebajarTodo()">Traerlo todo</button></div>`:''}
+   <div class="set-row" style="margin-top:12px">
+     <div class="t"><b>Guardar una copia en un archivo</b>
+       <span>Todo lo registrado en un solo archivo, para el USB o el correo. Es la copia que
+         no depende ni del navegador ni de la nube. Al restaurarla no se borra nada: lo que
+         falte se añade.</span></div>
+     <div style="display:flex;gap:8px;flex-wrap:wrap">
+       <button class="btn sec xs" onclick="copiaSeguridad()">Guardar copia</button>
+       <button class="btn quiet xs" onclick="pedirCopia()">Restaurar copia</button>
+     </div></div>
    <div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
