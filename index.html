@@ -2350,6 +2350,26 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    Tarjetas grandes con imagen: se reconocen de un vistazo y se
    pulsan con el pulgar. La foto del producto donde la hay; el resto,
    con el mismo icono que el menú, en grande. */
+/* La pantalla de inicio: los accesos solos, centrados y con aire. */
+.acc-solo{max-width:980px;margin:clamp(10px,5vh,54px) auto 0}
+.acc-solo .acc-g{gap:clamp(8px,2vw,20px);grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.acc-solo .acc-ic{width:96px;height:96px;border-radius:28px}
+.acc-solo .acc-ic svg{width:46px;height:46px}
+.acc-solo .acc-n{font-size:14px}
+.acc-solo .acc-c{left:calc(50% + 26px)}
+.acc-solo .acc-ed{right:calc(50% - 48px)}
+.acc-pie{display:flex;justify-content:center;margin-top:14px}
+/* Lo demás del panel, plegado detrás de una línea. */
+.pn-mas{max-width:980px;margin:clamp(14px,4vh,34px) auto 0}
+.pn-mas>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:10px}
+.pn-mas>summary::-webkit-details-marker{display:none}
+.pn-mas>summary:hover{color:var(--ink-1)}
+.pn-mas>summary::after{content:'';width:7px;height:7px;border-right:2px solid currentColor;
+  border-bottom:2px solid currentColor;transform:rotate(45deg);margin-top:-4px;transition:transform var(--fast)}
+.pn-mas[open]>summary::after{transform:rotate(225deg);margin-top:2px}
+.pn-mas[open]>summary>span::after{content:' — ocultar'}
+.pn-mas-b{max-width:1400px;margin:0 auto}
 .acc-g{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
 .acc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;
   padding:14px 8px 16px;border:0;border-radius:var(--r-2);background:none;
@@ -13824,7 +13844,18 @@ function guardarImagenAcceso(inp){
 }
 function quitarImagenAcceso(p){ delete ACCESO_IMG[p]; guardarLocal(); renderHome(); toast('Imagen quitada') }
 
-function accesosHtml(){
+/* La pantalla de inicio es SÓLO los accesos: ni cifras, ni listas, ni
+   avisos. Lo demás sigue estando, pero detrás de «Ver el resumen del
+   día» —el que lo quiera lo abre y se queda abierto—. Quien entra a
+   trabajar pulsa su sección y se va. */
+function panelInicio(resto){
+  return accesosHtml(true)+`
+    <details class="pn-mas" ${S.panelMas?'open':''} ontoggle="S.panelMas=this.open">
+      <summary><span>Ver el resumen del día</span></summary>
+      <div class="pn-mas-b">${resto}</div>
+    </details>`;
+}
+function accesosHtml(solo){
   const links=[...document.querySelectorAll('#nav > a')]
     .filter(a=>a.style.display!=='none'&&a.dataset.p&&a.dataset.p!=='home');
   if(!links.length)return '';
@@ -13834,6 +13865,7 @@ function accesosHtml(){
     const ct=((a.querySelector('.ct')||{}).textContent||'').trim();
     const ico=(a.querySelector('svg')||{}).outerHTML||'';
     return `<button class="acc" onclick="go('${p}')" title="${esc(info.d||lbl)}" aria-label="${esc(lbl)}${info.d?' — '+esc(info.d):''}">
+      ${/* Manda la imagen que suba la casa; si no la hay, el icono. */''}
       <span class="acc-ic ${ACCESO_IMG[p]?'foto':''}" style="--c:var(--${info.c||'sel'})">${
         ACCESO_IMG[p]?`<img src="${ACCESO_IMG[p]}" alt="">`:ico}</span>
       ${ACC_EDITA?`<span class="acc-ed" onclick="event.stopPropagation();cambiarImagenAcceso('${p}')"
@@ -13843,10 +13875,16 @@ function accesosHtml(){
       ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
     </button>`;
   }).join('');
-  return panel('Tus accesos',`<div class="acc-g">${tarjetas}</div>`,
-    `${S.rol==='admin'?`<button class="btn quiet xs" onclick="editarAccesos()">${
-      ACC_EDITA?'Terminar':'Cambiar imágenes'}</button>`:''}
-     <span class="count">${links.length} secciones</span>`);
+  const cambiar=S.rol==='admin'
+    ? `<button class="btn quiet xs" onclick="editarAccesos()">${
+        ACC_EDITA?'Terminar':'Cambiar imágenes'}</button>` : '';
+  /* En la pantalla de inicio va suelto, sin caja ni título: son los
+     botones y nada más. Dentro de otra pantalla sí lleva su panel. */
+  return solo
+    ? `<div class="acc-solo"><div class="acc-g">${tarjetas}</div>
+        ${cambiar?`<div class="acc-pie">${cambiar}</div>`:''}</div>`
+    : panel('Tus accesos',`<div class="acc-g">${tarjetas}</div>`,
+        `${cambiar}<span class="count">${links.length} secciones</span>`);
 }
 
 function hbars(rows){
@@ -14476,7 +14514,7 @@ function renderHomeTaller(){
     <span class="kv">${x.dot?`<span class="dot" style="color:var(--${x.dot})"></span>`:''}${x.v}</span>
     <span class="kk">${esc(x.k)}</span><span class="kd ${x.cls||''}">${esc(x.d)}</span></div>`).join('')}</div>`;
 
-  $('#homeView').innerHTML=
+  $('#homeView').innerHTML=panelInicio(
    avisoNuevoHtml(foco)+
    heroHtml({
      titulo:'Servicio técnico'+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
@@ -14496,9 +14534,8 @@ function renderHomeTaller(){
      <span class="spacer" style="flex:1"></span>
      <span class="count">${vs.length} válvula${vs.length===1?'':'s'} · ${ords.length} orden${ords.length===1?'':'es'}</span>
    </div>`}
-   ${accesosHtml()}
    ${kpiHtml}
-   ${resumenClientesHtml()}`;
+   ${resumenClientesHtml()}`);
 }
 
 /* ── Resumen de mantenimiento por cliente ────────────────────
@@ -14838,7 +14875,7 @@ function renderHome(){
              :`<button class="btn" onclick="verSol('${primero.solId}')">Ver la solicitud</button>`)};
   }
 
-  $('#homeView').innerHTML=
+  $('#homeView').innerHTML=panelInicio(
    heroHtml({
      titulo:esc(S.cli?cli(S.cli).n:'Adolphus S.A.')+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
      sub:`${fechaLarga(HOY)} · ${total} válvula${total===1?'':'s'} · ${marcas} marca${marcas===1?'':'s'}${S.cli?'':` · ${CLIENTES.length} clientes`}`,
@@ -14854,7 +14891,6 @@ function renderHome(){
         etapa y su porcentaje, y de un clic se entra a ver qué han
         hecho. Antes estaba tres bloques más abajo y había que buscarlo
         con la rueda del ratón. */''}
-   ${accesosHtml()}
    ${resumenClientesHtml()}
    ${colaHtml()}
    ${/* «Termina de configurar tu espacio» vivía aquí con sus cuatro
@@ -14866,7 +14902,7 @@ function renderHome(){
    ${resumenGeneralHtml()}
    <div class="dash">
      <div class="span-12">${panel('Actividad reciente',feedHtml,'<span class="count">de todas las empresas</span>')}</div>
-   </div>`;
+   </div>`);
 }
 
 /* ── Confiabilidad: de una empresa o de todas ────────────────
