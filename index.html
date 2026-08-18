@@ -2355,7 +2355,19 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    pulsan con el pulgar. La foto del producto donde la hay; el resto,
    con el mismo icono que el menú, en grande. */
 /* La pantalla de inicio: los accesos solos, centrados y con aire. */
-.acc-solo{max-width:980px;margin:clamp(10px,5vh,54px) auto 0}
+.acc-solo{max-width:980px;margin:clamp(10px,4vh,40px) auto 0}
+/* El buscador de la puerta: lo primero, ancho y con su atajo. */
+.acc-buscar{display:flex;align-items:center;gap:11px;width:100%;margin-bottom:clamp(14px,3vh,30px);
+  padding:15px 18px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);
+  font:inherit;font-size:14.5px;color:var(--ink-3);cursor:pointer;text-align:left;
+  box-shadow:var(--sh-1);transition:border-color var(--fast),box-shadow var(--fast)}
+.acc-buscar:hover{border-color:var(--ink-3);box-shadow:var(--sh-2)}
+.acc-buscar:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.acc-buscar svg{width:19px;height:19px;flex:0 0 auto;fill:none;stroke:var(--ink-3);stroke-width:1.9}
+.acc-buscar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc-buscar kbd{font:600 11px/1.6 'IBM Plex Mono';color:var(--ink-3);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+@media(max-width:520px){.acc-buscar{font-size:13.5px;padding:13px 15px} .acc-buscar kbd{display:none}}
 .acc-solo .acc-g{gap:clamp(8px,2vw,20px);grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
 .acc-solo .acc-ic{width:96px;height:96px;border-radius:28px}
 .acc-solo .acc-ic svg{width:46px;height:46px}
@@ -2363,17 +2375,6 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .acc-solo .acc-c{left:calc(50% + 26px)}
 .acc-solo .acc-ed{right:calc(50% - 48px)}
 .acc-pie{display:flex;justify-content:center;margin-top:14px}
-/* Lo demás del panel, plegado detrás de una línea. */
-.pn-mas{max-width:980px;margin:clamp(14px,4vh,34px) auto 0}
-.pn-mas>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-3);padding:10px}
-.pn-mas>summary::-webkit-details-marker{display:none}
-.pn-mas>summary:hover{color:var(--ink-1)}
-.pn-mas>summary::after{content:'';width:7px;height:7px;border-right:2px solid currentColor;
-  border-bottom:2px solid currentColor;transform:rotate(45deg);margin-top:-4px;transition:transform var(--fast)}
-.pn-mas[open]>summary::after{transform:rotate(225deg);margin-top:2px}
-.pn-mas[open]>summary>span::after{content:' — ocultar'}
-.pn-mas-b{max-width:1400px;margin:0 auto}
 .acc-g{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
 .acc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;
   padding:14px 8px 16px;border:0;border-radius:var(--r-2);background:none;
@@ -4038,7 +4039,11 @@ function toast(msg){
   el.innerHTML='<span class="dot"></span>'+esc(msg);
   $('#toasts').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},2600);
 }
-const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
+/* Lo que se está mirando: si hay una empresa abierta —porque se entró
+   a ella o porque quien mira es esa empresa—, sólo sus válvulas. El
+   panel de dentro de un cliente tiene que hablar de ese cliente y de
+   nadie más. */
+const visibles=()=>{const f=S.cli||S.inCli;return f?ACTIVOS.filter(a=>a.cli===f):ACTIVOS};
 
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
@@ -13708,6 +13713,25 @@ function buildCmd(q){
   ];
   const act=visibles().filter(a=>!q||[a.tag,a.ser,a.mod,MODELOS[a.mod]?.m,cli(a.cli).n].join(' ').toLowerCase().includes(q))
     .slice(0,7).map(a=>({g:'Activos',ic:'V',t:a.tag||a.ser||'(sin tag)',s:`${MODELOS[a.mod]?.m||''} ${a.mod} · ${cli(a.cli).n}`,fn:()=>gotoAsset(a.id)}));
+  /* Empresas y órdenes: hasta ahora el buscador sólo conocía válvulas
+     y números de parte, así que buscar «Refinería» o «MAT-005» no
+     devolvía nada y había que ir sección por sección. */
+  const emp=(S.rol==='cliente'?[]:CLIENTES)
+    .filter(c=>!q||[c.n,c.ruc,c.sec,c.fac].join(' ').toLowerCase().includes(q))
+    .slice(0,5).map(c=>({g:'Empresas',ic:'E',t:c.n,
+      s:`${ACTIVOS.filter(a=>a.cli===c.id).length} válvulas${c.ruc?' · RUC '+c.ruc:''}`,
+      fn:()=>enterClient(c.id)}));
+  const ords=ORDENES.filter(o=>{
+      const a=ACTIVOS.find(x=>x.id===o.act)||{};
+      return (!S.cli||a.cli===S.cli)&&(!q||[o.mat,o.n,o.tipo,o.ing,a.tag,a.ser,cli(a.cli).n]
+        .join(' ').toLowerCase().includes(q));})
+    .slice(0,6).map(o=>{
+      const a=ACTIVOS.find(x=>x.id===o.act)||{};
+      const et=(ETAPAS.find(e=>e[0]===o.et)||[,o.et])[1];
+      return {g:'Órdenes de trabajo',ic:'O',t:`${o.mat||o.n} · ${a.tag||a.ser||''}`,
+        s:`${et}${o.arch?' · en el historial':''} · ${cli(a.cli).n||''}`,
+        fn:()=>verOrden(o.id)};
+    });
   const partes=[];
   if(q.length>1){
     const vistos=new Set();
@@ -13717,7 +13741,8 @@ function buildCmd(q){
         partes.push({g:'Números de parte',ic:'#',t:p.n,s:`${p.d} · ${p.s>0?p.s+' en stock':'sin stock'}`,fn:()=>toast(`${p.n} — ${p.s>0?p.s+' und en Lima':'requiere importación'}`)})}
     });
   }
-  cmdItems=[...act,...partes.slice(0,5),...acciones.filter(a=>!q||a.t.toLowerCase().includes(q))].slice(0,14);
+  cmdItems=[...emp,...act,...ords,...partes.slice(0,5),
+            ...acciones.filter(a=>!q||a.t.toLowerCase().includes(q))].slice(0,18);
   cmdCur=0;paintCmd();
 }
 function paintCmd(){
@@ -13866,15 +13891,13 @@ function guardarImagenAcceso(inp){
 function quitarImagenAcceso(p){ delete ACCESO_IMG[p]; guardarLocal(); renderHome(); toast('Imagen quitada') }
 
 /* La pantalla de inicio es SÓLO los accesos: ni cifras, ni listas, ni
-   avisos. Lo demás sigue estando, pero detrás de «Ver el resumen del
-   día» —el que lo quiera lo abre y se queda abierto—. Quien entra a
-   trabajar pulsa su sección y se va. */
+   gráficos. Todo eso es de una empresa concreta, así que se ve DENTRO
+   de la empresa —se entra por Clientes y ahí está su panel— y no
+   amontonado en la puerta. Quien entra a trabajar pulsa su sección y
+   se va. */
+const enUnaEmpresa=()=>!!(S.inCli||S.cli);
 function panelInicio(resto){
-  return accesosHtml(true)+`
-    <details class="pn-mas" ${S.panelMas?'open':''} ontoggle="S.panelMas=this.open">
-      <summary><span>Ver el resumen del día</span></summary>
-      <div class="pn-mas-b">${resto}</div>
-    </details>`;
+  return enUnaEmpresa() ? resto : accesosHtml(true);
 }
 function accesosHtml(solo){
   const links=[...document.querySelectorAll('#nav > a')]
@@ -13896,16 +13919,21 @@ function accesosHtml(solo){
       ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
     </button>`;
   }).join('');
-  const cambiar=S.rol==='admin'
-    ? `<button class="btn quiet xs" onclick="editarAccesos()">${
-        ACC_EDITA?'Terminar':'Cambiar imágenes'}</button>` : '';
-  /* En la pantalla de inicio va suelto, sin caja ni título: son los
-     botones y nada más. Dentro de otra pantalla sí lleva su panel. */
+  /* En la pantalla de inicio van sueltos, sin caja ni título: son los
+     botones y nada más. Lo de cambiar las imágenes vive en Ajustes ·
+     Organización, que es donde se configura, no en la puerta. */
   return solo
-    ? `<div class="acc-solo"><div class="acc-g">${tarjetas}</div>
-        ${cambiar?`<div class="acc-pie">${cambiar}</div>`:''}</div>`
+    ? `<div class="acc-solo">
+        ${/* Buscar sin entrar a ninguna sección: escribe un tag, una
+             serie, una empresa, un número de orden o de parte y salta
+             directo a lo que sea. */''}
+        <button class="acc-buscar" onclick="openCmd()">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <span>Buscar una válvula, una empresa, una orden o un repuesto</span>
+          <kbd>⌘K</kbd></button>
+        <div class="acc-g">${tarjetas}</div></div>`
     : panel('Tus accesos',`<div class="acc-g">${tarjetas}</div>`,
-        `${cambiar}<span class="count">${links.length} secciones</span>`);
+        `<span class="count">${links.length} secciones</span>`);
 }
 
 function hbars(rows){
@@ -18157,6 +18185,14 @@ function renderSettings(){
         <div class="fld"><label>Teléfono</label><input class="inp" id="orTel" value="${esc(ORG.tel)}"></div>
         <div class="fld"><label>Sitio web</label><input class="inp" id="orWeb" value="${esc(ORG.web)}"></div>
         <button class="btn" onclick="guardarOrg()">Guardar organización</button>`)}
+      ${panel('Pantalla de inicio',`
+        <div class="set-row"><div class="t"><b>Imágenes de los accesos</b>
+          <span>Cada sección del inicio puede llevar la foto que quieras en vez de su icono.
+            Se guarda encogida y la ven todos los equipos.</span></div>
+          <button class="btn sec xs" onclick="go('home');editarAccesos()">Cambiar imágenes</button></div>
+        ${Object.keys(ACCESO_IMG).length?`<div class="set-row"><div class="t"><b>Volver a los iconos</b>
+          <span>Quita las imágenes puestas y deja los iconos de color.</span></div>
+          <button class="btn quiet xs" onclick="ACCESO_IMG={};guardarLocal();renderHome();renderSettings();toast('Iconos restaurados')">Quitar todas</button></div>`:''}`)}
     </div>`;
   }
 
