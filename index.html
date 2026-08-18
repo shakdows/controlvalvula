@@ -14610,11 +14610,16 @@ function renderHome(){
        :'nada espera por ti'],
      urgente:urg,
    })+`
+   ${/* Lo primero del panel del jefe son las EMPRESAS, igual que en el
+        del taller: cada una se abre y enseña sus servicios con su
+        etapa y su porcentaje, y de un clic se entra a ver qué han
+        hecho. Antes estaba tres bloques más abajo y había que buscarlo
+        con la rueda del ratón. */''}
+   ${resumenClientesHtml()}
    ${colaHtml()}
    ${/* «Termina de configurar tu espacio» vivía aquí con sus cuatro
         botones. La configuración se hace en Ajustes; el panel se mira. */''}
    ${kpiHtml}
-   ${resumenClientesHtml()}
    ${famHtml}
    ${/* El resumen ya no suma las tres empresas en un solo gráfico: cada
         una tiene el suyo, con su avance de taller arriba. */''}
