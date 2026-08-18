@@ -150,6 +150,13 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
   transition:width var(--med) var(--ease);
 }
 .app.rail-min .rail{width:56px}
+/* El panel como pantalla de inicio: sin menú lateral. Se encoge a
+   cero en vez de quitarse con display:none, porque el armazón es una
+   rejilla de dos columnas —«auto» para el menú y «1fr» para el resto—
+   y al desaparecer una, la que quedaba caía en la columna «auto» y la
+   pantalla se quedaba a media anchura. Con visibility oculta tampoco
+   se puede tabular a lo que no se ve. */
+.app.home-limpio .rail{width:0;min-width:0;border-right:0;overflow:hidden;visibility:hidden}
 .app.rail-min .rail .lbl,.app.rail-min .rail .rail-sec,.app.rail-min .ws-meta,.app.rail-min .rail-foot p{display:none}
 .app.rail-min .ws{justify-content:center;padding:var(--sp-3) 0}
 .app.rail-min .rail nav a{justify-content:center;padding:9px 0}
@@ -2358,6 +2365,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .acc:hover .acc-ic{transform:translateY(-3px) scale(1.04);
   box-shadow:0 12px 24px color-mix(in oklab,var(--c) 34%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
 .acc:active .acc-ic{transform:translateY(0) scale(.97)}
+.acc-ic.foto{background:var(--surface-2);box-shadow:0 6px 16px rgba(16,45,105,.16);overflow:hidden}
+.acc-ic.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.acc-ed{position:absolute;top:9px;right:calc(50% - 41px);width:26px;height:26px;border-radius:50%;
+  display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);
+  box-shadow:var(--sh-1);cursor:pointer}
+.acc-ed svg{width:14px;height:14px;fill:none;stroke:var(--ink-2);stroke-width:1.7}
+.acc-ed:hover{border-color:var(--ink-3)}
 .acc-ic svg{width:40px;height:40px;fill:none;stroke:#fff;stroke-width:1.6;
   stroke-linecap:round;stroke-linejoin:round}
 .acc-n{font-weight:600;font-size:13.5px;letter-spacing:-.01em;line-height:1.3}
@@ -3388,6 +3402,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
      ventana porque el contenido de la ventana se vuelve a dibujar. -->
 <input type="file" id="fileCopia" accept=".json,application/json" style="display:none"
   onchange="restaurarCopia(this)">
+<input type="file" id="fileAcceso" accept="image/*" style="display:none"
+  onchange="guardarImagenAcceso(this)">
 
 <div class="modal" id="modal" onmousedown="ovDown(event)" onmouseup="ovUp(event)" onclick="ovClick(event,cerrarModalPidiendo)">
   <div class="modal-c"><div class="modal-h"><h2 id="mTitle"></h2>
@@ -4128,6 +4144,7 @@ function go(p){
   $('#app').classList.remove('scrolled');
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
   anotarSitio(p);
+  pintarRailHome();
   // la página que entra se dibuja: barras, donas y cifras arrancan de cero
   requestAnimationFrame(animarVista);
 }
@@ -4172,9 +4189,18 @@ function pintarTabbar(){
     <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     <span>Más</span></button>`;
 }
+/* En el Panel el menú de la izquierda se esconde: la pantalla de
+   inicio son los accesos, grandes y sin nada alrededor. El botón ☰ lo
+   trae de vuelta cuando hace falta, y al entrar a cualquier sección
+   vuelve solo. */
+function pintarRailHome(){
+  const app=$('#app'); if(!app)return;
+  app.classList.toggle('home-limpio', S.page==='home'&&!S.railHome&&window.innerWidth>=980);
+}
 function toggleRail(){
-  if(window.innerWidth<980)$('#app').classList.toggle('rail-open');
-  else $('#app').classList.toggle('rail-min');
+  if(window.innerWidth<980){$('#app').classList.toggle('rail-open');return}
+  if(S.page==='home'){S.railHome=!S.railHome;pintarRailHome();return}
+  $('#app').classList.toggle('rail-min');
 }
 function toggleTheme(){
   const d=document.documentElement.dataset.theme==='dark';
@@ -13748,6 +13774,11 @@ const panel=(t,body,extra)=>`<div class="panel"><div class="panel-h"><h3>${esc(t
    inicio de una tablet: se reconocen por la forma y el color, no por
    leerlos. Antes cada tarjeta llevaba una foto distinta —unas de
    producto, otras un dibujo— y el conjunto quedaba desparejo. */
+/* Las imágenes que ponga la casa para cada sección. Es un maestro
+   como los demás: se guarda en el equipo y sube a la nube, así que la
+   foto que sube el jefe la ven todos. Si una sección no tiene imagen,
+   sale su icono de color. */
+let ACCESO_IMG={};
 const ACCESO_INFO={
   clients:{d:'Las empresas y su parque de válvulas', c:'sel'},
   assets: {d:'Las válvulas instaladas, una por una', c:'ok'},
@@ -13764,6 +13795,35 @@ const ACCESO_INFO={
   imp:    {d:'Subir un levantamiento en Excel', c:'ink-2'},
   users:  {d:'Quién entra y con qué permisos', c:'ink-2'}
 };
+let ACC_EDITA=false;
+function editarAccesos(){ ACC_EDITA=!ACC_EDITA; renderHome();
+  toast(ACC_EDITA?'Toca la cámara de cada acceso para poner su imagen':'Listo') }
+let ACC_DESTINO=null;
+function cambiarImagenAcceso(p){ ACC_DESTINO=p; const i=$('#fileAcceso'); if(i){i.value='';i.click()} }
+function guardarImagenAcceso(inp){
+  const f=inp.files&&inp.files[0], p=ACC_DESTINO; if(!f||!p)return;
+  /* La imagen se guarda encogida: una foto de celular son 4 MB y esto
+     viaja a la nube y al teléfono de todos. 320 px de lado bastan para
+     un icono. */
+  const r=new FileReader();
+  r.onload=()=>{
+    const im=new Image();
+    im.onload=()=>{
+      const L=320, cv=document.createElement('canvas');
+      const k=Math.min(L/im.width,L/im.height,1);
+      cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
+      cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+      ACCESO_IMG[p]=cv.toDataURL('image/jpeg',0.86);
+      guardarLocal();
+      renderHome(); toast('Imagen guardada');
+    };
+    im.onerror=()=>toast('No se pudo leer esa imagen');
+    im.src=r.result;
+  };
+  r.readAsDataURL(f);
+}
+function quitarImagenAcceso(p){ delete ACCESO_IMG[p]; guardarLocal(); renderHome(); toast('Imagen quitada') }
+
 function accesosHtml(){
   const links=[...document.querySelectorAll('#nav > a')]
     .filter(a=>a.style.display!=='none'&&a.dataset.p&&a.dataset.p!=='home');
@@ -13774,13 +13834,19 @@ function accesosHtml(){
     const ct=((a.querySelector('.ct')||{}).textContent||'').trim();
     const ico=(a.querySelector('svg')||{}).outerHTML||'';
     return `<button class="acc" onclick="go('${p}')" title="${esc(info.d||lbl)}" aria-label="${esc(lbl)}${info.d?' — '+esc(info.d):''}">
-      <span class="acc-ic" style="--c:var(--${info.c||'sel'})">${ico}</span>
+      <span class="acc-ic ${ACCESO_IMG[p]?'foto':''}" style="--c:var(--${info.c||'sel'})">${
+        ACCESO_IMG[p]?`<img src="${ACCESO_IMG[p]}" alt="">`:ico}</span>
+      ${ACC_EDITA?`<span class="acc-ed" onclick="event.stopPropagation();cambiarImagenAcceso('${p}')"
+         title="Cambiar la imagen de ${esc(lbl)}">
+         <svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg></span>`:''}
       <span class="acc-n">${esc(lbl)}</span>
       ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
     </button>`;
   }).join('');
   return panel('Tus accesos',`<div class="acc-g">${tarjetas}</div>`,
-    `<span class="count">${links.length} secciones</span>`);
+    `${S.rol==='admin'?`<button class="btn quiet xs" onclick="editarAccesos()">${
+      ACC_EDITA?'Terminar':'Cambiar imágenes'}</button>`:''}
+     <span class="count">${links.length} secciones</span>`);
 }
 
 function hbars(rows){
@@ -16410,7 +16476,10 @@ const NUBE_MAESTROS=[
  {k:'PRECIOS',    obj:()=>PRECIOS},   {k:'PART_PHOTO', obj:()=>PART_PHOTO},
  {k:'PRECIOS_HOJA',obj:()=>PRECIOS_HOJA},
  {k:'MODELO_DEF', obj:()=>MODELO_DEF},{k:'PLAN_TARIFA',obj:()=>PLAN_TARIFA},
- {k:'PATRON',     obj:()=>PATRON}
+ {k:'PATRON',     obj:()=>PATRON},
+ /* Las imágenes de los accesos del panel: las pone el jefe una vez y
+    las ven todos los equipos. */
+ {k:'ACCESO_IMG', obj:()=>ACCESO_IMG}
 ];
 /* Lo único que un cliente puede escribir. Coincide con la política de
    la base: si el navegador se equivoca, Postgres lo rechaza igual. */
@@ -16877,7 +16946,7 @@ const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
 function fotoDatos(){
   return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
           CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
-          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS};
+          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS,ACCESO_IMG};
 }
 /* ── LA COPIA DE SEGURIDAD ───────────────────────────────────
    Un archivo con TODO lo registrado, guardado donde el usuario
@@ -16927,7 +16996,7 @@ function fundirFoto(d){
   lista(CALIBS,d.CALIBS); lista(SERVS,d.SERVS); lista(DOCS,d.DOCS); lista(PROYECTOS,d.PROYECTOS);
   dicc(BOM,d.BOM); dicc(PRECIOS,d.PRECIOS); dicc(PART_PHOTO,d.PART_PHOTO);
   dicc(MODELOS,d.MODELOS); dicc(MODELO_DEF,d.MODELO_DEF);
-  dicc(PLAN_TARIFA,d.PLAN_TARIFA); dicc(PLAN_OK,d.PLAN_OK);
+  dicc(PLAN_TARIFA,d.PLAN_TARIFA); dicc(PLAN_OK,d.PLAN_OK); dicc(ACCESO_IMG,d.ACCESO_IMG);
   migrarEtapas();
   return n;
 }
@@ -16941,7 +17010,7 @@ function aplicarFoto(d){
   arr(CALIBS,d.CALIBS);arr(SERVS,d.SERVS);arr(DOCS,d.DOCS);arr(CLIENTES,d.CLIENTES);
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
-  obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);
+  obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);obj(ACCESO_IMG,d.ACCESO_IMG);
   arr(PROYECTOS,d.PROYECTOS);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
   ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
