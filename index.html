@@ -2381,14 +2381,37 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .ht-id{flex:1;min-width:0}
 .ht-id b{display:block;font-size:19px;letter-spacing:-.02em;font-family:'IBM Plex Mono'}
 .ht-id span{display:block;font-size:12px;color:var(--ink-3)}
-.ht-fil{display:flex;gap:6px;flex-wrap:wrap;margin:var(--sp-3) 0 var(--sp-2)}
+.ht-fil{display:inline-flex;gap:2px;flex-wrap:wrap;margin:var(--sp-3) 0 var(--sp-2);
+  padding:3px;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface-2)}
+.ht-f{display:inline-flex;align-items:center;gap:7px;border:0;background:none;cursor:pointer;
+  font:600 12.5px/1 inherit;color:var(--ink-2);padding:8px 13px;border-radius:var(--r-pill);
+  transition:background var(--fast),color var(--fast)}
+.ht-f span{font-family:'IBM Plex Mono';font-size:11px;color:var(--ink-3);
+  background:var(--surface-3);border-radius:var(--r-pill);padding:1px 7px}
+.ht-f:hover{background:var(--surface-3)}
+.ht-f.on{background:var(--surface);color:var(--ink-1);box-shadow:var(--sh-1)}
+.ht-f.on span{background:var(--sel);color:#fff}
+.ht-f:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
 .ht-y{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);
   margin:var(--sp-3) 0 var(--sp-2);font-family:'IBM Plex Mono'}
 .tl-i.ent::before{border-color:var(--due)}
 .tl-i.cert::before{border-color:var(--ok)}
 .tl-i.ord::before{border-color:var(--sel)}
 .tl-i.abierto::before{border-color:var(--late)}
-.tl-acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.tl-acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.tl-doc{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.03em;color:var(--ink-3);
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:1px 8px}
+/* Los datos del hito: rótulo arriba en pequeño y el valor debajo. Se
+   leen en columna, como una ficha, y no como una frase larga. */
+.tl-d{display:flex;flex-wrap:wrap;gap:4px 22px;margin:6px 0 0}
+.tl-d div{min-width:0}
+.tl-d dt{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.tl-d dd{margin:0;font-size:12.5px;font-weight:600;color:var(--ink-1)}
+.tl-x{margin-top:6px}
+.hv-s{font-size:11px;color:var(--ink-3);font-family:'IBM Plex Mono';
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-n i{font-style:normal;color:var(--due);font-weight:600}
+.hv-u{font-size:11px;color:var(--ink-3);margin-top:1px}
 @media(max-width:760px){
   .hst-h{flex-wrap:wrap}
   .hst-id{flex:1 0 100%}
@@ -3794,7 +3817,10 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&g
 /* texto seguro dentro de un string JS que va en un atributo onclick="…" */
 const jsq=s=>String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;');
 const cli=id=>CLIENTES.find(c=>c.id===id)||{};
-const area=a=>{const c=CLIENTES.find(x=>x.areas[a.ar]);return c?c.areas[a.ar]:'—'};
+/* Un cliente puede no tener áreas —se creó a mano en el celular, o
+   bajó de la nube sin ese campo—. Sin la comprobación, buscar el área
+   de cualquier válvula reventaba y con ella se caía el panel entero. */
+const area=a=>{const c=CLIENTES.find(x=>x.areas&&x.areas[(a||{}).ar]);return c?c.areas[a.ar]:'—'};
 const dias=f=>f?Math.round((new Date(f+'T00:00:00')-HOY)/864e5):null;
 const CL={control:'Control',seguridad:'Seguridad',onoff:'On-Off',actuador:'Actuador'};
 
@@ -6289,37 +6315,48 @@ function histFiltro(k){ S.histFil=k; renderHistorial() }
    ════════════════════════════════════════════════════════════ */
 const HIST_FILTROS=[['todo','Todo'],['ent','Pruebas de entrada'],
                     ['mant','Mantenimientos'],['cert','Certificados']];
+/* Cada hito se cuenta como se cuenta en el taller: qué pasó, quién lo
+   hizo y en qué quedó. Los datos van en pares con su rótulo —no en una
+   ristra de textos separados por puntos— porque así se leen tres hitos
+   seguidos sin perderse. */
 function histLinea(a){
   const ev=[], cliente=S.rol==='cliente';
+  const par=(k,v)=>v==null||String(v).trim()===''?null:[k,String(v)];
   histDe(a).forEach(c=>{
     if(c.tipo==='psv'){
       /* La entrada es un hecho aparte: tiene su fecha, su firma y su
          propio papel, y muchas veces es de otro día que el ensayo. */
       if(recepcionCerrada(c)){
         const rech=c.rcVeredicto==='rechaza';
-        ev.push({f:c.rcFecha||c.fecha||'', k:'ent', t:'Prueba de entrada · AXAD-084',
-          x:[c.rcRecibe?`La probó ${c.rcRecibe}`:'',
-             c.asFound?`disparó a ${c.asFound} ${c.und||'psi'}`:'',
-             rech&&c.rcMotivo?`motivo: ${c.rcMotivo}`:''].filter(Boolean).join(' · '),
+        ev.push({f:c.rcFecha||c.fecha||'', k:'ent',
+          t:rech?'Llegó y se rechazó en la prueba de entrada':'Llegó y se aceptó en la prueba de entrada',
+          doc:'AXAD-084',
+          d:[par('La probó',c.rcRecibe),
+             par('Disparo al llegar',c.asFound?`${c.asFound} ${c.und||'psi'}`:''),
+             par('Motivo',rech?c.rcMotivo:'')].filter(Boolean),
+          nota:c.rcComent||'',
           e:rech?{t:'Rechazada',c:'late'}:{t:'Aceptada',c:'ok'},
           acc:`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Ver el protocolo</button>`});
       }
       const est=histEstado(c);
       ev.push({f:c.fecha||'', k:est.listo?'cert':'mant',
-        t:est.listo?`Certificado · ${histDoc(c)}`:'Mantenimiento sin cerrar',
-        x:[c.setEsp?`set ${c.setEsp} ${c.und||'psi'}`:'',
-           histResp(c)?`responsable ${histResp(c)}`:'',
-           c.coment||''].filter(Boolean).join(' · '),
+        t:est.listo?'Certificado emitido':'Mantenimiento sin terminar',
+        doc:est.listo?'AXAD-088':'',
+        d:[par('Orden de servicio',c.os),
+           par('Set requerido',c.setEsp?`${c.setEsp} ${c.und||'psi'}`:''),
+           par('Lo hizo',histResp(c)),
+           est.listo?null:par('Le falta',faltaParaEmitir(c))].filter(Boolean),
+        nota:est.listo?(c.coment||''):'',
         e:{t:est.t,c:est.c},
         acc:est.listo
-          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Ver</button>
+          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Ver el certificado</button>
              <button class="btn quiet xs" onclick="imprimirPSV('${c.id}')">PDF</button>
              ${cliente?'':`<button class="btn quiet xs" onclick="psvWord('${c.id}')">Word</button>`}`
           : (cliente?'':`<button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button>`)});
     }else{
-      ev.push({f:histFecha(c), k:'cert', t:`Certificado · ${histDoc(c)}`,
-        x:[c.nom?`${c.nom} ${c.uni||''}`:'',histResp(c)?`responsable ${histResp(c)}`:''].filter(Boolean).join(' · '),
-        e:histEstado(c),
+      ev.push({f:histFecha(c), k:'cert', t:'Calibración registrada', doc:c.cert||'',
+        d:[par('Instrumento',c.nom?`${c.nom} ${c.uni||''}`:''),par('Lo hizo',histResp(c))].filter(Boolean),
+        nota:'', e:histEstado(c),
         acc:`<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${c.id}'))">Ver</button>`});
     }
   });
@@ -6327,9 +6364,13 @@ function histLinea(a){
     const fin=o.et==='final', etp=(ETAPAS.find(e=>e[0]===o.et)||[,'En curso'])[1];
     const otras=lineasDe(o).length;
     ev.push({f:(fin?(o.arch||o.f):o.f)||'', k:'mant',
-      t:`Orden de servicio · ${o.mat||o.n}`,
-      x:[o.tipo||'', otras>1?`${otras} válvulas en la orden`:'',
-         o.ing?`ingeniero ${o.ing}`:'', o.hall||''].filter(Boolean).join(' · '),
+      t:fin?'Servicio terminado':'Servicio en curso',
+      doc:o.mat||o.n,
+      d:[par('Trabajo',o.tipo),
+         otras>1?par('En la misma orden',`${otras} válvulas`):null,
+         par('Ingeniero',o.ing),
+         fin?null:par('Va por',etp)].filter(Boolean),
+      nota:o.hall||'',
       e:fin?{t:o.arch?'En el historial':'Finalizada',c:'ok'}:{t:etp,c:'due'},
       acc:`${cliente?'':`<button class="btn quiet xs" onclick="imprimirInforme('${o.id}')">Informe técnico</button>`}
         ${o.arch&&!cliente?`<button class="btn quiet xs" onclick="devolverAlTablero('${o.id}')">Devolver al tablero</button>`:''}`});
@@ -6374,19 +6415,28 @@ function renderHistorial(){
   const visto=q?filas.filter(({a})=>[a.tag,a.ser,a.mod,(MODELOS[a.mod]||{}).m,area(a)]
       .some(x=>String(x||'').toLowerCase().includes(q))):filas;
 
+  /* Dos válvulas pueden llamarse igual —«1300» dos veces es lo normal
+     en una planta—: lo que las distingue es la serie, así que la serie
+     va en su propio renglón y no escondida al final de una línea que
+     se corta. */
   const fichas=visto.map(({a,ev})=>{
     const m=MODELOS[a.mod]||{};
-    const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:''].filter(Boolean).join(' · ');
+    const certs=ev.filter(x=>x.k==='cert').length;
+    const abiertos=ev.filter(x=>x.e&&x.e.c!=='ok').length;
     const ult=ev[0];
     return `<button class="hv-c" onclick="histAbrir('${a.id}')"
         aria-label="Abrir el historial de ${esc(a.tag||a.ser||'la válvula')}">
       <div class="hv-ph">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
       <div class="hv-b">
         <b>${esc(a.tag||a.ser||'(sin tag)')}</b>
-        <span>${esc(sub||area(a)||'—')}</span>
-        <div class="hv-n"><b>${ev.length}</b> ${ev.length===1?'registro':'registros'}${
-          ult?` · <span class="mono">${esc(fPE(ult.f))}</span>`:''}</div>
-        ${ult?`<span class="tag ${ult.e.c}"><span class="dot"></span>${esc(ult.e.t)}</span>`:''}
+        <span>${esc([m.m,a.mod].filter(Boolean).join(' ')||'—')}</span>
+        <span class="hv-s">${a.ser?'s/n '+esc(a.ser):'sin número de serie'}${
+          area(a)&&area(a)!=='—'?' · '+esc(area(a)):''}</span>
+        <div class="hv-n">${!ev.length ? '<i>sin historia todavía</i>'
+          : certs ? `<b>${certs}</b> certificado${certs===1?'':'s'}${abiertos?` · <i>${abiertos} sin cerrar</i>`:''}`
+          : `<i>${abiertos} trabajo${abiertos===1?'':'s'} sin cerrar</i> · todavía sin certificado`}</div>
+        ${ult?`<div class="hv-u">Lo último · <span class="mono">${esc(fPE(ult.f))}</span></div>
+          <span class="tag ${ult.e.c}"><span class="dot"></span>${esc(ult.e.t)}</span>`:''}
       </div></button>`;
   }).join('');
 
@@ -6407,7 +6457,9 @@ function renderHistorial(){
 
 function histDetalle(a,c){
   const m=MODELOS[a.mod]||{};
-  const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:'',area(a)].filter(Boolean).join(' · ');
+  const ar=area(a);
+  const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:'',
+             ar&&ar!=='—'?ar:''].filter(Boolean).join(' · ');
   const todos=histLinea(a);
   const fil=S.histFil||'todo';
   const ev=fil==='todo'?todos:todos.filter(x=>x.k===fil);
@@ -6419,10 +6471,13 @@ function histDetalle(a,c){
   const hilo=anios.map(y=>`<div class="ht-y">${esc(y)}</div>
     <div class="tl">${ev.filter(x=>String(x.f).slice(0,4)===y).map(x=>`
       <div class="tl-i ${x.k==='ent'?'ent':x.k==='cert'?'cert':'ord'}">
-        <div class="tl-m"><span>${esc(fPE(x.f))}</span><span>·</span>
-          <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span></div>
+        <div class="tl-m"><span>${esc(fPE(x.f))}</span>
+          <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span>
+          ${x.doc?`<span class="tl-doc">${esc(x.doc)}</span>`:''}</div>
         <div class="tl-t">${esc(x.t)}</div>
-        ${x.x?`<div class="tl-x">${esc(x.x)}</div>`:''}
+        ${x.d&&x.d.length?`<dl class="tl-d">${x.d.map(([k,v])=>
+          `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`:''}
+        ${x.nota?`<div class="tl-x">${esc(x.nota)}</div>`:''}
         ${x.acc?`<div class="tl-acc">${x.acc}</div>`:''}
       </div>`).join('')}</div>`).join('');
 
@@ -6436,8 +6491,9 @@ function histDetalle(a,c){
       <div class="ht-id"><b>${esc(a.tag||a.ser||'(sin tag)')}</b><span>${esc(sub||'—')}</span>
         <span>${todos.length} registro${todos.length===1?'':'s'} guardado${todos.length===1?'':'s'}</span></div>
     </div>
-    <div class="ht-fil">${HIST_FILTROS.map(([k,l])=>`
-      <button class="btn ${fil===k?'sec':'quiet'} xs" onclick="histFiltro('${k}')">${l} · ${cuenta(k)}</button>`).join('')}</div>
+    <div class="ht-fil" role="tablist" aria-label="Filtrar el historial">${HIST_FILTROS.map(([k,l])=>`
+      <button class="ht-f ${fil===k?'on':''}" role="tab" aria-selected="${fil===k}"
+        onclick="histFiltro('${k}')">${l}<span>${cuenta(k)}</span></button>`).join('')}</div>
     ${ev.length?hilo:`<div class="panel"><div class="empty"><b>Nada de eso todavía</b>
       Cuando se haga, queda aquí guardado.</div></div>`}`;
 }
