@@ -150,13 +150,13 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
   transition:width var(--med) var(--ease);
 }
 .app.rail-min .rail{width:56px}
-/* El panel como pantalla de inicio: sin menú lateral. Se encoge a
-   cero en vez de quitarse con display:none, porque el armazón es una
-   rejilla de dos columnas —«auto» para el menú y «1fr» para el resto—
-   y al desaparecer una, la que quedaba caía en la columna «auto» y la
-   pantalla se quedaba a media anchura. Con visibility oculta tampoco
-   se puede tabular a lo que no se ve. */
-.app.home-limpio .rail{width:0;min-width:0;border-right:0;overflow:hidden;visibility:hidden}
+/* El menú, recogido. Se encoge a cero en vez de quitarse con
+   display:none, porque el armazón es una rejilla de dos columnas
+   —«auto» para el menú y «1fr» para el resto— y al desaparecer una, la
+   que quedaba caía en la columna «auto» y la pantalla se quedaba a
+   media anchura. Con visibility oculta tampoco se puede tabular a lo
+   que no se ve. */
+.app.rail-off .rail{width:0;min-width:0;border-right:0;overflow:hidden;visibility:hidden}
 .app.rail-min .rail .lbl,.app.rail-min .rail .rail-sec,.app.rail-min .ws-meta,.app.rail-min .rail-foot p{display:none}
 .app.rail-min .ws{justify-content:center;padding:var(--sp-3) 0}
 .app.rail-min .rail nav a{justify-content:center;padding:9px 0}
@@ -207,6 +207,9 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .bar::before,.bar::after{content:'';flex:1 1 0;min-width:0;max-width:calc((100% - 1400px)/2)}
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);min-width:0;flex:1}
 .crumbs b{color:var(--ink);font-weight:600}
+.crumb-ir{border:0;background:none;padding:0;font:inherit;color:var(--ink-3);cursor:pointer}
+.crumb-ir:hover{color:var(--sel);text-decoration:underline}
+.crumb-ir:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
 .crumbs .sep{opacity:.45}
 .kbd{
   display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid var(--line);
@@ -4157,14 +4160,18 @@ function go(p){
   const dentro=S.inCli&&CLI_TABS.some(([x])=>x===p)?esc(cli(S.inCli).n):null;
   // un cliente mirando su propio espacio no necesita su nombre dos veces
   const ruta=[base,dentro&&dentro!==base?dentro:null].filter(Boolean);
-  $('#crumbs').innerHTML=ruta.map(x=>`<span>${x}</span><span class="sep">/</span>`).join('')+`<b>${TITULOS[p]}</b>`;
+  /* Sin menú a la vista, la miga de pan es la puerta de vuelta: el
+     primer nombre lleva al inicio. */
+  $('#crumbs').innerHTML=ruta.map((x,i)=>(i===0
+      ? `<button class="crumb-ir" onclick="go('home')" title="Volver al inicio">${x}</button>`
+      : `<span>${x}</span>`)+`<span class="sep">/</span>`).join('')+`<b>${TITULOS[p]}</b>`;
   renderCliBar();
   pintarTabbar();
   $('.view').scrollTop=0;
   $('#app').classList.remove('scrolled');
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
   anotarSitio(p);
-  pintarRailHome();
+  pintarRail();
   // la página que entra se dibuja: barras, donas y cifras arrancan de cero
   requestAnimationFrame(animarVista);
 }
@@ -4209,19 +4216,19 @@ function pintarTabbar(){
     <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     <span>Más</span></button>`;
 }
-/* En el Panel el menú de la izquierda se esconde: la pantalla de
-   inicio son los accesos, grandes y sin nada alrededor. El botón ☰ lo
-   trae de vuelta cuando hace falta, y al entrar a cualquier sección
-   vuelve solo. */
-function pintarRailHome(){
+/* El menú de la izquierda no sale solo NUNCA: la pantalla es la
+   pantalla, y el menú aparece cuando se pulsa ☰ y se va cuando se
+   vuelve a pulsar. Vale para todas las secciones, no sólo para el
+   panel. En celular sigue siendo un cajón, que ya funcionaba así. */
+function pintarRail(){
   const app=$('#app'); if(!app)return;
-  app.classList.toggle('home-limpio', S.page==='home'&&!S.railHome&&window.innerWidth>=980);
+  app.classList.toggle('rail-off', !S.railAbierto&&window.innerWidth>=980);
 }
 function toggleRail(){
   if(window.innerWidth<980){$('#app').classList.toggle('rail-open');return}
-  if(S.page==='home'){S.railHome=!S.railHome;pintarRailHome();return}
-  $('#app').classList.toggle('rail-min');
+  S.railAbierto=!S.railAbierto; pintarRail();
 }
+addEventListener('resize',pintarRail);
 function toggleTheme(){
   const d=document.documentElement.dataset.theme==='dark';
   document.documentElement.dataset.theme=d?'light':'dark';paintThemeBtn();
