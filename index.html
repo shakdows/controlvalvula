@@ -874,11 +874,13 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
   background-size:30px 30px;mask-image:radial-gradient(130% 108% at 26% 16%,#000,transparent 72%)
 }
 .cover-hero>*{position:relative;z-index:1}
-/* anillo tipo manómetro detrás de la válvula — motivo temático, no decorativo */
+/* Detrás del vídeo va sólo el resplandor, sin el aro. Los dos anillos
+   —el fino y el punteado— se salían de la caja del vídeo y le cruzaban
+   una raya por encima al logotipo, que es lo primero que se mira. */
 .hero-stage{position:relative}
-.hero-stage::before,.hero-stage::after{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none}
-.hero-stage::before{width:min(540px,116%);aspect-ratio:1;border:1px solid oklch(1 0 0 /.16);box-shadow:0 0 150px 30px oklch(0.60 0.14 230 /.32)}
-.hero-stage::after{width:min(400px,86%);aspect-ratio:1;border:1px dashed oklch(1 0 0 /.08)}
+.hero-stage::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:min(540px,116%);aspect-ratio:1;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,oklch(0.60 0.14 230 /.34),transparent 68%)}
 @keyframes coverRise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .cover:not(.gone) .hero-brand{animation:coverRise .6s var(--ease) both}
 .cover:not(.gone) .hero-stage{animation:coverRise .8s var(--ease) .06s both}
