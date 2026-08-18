@@ -207,6 +207,7 @@ button,input,select,textarea{font:inherit;color:inherit;font-variant-numeric:tab
 .bar::before,.bar::after{content:'';flex:1 1 0;min-width:0;max-width:calc((100% - 1400px)/2)}
 .crumbs{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-3);min-width:0;flex:1}
 .crumbs b{color:var(--ink);font-weight:600}
+.icon-btn.atras svg{stroke-width:2.2}
 .crumb-ir{border:0;background:none;padding:0;font:inherit;color:var(--ink-3);cursor:pointer}
 .crumb-ir:hover{color:var(--sel);text-decoration:underline}
 .crumb-ir:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
@@ -3139,6 +3140,11 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
   <div class="work">
     <header class="bar">
       <button class="icon-btn" onclick="toggleRail()" title="Barra lateral"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <!-- Atrás. Hace exactamente lo mismo que el botón del celular:
+           llama al historial, no a una lógica paralela, para que los
+           dos caminos no se separen nunca. -->
+      <button class="icon-btn atras" id="btnAtras" onclick="atras()" title="Atrás" aria-label="Volver atrás"
+        style="display:none"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
       <div class="crumbs" id="crumbs"></div>
       <button class="search-trigger" onclick="openCmd()" aria-label="Buscar tag, serie o número de parte">
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
@@ -4134,6 +4140,13 @@ function atrasDelSistema(){
 }
 addEventListener('popstate',atrasDelSistema);
 anclarHistorial();
+/* El botón de la barra y el del teléfono son el mismo camino. */
+function atras(){ try{history.back()}catch(e){ atrasDelSistema() } }
+/* Sólo se enseña cuando de verdad hay a dónde volver. */
+function pintarAtras(){
+  const b=document.getElementById('btnAtras'); if(!b)return;
+  b.style.display=PILA.length>1?'':'none';
+}
 
 function go(p){
   // las páginas de un cliente solo se abren desde su espacio de trabajo
@@ -4172,6 +4185,7 @@ function go(p){
   if(window.innerWidth<980)$('#app').classList.remove('rail-open');
   anotarSitio(p);
   pintarRail();
+  pintarAtras();
   // la página que entra se dibuja: barras, donas y cifras arrancan de cero
   requestAnimationFrame(animarVista);
 }
