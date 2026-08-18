@@ -2343,30 +2343,36 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    Tarjetas grandes con imagen: se reconocen de un vistazo y se
    pulsan con el pulgar. La foto del producto donde la hay; el resto,
    con el mismo icono que el menú, en grande. */
-.acc-g{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(176px,1fr))}
-.acc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;
-  padding:14px 12px 15px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);
-  cursor:pointer;font:inherit;color:inherit;
-  transition:border-color var(--fast),box-shadow var(--fast),transform var(--fast)}
-.acc:hover{border-color:var(--ink-3);box-shadow:var(--sh-2);transform:translateY(-2px)}
-.acc:active{transform:translateY(0)}
+.acc-g{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+.acc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;
+  padding:14px 8px 16px;border:0;border-radius:var(--r-2);background:none;
+  cursor:pointer;font:inherit;color:inherit;transition:background var(--fast)}
+.acc:hover{background:var(--surface-2)}
 .acc:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
-.acc-th{width:100%;height:92px;display:grid;place-items:center;margin-bottom:9px;overflow:hidden;
-  border-radius:var(--r-1);background:radial-gradient(120% 100% at 50% 20%,
-    color-mix(in oklab,var(--sel) 9%,var(--surface)) 0%, var(--surface-2) 70%)}
-.acc-th img{max-width:100%;max-height:88px;width:auto;height:auto;object-fit:contain;display:block;
-  mix-blend-mode:multiply}
-[data-theme="dark"] .acc-th img{mix-blend-mode:normal}
-.acc-th svg{width:36px;height:36px;fill:none;stroke:var(--sel);stroke-width:1.5;
+/* El icono: un cuadrado redondeado de color, como el de una app. Es
+   lo único que cambia entre secciones, así que el ojo lo aprende. */
+.acc-ic{width:82px;height:82px;border-radius:24px;display:grid;place-items:center;margin-bottom:9px;
+  background:linear-gradient(155deg,color-mix(in oklab,var(--c) 78%,#fff) 0%,var(--c) 100%);
+  box-shadow:0 6px 16px color-mix(in oklab,var(--c) 28%,transparent),inset 0 1px 0 rgba(255,255,255,.35);
+  transition:transform var(--fast),box-shadow var(--fast)}
+.acc:hover .acc-ic{transform:translateY(-3px) scale(1.04);
+  box-shadow:0 12px 24px color-mix(in oklab,var(--c) 34%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
+.acc:active .acc-ic{transform:translateY(0) scale(.97)}
+.acc-ic svg{width:40px;height:40px;fill:none;stroke:#fff;stroke-width:1.6;
   stroke-linecap:round;stroke-linejoin:round}
-.acc-n{font-weight:600;font-size:13.5px;letter-spacing:-.01em}
-.acc-d{font-size:11.5px;color:var(--ink-3);line-height:1.35}
-.acc-c{position:absolute;top:9px;right:9px;min-width:22px;padding:2px 8px;border-radius:var(--r-pill);
-  background:var(--sel);color:#fff;font:600 11px/1.5 'IBM Plex Mono';letter-spacing:-.02em}
+.acc-n{font-weight:600;font-size:13.5px;letter-spacing:-.01em;line-height:1.3}
+/* El contador, pegado al icono como el globito de una app. */
+.acc-c{position:absolute;top:9px;left:calc(50% + 22px);min-width:21px;padding:2px 7px;
+  border-radius:var(--r-pill);background:var(--late);color:#fff;
+  font:700 11px/1.5 'IBM Plex Mono';letter-spacing:-.02em;
+  box-shadow:0 0 0 2px var(--surface)}
 @media(max-width:520px){
-  .acc-g{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-  .acc-th{height:74px}
-  .acc-d{display:none}
+  .acc-g{grid-template-columns:repeat(4,1fr);gap:2px}
+  .acc{padding:12px 4px 14px}
+  .acc-ic{width:66px;height:66px;border-radius:20px}
+  .acc-ic svg{width:32px;height:32px}
+  .acc-n{font-size:11.5px}
+  .acc-c{left:calc(50% + 16px)}
 }
 /* La franja de rescate: sale sólo cuando el equipo está vacío y no hay
    sesión en la nube. Es un aviso, no un error: lo que hay que hacer
@@ -13738,21 +13744,25 @@ const panel=(t,body,extra)=>`<div class="panel"><div class="panel-h"><h3>${esc(t
    Las tarjetas SALEN DEL PROPIO MENÚ: así cada rol ve exactamente lo
    suyo y nunca se desincronizan.
    ════════════════════════════════════════════════════════════ */
+/* Un icono por sección y todos iguales de tamaño, como la pantalla de
+   inicio de una tablet: se reconocen por la forma y el color, no por
+   leerlos. Antes cada tarjeta llevaba una foto distinta —unas de
+   producto, otras un dibujo— y el conjunto quedaba desparejo. */
 const ACCESO_INFO={
-  clients:{d:'Las empresas y su parque de válvulas', foto:'control'},
-  assets: {d:'Las válvulas instaladas, una por una', foto:'seguridad'},
-  wo:     {d:'El tablero del taller, etapa por etapa', foto:'cuchilla'},
-  cal:    {d:'Ensayos de banco y certificados'},
-  plan:   {d:'Qué válvula toca cada mes'},
-  parts:  {d:'Despieces, precios y disponibilidad', foto:'mariposa'},
-  req:    {d:'Lo que piden los clientes'},
-  cot:    {d:'Precios enviados y su estado'},
-  snc:    {d:'Reclamos y servicio no conforme'},
-  rep:    {d:'Cómo se está portando el parque'},
-  cat:    {d:'Modelos, despieces y lista de precios', foto:'pinch'},
-  stk:    {d:'Lo que hay en el almacén de Lima'},
-  imp:    {d:'Subir un levantamiento en Excel'},
-  users:  {d:'Quién entra y con qué permisos'}
+  clients:{d:'Las empresas y su parque de válvulas', c:'sel'},
+  assets: {d:'Las válvulas instaladas, una por una', c:'ok'},
+  wo:     {d:'El tablero del taller, etapa por etapa', c:'due'},
+  cal:    {d:'Ensayos de banco y certificados', c:'sel'},
+  plan:   {d:'Qué válvula toca cada mes', c:'ink-2'},
+  parts:  {d:'Despieces, precios y disponibilidad', c:'ok'},
+  req:    {d:'Lo que piden los clientes', c:'due'},
+  cot:    {d:'Precios enviados y su estado', c:'sel'},
+  snc:    {d:'Reclamos y servicio no conforme', c:'late'},
+  rep:    {d:'Cómo se está portando el parque', c:'ink-2'},
+  cat:    {d:'Modelos, despieces y lista de precios', c:'sel'},
+  stk:    {d:'Lo que hay en el almacén de Lima', c:'ok'},
+  imp:    {d:'Subir un levantamiento en Excel', c:'ink-2'},
+  users:  {d:'Quién entra y con qué permisos', c:'ink-2'}
 };
 function accesosHtml(){
   const links=[...document.querySelectorAll('#nav > a')]
@@ -13763,11 +13773,9 @@ function accesosHtml(){
     const lbl=(a.querySelector('.lbl')||{}).textContent||p;
     const ct=((a.querySelector('.ct')||{}).textContent||'').trim();
     const ico=(a.querySelector('svg')||{}).outerHTML||'';
-    return `<button class="acc" onclick="go('${p}')" aria-label="${esc(lbl)}">
-      <span class="acc-th">${info.foto&&RPHOTO[info.foto]
-        ? `<img src="${RPHOTO[info.foto]}" alt="" loading="lazy">` : ico}</span>
+    return `<button class="acc" onclick="go('${p}')" title="${esc(info.d||lbl)}" aria-label="${esc(lbl)}${info.d?' — '+esc(info.d):''}">
+      <span class="acc-ic" style="--c:var(--${info.c||'sel'})">${ico}</span>
       <span class="acc-n">${esc(lbl)}</span>
-      <span class="acc-d">${esc(info.d||'')}</span>
       ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
     </button>`;
   }).join('');
