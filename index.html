@@ -2339,6 +2339,35 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .hst-t tr{cursor:default}
 .hst-acc{text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
 .hst-vacio{padding:14px;font-size:12.5px;color:var(--ink-3);margin:0}
+/* ── Los accesos del panel ───────────────────────────────────
+   Tarjetas grandes con imagen: se reconocen de un vistazo y se
+   pulsan con el pulgar. La foto del producto donde la hay; el resto,
+   con el mismo icono que el menú, en grande. */
+.acc-g{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(176px,1fr))}
+.acc{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;
+  padding:14px 12px 15px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);
+  cursor:pointer;font:inherit;color:inherit;
+  transition:border-color var(--fast),box-shadow var(--fast),transform var(--fast)}
+.acc:hover{border-color:var(--ink-3);box-shadow:var(--sh-2);transform:translateY(-2px)}
+.acc:active{transform:translateY(0)}
+.acc:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.acc-th{width:100%;height:92px;display:grid;place-items:center;margin-bottom:9px;overflow:hidden;
+  border-radius:var(--r-1);background:radial-gradient(120% 100% at 50% 20%,
+    color-mix(in oklab,var(--sel) 9%,var(--surface)) 0%, var(--surface-2) 70%)}
+.acc-th img{max-width:100%;max-height:88px;width:auto;height:auto;object-fit:contain;display:block;
+  mix-blend-mode:multiply}
+[data-theme="dark"] .acc-th img{mix-blend-mode:normal}
+.acc-th svg{width:36px;height:36px;fill:none;stroke:var(--sel);stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round}
+.acc-n{font-weight:600;font-size:13.5px;letter-spacing:-.01em}
+.acc-d{font-size:11.5px;color:var(--ink-3);line-height:1.35}
+.acc-c{position:absolute;top:9px;right:9px;min-width:22px;padding:2px 8px;border-radius:var(--r-pill);
+  background:var(--sel);color:#fff;font:600 11px/1.5 'IBM Plex Mono';letter-spacing:-.02em}
+@media(max-width:520px){
+  .acc-g{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+  .acc-th{height:74px}
+  .acc-d{display:none}
+}
 /* La franja de rescate: sale sólo cuando el equipo está vacío y no hay
    sesión en la nube. Es un aviso, no un error: lo que hay que hacer
    está en el mismo renglón. */
@@ -3683,7 +3712,7 @@ let ORDENES=[
    mostrador, no en el taller— y porque nada pasa de ahí sin el
    protocolo de entrada firmado. */
 const ETAPAS=[['oc','OC recibida'],['ent','Prueba de entrada'],['mant','En mantenimiento'],
-              ['cert','Verificación final'],['final','Finalizado']];
+              ['cert','Prueba de salida'],['final','Finalizado']];
 const DOCS=[
  {a:'a3',t:'INF',n:'Informe de mantenimiento AD-26-0430.pdf',f:'2026-03-08',w:'1.2 MB'},
  {a:'a3',t:'OC',n:'OC-2026-0871 · Trim y empaquetadura.pdf',f:'2026-02-20',w:'340 KB'},
@@ -6986,9 +7015,13 @@ function psvFaltantes(c){
    llena el supervisor y el 2 lo firmó quien recibió la válvula; el
    técnico ni siquiera los ve. Exigírselos para mover la tarjeta era
    pedirle algo que no puede hacer — y era lo que le impedía pasar a
-   verificación final teniéndolo todo suyo listo. */
-const faltaDelTaller=c=>psvFaltantes(c).filter(x=>(x.paso||9)>=3);
-const tallerListo=c=>psvVeredicto(c).estado!=='incompleto'&&faltaDelTaller(c).length===0;
+   prueba de salida teniéndolo todo suyo listo. */
+/* Lo que le toca al taller EN MANTENIMIENTO es el cuadro 3: abrir la
+   válvula y fotografiar pieza por pieza. Los disparos ya no se piden
+   aquí —son la prueba de salida, la columna siguiente—, así que
+   exigirlos para avanzar dejaba la tarjeta clavada. */
+const faltaDelTaller=c=>psvFaltantes(c).filter(x=>(x.paso||9)===3);
+const tallerListo=c=>faltaDelTaller(c).length===0;
 /* El veredicto lo dan las presiones —y con eso se dibuja el gráfico en
    cuanto hay disparos, que es cuando sirve—. Emitir el certificado es
    otra cosa: para eso tienen que estar los seis pasos. */
@@ -7600,12 +7633,20 @@ function pruebaDeEntrada(actId){ openPSV(actId,null,'entrada') }
    concluir y firmar: los pasos 1 y 2 ya los hizo otro y ya están
    completos. Se pliegan y se guardan detrás de una línea; si necesita
    mirarlos —el patrón, a qué presión llegó— los abre de un toque.  */
+/* Un cuadro por columna. En mantenimiento se DESARMA —cuadro 3, el
+   que llena el informe DVAD-SER-002—; en la prueba de salida se
+   DISPARA —cuadro 4, el as-left—. Las conclusiones y las firmas
+   quedan para el cierre, con todo delante. Cada técnico ve sólo lo
+   que le toca; el resto se abre con la clave del jefe. */
 const PASOS_ETAPA={
   oc:  [1,2],
   ent: [1,2],
-  mant:[3,4,5,6],
-  cert:[1,2,3,4,5,6],
-  final:[1,2,3,4,5,6]
+  mant:[3],
+  cert:[4],
+  /* Al cerrar, lo que falta escribir: las conclusiones y
+     recomendaciones, y la firma de quien lo hizo. Lo demás ya está
+     puesto y se abre con el botón de ver todos los pasos. */
+  final:[5,6]
 };
 /* Cada columna vale un quinto del trabajo: llegó la OC, llegó la
    válvula, se hizo el mantenimiento, lo revisó el jefe, salió con su
@@ -7784,7 +7825,7 @@ function pintarPSV(){
           <input class="inp bloq" value="${t.asFound?esc(t.asFound)+' '+esc(t.und||'psi'):'—'}" readonly
             title="Se toma en el paso 2, la prueba de entrada"></div>
       </div>
-      <h4 class="snc-sec">Verificación final · AS LEFT
+      <h4 class="snc-sec">Prueba de salida · AS LEFT
         <span class="opc">cada disparo con su foto, tomada en ese momento</span></h4>
       <div id="psvDisparos"></div>
       <div id="psvRes"></div>
@@ -7844,6 +7885,15 @@ function pintarPSV(){
     secs.forEach((d,i)=>{d.open=(i>0)});
     PSV_ABRIR_EN=null;      // sólo la primera vez; después manda el técnico
   }
+  /* La prueba de SALIDA: la válvula ya está armada y lo que toca es
+     dispararla. Se abre el cuadro 4 y nada más. */
+  else if(PSV_ABRIR_EN==='salida'){
+    const secs=$$('#mBody .psv-sec');
+    const i=secs.findIndex(d=>/^\s*4\s*·/.test((d.querySelector('summary')||{}).textContent||''));
+    secs.forEach((d,j)=>{d.open=(j===(i<0?3:i))});
+    setTimeout(()=>{const s2=secs[i<0?3:i]; if(s2)s2.scrollIntoView({block:'start'})},120);
+    PSV_ABRIR_EN=null;
+  }
   /* La prueba de ENTRADA: la válvula acaba de llegar y todavía no ha
      entrado al taller. Sólo se abre ese paso — los demás no se pueden
      hacer aún y verlos abiertos hace creer que hay que llenarlos. */
@@ -7856,6 +7906,9 @@ function pintarPSV(){
      Se abre todo —para que pueda repasarlo— y se baja hasta la firma,
      que es lo único que él añade. */
   else if(PSV_ABRIR_EN==='firmas'){
+    /* El jefe viene a REVISAR: se le enseñan todos los cuadros, no
+       sólo el de su columna. Al técnico se le siguen escondiendo. */
+    if(S.rol==='admin')mostrarTodosLosPasos();
     $$('#mBody .psv-sec').forEach(d=>{d.open=true});
     setTimeout(()=>{const f=$('#pvFirma'); if(f)f.scrollIntoView({block:'center'})},120);
     PSV_ABRIR_EN=null;
@@ -8008,7 +8061,7 @@ function pintarFirmaPSV(){
      casilla ni aparece, y en cuanto está firmado lo ve todo el mundo
      —es la prueba de que el trabajo pasó por el jefe—. */
   /* Aquí firma el técnico y nadie más. El visto bueno del jefe llega
-     después, en «Verificación final», y desde ahí se pone: mientras no
+     después, en «Prueba de salida», y desde ahí se pone: mientras no
      esté, esta casilla ni aparece — enseñarla vacía hacía creer al
      taller que le faltaba algo suyo. En cuanto está firmado sí se ve,
      porque es la prueba de que el trabajo pasó por gerencia. */
@@ -9428,6 +9481,10 @@ li{margin-bottom:2px}
 .fir .l b{display:block;font-size:9.8px}
 .fir .l span{color:#8a929c;font-size:8.4px}
 .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eef0f2;font-size:8.2px;color:#8a929c;text-align:center}
+/* Los renglones en blanco del formato: para escribir a mano lo que
+   no estaba previsto. */
+.renglones{margin:8px 0 4px;break-inside:avoid;page-break-inside:avoid}
+.renglones span{display:block;border-bottom:1px solid #9aa2ac;height:16px;margin-bottom:7px}
 /* ── Que se respeten las hojas, como en el Word ──────────────
    La carátula es UNA hoja: membrete, servicio, cliente y el cuadro de
    firmas, y nada más. Lo que sigue empieza en la siguiente. Antes
@@ -9445,10 +9502,25 @@ li{margin-bottom:2px}
 .caratula .hueco{flex:1 1 auto}
 .caratula .hueco.a{flex-grow:2;min-height:24mm}
 .caratula .hueco.b{flex-grow:3;min-height:32mm}
-.caratula .port{margin:0;padding:0 0 26px}
-.caratula .port h1{margin:10px 0 22px}
-.caratula .port .me{margin-top:14px}
-.caratula .port .ref{margin-top:24px}
+/* La carátula es una portada: se lee a un metro, encima de la mesa.
+   Con el cuerpo del informe (10,5 px) quedaba diminuta y con media
+   hoja en blanco. Aquí todo va en grande y con el gris subido de
+   tono, que en papel el gris claro casi no imprime. */
+.caratula .port{margin:0;padding:0 0 30px}
+.caratula .port .s{font-size:11px;letter-spacing:.3em;color:#5b6470}
+.caratula .port h1{font-size:30px;line-height:1.2;margin:12px 0 26px}
+.caratula .port .cl{font-size:22px;font-weight:700}
+.caratula .port .me{font-size:14px;margin-top:12px;color:#3a424c}
+.caratula .port .ref{font-size:12.5px;margin-top:26px;color:#3a424c}
+.caratula .port .ref b{font-size:13px}
+.caratula .mem .ti{font-size:12.5px}
+.caratula .mem .dt{font-size:9.8px}
+.caratula .mem .dt span{color:#3a424c}
+.caratula .roles{font-size:12.5px}
+.caratula .roles th{font-size:10.5px;color:#3a424c}
+.caratula .roles td{height:46px}
+.caratula .roles .rol{font-size:10px;color:#5b6470}
+.cara-pie{font-size:9.5px;color:#5b6470}
 .caratula .roles{margin-bottom:0}
 .cara-pie{padding-top:16px;font-size:8.2px;color:#8a929c;text-align:center}
 /* Ni un título al final de una hoja con su contenido en la siguiente,
@@ -9548,6 +9620,13 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 
 </section>
 
+<!-- El registro fotográfico va donde lo pone el formato original:
+     detrás de las actividades y delante de las herramientas. -->
+<section class="hoja pliego">
+<h2>Registro fotográfico</h2>
+${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
+</section>
+
 <section class="hoja pliego">
 
 <h2>Herramientas utilizadas</h2>
@@ -9572,6 +9651,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 
 <h2>Recomendaciones generales</h2>
 <ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
+<div class="renglones">${'<span></span>'.repeat(3)}</div>
 
 <h2>Conclusiones</h2>
 <p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
@@ -9580,6 +9660,9 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
 ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
   `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
+${/* Como en el Word: unos renglones en blanco para añadir a mano lo
+     que no estaba previsto. */''}
+<div class="renglones">${'<span></span>'.repeat(3)}</div>
 
 <div class="fir">
   <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}</div>
@@ -9594,16 +9677,6 @@ ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
   de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
 </section>
 
-<!-- Las fotos, SIEMPRE al final y como anexo. El informe se lee de
-     corrido —antecedentes, actividades, conclusiones y firmas— y quien
-     quiera ver la prueba gráfica se va al anexo. Antes las fotos se
-     metían en medio y partían la lectura justo antes de las
-     conclusiones. -->
-<section class="hoja pliego anexo">
-<h2>Anexo · Registro fotográfico</h2>
-${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
-<p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — Anexo fotográfico</p>
-</section>
 ${BARRA_IMPRIMIR}
 </body></html>`};
 }
@@ -10843,7 +10916,7 @@ function renderCal(){
    ============================================================ */
 const WO_NEXT={oc:  ['ent',  'Recibir la válvula'],
                ent: ['mant', 'Pasar a mantenimiento'],
-               mant:['cert', 'Pasar a verificación final'],
+               mant:['cert', 'Pasar a prueba de salida'],
                cert:['final','Finalizar y emitir el certificado']};
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
@@ -11087,7 +11160,7 @@ function tomarOrden(id,grupo){
      papel no hay con qué comparar el trabajo después. */
   /* Lo que hace falta es que la prueba de entrada esté HECHA y
      firmada, no que salga aceptada. Una válvula rechazada en la
-     recepción sigue el mismo camino —taller, verificación final y
+     recepción sigue el mismo camino —taller, prueba de salida y
      certificado—: el rechazo queda escrito en su protocolo y en el
      certificado, que es donde tiene que estar. Cortarle el paso aquí
      dejaba el trabajo sin papeles y a la válvula en tierra de nadie. */
@@ -11816,7 +11889,7 @@ function renderWO(){
             /* El avance de TODA la orden: la media de lo andado por
                cada válvula, con las etapas valiendo un quinto cada
                una. Antes sólo contaba las finalizadas, así que una
-               orden con las cinco en verificación final marcaba 0 %. */
+               orden con las cinco en prueba de salida marcaba 0 %. */
             const avT=Math.round(G.todas.reduce((n,x)=>n+avanceEtapa(x.et),0)/G.todas.length);
             return `<div class="wo-av"><i style="width:${avT}%"></i>
               <span>${avT}% · ${finT} de ${G.todas.length} finalizadas</span></div>
@@ -11853,10 +11926,10 @@ function renderWO(){
             return `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'fotos')`}">
               <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
-              n?`Hacer el mantenimiento · ${n} foto${n===1?'':'s'}`:'Hacer el mantenimiento'}</button>`;
+              n?`Desarme · ${n} foto${n===1?'':'s'}`:'Hacer el desarme'}</button>`;
           })():''}
           ${G.et==='cert'?(()=>{
-            /* Verificación final: el trabajo del taller está firmado y le
+            /* Prueba de salida: el trabajo del taller está firmado y le
                toca al jefe. El botón para entrar a revisar y firmar está
                SIEMPRE — antes, si el rol no era gerencia, sólo salía una
                nota y no había por dónde poner la firma. */
@@ -11868,7 +11941,14 @@ function renderWO(){
               ? `<div class="wo-parte ok">Visto bueno puesto · lista para cerrar</div>`
               : `<div class="wo-parte">Falta${ls.length-firmadas===1?'':'n'} ${ls.length-firmadas} firma${
                   ls.length-firmadas===1?'':'s'} de gerencia${jefe?'':' — la pone el jefe'}</div>`;
-            return `<button class="btn ${jefe&&!todas?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
+            /* Aquí se hace la prueba de salida —los disparos del
+               as-left— y después firma el jefe. Dos botones porque son
+               dos manos distintas. */
+            const disparar=`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'salida')`}">
+              <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>
+              Hacer la prueba de salida</button>`;
+            return disparar+`<button class="btn ${jefe&&!todas?'':'quiet'} xs" style="width:100%;margin-top:6px;justify-content:center"
               onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
               <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
                 jefe ? (todas?'Revisar y rehacer la firma':'Revisar y firmar') : 'Ver lo que se hizo'}${
@@ -11893,7 +11973,9 @@ function renderWO(){
             }
             return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`;
           })():''}
-          ${(G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+          ${/* El desarme del cuadro 3 es lo que llena el informe técnico:
+               desde mantenimiento ya se puede sacar y ver cómo va. */''}
+          ${(G.et==='mant'||G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();imprimirInforme('${o.id}')" title="El informe técnico DVAD-SER-002 de toda la orden">
             <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informe técnico</button>`:''}
           ${G.et==='final'&&S.rol==='admin'&&ls.some(x=>x.calib)?`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
@@ -11946,15 +12028,15 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
     return o;
   }
   /* Guardar el ensayo YA NO CIERRA la orden. Desde que hay una columna
-     de verificación final, cerrarla aquí se saltaba al jefe: el taller
+     de prueba de salida, cerrarla aquí se saltaba al jefe: el taller
      guardaba y el trabajo aparecía finalizado sin que nadie lo hubiera
-     revisado. Lo que hace es dejarla a punto — en verificación final —
+     revisado. Lo que hace es dejarla a punto — en prueba de salida —
      y ahí espera la firma de gerencia. */
   if(o.et!=='final'&&!(c=>c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))(CALIBS.find(x=>x.id===calibId))){
     if(o.et!=='cert'){
       moverLinea(o,'cert');
-      registrar('Orden',`${o.mat||o.n} · ensayo guardado, a verificación final`);
-      toast('Guardado · pasa a verificación final, le toca al jefe');
+      registrar('Orden',`${o.mat||o.n} · ensayo guardado, a prueba de salida`);
+      toast('Guardado · pasa a prueba de salida, le toca al jefe');
     }
     return o;
   }
@@ -11974,7 +12056,7 @@ function advanceWO(id){
   if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   /* Recibir la válvula tiene nombre y fecha: van al protocolo. */
   if(nx[0]==='ent'){recibirOrden(id);return}
-  /* De mantenimiento a verificación final: el trabajo del taller tiene que
+  /* De mantenimiento a prueba de salida: el trabajo del taller tiene que
      estar entero —desarme, disparos, conclusiones y la firma del
      técnico—. Lo que falta a partir de ahí es el jefe. */
   if(nx[0]==='cert'){
@@ -11989,14 +12071,14 @@ function advanceWO(id){
       openPSV(o.act,null,'fotos'); return;
     }
     moverLinea(o,'cert'); renderAll();
-    registrar('Orden',`${o.mat||o.n} · a verificación final, esperando el visto bueno`);
-    toast('A verificación final · le toca al jefe revisar y firmar');
+    registrar('Orden',`${o.mat||o.n} · a prueba de salida, esperando el visto bueno`);
+    toast('A prueba de salida · le toca al jefe revisar y firmar');
     return;
   }
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
     /* El certificado no sale sin el visto bueno del jefe. Es el
-       sentido de la columna «Verificación final»: el trabajo está hecho y
+       sentido de la columna «Prueba de salida»: el trabajo está hecho y
        firmado por el taller, y falta que gerencia lo revise. */
     if(o.et==='cert'){
       const c=recepDe(o.act);
@@ -12144,7 +12226,7 @@ function avanzarGrupo(g,etapa){
   }
   if(nx[0]==='ent'){recibirOrden(mueven[0].id,g);return}
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
-  /* A verificación final entra cada válvula por su cuenta: cada una tiene su
+  /* A prueba de salida entra cada válvula por su cuenta: cada una tiene su
      propio ensayo y su propia firma. */
   if(nx[0]==='cert'){ mueven.forEach(x=>advanceWO(x.id)); return }
   mueven.forEach(x=>moverLinea(x,nx[0]));
@@ -13611,6 +13693,52 @@ const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'
 const fechaLarga=d=>`${DIAS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
 const panel=(t,body,extra)=>`<div class="panel"><div class="panel-h"><h3>${esc(t)}</h3>${extra||''}</div><div class="panel-b">${body}</div></div>`;
 
+/* ── LOS ACCESOS, CON SU FOTO ────────────────────────────────
+   Lo primero que se ve al entrar: cada sección como una tarjeta con
+   su imagen, su nombre, una línea de qué hay dentro y cuántas cosas
+   esperan. Se pulsa y se entra. El menú de la izquierda sigue ahí
+   para el que ya se lo sabe; esto es para el que abre el portal por
+   primera vez —o desde el celular— y no quiere leer una lista.
+   Las tarjetas SALEN DEL PROPIO MENÚ: así cada rol ve exactamente lo
+   suyo y nunca se desincronizan.
+   ════════════════════════════════════════════════════════════ */
+const ACCESO_INFO={
+  clients:{d:'Las empresas y su parque de válvulas', foto:'control'},
+  assets: {d:'Las válvulas instaladas, una por una', foto:'seguridad'},
+  wo:     {d:'El tablero del taller, etapa por etapa', foto:'cuchilla'},
+  cal:    {d:'Ensayos de banco y certificados'},
+  plan:   {d:'Qué válvula toca cada mes'},
+  parts:  {d:'Despieces, precios y disponibilidad', foto:'mariposa'},
+  req:    {d:'Lo que piden los clientes'},
+  cot:    {d:'Precios enviados y su estado'},
+  snc:    {d:'Reclamos y servicio no conforme'},
+  rep:    {d:'Cómo se está portando el parque'},
+  cat:    {d:'Modelos, despieces y lista de precios', foto:'pinch'},
+  stk:    {d:'Lo que hay en el almacén de Lima'},
+  imp:    {d:'Subir un levantamiento en Excel'},
+  users:  {d:'Quién entra y con qué permisos'}
+};
+function accesosHtml(){
+  const links=[...document.querySelectorAll('#nav > a')]
+    .filter(a=>a.style.display!=='none'&&a.dataset.p&&a.dataset.p!=='home');
+  if(!links.length)return '';
+  const tarjetas=links.map(a=>{
+    const p=a.dataset.p, info=ACCESO_INFO[p]||{};
+    const lbl=(a.querySelector('.lbl')||{}).textContent||p;
+    const ct=((a.querySelector('.ct')||{}).textContent||'').trim();
+    const ico=(a.querySelector('svg')||{}).outerHTML||'';
+    return `<button class="acc" onclick="go('${p}')" aria-label="${esc(lbl)}">
+      <span class="acc-th">${info.foto&&RPHOTO[info.foto]
+        ? `<img src="${RPHOTO[info.foto]}" alt="" loading="lazy">` : ico}</span>
+      <span class="acc-n">${esc(lbl)}</span>
+      <span class="acc-d">${esc(info.d||'')}</span>
+      ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
+    </button>`;
+  }).join('');
+  return panel('Tus accesos',`<div class="acc-g">${tarjetas}</div>`,
+    `<span class="count">${links.length} secciones</span>`);
+}
+
 function hbars(rows){
   const max=Math.max(1,...rows.map(r=>r.value));
   return `<div class="hb">${rows.map(r=>`<div class="hb-row${r.go?' go':''}" title="${esc(r.tip||r.label+': '+r.value+(r.unit||''))}"${r.go?` onclick="${r.go}"`:''}>
@@ -14258,6 +14386,7 @@ function renderHomeTaller(){
      <span class="spacer" style="flex:1"></span>
      <span class="count">${vs.length} válvula${vs.length===1?'':'s'} · ${ords.length} orden${ords.length===1?'':'es'}</span>
    </div>`}
+   ${accesosHtml()}
    ${kpiHtml}
    ${resumenClientesHtml()}`;
 }
@@ -14615,6 +14744,7 @@ function renderHome(){
         etapa y su porcentaje, y de un clic se entra a ver qué han
         hecho. Antes estaba tres bloques más abajo y había que buscarlo
         con la rueda del ratón. */''}
+   ${accesosHtml()}
    ${resumenClientesHtml()}
    ${colaHtml()}
    ${/* «Termina de configurar tu espacio» vivía aquí con sus cuatro
