@@ -2439,6 +2439,9 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   border-bottom:1px solid var(--line)}
 /* Vale igual la foto de verdad que el dibujo del tipo de válvula: los
    dos tienen que caber en la ventana, no desbordarla. */
+/* La empresa no tiene foto: su inicial, grande y en el azul de la casa. */
+.hv-emp{background:linear-gradient(155deg,color-mix(in oklab,var(--sel) 16%,var(--surface)) 0%,var(--surface-2) 100%)}
+.hv-emp span{font:700 32px/1 'IBM Plex Mono';letter-spacing:-.03em;color:var(--sel)}
 .hv-ph img,.hv-ph svg{max-width:100%;max-height:100px;width:auto;height:auto;object-fit:contain;display:block}
 .hv-b{padding:10px 12px 12px;display:grid;gap:3px}
 .hv-b>b{font-size:14px;letter-spacing:-.01em;font-family:'IBM Plex Mono'}
@@ -3122,6 +3125,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <a data-p="parts"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M11 8v6M8 11h6"/></svg><span class="lbl">Repuestos</span></a>
       <a data-p="req"><svg viewBox="0 0 24 24"><path d="M4 5h2l2.5 10h9L20 8H7"/><circle cx="10" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/></svg><span class="lbl">Solicitudes</span><span class="ct" id="ctReq"></span></a>
       <a data-p="cot"><svg viewBox="0 0 24 24"><path d="M6 3h9l5 5v13H6z"/><path d="M15 3v5h5M9.5 13h5M9.5 17h5"/></svg><span class="lbl">Cotizaciones</span><span class="ct" id="ctCot"></span></a>
+      <a data-p="hist"><svg viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1M3 4v5h5"/><path d="M12 7.5V12l3 2"/></svg><span class="lbl">Historial</span></a>
       <a data-p="snc"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg><span class="lbl">Reclamos</span><span class="ct" id="ctSnc"></span></a>
       <div class="rail-sec">Análisis</div>
       <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
@@ -4165,7 +4169,7 @@ function go(p){
      las empresas, con su selector arriba. Antes rebotaba al panel si
      no había un cliente abierto, y desde el panel de un equipo recién
      instalado no había forma de llegar. */
-  if(p!=='snc'&&p!=='cot'&&p!=='wo'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){
+  if(p!=='snc'&&p!=='cot'&&p!=='wo'&&p!=='hist'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){
     go(SALIDA_ROL[S.rol]||'clients'); return;
   }
   S.page=p;
@@ -4293,7 +4297,7 @@ function applyRole(v){
      panel no lista ninguna y entonces no habia por donde entrar a la
      carpeta de una empresa. La lista de empresas es la puerta, y tiene
      que estar siempre. */
-  const POR_ROL={tec:['cot','rep','users'], com:['rep','users']};
+  const POR_ROL={tec:['cot','rep','users'], com:['rep','users','hist']};
   const ocultas=c
     ? ['clients','cat','imp','users','snc','stk']
     : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
@@ -6522,9 +6526,28 @@ function renderHistorial(){
   const caja=$('#histView'); if(!caja) return;
   const foco=planFoco();
   if(!foco){
+    /* Sin empresa elegida no se enseña un cartel pidiendo que se elija
+       una: se enseñan las empresas, con cuántas válvulas y cuántos
+       papeles tiene cada una, y se entra de un clic. */
+    const filas=CLIENTES.map(c=>{
+      const eq=ACTIVOS.filter(a=>a.cli===c.id);
+      const n=eq.reduce((t,a)=>t+histLinea(a).length,0);
+      const ult=eq.flatMap(a=>histLinea(a)).sort((p,q)=>String(q.f).localeCompare(String(p.f)))[0];
+      return {c,eq,n,ult};
+    }).filter(f=>f.eq.length).sort((a,b)=>b.n-a.n);
     caja.innerHTML=`<div class="hd"><div><h1>Historial</h1>
-      <p>El expediente se arma por cliente: sus válvulas y todo lo que se le hizo a cada una. Entra a un cliente para verlo.</p></div></div>
-      <div class="panel"><div class="empty"><b>Elige un cliente</b>Cada historial sale del parque de esa empresa.</div></div>`;
+      <p>El expediente de cada empresa: sus válvulas y todo lo que se le hizo a cada una.</p></div></div>
+      ${filas.length?`<div class="hv-g">${filas.map(({c,eq,n,ult})=>`
+        <button class="hv-c" onclick="enterClient('${c.id}','hist')" aria-label="Historial de ${esc(c.n)}">
+          <div class="hv-ph hv-emp"><span>${esc((c.n||'?').slice(0,2).toUpperCase())}</span></div>
+          <div class="hv-b">
+            <b>${esc(c.n)}</b>
+            <span>${eq.length} válvula${eq.length===1?'':'s'}${c.fac?' · '+esc(c.fac):''}</span>
+            <div class="hv-n">${n?`<b>${n}</b> registro${n===1?'':'s'}`:'<i>sin historia todavía</i>'}</div>
+            ${ult?`<div class="hv-u">Lo último · <span class="mono">${esc(fPE(ult.f))}</span></div>`:''}
+          </div></button>`).join('')}</div>`
+        :`<div class="panel"><div class="empty"><b>Todavía no hay empresas con válvulas</b>
+           Da de alta una empresa y su parque, y aquí queda la historia de cada válvula.</div></div>`}`;
     return;
   }
   const c=cli(foco);
@@ -6570,7 +6593,8 @@ function renderHistorial(){
           area(a)&&area(a)!=='—'?' · '+esc(area(a)):''}</span>
         <div class="hv-n">${!ev.length ? '<i>sin historia todavía</i>'
           : certs ? `<b>${certs}</b> certificado${certs===1?'':'s'}${abiertos?` · <i>${abiertos} sin cerrar</i>`:''}`
-          : `<i>${abiertos} trabajo${abiertos===1?'':'s'} sin cerrar</i> · todavía sin certificado`}</div>
+          : abiertos ? `<i>${abiertos} trabajo${abiertos===1?'':'s'} sin cerrar</i> · todavía sin certificado`
+          : `<b>${ev.length}</b> registro${ev.length===1?'':'s'} · todavía sin certificado`}</div>
         ${ult?`<div class="hv-u">Lo último · <span class="mono">${esc(fPE(ult.f))}</span></div>
           <span class="tag ${ult.e.c}"><span class="dot"></span>${esc(ult.e.t)}</span>`:''}
       </div></button>`;
@@ -13849,6 +13873,7 @@ const ACCESO_INFO={
   clients:{d:'Las empresas y su parque de válvulas', c:'sel'},
   assets: {d:'Las válvulas instaladas, una por una', c:'ok'},
   wo:     {d:'El tablero del taller, etapa por etapa', c:'due'},
+  hist:   {d:'Todo lo que se le hizo a cada válvula', c:'ink-2'},
   cal:    {d:'Ensayos de banco y certificados', c:'sel'},
   plan:   {d:'Qué válvula toca cada mes', c:'ink-2'},
   parts:  {d:'Despieces, precios y disponibilidad', c:'ok'},
