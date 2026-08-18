@@ -4066,7 +4066,11 @@ function go(p){
      ninguno abierto se manda a elegirlo: a la lista de Clientes, o al
      Panel para quien no tiene esa lista —el taller—, que es donde
      están las empresas con lo que tienen aquí. */
-  if(p!=='snc'&&p!=='cot'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){
+  /* Órdenes de trabajo también se ve de corrido: el tablero de todas
+     las empresas, con su selector arriba. Antes rebotaba al panel si
+     no había un cliente abierto, y desde el panel de un equipo recién
+     instalado no había forma de llegar. */
+  if(p!=='snc'&&p!=='cot'&&p!=='wo'&&CLI_TABS.some(([x])=>x===p)&&!S.inCli&&!S.cli){
     go(SALIDA_ROL[S.rol]||'clients'); return;
   }
   S.page=p;
@@ -4181,6 +4185,13 @@ function applyRole(v){
   const ocultas=c
     ? ['clients','cat','imp','users','snc','stk']
     : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
+  /* Al taller se le quitó «Clientes» del lateral porque entra por el
+     panel. Pero entonces, si el panel todavía no tiene ninguna empresa
+     con trabajo, se quedaba sin ninguna puerta: ni clientes, ni
+     órdenes, ni nada. «Órdenes de trabajo» vuelve al lateral —con el
+     selector de empresa dentro— para que el tablero esté siempre a un
+     clic, haya o no algo en el panel. */
+  if(S.rol==='tec'||S.rol==='admin'){const i=ocultas.indexOf('wo');if(i>=0)ocultas.splice(i,1)}
   $$('#nav > a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
