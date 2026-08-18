@@ -4180,11 +4180,13 @@ function applyRole(v){
      cotiza ni da de alta usuarios, y los reportes de confiabilidad y
      los accesos son cosa de gerencia. */
   const FUERA_DE_CLIENTE=['assets','cal','plan','wo','req','parts','imp'];
-  /* El taller tampoco administra la cartera: no da de alta empresas ni
-     las edita. Entra por el panel, que ya lista las empresas con lo que
-     tienen aquí, y de un clic está en SUS órdenes. «Clientes» le
-     sobraba: era un desvío para llegar a lo mismo. */
-  const POR_ROL={tec:['cot','rep','users','clients'], com:['rep','users']};
+  /* «Clientes» vuelve al lateral del taller. Se habia quitado porque
+     al panel ya salen las empresas con lo que tienen aqui, pero eso
+     solo vale cuando hay trabajo en la casa: sin ordenes abiertas el
+     panel no lista ninguna y entonces no habia por donde entrar a la
+     carpeta de una empresa. La lista de empresas es la puerta, y tiene
+     que estar siempre. */
+  const POR_ROL={tec:['cot','rep','users'], com:['rep','users']};
   const ocultas=c
     ? ['clients','cat','imp','users','snc','stk']
     : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
