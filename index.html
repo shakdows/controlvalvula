@@ -9811,9 +9811,25 @@ function psvDocumento(id){
   .disp-c{border:1px solid #e4e7ea;border-radius:7px;padding:5px 8px;page-break-inside:avoid;
     border-left:3px solid #cfd4d9}
   .ref-anx{font-size:8px;color:#9aa2ab;margin-top:3px;letter-spacing:.03em}
+  /* La tabla de disparos del formato: un renglón por prueba y el
+     promedio al pie, resaltado, que es con el que se aprueba. */
+  .dsp{margin-top:5px}
+  .dsp th{width:auto}
+  .dsp tbody tr:first-child th,.dsp tr:first-child th{background:#f7f9fb}
+  .dsp th small{display:block;font-weight:400;font-size:7.6px;color:#9aa2ab;text-transform:none;letter-spacing:0}
+  .dsp tr.ok td:nth-child(3){color:#126b44}
+  .dsp tr.no td:nth-child(3){color:#a8291c}
+  .dsp tr.prom th,.dsp tr.prom td{background:#f7f9fb;font-weight:700;color:#1a1d21}
+  /* El visto bueno del cliente, en su propia fila de dos. */
+  .firmas.cli{grid-template-columns:1fr 1fr;margin-top:10px}
   /* El procedimiento es el mismo en todos los certificados: va en
      letra pequeña, que lo importante de la hoja son los resultados. */
-  .proc td{font-size:8.2px;line-height:1.4;color:#5b6470}
+  p.proc{font-size:8px;line-height:1.45;color:#5b6470;margin:2px 0 0}
+  p.proc b{color:#3a424c}
+  .patron{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:8.8px;margin:2px 0 0}
+  .patron span{white-space:nowrap}
+  .patron i{font-style:normal;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#8a929c;margin-right:4px}
+  .firmas.cli .fb{min-height:48px}
   .disp-c.ok{border-left-color:#1a7f52} .disp-c.no{border-left-color:#c0392b}
   .disp-h{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
   .disp-h b{font-size:8px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c}
@@ -9925,18 +9941,17 @@ function psvDocumento(id){
   </div>
 
   <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
-  <div class="par"><table>
-    ${fila('DESCRIPCIÓN',c.patDesc)}${fila('MODELO',c.patModelo)}${fila('MARCA',c.patMarca)}
-    ${fila('NUM. SERIE',c.patSerie)}</table>
-  <table>${fila('ESCALA',c.patEscala)}${fila('CLASE DE EXACTITUD',c.patExact)}
-    ${fila('FECHA DE CALIBRACIÓN',fPE(c.patFecha))}${fila('CERTIF. NUM',c.patCert)}</table></div>
+  ${/* Ocho datos que se leen de corrido: en dos tablas ocupaban un
+       quinto de la hoja para decir lo mismo. */''}
+  <p class="patron">${[['Descripción',c.patDesc],['Marca',c.patMarca],['Modelo',c.patModelo],
+      ['N.º de serie',c.patSerie],['Escala',c.patEscala],['Clase de exactitud',c.patExact],
+      ['Calibrado el',c.patFecha?fPE(c.patFecha):''],['Certificado',c.patCert]]
+    .map(([k,val])=>`<span><i>${k}</i> ${val==null||String(val).trim()===''?'<span class="ln"></span>':esc(String(val))}</span>`).join('')}</p>
 
-  <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
-  <table class="proc"><tr><td>
-    <b>1.</b> Presión de disparo (seteo) inicial — <i>as found</i>, para verificar el punto de disparo actual de la válvula.<br>
-    <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.<br>
-    <b>3.</b> Verificación final del punto de disparo. Se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.
-  </td></tr></table>
+  <p class="proc">
+    <b>Procedimiento ·</b> <b>1.</b> Presión de disparo (seteo) inicial —<i>as found</i>—, para verificar el punto de disparo actual.
+    <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.
+    <b>3.</b> Verificación final: se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.</p>
 
   <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
   ${/* Tira horizontal: los tres datos de cabecera en un renglón. Y el
@@ -9949,28 +9964,38 @@ function psvDocumento(id){
     <div><span>Fluido de prueba</span><b>${esc(c.fluidoP||'—')}</b></div>
   </div>
   ${(()=>{
-    /* Un disparo por tarjeta, con SU foto. Es lo mismo que el técnico
-       llenó en el banco, y la foto al lado del número es lo que hace
-       que el certificado se pueda auditar sin llamar a nadie. */
+    /* La tabla del formato de la casa: un renglón por disparo con el
+       set requerido, lo que disparó, a qué presión cerró, su
+       desviación y la banda admisible; y el promedio al pie, que es
+       el número con el que se aprueba o se rechaza. Las fotos de cada
+       disparo van en el anexo. */
     const l=disparosDe(c);
     const lim=v.estado!=='incompleto'?v.limite:null;
-    /* Cuatro disparos caben en una fila; con tres columnas fijas el
-       cuarto abría un renglón entero y empujaba las firmas fuera de
-       la hoja. */
-    return `<div class="disp" style="grid-template-columns:repeat(${l.length===4?4:3},1fr)">${l.map((t,i)=>{
+    const banda=v.estado!=='incompleto'?`${n2(v.min)} – ${n2(v.max)}`:'—';
+    const fila=(t,i)=>{
       const val=num(t.v), hay=isFinite(val)&&val>0;
       const dentro=hay&&lim!=null?Math.abs(val-v.set)<=lim+1e-9:null;
-      return `<div class="disp-c ${dentro===null?'':dentro?'ok':'no'}">
-        <div class="disp-h"><b>Prueba ${i+1}</b><i>${hay?n2(val):'—'}</i></div>
-        <small>${esc(u)}${t.pc?` · cierre ${esc(t.pc)}`:''}${hay&&v.set?` · ${((val-v.set)/v.set*100)>0?'+':''}${n2((val-v.set)/v.set*100)} %`:''}</small>
-        ${(()=>{const n=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos.length:(t.foto?1:0));
-          return n?`<div class="ref-anx">${n} foto${n===1?'':'s'} en el anexo</div>`:''})()}
-        ${t.nota?`<div class="nota">${esc(t.nota)}</div>`:''}
-      </div>`}).join('')}</div>
-    ${/* El promedio y la desviación salen en la franja de la gráfica;
-         aquí sólo el dato que allí no cabe: la presión de recierre. */''}
-    ${v.estado!=='incompleto'&&b?`<table class="res" style="margin-top:6px">
-      <tr><th>PRESIÓN DE RECIERRE (CIERRE)</th><th>${n2(b.prom)} ${esc(u)}</th></tr></table>`:''}`;
+      const dv=hay&&v.set?((val-v.set)/v.set*100):null;
+      const nf=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos.length:(t.foto?1:0));
+      return `<tr class="${dentro===null?'':dentro?'ok':'no'}">
+        <th>TEST ${i+1}${nf?` <small>${nf} foto${nf===1?'':'s'} en el anexo</small>`:''}</th>
+        <td class="c">${c.setEsp?n2(num(c.setEsp)):'—'}</td>
+        <td class="c"><b>${hay?n2(val):'—'}</b></td>
+        <td class="c">${t.pc?n2(num(t.pc)):'—'}</td>
+        <td class="c">${dv==null?'—':`${dv>0?'+':''}${n2(dv)} %`}</td>
+        <td class="c">${banda}</td></tr>`;
+    };
+    return `<table class="res dsp">
+      <tr><th>AS LEFT según API 527</th><th class="c">Set press</th><th class="c">Disparo</th>
+        <th class="c">Cierre</th><th class="c">Desviación (±%)</th><th class="c">Rango admisible ${esc(u)}</th></tr>
+      ${l.map(fila).join('')}
+      ${v.estado!=='incompleto'?`<tr class="prom"><th>PROMEDIO DE ${v.disparos.length} DISPARO${v.disparos.length===1?'':'S'}</th>
+        <td class="c">${c.setEsp?n2(num(c.setEsp)):'—'}</td>
+        <td class="c"><b>${n2(v.prom)}</b></td>
+        <td class="c">${b?n2(b.prom):'—'}</td>
+        <td class="c"><b>${v.desv>0?'+':''}${n2(v.desv)} %</b></td>
+        <td class="c">${banda}</td></tr>`:''}
+    </table>`;
   })()}
   ${v.estado!=='incompleto'?`
   <div class="quien" style="margin-top:4px">
@@ -9982,12 +10007,13 @@ function psvDocumento(id){
   ${v.dispersos?`<table class="res" style="margin-top:4px">${fila('OBSERVACIÓN DE REPETIBILIDAD',
       v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.')}</table>`:''}
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}
-    <small>${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
+    <small>${v.estado==='aprobado'?'QUEDA OPERATIVA LA VÁLVULA':'NO QUEDA OPERATIVA'}
+      · ${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
   <div class="grafc"><h4>Los disparos frente a la banda admisible</h4>${
     /* Más ancha de lienzo = más baja de papel: con el mismo dibujo, un
        viewBox apaisado ocupa la mitad de alto y deja sitio para las
        conclusiones y las firmas en la misma hoja. */
-    psvGrafica(v,1020,180)}</div>`:''}
+    psvGrafica(v,1020,150)}</div>`:''}
 
   ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
@@ -10008,6 +10034,16 @@ function psvDocumento(id){
         <div class="ln"><b>${f?esc(f.n):'&nbsp;'}</b>
           <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
           <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
+  </div>
+  ${/* El visto bueno del cliente: inspección y responsable, como en el
+       formato de la casa. Se firma en papel, por eso van en blanco. */''}
+  <div class="firmas cli">
+    <div class="fb"><span class="rol">V°B° Inspección ${esc(e.n||'cliente')}</span>
+      <div class="sg"></div><div class="ln"><b>&nbsp;</b>
+      <span class="cg">Nombre y cargo</span><br><span class="cg">Fecha</span></div></div>
+    <div class="fb"><span class="rol">V°B° Responsable ${esc(e.n||'cliente')}</span>
+      <div class="sg"></div><div class="ln"><b>&nbsp;</b>
+      <span class="cg">Nombre y cargo</span><br><span class="cg">Fecha</span></div></div>
   </div>
   <div class="pliego-n">Certificado · hoja 1</div>
   </section>
