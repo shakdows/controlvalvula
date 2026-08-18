@@ -2339,6 +2339,46 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .hst-t tr{cursor:default}
 .hst-acc{text-align:right;display:flex;gap:6px;justify-content:flex-end;align-items:center}
 .hst-vacio{padding:14px;font-size:12.5px;color:var(--ink-3);margin:0}
+/* ── El historial, en dos pasos ──────────────────────────────
+   Primero el parque de la empresa: una ficha por válvula con su
+   foto, como se reconoce en el taller. Al abrir una, su línea de
+   tiempo con todo lo que se le hizo —entradas, mantenimientos y
+   certificados—, filtrable. Así el trabajo terminado se saca del
+   tablero de órdenes sin perderlo de vista. */
+.hv-g{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fill,minmax(206px,1fr));margin-top:var(--sp-4)}
+.hv-c{display:flex;flex-direction:column;text-align:left;padding:0;overflow:hidden;cursor:pointer;
+  border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);font:inherit;color:inherit;
+  transition:border-color var(--fast),box-shadow var(--fast),transform var(--fast)}
+.hv-c:hover{border-color:var(--ink-3);box-shadow:var(--sh-1);transform:translateY(-1px)}
+.hv-c:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.hv-ph{height:120px;display:grid;place-items:center;padding:10px;overflow:hidden;
+  border-bottom:1px solid var(--line)}
+/* Vale igual la foto de verdad que el dibujo del tipo de válvula: los
+   dos tienen que caber en la ventana, no desbordarla. */
+.hv-ph img,.hv-ph svg{max-width:100%;max-height:100px;width:auto;height:auto;object-fit:contain;display:block}
+.hv-b{padding:10px 12px 12px;display:grid;gap:3px}
+.hv-b>b{font-size:14px;letter-spacing:-.01em;font-family:'IBM Plex Mono'}
+.hv-b>span{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-n{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--ink-2)}
+.hv-n b{font-family:'IBM Plex Mono';font-size:13px}
+.hv-c .tag{margin-top:6px;justify-self:start}
+/* la ficha de arriba cuando ya estás dentro de una válvula */
+.ht-cab{display:flex;align-items:center;gap:14px;padding:12px 14px;margin-top:var(--sp-4);
+  border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface)}
+.ht-cab .photo-frame{width:96px;height:96px;flex:0 0 auto;display:grid;place-items:center;padding:8px}
+.ht-cab .photo-frame{overflow:hidden}
+.ht-cab .photo-frame img,.ht-cab .photo-frame svg{max-width:100%;max-height:80px;width:auto;height:auto;object-fit:contain}
+.ht-id{flex:1;min-width:0}
+.ht-id b{display:block;font-size:19px;letter-spacing:-.02em;font-family:'IBM Plex Mono'}
+.ht-id span{display:block;font-size:12px;color:var(--ink-3)}
+.ht-fil{display:flex;gap:6px;flex-wrap:wrap;margin:var(--sp-3) 0 var(--sp-2)}
+.ht-y{font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);
+  margin:var(--sp-3) 0 var(--sp-2);font-family:'IBM Plex Mono'}
+.tl-i.ent::before{border-color:var(--due)}
+.tl-i.cert::before{border-color:var(--ok)}
+.tl-i.ord::before{border-color:var(--sel)}
+.tl-i.abierto::before{border-color:var(--late)}
+.tl-acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
 @media(max-width:760px){
   .hst-h{flex-wrap:wrap}
   .hst-id{flex:1 0 100%}
@@ -3873,7 +3913,7 @@ const visibles=()=>S.cli?ACTIVOS.filter(a=>a.cli===S.cli):ACTIVOS;
 /* ============================================================
    3 · NAVEGACIÓN / SHELL
    ============================================================ */
-const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',hist:'Historial de certificados',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',stk:'Stock de almacén',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
+const TITULOS={home:'Panel',clients:'Clientes',assets:'Activos',cal:'Calibraciones',plan:'Plan anual de mantenimiento',hist:'Historial',wo:'Órdenes de trabajo',parts:'Repuestos',req:'Solicitudes',cot:'Cotizaciones',snc:'Reclamos y servicio no conforme',rep:'Confiabilidad',cat:'Catálogo y despieces',imp:'Importar levantamiento',stk:'Stock de almacén',users:'Usuarios y accesos',settings:'Ajustes de la cuenta'};
 /* ============================================================
    EL BOTÓN «ATRÁS» DEL CELULAR
    ------------------------------------------------------------
@@ -4739,7 +4779,7 @@ function enterClient(id,page){
      saber por qué —lo peor de un filtro es el que no se ve—. */
   S.inCli=id;S.fCli=id;S.calCli=id;S.woCli=id;S.repCli='';S.homeCli='';
   S.view='todos';S.fFam='';S.fTipo='';S.fMod='';S.fMarca='';S.cliPend=false;S.focus=0;
-  S.histQ='';
+  S.histQ='';S.histAct=null;
   S.picked.clear();
   const fm=$('#fMarca'); if(fm)fm.value='';
   resetImport();                     // el asistente no debe quedar con el resultado del cliente anterior
@@ -6185,7 +6225,7 @@ function planDe(cliId){
 
 const planFoco=()=>S.cli||S.inCli||null;
 
-/* ── Historial de certificados ───────────────────────────────
+/* ── Historial ───────────────────────────────────────────────
    La hoja que faltaba: TODAS las válvulas del cliente y, colgando de
    cada una, TODOS los certificados que se le han emitido, del más
    nuevo al más viejo. Es el expediente del parque en una pantalla.
@@ -6215,83 +6255,170 @@ const histDoc=c=>c.tipo==='psv'?('AXAD-088'+(c.os?' · '+c.os:'')):(c.cert||'—
 const histResp=c=>c.tipo==='psv'?(c.respNombre||''):(c.tec||'');
 
 function histBuscar(v){ S.histQ=v; renderHistorial() }
+function histAbrir(id){ S.histAct=id; S.histFil='todo'; renderHistorial(); window.scrollTo({top:0,behavior:'smooth'}) }
+function histVolver(){ S.histAct=null; renderHistorial() }
+function histFiltro(k){ S.histFil=k; renderHistorial() }
+
+/* ── LA LÍNEA DE TIEMPO DE UNA VÁLVULA ───────────────────────
+   Todo lo que se le hizo, en un solo hilo y en orden: la prueba de
+   entrada con su protocolo, el mantenimiento, el certificado y la
+   orden de servicio a la que pertenecía. Es lo que se mira cuando el
+   cliente pregunta «¿y esta válvula qué historia tiene?», y es lo que
+   permite sacar del tablero lo ya terminado sin perderlo.
+   ════════════════════════════════════════════════════════════ */
+const HIST_FILTROS=[['todo','Todo'],['ent','Pruebas de entrada'],
+                    ['mant','Mantenimientos'],['cert','Certificados']];
+function histLinea(a){
+  const ev=[], cliente=S.rol==='cliente';
+  histDe(a).forEach(c=>{
+    if(c.tipo==='psv'){
+      /* La entrada es un hecho aparte: tiene su fecha, su firma y su
+         propio papel, y muchas veces es de otro día que el ensayo. */
+      if(recepcionCerrada(c)){
+        const rech=c.rcVeredicto==='rechaza';
+        ev.push({f:c.rcFecha||c.fecha||'', k:'ent', t:'Prueba de entrada · AXAD-084',
+          x:[c.rcRecibe?`La probó ${c.rcRecibe}`:'',
+             c.asFound?`disparó a ${c.asFound} ${c.und||'psi'}`:'',
+             rech&&c.rcMotivo?`motivo: ${c.rcMotivo}`:''].filter(Boolean).join(' · '),
+          e:rech?{t:'Rechazada',c:'late'}:{t:'Aceptada',c:'ok'},
+          acc:`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Ver el protocolo</button>`});
+      }
+      const est=histEstado(c);
+      ev.push({f:c.fecha||'', k:est.listo?'cert':'mant',
+        t:est.listo?`Certificado · ${histDoc(c)}`:'Mantenimiento sin cerrar',
+        x:[c.setEsp?`set ${c.setEsp} ${c.und||'psi'}`:'',
+           histResp(c)?`responsable ${histResp(c)}`:'',
+           c.coment||''].filter(Boolean).join(' · '),
+        e:{t:est.t,c:est.c},
+        acc:est.listo
+          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Ver</button>
+             <button class="btn quiet xs" onclick="imprimirPSV('${c.id}')">PDF</button>
+             ${cliente?'':`<button class="btn quiet xs" onclick="psvWord('${c.id}')">Word</button>`}`
+          : (cliente?'':`<button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button>`)});
+    }else{
+      ev.push({f:histFecha(c), k:'cert', t:`Certificado · ${histDoc(c)}`,
+        x:[c.nom?`${c.nom} ${c.uni||''}`:'',histResp(c)?`responsable ${histResp(c)}`:''].filter(Boolean).join(' · '),
+        e:histEstado(c),
+        acc:`<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${c.id}'))">Ver</button>`});
+    }
+  });
+  ORDENES.filter(o=>o.act===a.id).forEach(o=>{
+    const fin=o.et==='final', etp=(ETAPAS.find(e=>e[0]===o.et)||[,'En curso'])[1];
+    const otras=lineasDe(o).length;
+    ev.push({f:(fin?(o.arch||o.f):o.f)||'', k:'mant',
+      t:`Orden de servicio · ${o.mat||o.n}`,
+      x:[o.tipo||'', otras>1?`${otras} válvulas en la orden`:'',
+         o.ing?`ingeniero ${o.ing}`:'', o.hall||''].filter(Boolean).join(' · '),
+      e:fin?{t:o.arch?'En el historial':'Finalizada',c:'ok'}:{t:etp,c:'due'},
+      acc:`${cliente?'':`<button class="btn quiet xs" onclick="imprimirInforme('${o.id}')">Informe técnico</button>`}
+        ${o.arch&&!cliente?`<button class="btn quiet xs" onclick="devolverAlTablero('${o.id}')">Devolver al tablero</button>`:''}`});
+  });
+  return ev.filter(x=>x.f).sort((p,q)=>String(q.f).localeCompare(String(p.f)));
+}
+
+/* Cuántos papeles tiene la válvula: es el número que se enseña en la
+   ficha del parque, y lo que decide si aparece «sin historial». */
+const histCuenta=a=>histLinea(a).length;
 
 function renderHistorial(){
   const caja=$('#histView'); if(!caja) return;
   const foco=planFoco();
   if(!foco){
-    caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1>
-      <p>El expediente se arma por cliente: sus válvulas y todos los certificados de cada una. Entra a un cliente para verlo.</p></div></div>
+    caja.innerHTML=`<div class="hd"><div><h1>Historial</h1>
+      <p>El expediente se arma por cliente: sus válvulas y todo lo que se le hizo a cada una. Entra a un cliente para verlo.</p></div></div>
       <div class="panel"><div class="empty"><b>Elige un cliente</b>Cada historial sale del parque de esa empresa.</div></div>`;
     return;
   }
   const c=cli(foco);
-  const q=(S.histQ||'').trim().toLowerCase();
   const parque=ACTIVOS.filter(a=>a.cli===foco)
     .sort((x,y)=>String(x.tag||'').localeCompare(String(y.tag||''),'es'));
-  const filas=parque.map(a=>({a,cs:histDe(a)}));
-  const total=filas.reduce((s,f)=>s+f.cs.length,0);
-  const conCert=filas.filter(f=>f.cs.length).length;
-  const ultimo=filas.flatMap(f=>f.cs).sort(HIST_ORDEN)[0];
-
-  const visto=q?filas.filter(({a})=>[a.tag,a.ser,a.mod,(MODELOS[a.mod]||{}).m,area(a)]
-      .some(x=>String(x||'').toLowerCase().includes(q))):filas;
 
   if(!parque.length){
-    caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1><p>${esc(c.n)}</p></div></div>
+    caja.innerHTML=`<div class="hd"><div><h1>Historial</h1><p>${esc(c.n)}</p></div></div>
       <div class="panel"><div class="empty"><b>Todavía no hay válvulas registradas</b>
-        Registra el parque de ${esc(c.n)} y aquí queda el historial de cada una.</div></div>`;
+        Registra el parque de ${esc(c.n)} y aquí queda la historia de cada una.</div></div>`;
     return;
   }
 
-  const tarjetas=visto.map(({a,cs})=>{
+  /* ── Dentro de una válvula: su línea de tiempo ── */
+  const dentro=S.histAct&&parque.find(a=>a.id===S.histAct);
+  if(dentro){ caja.innerHTML=histDetalle(dentro,c); return }
+
+  /* ── El parque: una ficha por válvula, con su foto ── */
+  const q=(S.histQ||'').trim().toLowerCase();
+  const filas=parque.map(a=>({a,ev:histLinea(a)}));
+  const total=filas.reduce((s,f)=>s+f.ev.length,0);
+  const conHist=filas.filter(f=>f.ev.length).length;
+  const ultimo=filas.flatMap(f=>f.ev).sort((p,q2)=>String(q2.f).localeCompare(String(p.f)))[0];
+  const visto=q?filas.filter(({a})=>[a.tag,a.ser,a.mod,(MODELOS[a.mod]||{}).m,area(a)]
+      .some(x=>String(x||'').toLowerCase().includes(q))):filas;
+
+  const fichas=visto.map(({a,ev})=>{
     const m=MODELOS[a.mod]||{};
-    const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:'',area(a)].filter(Boolean).join(' · ');
-    const ult=cs[0]?histEstado(cs[0]):null;
-    const cuerpo=cs.length?`<table class="grid hst-t">
-      <thead><tr><th>Fecha</th><th>Documento</th><th class="num">Presión de ajuste</th>
-        <th>Resultado</th><th>Responsable</th><th></th></tr></thead>
-      <tbody>${cs.map(x=>{
-        const e=histEstado(x);
-        const set=x.tipo==='psv'?`${esc(x.setEsp||'—')} ${esc(x.und||'')}`:`${x.nom} ${esc(x.uni||'')}`;
-        const acc=x.tipo==='psv'
-          ? (e.listo
-              ? `<button class="btn sec xs" onclick="verPSV('${x.id}')">Ver</button>
-                 <button class="btn quiet xs" onclick="imprimirPSV('${x.id}')" title="Imprimir o guardar en PDF"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg></button>
-                 ${S.rol!=='cliente'?`<button class="btn quiet xs" onclick="psvWord('${x.id}')" title="Descargar en Word para editarlo">Word</button>`:''}`
-              : `<button class="btn sec xs" onclick="openPSV(null,'${x.id}')">Seguir</button>`)
-          : `<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${x.id}'))">Ver</button>`;
-        return `<tr><td class="mono">${esc(fPE(histFecha(x)))}</td>
-          <td class="mono muted">${esc(histDoc(x))}</td>
-          <td class="num">${set}</td>
-          <td><span class="tag ${e.c}"><span class="dot"></span>${e.t}</span></td>
-          <td>${esc(histResp(x)||'—')}</td>
-          <td class="hst-acc">${acc}</td></tr>`;
-      }).join('')}</tbody></table>`
-      :`<p class="hst-vacio">Sin certificados todavía. El primero se emite al finalizar su mantenimiento.</p>`;
-    return `<article class="hst">
-      <header class="hst-h">
-        <div class="hst-id"><b class="mono">${esc(a.tag||a.ser||'(sin tag)')}</b><span>${esc(sub)}</span></div>
-        ${ult?`<span class="tag ${ult.c}"><span class="dot"></span>${ult.t}</span>`:''}
-        <div class="hst-n"><b>${cs.length}</b><span>certificado${cs.length===1?'':'s'}</span></div>
-        <button class="btn quiet xs" onclick="openAsset('${a.id}')">Abrir la ficha</button>
-      </header>
-      ${cuerpo}</article>`;
+    const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:''].filter(Boolean).join(' · ');
+    const ult=ev[0];
+    return `<button class="hv-c" onclick="histAbrir('${a.id}')"
+        aria-label="Abrir el historial de ${esc(a.tag||a.ser||'la válvula')}">
+      <div class="hv-ph">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
+      <div class="hv-b">
+        <b>${esc(a.tag||a.ser||'(sin tag)')}</b>
+        <span>${esc(sub||area(a)||'—')}</span>
+        <div class="hv-n"><b>${ev.length}</b> ${ev.length===1?'registro':'registros'}${
+          ult?` · <span class="mono">${esc(fPE(ult.f))}</span>`:''}</div>
+        ${ult?`<span class="tag ${ult.e.c}"><span class="dot"></span>${esc(ult.e.t)}</span>`:''}
+      </div></button>`;
   }).join('');
 
-  caja.innerHTML=`<div class="hd"><div><h1>Historial de certificados</h1>
-      <p>${esc(c.n)} · todas sus válvulas y los certificados emitidos a cada una.</p></div>
+  caja.innerHTML=`<div class="hd"><div><h1>Historial</h1>
+      <p>${esc(c.n)} · el parque de la empresa. Entra a una válvula y verás su línea de tiempo.</p></div>
       <input class="inp" id="histQ" style="height:34px;max-width:250px" placeholder="Buscar por tag, serie o modelo"
         value="${esc(S.histQ||'')}" oninput="histBuscar(this.value)" aria-label="Buscar una válvula del historial"></div>
     <div class="stats">
       <div class="stat" style="cursor:default"><span class="v">${parque.length}</span><span class="k">Válvulas del cliente</span></div>
-      <div class="stat" style="cursor:default"><span class="v">${total}</span><span class="k">Certificados emitidos</span></div>
-      <div class="stat" style="cursor:default"><span class="v">${conCert}</span><span class="k">Con historial</span></div>
-      <div class="stat" style="cursor:default"><span class="v">${parque.length-conCert}</span><span class="k">Sin ningún certificado</span></div>
-      <div class="stat" style="cursor:default"><span class="v mono" style="font-size:17px">${esc(ultimo?fPE(histFecha(ultimo)):'—')}</span><span class="k">Último emitido</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${total}</span><span class="k">Registros guardados</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${conHist}</span><span class="k">Con historia</span></div>
+      <div class="stat" style="cursor:default"><span class="v">${parque.length-conHist}</span><span class="k">Sin nada todavía</span></div>
+      <div class="stat" style="cursor:default"><span class="v mono" style="font-size:17px">${esc(ultimo?fPE(ultimo.f):'—')}</span><span class="k">Lo último</span></div>
     </div>
-    <div class="hst-l">${visto.length?tarjetas
-      :`<div class="panel"><div class="empty"><b>Ninguna válvula coincide</b>Prueba con otro tag, serie o modelo.</div></div>`}</div>`;
+    ${visto.length?`<div class="hv-g">${fichas}</div>`
+      :`<div class="panel"><div class="empty"><b>Ninguna válvula coincide</b>Prueba con otro tag, serie o modelo.</div></div>`}`;
+}
+
+function histDetalle(a,c){
+  const m=MODELOS[a.mod]||{};
+  const sub=[[m.m,a.mod].filter(Boolean).join(' '),a.ser?'s/n '+a.ser:'',area(a)].filter(Boolean).join(' · ');
+  const todos=histLinea(a);
+  const fil=S.histFil||'todo';
+  const ev=fil==='todo'?todos:todos.filter(x=>x.k===fil);
+  const cuenta=k=>k==='todo'?todos.length:todos.filter(x=>x.k===k).length;
+
+  /* Por años: en un parque que lleva décadas, la lista sin cortes no
+     se lee. Cada año con su rótulo y debajo lo que pasó ese año. */
+  const anios=[...new Set(ev.map(x=>String(x.f).slice(0,4)))];
+  const hilo=anios.map(y=>`<div class="ht-y">${esc(y)}</div>
+    <div class="tl">${ev.filter(x=>String(x.f).slice(0,4)===y).map(x=>`
+      <div class="tl-i ${x.k==='ent'?'ent':x.k==='cert'?'cert':'ord'}">
+        <div class="tl-m"><span>${esc(fPE(x.f))}</span><span>·</span>
+          <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span></div>
+        <div class="tl-t">${esc(x.t)}</div>
+        ${x.x?`<div class="tl-x">${esc(x.x)}</div>`:''}
+        ${x.acc?`<div class="tl-acc">${x.acc}</div>`:''}
+      </div>`).join('')}</div>`).join('');
+
+  return `<div class="hd"><div>
+      <button class="btn quiet xs" style="margin-bottom:8px" onclick="histVolver()">‹ Todas las válvulas</button>
+      <h1>Historial de ${esc(a.tag||a.ser||'la válvula')}</h1>
+      <p>${esc(c.n)} · todo lo que se le hizo, de lo más nuevo a lo más viejo.</p></div>
+      <button class="btn sec" onclick="openAsset('${a.id}')">Abrir la ficha</button></div>
+    <div class="ht-cab">
+      <div class="photo-frame">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
+      <div class="ht-id"><b>${esc(a.tag||a.ser||'(sin tag)')}</b><span>${esc(sub||'—')}</span>
+        <span>${todos.length} registro${todos.length===1?'':'s'} guardado${todos.length===1?'':'s'}</span></div>
+    </div>
+    <div class="ht-fil">${HIST_FILTROS.map(([k,l])=>`
+      <button class="btn ${fil===k?'sec':'quiet'} xs" onclick="histFiltro('${k}')">${l} · ${cuenta(k)}</button>`).join('')}</div>
+    ${ev.length?hilo:`<div class="panel"><div class="empty"><b>Nada de eso todavía</b>
+      Cuando se haga, queda aquí guardado.</div></div>`}`;
 }
 
 function renderPlan(){
@@ -11543,8 +11670,10 @@ function renderWO(){
     sel.dataset.built='1';sel.onchange=e=>{S.woCli=e.target.value;renderWO()};
   }
   if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.woCli||''}
+  /* Lo archivado ya no pinta en el tablero: vive en el Historial. Es
+     lo que evita que la columna «Finalizado» crezca sin fin. */
   const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
-    return (!S.cli||a?.cli===S.cli)&&(!S.woCli||a?.cli===S.woCli)});
+    return !o.arch&&(!S.cli||a?.cli===S.cli)&&(!S.woCli||a?.cli===S.woCli)});
   $('#ctWo').textContent=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return (!S.cli||a?.cli===S.cli)&&o.et!=='final'}).length||'';
   /* Una tarjeta por ORDEN, no por válvula: un MAT con tres válvulas es
      un trabajo, no tres. La columna en la que cae es la de su línea
@@ -11664,6 +11793,11 @@ function renderWO(){
           ${G.et==='final'&&S.rol==='admin'&&ls.some(x=>x.calib)?`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
             onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
             <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Revisar y firmar</button>`:''}
+          ${G.et==='final'&&S.rol!=='cliente'&&G.todas.every(x=>x.et==='final')?`
+            <button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+              onclick="event.stopPropagation();archivarGrupo('${G.g}')"
+              title="Sale del tablero y queda guardada en el historial de cada válvula">
+              <svg viewBox="0 0 24 24"><path d="M3 7h18v3H3zM5 10v10h14V10M9 14h6"/></svg>Mandar al historial</button>`:''}
           <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
@@ -11913,6 +12047,41 @@ function avanzarGrupo(g,etapa){
   toast(`${mueven[0].n} · ${mueven.length} válvulas → ${et2}`);
   renderAll();
 }
+/* ── MANDAR AL HISTORIAL ─────────────────────────────────────
+   Una orden terminada no tiene por qué seguir ocupando el tablero:
+   la columna «Finalizado» crecía sin fin y había que bajar media
+   pantalla para ver el trabajo del día. Archivarla la saca del
+   tablero y la deja donde se busca de verdad —el historial de cada
+   válvula—, con su informe y su certificado colgados. No borra nada:
+   se puede devolver.
+   ════════════════════════════════════════════════════════════ */
+function archivarGrupo(g){
+  const ls=ORDENES.filter(x=>grupoDe(x)===g);
+  if(!ls.length)return;
+  const abiertas=ls.filter(x=>x.et!=='final');
+  if(abiertas.length){
+    toast(`Falta${abiertas.length===1?'':'n'} ${abiertas.length} válvula${abiertas.length===1?'':'s'} por finalizar`);
+    return;
+  }
+  const h=hoyISO();
+  ls.forEach(x=>{ x.arch=h });
+  guardarLocal();
+  const n=ls[0].mat||ls[0].n;
+  registrar('Orden',`${n} · al historial (${ls.length} válvula${ls.length===1?'':'s'})`);
+  toast(`${n} guardada en el historial · la ves en Historial, en cada válvula`);
+  renderAll();
+}
+/* Se archivó por error, o el cliente reclama algo de ese servicio: la
+   orden vuelve al tablero tal como estaba. */
+function devolverAlTablero(id){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const ls=ORDENES.filter(x=>grupoDe(x)===grupoDe(o));
+  ls.forEach(x=>{ delete x.arch });
+  guardarLocal();
+  toast(`${o.mat||o.n} vuelve al tablero, en Finalizado`);
+  renderAll();
+}
+
 /* Se arrastra «grupo|etapa»: la tarjeta que se agarra, no la orden. */
 function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataTransfer.effectAllowed='move'}
 function dropWO(ev,et){
@@ -14007,7 +14176,8 @@ function resumenClientesHtml(){
     /* El trabajo que esa empresa tiene EN LA CASA, etapa por etapa.
        Es lo primero que se pregunta al mirar este bloque: cuántas
        válvulas suyas hay aquí y por dónde va cada una. */
-    const ords=ORDENES.filter(o=>eq.some(a=>a.id===o.act));
+    /* Lo archivado no cuenta: está en el historial, no en la casa. */
+    const ords=ORDENES.filter(o=>!o.arch&&eq.some(a=>a.id===o.act));
     const eta={}; ETAPAS.forEach(([k])=>eta[k]=ords.filter(o=>o.et===k));
     const av=avanceCliente(c.id);
     return {c,eq,por,pend,ords,eta,av};
@@ -14213,7 +14383,9 @@ function verFiltradasDe(cid,campo,valor){
    salieron. Es la misma cuenta de la línea de «Tu trabajo», pero aquí
    mirando TODAS sus órdenes, no sólo las de trabajos abiertos. */
 function avanceCliente(cid){
-  const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===cid});
+  /* Sin lo archivado: el avance es el del trabajo que está en la casa,
+     no el de todo lo que se hizo desde 1961. */
+  const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===cid&&!o.arch});
   const esp=ords.filter(o=>o.et==='oc'||o.et==='ent').length,
         tal=ords.filter(o=>o.et==='mant'||o.et==='cert').length,
         fin=ords.filter(o=>o.et==='final').length, tot=esp+tal+fin;
