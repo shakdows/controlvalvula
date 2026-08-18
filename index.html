@@ -3319,9 +3319,12 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
     </div>
     <div class="dr-id"><div class="izq" id="drTags"></div><div id="drSalud"></div></div>
   </div>
+  <!-- Resumen y Despiece salen sólo cuando se entra por Repuestos:
+       al abrir una válvula lo que se hace es completar su ficha y
+       mirar sus papeles, no leer un resumen. -->
   <div class="dr-tabs" id="drTabs" role="tablist" aria-label="Secciones del equipo">
-    <button class="dr-tab on" data-t="ficha" role="tab" aria-selected="true" aria-controls="pn-ficha">Resumen</button>
-    <button class="dr-tab" data-t="tec" role="tab" aria-selected="false" aria-controls="pn-tec" tabindex="-1">Ficha técnica</button>
+    <button class="dr-tab" data-t="ficha" role="tab" aria-selected="false" aria-controls="pn-ficha" tabindex="-1">Resumen</button>
+    <button class="dr-tab on" data-t="tec" role="tab" aria-selected="true" aria-controls="pn-tec">Ficha técnica</button>
     <button class="dr-tab" data-t="bom" role="tab" aria-selected="false" aria-controls="pn-bom" tabindex="-1">Despiece</button>
     <button class="dr-tab" data-t="cal" role="tab" aria-selected="false" aria-controls="pn-cal" tabindex="-1">Calibraciones</button>
     <button class="dr-tab" data-t="hist" role="tab" aria-selected="false" aria-controls="pn-hist" tabindex="-1">Historial</button>
@@ -5298,7 +5301,15 @@ function renderCliBar(){
 /* ============================================================
    5 · DRAWER DE DETALLE
    ============================================================ */
-function openAsset(id){
+/* Abrir una válvula enseña cuatro pestañas: ficha técnica,
+   calibraciones, historial y documentos. «Resumen» y «Despiece» son
+   otra cosa —mirar repuestos— y aparecen cuando se entra desde
+   Repuestos: openAsset(id,{completo:true}). */
+function openAsset(id,opt){
+  const completo=!!(opt&&opt.completo);
+  ['ficha','bom'].forEach(k=>{const b=document.querySelector(`.dr-tab[data-t="${k}"]`);
+    if(b)b.style.display=completo?'':'none'});
+  S.tab=(opt&&opt.tab)||(completo?'ficha':'tec');
   S.cur=ACTIVOS.find(a=>a.id===id);if(!S.cur)return;
   const a=S.cur,m=MODELOS[a.mod]||{},e=estado(a),d=a.prox?dias(a.prox):null;
   $('#drTitle').textContent=a.tag||'Activo sin tag';
@@ -5346,7 +5357,7 @@ function openAsset(id){
            placa y mandarla a servicio. */''}
       <button class="btn sec" onclick="openPlacaPSV('${a.id}')">Datos de placa</button>
       ${accionDeCierre(a,ORDENES.find(o=>o.act===a.id&&o.et!=='final'),false)}`;})();
-  showTab(S.tab||'ficha');
+  showTab(S.tab||'tec');
   $('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
   renderGrid();
 }
@@ -5422,6 +5433,11 @@ function verSalud(id){
 function toggleWide(){S.wide=!S.wide;$('#drawer').classList.toggle('wide',S.wide)}
 function showTab(t){
   S.tab=t;
+  /* Pedir el despiece o el resumen desde un botón del pie tiene que
+     enseñar también su pestaña: si no, el contenido cambia y arriba
+     no hay nada marcado. */
+  if(t==='ficha'||t==='bom'){const b=document.querySelector(`.dr-tab[data-t="${t}"]`);
+    if(b)b.style.display=''}
   $$('.dr-tab').forEach(x=>{const on=x.dataset.t===t;
     x.classList.toggle('on',on);x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1});
   $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pn-'+t));
@@ -12643,7 +12659,14 @@ function partsDetail(){
        <h1>${esc(k)}</h1>
        <div class="ty">${esc(m.t)} — ${esc(m.d)}</div>
        <div class="pd-tags">${tags.join('')}</div>
-       ${a?`<div style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">Serie <b class="mono">${esc(a.ser)}</b> · ${esc(cli(a.cli).n)} · ${esc(area(a))}</div>`:''}
+       ${a?`<div style="margin-top:10px;font-size:12.5px;color:var(--ink-2)">Serie <b class="mono">${esc(a.ser)}</b> · ${esc(cli(a.cli).n)} · ${esc(area(a))}</div>
+       ${/* Desde repuestos sí se entra al resumen y al despiece de la
+            ficha: es la puerta por la que se mira la válvula como
+            equipo, no como trabajo. */''}
+       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+         <button class="btn sec xs" onclick="openAsset('${a.id}',{completo:true,tab:'ficha'})">Resumen de la válvula</button>
+         <button class="btn quiet xs" onclick="openAsset('${a.id}',{completo:true,tab:'bom'})">Despiece en la ficha</button>
+       </div>`:''}
      </div>
      <div class="pd-kit">
        <div class="k">Kit de overhaul</div>
