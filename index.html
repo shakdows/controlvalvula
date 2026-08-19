@@ -642,6 +642,16 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 @media(min-width:1400px){.kb{min-width:0}}
 .kb-col{background:var(--surface-2);border:1px solid var(--line-2);border-radius:var(--r-2);min-height:180px;display:flex;flex-direction:column}
 .kb-col.over{border-color:var(--sel);background:var(--sel-bg)}
+/* El buzón de cada columna: sólo existe mientras se arrastra, y dice
+   por su nombre dónde va a caer la tarjeta. */
+.kb-buzon{display:none}
+#kanban.arrastrando .kb-buzon{display:flex;align-items:center;justify-content:center;gap:6px;
+  margin:8px;padding:14px 10px;border:2px dashed var(--line-2);border-radius:var(--r-2);
+  color:var(--ink-3);font-size:11.5px;text-align:center;pointer-events:none}
+#kanban.arrastrando .kb-col.over .kb-buzon{border-color:var(--sel);color:var(--sel);
+  background:var(--surface);box-shadow:0 2px 10px rgba(16,45,105,.12)}
+.kb-buzon b{font-size:12.5px;color:var(--ink-1)}
+#kanban.arrastrando .kb-col.over .kb-buzon b{color:var(--sel)}
 /* Cada columna vale un quinto: se dice en su cabecera para que se vea
    cuánto se ha andado sin abrir ninguna tarjeta. */
 .kb-pct{font-size:10.5px;font-weight:700;font-family:'IBM Plex Mono';letter-spacing:-.02em;
@@ -721,6 +731,10 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .ord-m small.pendiente{color:var(--late);font-weight:500}
 .ord-m small.pendiente b{font-weight:700}
 .ord-m small.lista{color:var(--ok);font-weight:600}
+/* Cuándo se movió cada válvula, con la hora de Lima. */
+.ord-m small.ord-h{display:block;margin-top:3px;color:var(--ink-3);font-size:11px;
+  font-variant-numeric:tabular-nums}
+.ord-m small.ord-h span{opacity:.7;font-style:italic}
 .af-lupa{position:absolute;left:6px;bottom:6px;background:oklch(0 0 0 /.62);color:#fff;
   border-radius:var(--r-pill);font-size:10px;padding:2px 8px;pointer-events:none;letter-spacing:.02em}
 .af-nota{font-size:12px;padding:7px 9px}
@@ -1505,6 +1519,12 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .rc-a span{display:block;font-size:10.5px;letter-spacing:.03em;color:var(--ink-3)}
 .rc-a b{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);word-break:break-word}
 .rc-a.vacio b{font-weight:400;color:var(--ink-3);font-style:italic}
+/* La presión de seteo, con su candado al lado: el campo ocupa lo que
+   pueda y el botón de abrir se queda pegado a la derecha. */
+.set-fila{display:flex;align-items:center;gap:8px}
+.set-fila .inp{flex:1;min-width:0}
+.set-fila .set-lock-btn{flex:0 0 auto;white-space:nowrap}
+.set-clave{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .rc-nota{font-size:11.5px;color:var(--ink-3);margin:8px 0 0;line-height:1.5}
 .rc-nota a{color:var(--sel);font-weight:600;text-decoration:underline}
 .rc-norma{margin:14px 0 0;padding-top:10px;border-top:1px solid var(--line-2);
@@ -4556,6 +4576,7 @@ function ordenesEnLote(){
    </div>
    <div class="fld"><label for="loMot">Motivo / qué hay que hacerles</label>
      <textarea class="inp" id="loMot" rows="2" placeholder="Lo que el taller necesita saber antes de abrirlas."></textarea></div>
+   ${pasosHTML()}
    <h4 class="snc-sec">Van al taller</h4>
    <div class="py-lista">${libres.map(a=>`<label class="py-it">
      <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
@@ -4658,11 +4679,12 @@ function confirmarOrdenesLote(){
   const mat=nuevoMAT();
   const grupo='g'+Date.now();
   const sello=Date.now();
+  const pasos=pasosMarcados();
   const hechas=[];
   LOTE_IDS.forEach((id,i)=>{
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
     if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
-    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,grupo,
+    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,grupo,pasos,
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
     hechas.push(a.tag||a.ser||'');
   });
@@ -5051,8 +5073,11 @@ function verOrden(idOrAct,esActivo){
       return `<section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
         <div class="fx-blk-h"><h3>Válvulas de esta orden</h3>
           <span class="count">${fin} de ${ls.length} finalizadas</span>
-          ${S.rol==='cliente'?'':`<button class="btn quiet xs" onclick="editarValvulasOrden('${o.id}')"
-            title="Añadir o quitar válvulas de esta orden">Añadir o quitar</button>`}</div>
+          ${/* Cambiar las válvulas de una orden es cosa de gerencia: un
+               descuido en el taller saca del trabajo una válvula ya
+               empezada y se lleva por delante lo hecho. */''}
+          ${S.rol==='admin'?`<button class="btn quiet xs" onclick="editarValvulasOrden('${o.id}')"
+            title="Añadir o quitar válvulas de esta orden">Añadir o quitar</button>`:''}</div>
         <div class="ord-v">${ls.map(x=>{
           const v=ACTIVOS.find(y=>y.id===x.act)||{};
           const et=ETAPAS.find(e=>e[0]===x.et)||['',x.et];
@@ -5071,6 +5096,18 @@ function verOrden(idOrAct,esActivo){
                 const n=f.falta.length;
                 return `<small class="pendiente"><b>Falta agregar datos</b>${
                   n>1?` · ${n} cosas`:''}: ${esc(f.falta[0].replace(/^Del mantenimiento falta /,''))}</small>`;
+              })()}
+              ${/* Cuándo se movió ESTA válvula. Cada una entra a su hora
+                   —y la hora es la de Lima, no la del aparato desde el
+                   que se mira—: es lo que se responde cuando el cliente
+                   pregunta desde cuándo la tenemos. */''}
+              ${(()=>{
+                const h=[];
+                if(x.recibida)h.push(`Recibida ${fPE(x.recibida)}${x.recibidaH?` · ${x.recibidaH} h`:''}`);
+                if(x.tomada)h.push(`A mantenimiento ${fPE(x.tomada)}${x.tomadaH?` · ${x.tomadaH} h`:''}`);
+                if(x.hist&&x.hist.cert)h.push(`A prueba de salida ${fPE(x.hist.cert)}`);
+                if(x.et==='final'&&x.hist&&x.hist.final)h.push(`Finalizada ${fPE(x.hist.final)}`);
+                return h.length?`<small class="ord-h">${esc(h.join(' · '))} <span>hora de Perú</span></small>`:'';
               })()}</div>
             <span class="tag ${x.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(et[1])}</span>
             ${S.rol==='cliente'?''
@@ -5177,10 +5214,14 @@ function verOrden(idOrAct,esActivo){
    válvulas y se saca una hoja, no ocho impresiones.
    ════════════════════════════════════════════════════════════ */
 const ETIQ_TAM=[
- ['g','90 × 50 mm','una etiqueta grande, se lee de lejos'],
- ['m','70 × 40 mm','la de siempre, 8 por hoja'],
- ['p','50 × 25 mm','pequeña, para válvulas de línea']
+ ['a4','Hoja A4 completa','una por hoja, se lee desde el otro lado del taller'],
+ ['a5','Media hoja A4',   'dos por hoja, para válvulas grandes'],
+ ['g', '90 × 50 mm',      'una etiqueta grande, se lee de lejos'],
+ ['m', '70 × 40 mm',      'la de siempre, 8 por hoja'],
+ ['p', '50 × 25 mm',      'pequeña, para válvulas de línea']
 ];
+/* Cuántas entran en una hoja A4 de cada tamaño. */
+const ETIQ_XHOJA={a4:1, a5:2, g:6, m:8, p:24};
 /* Lo que va impreso, sacado de lo que hay guardado. */
 /* La hora de Lima. El portal puede abrirse desde un equipo con otro
    huso —o con la hora mal puesta—: lo que se sella en la etiqueta es la
@@ -5240,7 +5281,7 @@ function etiquetaHTML(actId,tam,grupo){
   const D=datosEtiqueta(actId,grupo); if(!D)return '';
   const {a,m,e,set,mat,tipo,ingreso,horaIngreso,ing,etapa}=D;
   const marca=LOGO.replace('<svg ','<svg class="et-lg" ');
-  const chico=tam==='p', grande=tam==='g';
+  const chico=tam==='p', hoja=tam==='a4'||tam==='a5', grande=tam==='g'||hoja;
   const pie=[];
   /* Fecha Y hora: con dos válvulas iguales que entran el mismo día, la
      hora es lo único que las distingue en el banco. Hora de Lima. */
@@ -5304,7 +5345,7 @@ function pintarEtiqueta(){
     document.head.appendChild(st);
   }
   const total=(1+ETIQ.extra.length)*ETIQ.copias;
-  const porHoja={g:6,m:8,p:24}[ETIQ.tam];
+  const porHoja=ETIQ_XHOJA[ETIQ.tam]||8;
   $('#mBody').innerHTML=`
     <div class="callout ${D.mat?'ok':'warn'}"><svg viewBox="0 0 24 24">${D.mat
       ?'<path d="M20 6 9 17l-5-5"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
@@ -5328,7 +5369,8 @@ function pintarEtiqueta(){
     <h4 class="snc-sec">Así queda${ETIQ.extra.length?` <span class="opc">una por válvula</span>`:''}</h4>
     ${/* Se enseñan todas, no sólo la primera: con dos válvulas de la
          misma OC lo que hay que ver es que una diga -1 y la otra -2. */''}
-    <div class="et-prev">${etiqEnOrden().map(id=>etiquetaHTML(id,ETIQ.tam,ETIQ.grupo)).join('')}</div>
+    <div class="et-prev${ETIQ.tam==='a4'||ETIQ.tam==='a5'?' mini':''}">${
+      etiqEnOrden().map(id=>etiquetaHTML(id,ETIQ.tam,ETIQ.grupo)).join('')}</div>
     <p class="hint">${total} etiqueta${total===1?'':'s'} · ${Math.ceil(total/porHoja)} hoja${Math.ceil(total/porHoja)===1?'':'s'} A4.
       Imprime al <b>100 %</b>, sin «ajustar a la página», o el tamaño no sale.</p>`;
   $('#mFoot').innerHTML=`<button class="btn quiet" onclick="${ETIQ.luego?'etiquetaSeguir()':'closeModal()'}">${ETIQ.luego?'Ahora no':'Cerrar'}</button>
@@ -5357,11 +5399,16 @@ function etiquetasAImprimir(){
   if(!trozos.length){toast('No hay nada que imprimir');return}
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
+  /* Las de hoja ocupan el ancho útil entero: si se dejara el margen
+     de 8 mm del cuerpo, la impresora las reduciría y el tamaño ya no
+     sería el que dice. */
+  const deHoja=ETIQ.tam==='a4'||ETIQ.tam==='a5';
   w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Etiquetas Adolphus</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;padding:8mm;font-family:'Helvetica Neue',Segoe UI,Roboto,sans-serif;
-  display:flex;flex-wrap:wrap;align-content:flex-start;gap:4mm}
+body{margin:0;padding:${deHoja?'0':'8mm'};font-family:'Helvetica Neue',Segoe UI,Roboto,sans-serif;
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:${deHoja?'6mm':'4mm'};
+  justify-content:center}
 ${ETIQUETA_CSS}
 .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;
   background:rgba(255,255,255,.94);padding:8px;border-radius:10px;
@@ -5372,7 +5419,7 @@ ${ETIQUETA_CSS}
 .barra button.p{background:#102d69;border-color:#102d69;color:#fff}
 .barra button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
 @media print{.barra{display:none}}
-@page{size:A4;margin:6mm}
+@page{size:A4;margin:${deHoja?'5mm':'6mm'}}
 </style></head><body>${trozos.join('')}${BARRA_IMPRIMIR}</body></html>`);
   w.document.close(); w.focus(); imprimirCuandoCarguen(w);
   registrar('Etiqueta',`${trozos.length} etiquetas impresas`);
@@ -5413,16 +5460,47 @@ const ETIQUETA_CSS=`
 .et-m .et-tag{font-size:6.6mm} .et-m .et-emp2{font-size:2.6mm} .et-m .et-eq{font-size:2.2mm}
 .et-m .et-orden{padding:.5mm 2mm} .et-m .et-orden b{font-size:3.8mm}
 .et-m .et-pie b{font-size:2.3mm}
-/* Pequeña: sólo el par orden + válvula, que es lo que no puede faltar. */
-.et-p{gap:.4mm;padding:1.4mm 1.8mm}
-.et-p::before{height:1.2mm}
-.et-p .et-cab{margin-top:.6mm} .et-p .et-cab .et-lg{width:2.6mm;height:3.2mm}
-.et-p .et-emp{font-size:1.7mm}
-.et-p .et-orden{padding:.3mm 1.4mm} .et-p .et-orden b{font-size:3mm} .et-p .et-orden span{font-size:1.6mm}
-.et-p .et-tag{font-size:4.8mm} .et-p .et-emp2{font-size:2.1mm}
-.et-p .et-pie span{font-size:1.6mm} .et-p .et-pie b{font-size:2.1mm}
+/* Pequeña: sólo el par orden + válvula, que es lo que no puede faltar.
+   En 50 × 25 mm no cabe nada más, y lo que sobraba antes empujaba el
+   tag fuera del borde: se quita el rótulo de la empresa —el logotipo
+   ya está— y se ajusta cada línea a lo que hay de alto. */
+.et-p{gap:.2mm;padding:1mm 1.4mm;justify-content:space-between}
+.et-p::before{height:1mm}
+.et-p .et-cab{margin-top:.2mm;gap:1mm} .et-p .et-cab .et-lg{width:2.2mm;height:2.8mm}
+.et-p .et-emp{display:none}
+.et-p .et-orden{padding:.2mm 1.2mm;border-radius:1mm}
+.et-p .et-orden b{font-size:2.9mm} .et-p .et-orden span{font-size:1.5mm}
+.et-p .et-tag{font-size:4.4mm;line-height:1} .et-p .et-emp2{font-size:1.9mm}
+.et-p .et-pie{padding-top:.3mm;gap:0 3mm}
+.et-p .et-pie span{font-size:1.4mm} .et-p .et-pie b{font-size:1.9mm}
 /* Grande: sitio de sobra */
 .et-g .et-tag{font-size:10mm} .et-g .et-orden b{font-size:5mm} .et-g .et-emp2{font-size:3.2mm}
+/* ── De hoja: media A4 y A4 entera ──
+   Para la válvula que se ve desde el otro lado del taller. Son las
+   mismas medidas útiles de una hoja impresa con 5 mm de margen, así
+   que no se corta nada al imprimir al 100 %. */
+.et-a5{width:190mm;height:133mm;gap:3mm;padding:8mm 12mm;border-width:2px;border-radius:5mm}
+.et-a4{width:190mm;height:275mm;gap:6mm;padding:14mm 16mm;border-width:2.5px;border-radius:6mm}
+.et-a5::before{height:5mm} .et-a4::before{height:8mm}
+.et-a5 .et-cab{margin-top:3mm;gap:4mm} .et-a4 .et-cab{margin-top:6mm;gap:6mm}
+.et-a5 .et-cab .et-lg{width:9mm;height:11mm} .et-a4 .et-cab .et-lg{width:15mm;height:19mm}
+.et-a5 .et-emp{font-size:5mm} .et-a4 .et-emp{font-size:8mm}
+.et-a5 .et-orden{padding:2mm 6mm;border-width:2px;border-radius:3mm}
+.et-a4 .et-orden{padding:4mm 10mm;border-width:3px;border-radius:4mm}
+.et-a5 .et-orden span{font-size:4.5mm} .et-a4 .et-orden span{font-size:7mm}
+.et-a5 .et-orden b{font-size:13mm} .et-a4 .et-orden b{font-size:22mm}
+.et-a5 .et-tag{font-size:26mm} .et-a4 .et-tag{font-size:44mm}
+.et-a5 .et-emp2{font-size:9mm} .et-a4 .et-emp2{font-size:15mm}
+.et-a5 .et-eq{font-size:6mm} .et-a4 .et-eq{font-size:10mm}
+.et-a5 .et-pie{gap:0 12mm;padding-top:4mm;border-top-width:1.5px}
+.et-a4 .et-pie{gap:0 20mm;padding-top:8mm;border-top-width:2px}
+.et-a5 .et-pie span{font-size:4mm} .et-a4 .et-pie span{font-size:6.5mm}
+.et-a5 .et-pie b{font-size:6.5mm} .et-a4 .et-pie b{font-size:11mm}
+.et-a5 .et-nota{right:8mm;top:9mm;font-size:4.5mm}
+.et-a4 .et-nota{right:14mm;top:16mm;font-size:7mm}
+/* En el diálogo, una hoja entera no cabe: se enseña en pequeño. */
+.et-prev.mini{gap:16px}
+.et-prev.mini .et{zoom:.30}
 `;
 
 /* Abrir un equipo desde cualquier parte: entra a su cliente y lo muestra. */
@@ -5563,6 +5641,45 @@ function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList
 /* Baja de un equipo mal registrado. Pide clave para evitar borrados accidentales.
    Nota: la validación real debe hacerse en el servidor cuando exista backend. */
 const CLAVE_BAJA='adolphus2026';
+/* ── LA PRESIÓN DE SETEO LA PONE LA JEFATURA ─────────────────
+   Es el número contra el que se juzga todo el trabajo: si se pudiera
+   cambiar en el banco, se podría hacer «aprobar» una válvula moviendo
+   la referencia en vez de la válvula. Lo escribe quien abre la orden
+   —gerencia—, y sin él el taller no puede ni empezar. Mantenimiento
+   lo corrige sólo con la clave del jefe, y ese desbloqueo queda
+   escrito en la bitácora.
+   ════════════════════════════════════════════════════════════ */
+const CLAVE_SET='adolphus2026';
+let SET_ABIERTO=false;                 // dura lo que dure la sesión
+const puedeEditarSet=()=>S.rol==='admin'||SET_ABIERTO;
+/* El candadito que se enseña al lado del campo cuando no se puede
+   tocar. Al de mantenimiento le sale la clave; al cliente, nada. */
+const setCandado=()=>puedeEditarSet()?''
+  :(S.rol==='tec'
+     ? `<button class="btn quiet xs set-lock-btn" onclick="setDesbloquear(this)"
+          title="La presión de seteo la pone gerencia">Desbloquear</button>`
+     : `<span class="hint set-lock-btn">la pone gerencia</span>`);
+function setDesbloquear(btn){
+  const caja=btn.parentNode; if(!caja)return;
+  btn.outerHTML=`<span class="set-clave"><input class="inp" type="password" id="setClave"
+      placeholder="Clave del jefe" style="max-width:160px" autocomplete="off">
+    <button class="btn sec xs" onclick="setProbarClave()">Abrir</button></span>`;
+  const i=document.getElementById('setClave');
+  if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();setProbarClave()} } }
+}
+function setProbarClave(){
+  const i=document.getElementById('setClave'); if(!i)return;
+  if(i.value.trim()!==CLAVE_SET){ toast('Clave incorrecta · la presión de seteo no se tocó'); i.value=''; i.focus(); return }
+  SET_ABIERTO=true;
+  /* Se abren los campos que estén en pantalla, sin repintar el
+     formulario: repintarlo se llevaría por delante lo ya escrito. */
+  document.querySelectorAll('.set-campo').forEach(x=>{
+    x.readOnly=false; x.disabled=false; x.classList.remove('bloq');
+  });
+  document.querySelectorAll('.set-lock-btn,.set-clave').forEach(x=>x.remove());
+  registrar('Válvula','Presión de seteo desbloqueada con la clave del jefe');
+  toast('Presión de seteo desbloqueada · corrígela y quedará registrada');
+}
 /* ── BORRAR UNA ORDEN DE SERVICIO ────────────────────────────
    Sólo gerencia. Se borra la ORDEN —sus líneas, su código MAT, su
    sitio en el tablero—, no el trabajo: los ensayos y los certificados
@@ -7324,6 +7441,16 @@ function pintarEquipoPSV(){
 }
 
 /* Pinta en naranja las casillas que faltan y sube a la primera. */
+/* Pinta lo que falta sin mover la pantalla ni abrir nada: es el aviso
+   permanente. Señalar y LLEVAR a la casilla es psvSenalarFaltas. */
+function psvPintarFaltas(){
+  const t=PSV_TMP; if(!t)return;
+  document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
+  psvFaltantes(t).forEach(x=>{
+    const e=x.id&&document.getElementById(x.id);
+    if(e&&!e.closest('.oculto'))e.classList.add('falta');
+  });
+}
 function psvSenalarFaltas(){
   const t=PSV_TMP; if(!t)return null;
   document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
@@ -7566,11 +7693,14 @@ function psvNuevo(actId){
        válvula se hizo con otro, manda el de la casa igual: el que vale
        es con el que se va a medir hoy. */
     ...PATRON,
-    /* Lo del protocolo de entrada que describe a la válvula ya está en
-       su ficha desde el mantenimiento anterior: sale puesto y no se
-       vuelve a preguntar. Lo de la entrega —guía, ítem de la OC— sí es
-       de este trabajo y arranca en blanco. */
-    ...Object.fromEntries(RECEP_VALVULA.map(([k])=>[k,a[k]||''])),
+    /* Lo que se mira en la válvula sólo se hereda si ESTA válvula ya
+       pasó por el taller alguna vez: entonces son datos que alguien de
+       la casa comprobó y no hay por qué volver a escribirlos. En una
+       válvula que llega por primera vez el papel arranca en blanco —
+       traer datos que nadie ha mirado es firmarlos por adelantado. */
+    ...Object.fromEntries(RECEP_VALVULA.map(([k])=>[k,
+        CALIBS.some(c=>c.act===a.id&&c.tipo==='psv'&&c.veredicto&&c.veredicto!=='incompleto')
+          ? (a[k]||'') : ''])),
     rcPernoIni:'', rcPernoFin:'',
     rcVeredicto:'', rcMotivo:'', rcComent:'',
     /* Quién la recibió y qué día se probó: se apuntaron al mover la
@@ -7966,10 +8096,32 @@ function pendientesDeEntrada(g){
   return ORDENES.filter(x=>grupoDe(x)===g&&x.et==='ent')
     .filter(x=>!recepcionCerrada(recepDe(x.act)));
 }
+/* Con dos o tres válvulas esperando, la que se prueba es la que el
+   mecánico tiene en la mano: se enseñan todas y él elige. Antes se
+   abría la primera de la lista y había que adivinar cuál era. */
 function entradaDeLaOrden(g){
-  const falta=pendientesDeEntrada(g);
-  if(!falta.length){toast('Todas las pruebas de entrada están hechas');return}
-  pruebaDeEntrada(falta[0].act);
+  const ls=ORDENES.filter(x=>grupoDe(x)===g&&x.et==='ent');
+  if(!ls.length){toast('No hay válvulas esperando su prueba de entrada');return}
+  if(ls.length===1)return pruebaDeEntrada(ls[0].act);
+  const o=ls[0], falta=pendientesDeEntrada(g).length;
+  $('#mTitle').textContent=`Prueba de entrada · ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`
+    <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
+      <div>Cada válvula lleva su propio protocolo <b>AXAD-084</b>. Elige la que tienes delante;
+        las demás se quedan esperando su turno.${falta?'':' Ya están todas hechas — puedes volver a abrir cualquiera.'}</div></div>
+    <div class="py-lista">${ls.map(x=>{
+      const v=ACTIVOS.find(y=>y.id===x.act)||{}, m=MODELOS[v.mod]||{};
+      const c=recepDe(x.act), hecha=recepcionCerrada(c);
+      const rech=hecha&&c&&c.rcVeredicto==='rechaza';
+      return `<label class="py-it" style="cursor:pointer" onclick="closeModal();pruebaDeEntrada('${x.act}')">
+        <span class="py-tag mono">${esc(v.tag||v.ser||'sin tag')}</span>
+        <span class="py-sub">${esc(codigoLinea(x))} · ${esc(m.m||'')} ${esc(v.mod||'')}</span>
+        <span class="tag ${hecha?(rech?'late':'ok'):'due'}"><span class="dot"></span>${
+          hecha?(rech?'Rechazada':'Hecha'):'Falta'}</span>
+        <button class="btn ${hecha?'quiet':'sec'} xs">${hecha?'Ver el protocolo':'Hacer la prueba'}</button></label>`;
+    }).join('')}</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
 }
 /* Al guardar una prueba de entrada, si a la orden le faltan otras, se
    avisa y se pasa a la siguiente sin buscarla en el tablero. */
@@ -8125,8 +8277,11 @@ function pintarPSV(){
         vino, se firma esa recepción y ahí se decide si entra o se
         devuelve; se abre y se fotografía lo que viene mal; se prueba;
         se concluye; y se firma. */''}
-   ${escondidos.length?`<div class="psv-hay" id="psvVerTodo">
-     <span>Los pasos ${escondidos.map(n=>n).join(' y ')} ya están hechos —
+   ${/* En la prueba de entrada no se enseña: la válvula acaba de llegar
+        y todavía no hay nada hecho, así que decir «los pasos 3, 4, 5 y 6
+        ya están hechos» es mentira y encima estorba. */''}
+   ${escondidos.length&&etapa!=='ent'?`<div class="psv-hay" id="psvVerTodo">
+     <span>Los pasos ${escondidos.join(', ')} ya están hechos —
        ${etapa==='mant'?'aquí te toca el mantenimiento':'aquí te toca lo tuyo'}.</span>
      <button class="btn quiet xs" onclick="verTodosLosPasos()">Ver todo el formulario</button>
    </div>`:''}
@@ -8178,10 +8333,15 @@ function pintarPSV(){
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span>${
-          ayuda('La presión a la que la válvula TIENE que abrir, según la placa o la hoja del cliente. Es la referencia contra la que se juzgan los disparos.')}</label>
-          <input class="inp" id="pv-setEsp" value="${esc(t.setEsp)}" oninput="psvCampo('setEsp',this.value)"></div>
+          ayuda('La presión a la que la válvula TIENE que abrir, según la placa o la hoja del cliente. Es la referencia contra la que se juzgan los disparos. La pone gerencia al abrir la orden; en el taller sólo se corrige con la clave del jefe.')}</label>
+          <div class="set-fila">
+            <input class="inp set-campo${puedeEditarSet()?'':' bloq'}" id="pv-setEsp" value="${esc(t.setEsp)}"
+              ${puedeEditarSet()?'':'readonly'} oninput="psvCampo('setEsp',this.value)">
+            ${setCandado()}
+          </div></div>
         <div class="fld"><label for="pv-und">Unidad</label>
-          <select class="inp" id="pv-und" onchange="psvCampo('und',this.value)">
+          <select class="inp set-campo${puedeEditarSet()?'':' bloq'}" id="pv-und" ${puedeEditarSet()?'':'disabled'}
+            onchange="psvCampo('und',this.value)">
             ${UNIDS.map(u=>`<option ${String(t.und).toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
         <div class="fld"><label>Disparó a · AS FOUND</label>
           <input class="inp bloq" value="${t.asFound?esc(t.asFound)+' '+esc(t.und||'psi'):'—'}" readonly
@@ -8275,6 +8435,10 @@ function pintarPSV(){
     setTimeout(()=>{const f=$('#pvFirma'); if(f)f.scrollIntoView({block:'center'})},120);
     PSV_ABRIR_EN=null;
   }
+  /* Lo que falta se pinta en naranja desde el primer momento, sin
+     tener que preguntar: el técnico abre el formulario y ve las
+     casillas que le quedan. Se apagan solas al escribirlas. */
+  psvPintarFaltas();
   /* El ensayo sabe guardarse a medias: si se cierra sin querer, se
      ofrece dejarlo como borrador en vez de perderlo. */
   MODAL_GUARDA={que:'el mantenimiento',guardar:()=>guardarPSV(false)};
@@ -8495,7 +8659,10 @@ function pintarPSVPie(){
   p.innerHTML=`<button class="btn quiet" onclick="cerrarModalPidiendo()">Cancelar</button>
     <span style="flex:1"></span>
     ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
-    <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">${listo?'Guardar':'Guardar borrador'}</button>
+    ${/* «Guardar», a secas: lo que se guarda a medias sigue siendo el
+         mismo papel y se retoma donde se dejó. Llamarlo borrador hacía
+         dudar de si lo escrito quedaba o no. */''}
+    <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">Guardar</button>
     ${hermanas>1?'':`<button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
       title="${listo?'Cierra el mantenimiento y numera el certificado':esc('Falta '+queFalta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
 }
@@ -9017,9 +9184,17 @@ function openPlacaPSV(actId){
            <input class="inp mono" id="pl-ser" value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)"></div>
        </div>
        <div class="two">
-        ${campos.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}</label>
-          <input class="inp" id="pl-${k}" value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}"
-            oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
+        ${campos.map(([k,lbl,ph])=>{
+          /* La presión de ajuste y su unidad son de gerencia: aquí se
+             leen, y sólo se abren con la clave del jefe. */
+          const cerrado=(k==='setPress'||k==='setUnd')&&!puedeEditarSet();
+          return `<div class="fld"><label for="pl-${k}">${lbl}${k==='setPress'?' <span class="req-dot">*</span>':''}</label>
+          <div class="${cerrado?'set-fila':''}">
+            <input class="inp${cerrado?' set-campo bloq':((k==='setPress'||k==='setUnd')?' set-campo':'')}" id="pl-${k}"
+              value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}" ${cerrado?'readonly':''}
+              oninput="placaCampo('${a.id}','${k}',this.value)">
+            ${k==='setPress'?setCandado():''}
+          </div></div>`}).join('')}
        </div>
      </div>
    </div>`;
@@ -9482,7 +9657,7 @@ function documentoRecepcion(c){
   return {titulo:`Protocolo de recepcion ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>AXAD-084 ${esc(a.tag||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:11mm 10mm;background:#fff}
+body{font:12px/1.5 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:11mm 10mm;background:#fff}
 .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;background:rgba(255,255,255,.94);
   padding:8px;border-radius:10px;box-shadow:0 6px 22px rgba(16,45,105,.18);border:1px solid #e4e7ea}
 .barra button{font:600 13px/1 'Helvetica Neue',Segoe UI,Roboto,sans-serif;cursor:pointer;border-radius:7px;
@@ -9490,39 +9665,39 @@ body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;ma
 .barra button.p{background:#102d69;border-color:#102d69;color:#fff}
 .barra button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8}
 @media print{.barra{display:none}body{padding:9mm}}
-.cab{display:flex;align-items:center;gap:12px;padding:9px 12px;margin-bottom:10px;border-radius:8px;background:#102d69;color:#fff}
+.cab{display:flex;align-items:center;gap:14px;padding:12px 15px;margin-bottom:12px;border-radius:8px;background:#102d69;color:#fff}
 .cab .mk{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-radius:6px;padding:5px 6px}
 .cab .ti{flex:1;min-width:0}
-.cab h1{font-size:12px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff;line-height:1.3}
-.cab .emp{font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:#a8bce0;margin-bottom:3px}
-.cab .cod{flex:0 0 auto;text-align:right;font-size:7.5px;color:#a8bce0;line-height:1.55}
-.cab .cod b{display:block;font-size:10px;color:#fff;letter-spacing:.05em}
-h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5b6470;margin:11px 0 4px}
+.cab h1{font-size:15px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff;line-height:1.3}
+.cab .emp{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#a8bce0;margin-bottom:3px}
+.cab .cod{flex:0 0 auto;text-align:right;font-size:9px;color:#a8bce0;line-height:1.55}
+.cab .cod b{display:block;font-size:12.5px;color:#fff;letter-spacing:.05em}
+h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5b6470;margin:14px 0 5px}
 .rej{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #e4e7ea;border-radius:7px;overflow:hidden;background:#fff}
-.rej .c{padding:5px 8px;border-right:1px solid #f1f3f5;border-bottom:1px solid #f1f3f5;min-width:0}
+.rej .c{padding:8px 10px;border-right:1px solid #f1f3f5;border-bottom:1px solid #f1f3f5;min-width:0}
 .rej .c:nth-child(4n){border-right:0}
-.rej .c span{display:block;font-size:7.4px;letter-spacing:.06em;text-transform:uppercase;color:#8a929c}
-.rej .c b{display:block;font-size:9.6px;font-weight:600;color:#1a1d21;word-break:break-word}
+.rej .c span{display:block;font-size:8.8px;letter-spacing:.06em;text-transform:uppercase;color:#8a929c}
+.rej .c b{display:block;font-size:12px;font-weight:600;color:#1a1d21;word-break:break-word}
 .af{display:flex;align-items:stretch;gap:0;border:1px solid #102d69;border-radius:7px;overflow:hidden;margin-top:4px}
-.af .k{padding:8px 12px;background:#102d69;color:#fff;font-size:8.4px;letter-spacing:.09em;text-transform:uppercase;
+.af .k{padding:11px 15px;background:#102d69;color:#fff;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
   display:flex;align-items:center;font-weight:700}
-.af .v{padding:8px 14px;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:6px}
-.af .v small{font-size:9.5px;font-weight:500;color:#5b6470}
-.af .n{padding:8px 12px;font-size:8.4px;color:#5b6470;display:flex;align-items:center;margin-left:auto;text-align:right}
-.vd{display:flex;align-items:center;gap:10px;margin-top:9px;padding:9px 13px;border-radius:7px;
-  border:1.5px solid ${vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':vd==='calibra'?'#b46a12':'#cfd4d9'};
+.af .v{padding:11px 18px;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:7px}
+.af .v small{font-size:12px;font-weight:500;color:#5b6470}
+.af .n{padding:11px 15px;font-size:10.5px;color:#5b6470;display:flex;align-items:center;margin-left:auto;text-align:right}
+.vd{display:flex;align-items:center;gap:12px;margin-top:11px;padding:13px 16px;border-radius:7px;
+  border:2px solid ${vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':vd==='calibra'?'#b46a12':'#cfd4d9'};
   background:${vd==='rechaza'?'#fdf1ef':vd==='acepta'?'#eef7f2':vd==='calibra'?'#fdf6ec':'#fafbfc'}}
-.vd b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:${
+.vd b{font-size:17px;letter-spacing:.05em;text-transform:uppercase;color:${
   vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':vd==='calibra'?'#b46a12':'#8a929c'}}
-.vd span{font-size:9px;color:#5b6470}
-.txt{border:1px solid #e4e7ea;border-radius:7px;padding:7px 10px;min-height:34px;font-size:9.6px;white-space:pre-wrap}
-.fir{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
-.fir .b{border:1px solid #e4e7ea;border-radius:7px;padding:8px 10px;min-height:76px;display:flex;flex-direction:column}
-.fir img{max-height:38px;max-width:100%;object-fit:contain;align-self:flex-start;margin-bottom:4px}
-.fir .l{margin-top:auto;border-top:1px solid #cfd4d9;padding-top:4px;font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c}
-.fir .l b{display:block;font-size:9.6px;color:#1a1d21;letter-spacing:0;text-transform:none}
-.nota{margin-top:11px;font-size:8.2px;color:#5b6470;line-height:1.5;text-align:center;border-top:1px solid #edeff1;padding-top:7px}
-.pie{margin-top:6px;font-size:7.6px;color:#8a929c;display:flex;justify-content:space-between}
+.vd span{font-size:11.5px;color:#5b6470}
+.txt{border:1px solid #e4e7ea;border-radius:7px;padding:10px 12px;min-height:80px;font-size:12px;white-space:pre-wrap}
+.fir{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.fir .b{border:1px solid #e4e7ea;border-radius:7px;padding:10px 12px;min-height:170px;display:flex;flex-direction:column}
+.fir img{max-height:110px;max-width:100%;width:auto;object-fit:contain;align-self:center;margin:auto 0 6px}
+.fir .l{margin-top:auto;border-top:1px solid #cfd4d9;padding-top:6px;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c}
+.fir .l b{display:block;font-size:13px;color:#1a1d21;letter-spacing:0;text-transform:none}
+.nota{margin-top:14px;font-size:10px;color:#5b6470;line-height:1.5;text-align:center;border-top:1px solid #edeff1;padding-top:9px}
+.pie{margin-top:8px;font-size:9.5px;color:#8a929c;display:flex;justify-content:space-between}
 /* El anexo empieza en hoja nueva y cada foto se ve ENTERA: nada de
    recortar, que lo que se fotografía es justo el detalle. */
 .anx{padding-top:0}
@@ -11402,6 +11577,60 @@ const WO_NEXT={oc:  ['ent',  'Recibir la válvula'],
                ent: ['mant', 'Pasar a mantenimiento'],
                mant:['cert', 'Pasar a prueba de salida'],
                cert:['final','Finalizar y emitir el certificado']};
+/* ── QUÉ SE LE VA A HACER A ESTA VÁLVULA ─────────────────────
+   No todo trabajo pasa por las cinco columnas. A veces el cliente
+   sólo quiere que se le dé un disparo para saber cómo está; a veces
+   la válvula entra derecha al taller porque ya se sabe qué tiene.
+   Quien abre la orden elige los pasos: prueba de entrada,
+   mantenimiento y prueba de salida. «OC recibida» y «Finalizado» no
+   se eligen —son el principio y el final de cualquier trabajo—, y
+   los pasos que no se marquen se saltan solos en el tablero.
+   ════════════════════════════════════════════════════════════ */
+const PASOS_ELEGIBLES=[
+ ['ent', 'Prueba de entrada',  'Se dispara tal como llegó y se firma el protocolo AXAD-084'],
+ ['mant','En mantenimiento',   'Se desarma, se fotografía pieza por pieza y se cambia lo que esté mal'],
+ ['cert','Prueba de salida',   'Los tres disparos del as-left y el visto bueno de gerencia']
+];
+const TODOS_LOS_PASOS=PASOS_ELEGIBLES.map(x=>x[0]);
+/* Los pasos de una orden. Las órdenes de antes no traen el campo: se
+   les respetan los cinco de siempre. */
+const pasosDe=o=>Array.isArray(o&&o.pasos)
+  ? TODOS_LOS_PASOS.filter(k=>o.pasos.includes(k))
+  : TODOS_LOS_PASOS.slice();
+const haceEsePaso=(o,k)=>pasosDe(o).includes(k);
+const WO_IR={ent:'Recibir la válvula', mant:'Pasar a mantenimiento',
+             cert:'Pasar a prueba de salida', final:'Finalizar y emitir el certificado'};
+/* La siguiente columna DE ESTA orden, saltándose lo que no se eligió. */
+function pasoSiguiente(o){
+  if(!o)return null;
+  const orden=['oc','ent','mant','cert','final'];
+  const i=orden.indexOf(o.et); if(i<0)return null;
+  const pasos=pasosDe(o);
+  for(let j=i+1;j<orden.length;j++){
+    const k=orden[j];
+    if(k==='final'||pasos.includes(k))return [k,WO_IR[k]];
+  }
+  return null;
+}
+/* Las casillas del diálogo de creación y lo que quedó marcado. */
+function pasosHTML(marcados){
+  const m=marcados||TODOS_LOS_PASOS;
+  return `<h4 class="snc-sec">Qué se le va a hacer
+      <span class="opc">«OC recibida» y «Finalizado» van siempre</span></h4>
+    <div class="py-lista">${PASOS_ELEGIBLES.map(([k,l,d])=>`<label class="py-it">
+      <input type="checkbox" class="ck-paso" value="${k}" ${m.includes(k)?'checked':''}>
+      <span class="py-tag">${esc(l)}</span>
+      <span class="py-sub">${esc(d)}</span></label>`).join('')}</div>
+    <p class="hint">Lo que no marques se salta en el tablero: la válvula pasa de largo por esa columna.</p>`;
+}
+const pasosMarcados=()=>{
+  const c=[...document.querySelectorAll('.ck-paso')];
+  if(!c.length)return TODOS_LOS_PASOS.slice();
+  const m=c.filter(x=>x.checked).map(x=>x.value);
+  return TODOS_LOS_PASOS.filter(k=>m.includes(k));
+};
+/* Para decirlo en la tarjeta cuando el trabajo no lleva los tres. */
+const pasosTexto=o=>pasosDe(o).map(k=>(PASOS_ELEGIBLES.find(p=>p[0]===k)||[])[1]).join(' · ');
 /* ============================================================
    8 bis · PROYECTOS (OC) · CÓDIGO MAT · AVANCE
    ------------------------------------------------------------
@@ -11424,7 +11653,13 @@ let PROYECTOS=[];
    separadas —cada válvula necesita SU certificado, eso no se agrupa—,
    pero el tablero, el avance y el número que ve el cliente son uno.
    Las órdenes de una sola válvula no cambian: su grupo es ella misma. */
-const grupoDe=o=>o.grupo||o.id;
+/* Lo que une dos líneas es el CÓDIGO de la orden —el MAT que lee el
+   cliente—, no un identificador interno: la 009-1 y la 009-2 son la
+   009 aunque se hayan creado por caminos distintos o se hayan
+   arrastrado por medio tablero. Si están en la misma columna, se ven
+   como una sola tarjeta. */
+const codOrden=o=>String((o&&(o.mat||o.n))||'').trim();
+const grupoDe=o=>codOrden(o)||o.grupo||o.id;
 const lineasDe=o=>ORDENES.filter(x=>grupoDe(x)===grupoDe(o));
 /* Una orden con varias válvulas se numera por dentro: si la OC es la
    001 y lleva tres válvulas, son la 001-1, la 001-2 y la 001-3. Así,
@@ -11534,6 +11769,7 @@ function openProyecto(){
    </div>
    <div class="fld"><label for="pyDesc">Descripción / alcance</label>
      <textarea class="inp" id="pyDesc" rows="2" placeholder="Qué pide el cliente en esta orden."></textarea></div>
+   ${pasosHTML()}
    <h4 class="snc-sec">Válvulas de esta OC <span class="opc" id="pyCuenta"></span></h4>
    <div id="pyLista" class="py-lista"></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -11569,9 +11805,10 @@ function guardarProyecto(){
   PROYECTOS.unshift({id,oc,cli:cliId,f:fec,tipo,desc:$('#pyDesc').value.trim()});
   /* Una orden por válvula, cada una con su MAT. El correlativo se
      recalcula en cada vuelta para que no se repita dentro del lote. */
+  const pasos=pasosMarcados();
   sel.forEach(actId=>{
     ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
-      act:actId, pry:id, oc, mat:nuevoMAT(),
+      act:actId, pry:id, oc, mat:nuevoMAT(), pasos,
       n:nuevoMAT(), et:'oc', tipo, f:fec, tec:'Por asignar',
       hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
   });
@@ -11667,8 +11904,11 @@ function tomarOrden(id,grupo){
      de entrada cerrada entra al taller aunque su compañera siga en el
      mostrador. Antes se esperaban todas, y una válvula lista se quedaba
      parada por otra que ni había llegado al banco. */
-  const sinPapel=ls.filter(x=>!recepcionCerrada(recepDe(x.act)));
-  const listas=ls.filter(x=>recepcionCerrada(recepDe(x.act)));
+  /* Si la orden no lleva prueba de entrada, no hay papel que exigir:
+     la válvula entra al taller directamente. */
+  const pide=x=>haceEsePaso(x,'ent');
+  const sinPapel=ls.filter(x=>pide(x)&&!recepcionCerrada(recepDe(x.act)));
+  const listas=ls.filter(x=>!pide(x)||recepcionCerrada(recepDe(x.act)));
   if(!listas.length){
     const v=ACTIVOS.find(x=>x.id===sinPapel[0].act)||{};
     toast(sinPapel.length>1
@@ -11723,7 +11963,7 @@ function confirmarTomar(id){
      tienen su prueba de entrada cerrada—, no todas las de la etapa. */
   const ls=(TOMAR_IDS&&TOMAR_IDS.length
       ? TOMAR_IDS.map(i=>ORDENES.find(x=>x.id===i)).filter(Boolean)
-      : [o]).filter(x=>recepcionCerrada(recepDe(x.act)));
+      : [o]).filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act)));
   if(!ls.length){toast('Primero la prueba de entrada');return}
   const hora=horaPeru();
   ls.forEach(x=>{x.ing=ing; x.tec=ing; x.tomada=fec; x.tomadaH=hora; moverLinea(x,'mant')});
@@ -12379,13 +12619,14 @@ function renderWO(){
       <div class="kb-h"><span class="dot" style="color:var(--${k==='final'?'ok':cs.some(o=>tonoOrden(o.__g.ls)==='late')?'late':'due'})"></span>${l}
         <span class="kb-pct" title="Llegar hasta aquí es el ${avanceEtapa(k)}% del trabajo">${avanceEtapa(k)}%</span>
         <span class="n">${cs.length}</span></div>
+      <div class="kb-buzon"><span>Soltar en</span><b>${esc(l)}</b></div>
       <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
-        const G=o.__g, ls=G.ls, varias=ls.length>1, nx=WO_NEXT[G.et];
+        const G=o.__g, ls=G.ls, varias=ls.length>1, nx=pasoSiguiente(G.jefe||ls[0]);
         const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
         const listas=ls.filter(x=>x.et==='final').length;
         const tono=tonoOrden(ls);
         return `
-        <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}|${G.et}')" ondragend="this.classList.remove('drag')">
+        <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}|${G.et}')" ondragend="finDrag(this)">
           ${/* Con una sola válvula en la tarjeta se enseña SU número de
                línea —001-2—, que es lo que el técnico busca; con varias,
                el de la orden. */''}
@@ -12416,9 +12657,9 @@ function renderWO(){
           })():''}
           ${o.oc?`<div class="wo-oc">OC <b class="mono">${esc(o.oc)}</b></div>`:''}
           ${G.et==='ent'
-            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Probó ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}`:''}</div>`
+            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Probó ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}${o.recibidaH?` · ${o.recibidaH} h`:''}`:''}</div>`
                        :`<div class="wo-ing libre">Sin probar todavía</div>`)
-            : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}`:''}</div>`
+            : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}${o.tomadaH?` · ${o.tomadaH} h`:''}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
           ${G.et==='ent'&&S.rol!=='cliente'?(()=>{
             /* La válvula llegó: lo primero es recibirla —un disparo tal
@@ -12429,7 +12670,7 @@ function renderWO(){
             const rech=est.filter(c=>c&&c.rcVeredicto==='rechaza'&&recepcionCerrada(c)).length;
             const todo=listas===ls.length;
             return `<button class="btn ${todo?'quiet':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
-              onclick="event.stopPropagation();${todo?`verOrden('${o.id}')`:`entradaDeLaOrden('${G.g}')`}">
+              onclick="event.stopPropagation();entradaDeLaOrden('${G.g}')">
               <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
               Prueba de entrada${ls.length>1?` · ${listas} de ${ls.length}`:todo?' ✓':''}</button>
               ${rech?`<div class="wo-tarde"><span class="dot"></span>${rech} llegó${rech===1?'':'aron'} rechazada${rech===1?'':'s'} — consta en el protocolo</div>`:''}`;
@@ -12488,7 +12729,7 @@ function renderWO(){
                cuenta las que están listas, no las que hay. */
             let cuantas=ls.length, aviso='';
             if(G.et==='ent'){
-              const listas=ls.filter(x=>recepcionCerrada(recepDe(x.act))).length;
+              const listas=ls.filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act))).length;
               const faltan=ls.length-listas;
               if(!listas)
                 return `<div class="wo-parte">Falta${faltan===1?'':'n'} ${faltan} prueba${faltan===1?'':'s'} de entrada para pasar al taller</div>`;
@@ -12582,7 +12823,7 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
    al guardar, la orden pasa sola a "Cerrada / certificada". */
 function advanceWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
-  const nx=WO_NEXT[o.et];if(!nx)return;
+  const nx=pasoSiguiente(o);if(!nx)return;
   /* Pasar a mantenimiento es hacerse cargo: se pide el nombre del
      ingeniero antes de mover la tarjeta, que es el sentido de esta
      etapa —saber quién la tiene y desde cuándo. */
@@ -12594,7 +12835,8 @@ function advanceWO(id){
      técnico—. Lo que falta a partir de ahí es el jefe. */
   if(nx[0]==='cert'){
     const c=recepDe(o.act);
-    if(!c||!tallerListo(c)){
+    /* Si la orden no lleva mantenimiento, no hay desarme que exigir. */
+    if(haceEsePaso(o,'mant')&&(!c||!tallerListo(c))){
       const a=ACTIVOS.find(x=>x.id===o.act)||{};
       const f=c?faltaDelTaller(c):[];
       const v=c?psvVeredicto(c):null;
@@ -12748,7 +12990,7 @@ let dragId=null;
 function avanzarGrupo(g,etapa){
   const ls=ORDENES.filter(x=>grupoDe(x)===g);
   if(!ls.length)return;
-  const et=etapa||etapaGrupo(ls), nx=WO_NEXT[et]; if(!nx)return;
+  const et=etapa||etapaGrupo(ls), nx=pasoSiguiente(ls.find(x=>x.et===et)||ls[0]); if(!nx)return;
   const mueven=ls.filter(x=>x.et===et);
   if(!mueven.length)return;
   if(nx[0]==='final'&&!puedeFinalizar(mueven[0])){toast(avisoNoFinaliza(mueven[0]));return}
@@ -12804,9 +13046,21 @@ function devolverAlTablero(id){
 }
 
 /* Se arrastra «grupo|etapa»: la tarjeta que se agarra, no la orden. */
-function dragWO(ev,id){dragId=id;ev.currentTarget.classList.add('drag');ev.dataTransfer.effectAllowed='move'}
+function dragWO(ev,id){
+  dragId=id; ev.currentTarget.classList.add('drag'); ev.dataTransfer.effectAllowed='move';
+  /* Mientras se arrastra, cada columna enseña su propio buzón: se ve a
+     cuál va a caer la tarjeta antes de soltarla, aunque se suelte
+     lejos de las demás válvulas de su orden. */
+  const kb=document.getElementById('kanban'); if(kb)kb.classList.add('arrastrando');
+}
+function finDrag(el){
+  if(el&&el.classList)el.classList.remove('drag');
+  const kb=document.getElementById('kanban');
+  if(kb){kb.classList.remove('arrastrando');
+    kb.querySelectorAll('.kb-col.over').forEach(c=>c.classList.remove('over'))}
+}
 function dropWO(ev,et){
-  ev.preventDefault();ev.currentTarget.classList.remove('over');
+  ev.preventDefault(); finDrag(document.querySelector('#kanban .wo.drag'));
   /* Se arrastra el grupo, que es lo que se ve. */
   const [gArr,etArr]=String(dragId).split('|');
   const ls=ORDENES.filter(x=>grupoDe(x)===gArr&&(!etArr||x.et===etArr));
@@ -12850,12 +13104,13 @@ function openWO(actId,tipo){
      <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
    <div class="fld"><label>Técnico responsable</label><input class="inp" id="woTec" value="Por asignar"></div>
    <div class="fld"><label>Alcance / hallazgos</label><textarea class="inp" id="woHall" rows="3" placeholder="Qué se va a hacer, qué se encontró…"></textarea></div>
-   <div class="fld"><label>Partes previstas (separadas por coma)</label><input class="inp" id="woPart" placeholder="AD-TRM-316-A, AD-EMP-PTFE-V"></div>`;
+   <div class="fld"><label>Partes previstas (separadas por coma)</label><input class="inp" id="woPart" placeholder="AD-TRM-316-A, AD-EMP-PTFE-V"></div>
+   ${pasosHTML()}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveWO()">Crear orden</button>`;
   $('#modal').classList.add('on');
 }
 function saveWO(){
-  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,et:'oc',tipo:$('#woTipo').value,
+  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,mat:$('#woNum').value,et:'oc',tipo:$('#woTipo').value,pasos:pasosMarcados(),
     f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
     partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
   closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
@@ -15764,6 +16019,18 @@ function editarActivo(id){
          <div class="fld"><label for="edSz">Tamaño</label><input class="inp" id="edSz" value="${esc(a.sz||'')}" placeholder='2"x3"'></div>
          <div class="fld"><label for="edRt">Rating / clase</label><input class="inp" id="edRt" value="${esc(a.rt||'')}" placeholder="300"></div>
          <div class="fld"><label for="edRng">Rango / set</label><input class="inp" id="edRng" value="${esc(a.rng||'')}" placeholder="150 psig"></div>
+         ${/* El número con el que trabaja el taller. Sin él no se puede
+              juzgar ningún disparo, así que en una válvula de seguridad
+              es obligatorio y lo pone gerencia. */''}
+         <div class="fld"><label for="edSet">Presión de seteo requerida${a.cl==='seguridad'?' <span class="req-dot">*</span>':' <span class="opc">si aplica</span>'}</label>
+           <div class="set-fila">
+             <input class="inp set-campo${puedeEditarSet()?'':' bloq'}" id="edSet" value="${esc(a.setPress||'')}"
+               placeholder="p. ej. 120" ${puedeEditarSet()?'':'readonly'}>
+             ${setCandado()}
+           </div></div>
+         <div class="fld"><label for="edSetU">Unidad del seteo</label>
+           <select class="inp set-campo${puedeEditarSet()?'':' bloq'}" id="edSetU" ${puedeEditarSet()?'':'disabled'}>
+             ${UNIDS.map(u=>`<option ${String(a.setUnd||'psi').toLowerCase()===u.toLowerCase()?'selected':''}>${u}</option>`).join('')}</select></div>
          <div class="fld"><label for="edCv">Cv</label><input class="inp" id="edCv" value="${esc(a.cv||'')}" placeholder="—"></div>
          <div class="fld"><label for="edAir">Falla a (aire)</label><select class="inp" id="edAir">${airOpts}</select></div>
        </div>
@@ -15883,6 +16150,7 @@ function mandarAMantenimiento(id){
    </div>
    <div class="fld"><label for="mmMot">Motivo / qué hay que hacerle</label>
      <textarea class="inp" id="mmMot" rows="3" placeholder="Lo que el taller necesita saber antes de abrirla.">${venc!==null&&venc<0?`Calibración vencida hace ${-venc} días.`:''}</textarea></div>
+   ${pasosHTML()}
    ${(()=>{
      /* La misma orden puede llevar más válvulas de esta empresa. Un
         MAT por válvula obligaba a abrir ocho órdenes para un trabajo
@@ -15927,7 +16195,8 @@ function confirmarMandar(id){
   /* Una línea por válvula, mismo código y mismo grupo: el tablero
      enseña una tarjeta, pero cada válvula conserva su ensayo y su
      certificado, que es lo que no se puede compartir. */
-  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, grupo,
+  const pasos=pasosMarcados();
+  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, grupo, pasos,
     et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
   MM_PRINCIPAL=null;
   closeModal(); renderAll(); go('wo');
@@ -15949,6 +16218,18 @@ function guardarActivo(id){
   a.mod=V('#edMod')||a.mod; a.cl=V('#edCl')||a.cl; a.cr=V('#edCr')||a.cr;
   a.sz=V('#edSz'); a.rt=V('#edRt'); a.rng=V('#edRng'); a.cv=V('#edCv');
   a.air=V('#edAir'); a.nota=V('#edNota');
+  /* La presión de seteo requerida: en una válvula de seguridad es
+     obligatoria —sin ella el taller no tiene contra qué comparar los
+     disparos— y sólo la escribe gerencia o quien tenga la clave. */
+  if($('#edSet')&&puedeEditarSet()){
+    const set=V('#edSet');
+    if(a.cl==='seguridad'&&!(num(set)>0)){
+      toast('Falta la presión de seteo requerida: sin ella el taller no puede trabajar la válvula');
+      const el=$('#edSet'); if(el){el.classList.add('falta');el.focus()}
+      return;
+    }
+    a.setPress=set; a.setUnd=V('#edSetU')||a.setUnd||'psi';
+  }
   /* Los campos de fecha sólo existen cuando la válvula no tiene
      ningún trabajo registrado. Si no están en pantalla, es que las
      fechas las manda el taller: no se tocan. */
