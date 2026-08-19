@@ -5131,9 +5131,25 @@ function verOrden(idOrAct,esActivo){
               /* En prueba de salida lo primero son los tres disparos:
                  cada válvula tiene los suyos y se hacen de una en una.
                  Después ya firma el jefe. */
-              :x.et==='cert' ? `<button class="btn sec xs" onclick="closeModal();openPSV('${x.act}',null,'salida')">Prueba de salida</button>
-                 <button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
-                   S.rol==='admin'?'Revisar y firmar':'Ver lo que se hizo'}</button>`
+              :x.et==='cert' ? (()=>{
+                /* Si los tres disparos ya están, se dice: el botón deja
+                   de pedir la prueba y pasa a ofrecer verla. Lo que
+                   queda es la firma del jefe, y eso se lee de un
+                   vistazo en la propia fila. */
+                const c=recepDe(x.act);
+                const n=c?disparosDe(c).filter(t=>num(t.v)>0).length:0;
+                const hecha=n>=3;
+                const firmado=!!(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img));
+                /* Un solo botón: dentro está todo —los disparos, las
+                   firmas que ya hay y el sitio donde firma el jefe—.
+                   Dos botones para la misma pantalla sólo hacían
+                   dudar de cuál era cuál. */
+                return `<button class="btn ${hecha&&firmado?'quiet':'sec'} xs"
+                    onclick="closeModal();openPSV('${x.act}',null,'${hecha?'firmas':'salida'}')">${
+                    !hecha?'Prueba de salida'
+                    :firmado?`Prueba de salida ✓ · ${n} disparos`
+                    :`Prueba de salida ✓ · ${S.rol==='admin'?'falta tu firma':'falta la firma del jefe'}`}</button>`;
+              })()
               :x.et==='final' ? `<button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
                   S.rol==='admin'?'Revisar y firmar':'Ver lo que se hizo'}</button>`
               :`<button class="btn quiet xs" onclick="closeModal();registrarEnsayoDeOrden('${x.id}')">Hacer el mantenimiento</button>`}
@@ -6713,61 +6729,71 @@ function histFiltro(k){ S.histFil=k; renderHistorial() }
    cliente pregunta «¿y esta válvula qué historia tiene?», y es lo que
    permite sacar del tablero lo ya terminado sin perderlo.
    ════════════════════════════════════════════════════════════ */
-const HIST_FILTROS=[['todo','Todo'],['ent','Pruebas de entrada'],
-                    ['mant','Mantenimientos'],['cert','Certificados']];
+const HIST_FILTROS=[['todo','Todo'],['cert','Con certificado'],
+                    ['mant','Sin terminar'],['ent','Con prueba de entrada']];
 /* Cada hito se cuenta como se cuenta en el taller: qué pasó, quién lo
    hizo y en qué quedó. Los datos van en pares con su rótulo —no en una
    ristra de textos separados por puntos— porque así se leen tres hitos
    seguidos sin perderse. */
 function histLinea(a){
+  /* ── UNA LÍNEA POR SERVICIO ──────────────────────────────────
+     El historial de una válvula no es un diario de sucesos: es la
+     lista de las veces que pasó por el taller. Antes cada servicio
+     dejaba tres o cuatro renglones —llegó, se desarmó, se certificó,
+     la orden— y para saber cuántas veces se había trabajado había que
+     contarlos a mano. Ahora es una línea por servicio, con su fecha y
+     su hora, y dentro los tres papeles de esa vez: el protocolo de
+     entrada, el informe técnico y el certificado.
+     ============================================================ */
   const ev=[], cliente=S.rol==='cliente';
   const par=(k,v)=>v==null||String(v).trim()===''?null:[k,String(v)];
+  const conPapel=new Set();
   histDe(a).forEach(c=>{
-    if(c.tipo==='psv'){
-      /* La entrada es un hecho aparte: tiene su fecha, su firma y su
-         propio papel, y muchas veces es de otro día que el ensayo. */
-      if(recepcionCerrada(c)){
-        const rech=c.rcVeredicto==='rechaza';
-        ev.push({f:c.rcFecha||c.fecha||'', k:'ent',
-          t:rech?'Llegó y se rechazó en la prueba de entrada':'Llegó y se aceptó en la prueba de entrada',
-          doc:'AXAD-084',
-          d:[par('La probó',c.rcRecibe),
-             par('Disparo al llegar',c.asFound?`${c.asFound} ${c.und||'psi'}`:''),
-             par('Motivo',rech?c.rcMotivo:'')].filter(Boolean),
-          nota:c.rcComent||'',
-          e:rech?{t:'Rechazada',c:'late'}:{t:'Aceptada',c:'ok'},
-          acc:`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Ver el protocolo</button>`});
-      }
-      const est=histEstado(c);
-      /* Un borrador recién empezado todavía no tiene fecha de ensayo:
-         se le pone la de la prueba de entrada, o la de hoy, para que
-         aparezca en la línea de tiempo. Antes se caía de la lista y
-         parecía que el trabajo se había perdido. */
-      ev.push({f:c.fecha||c.rcFecha||hoyISO(), k:est.listo?'cert':'mant',
-        t:est.listo?'Certificado emitido':'Mantenimiento sin terminar',
-        doc:est.listo?'AXAD-088':'',
-        d:[par('Orden de servicio',c.os),
-           par('Set requerido',c.setEsp?`${c.setEsp} ${c.und||'psi'}`:''),
-           par('Lo hizo',histResp(c)),
-           est.listo?null:par('Le falta',faltaParaEmitir(c))].filter(Boolean),
-        nota:est.listo?(c.coment||''):'',
-        e:{t:est.t,c:est.c},
-        acc:est.listo
-          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Ver el certificado</button>
-             <button class="btn quiet xs" onclick="imprimirPSV('${c.id}')">PDF</button>
-             ${cliente?'':`<button class="btn quiet xs" onclick="psvWord('${c.id}')">Word</button>`}`
-          : (cliente?'':`<button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button>`)});
-    }else{
-      ev.push({f:histFecha(c), k:'cert', t:'Calibración registrada', doc:c.cert||'',
+    if(c.tipo!=='psv'){
+      ev.push({f:histFecha(c), h:'', k:'cert', tieneEnt:false, t:'Calibración registrada', doc:c.cert||'',
         d:[par('Instrumento',c.nom?`${c.nom} ${c.uni||''}`:''),par('Lo hizo',histResp(c))].filter(Boolean),
         nota:'', e:histEstado(c),
         acc:`<button class="btn sec xs" onclick="showCalibReport(CALIBS.find(z=>z.id==='${c.id}'))">Ver</button>`});
+      return;
     }
+    const est=histEstado(c);
+    const entrada=recepcionCerrada(c);
+    const rech=c.rcVeredicto==='rechaza';
+    /* La orden de la que salió este papel: de ahí sale el código que
+       se lee —MAT-009-1— y el informe técnico de esa vez. */
+    const ord=(c.ord&&ORDENES.find(x=>x.id===c.ord))
+      ||ORDENES.find(x=>x.calib===c.id)
+      ||ORDENES.find(x=>x.act===a.id&&x.et!=='final');
+    if(ord)conPapel.add(grupoDe(ord)+'|'+ord.id);
+    const hora=c.horaFin||(ord&&(ord.tomadaH||ord.recibidaH))||'';
+    ev.push({
+      f:c.fecha||c.rcFecha||hoyISO(), h:hora,
+      k:est.listo?'cert':'mant', tieneEnt:entrada,
+      t:est.listo?'Servicio con certificado':'Servicio sin terminar',
+      doc:(ord?codigoLinea(ord):'')||c.os||'',
+      d:[par('Set requerido',c.setEsp?`${c.setEsp} ${c.und||'psi'}`:''),
+         par('Llegó disparando',entrada&&c.asFound?`${c.asFound} ${c.und||'psi'}${rech?' · rechazada':''}`:''),
+         par('Lo hizo',histResp(c)),
+         est.listo?null:par('Le falta',faltaParaEmitir(c))].filter(Boolean),
+      nota:est.listo?(c.coment||''):'',
+      e:{t:est.t,c:est.c},
+      /* Los tres papeles de ese servicio, cada uno por su lado. */
+      acc:[
+        entrada?`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Prueba de entrada · AXAD-084</button>`:'',
+        (ord&&!cliente)?`<button class="btn quiet xs" onclick="imprimirInforme('${ord.id}',['${ord.id}'])">Informe técnico · DVAD-SER-002</button>`:'',
+        est.listo
+          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Certificado · AXAD-088</button>
+             <button class="btn quiet xs" onclick="imprimirPSV('${c.id}')">PDF</button>
+             ${cliente?'':`<button class="btn quiet xs" onclick="psvWord('${c.id}')">Word</button>`}`
+          : (cliente?'':`<button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button>`)
+      ].filter(Boolean).join('')});
   });
-  ORDENES.filter(o=>o.act===a.id).forEach(o=>{
+  /* Las órdenes que todavía no tienen papel —recién abiertas— salen
+     igual, para que no parezca que no pasó nada. */
+  ORDENES.filter(o=>o.act===a.id&&!conPapel.has(grupoDe(o)+'|'+o.id)).forEach(o=>{
     const fin=o.et==='final', etp=(ETAPAS.find(e=>e[0]===o.et)||[,'En curso'])[1];
     const otras=lineasDe(o).length;
-    ev.push({f:(fin?(o.arch||o.f):o.f)||'', k:'mant',
+    ev.push({f:(fin?(o.arch||o.f):o.f)||'', h:o.tomadaH||o.recibidaH||'', k:'mant', tieneEnt:false,
       t:fin?'Servicio terminado':'Servicio en curso',
       doc:codigoLinea(o),
       d:[par('Trabajo',o.tipo),
@@ -6776,10 +6802,11 @@ function histLinea(a){
          fin?null:par('Va por',etp)].filter(Boolean),
       nota:o.hall||'',
       e:fin?{t:o.arch?'En el historial':'Finalizada',c:'ok'}:{t:etp,c:'due'},
-      acc:`${cliente?'':`<button class="btn quiet xs" onclick="imprimirInforme('${o.id}')">Informe técnico</button>`}
+      acc:`${cliente?'':`<button class="btn quiet xs" onclick="imprimirInforme('${o.id}',['${o.id}'])">Informe técnico</button>`}
         ${o.arch&&!cliente?`<button class="btn quiet xs" onclick="devolverAlTablero('${o.id}')">Devolver al tablero</button>`:''}`});
   });
-  return ev.filter(x=>x.f).sort((p,q)=>String(q.f).localeCompare(String(p.f)));
+  return ev.filter(x=>x.f).sort((p,q)=>
+    String(q.f+' '+(q.h||'')).localeCompare(String(p.f+' '+(p.h||''))));
 }
 
 /* Cuántos papeles tiene la válvula: es el número que se enseña en la
@@ -6886,8 +6913,11 @@ function histDetalle(a,c){
              ar&&ar!=='—'?ar:''].filter(Boolean).join(' · ');
   const todos=histLinea(a);
   const fil=S.histFil||'todo';
-  const ev=fil==='todo'?todos:todos.filter(x=>x.k===fil);
-  const cuenta=k=>k==='todo'?todos.length:todos.filter(x=>x.k===k).length;
+  /* El filtro mira el servicio entero: los que ya tienen certificado,
+     los que siguen abiertos y los que traen su prueba de entrada. */
+  const pasa=(x,k)=>k==='todo'?true:k==='ent'?!!x.tieneEnt:x.k===k;
+  const ev=todos.filter(x=>pasa(x,fil));
+  const cuenta=k=>todos.filter(x=>pasa(x,k)).length;
 
   /* Por años: en un parque que lleva décadas, la lista sin cortes no
      se lee. Cada año con su rótulo y debajo lo que pasó ese año. */
@@ -6895,7 +6925,7 @@ function histDetalle(a,c){
   const hilo=anios.map(y=>`<div class="ht-y">${esc(y)}</div>
     <div class="tl">${ev.filter(x=>String(x.f).slice(0,4)===y).map(x=>`
       <div class="tl-i ${x.k==='ent'?'ent':x.k==='cert'?'cert':'ord'}">
-        <div class="tl-m"><span>${esc(fPE(x.f))}</span>
+        <div class="tl-m"><span>${esc(fPE(x.f))}${x.h?` · ${esc(x.h)} h`:''}</span>
           <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span>
           ${x.doc?`<span class="tl-doc">${esc(x.doc)}</span>`:''}</div>
         <div class="tl-t">${esc(x.t)}</div>
@@ -6908,12 +6938,12 @@ function histDetalle(a,c){
   return `<div class="hd"><div>
       <button class="btn quiet xs" style="margin-bottom:8px" onclick="histVolver()">‹ Todas las válvulas</button>
       <h1>Historial de ${esc(a.tag||a.ser||'la válvula')}</h1>
-      <p>${esc(c.n)} · todo lo que se le hizo, de lo más nuevo a lo más viejo.</p></div>
+      <p>${esc(c.n)} · una línea por servicio, del más nuevo al más viejo. Dentro de cada uno están sus tres papeles.</p></div>
       <button class="btn sec" onclick="openAsset('${a.id}')">Abrir la ficha</button></div>
     <div class="ht-cab">
       <div class="photo-frame">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
       <div class="ht-id"><b>${esc(a.tag||a.ser||'(sin tag)')}</b><span>${esc(sub||'—')}</span>
-        <span>${todos.length} registro${todos.length===1?'':'s'} guardado${todos.length===1?'':'s'}</span></div>
+        <span>${todos.length} servicio${todos.length===1?'':'s'} registrado${todos.length===1?'':'s'}</span></div>
     </div>
     <div class="ht-fil" role="tablist" aria-label="Filtrar el historial">${HIST_FILTROS.map(([k,l])=>`
       <button class="ht-f ${fil===k?'on':''}" role="tab" aria-selected="${fil===k}"
@@ -8156,7 +8186,12 @@ const PASOS_ETAPA={
   oc:  [1,2],
   ent: [1,2],
   mant:[3],
-  cert:[4],
+  /* En prueba de salida van los disparos Y las firmas: ahí es donde
+     el jefe lee lo que hizo el taller —con la firma del mecánico que
+     la recibió y la del que la trabajó delante— y pone su visto
+     bueno. Tenerlo en dos pantallas distintas obligaba a salir del
+     formulario para firmar. */
+  cert:[4,6],
   /* Al cerrar, lo que falta escribir: las conclusiones y
      recomendaciones, y la firma de quien lo hizo. Lo demás ya está
      puesto y se abre con el botón de ver todos los pasos. */
@@ -8385,9 +8420,10 @@ function pintarPSV(){
    <div class="psv-docs">
      <div class="t"><b>Informe técnico de la orden</b>
        <span>DVAD-SER-002 · con todas las válvulas de este trabajo, su desarme y sus pruebas.</span></div>
-     <button class="btn sec xs" onclick="informeDeValvula(false)">
+     <button class="btn sec xs" onclick="informeDeValvula('ver')">
        <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Ver e imprimir</button>
-     <button class="btn quiet xs" onclick="informeDeValvula(true)">Word</button>
+     <button class="btn quiet xs" onclick="informeDeValvula('pdf')">PDF</button>
+     <button class="btn quiet xs" onclick="informeDeValvula('word')">Word</button>
    </div>`;
 
   pintarPSVPie();
@@ -9081,6 +9117,9 @@ function guardarPSV(emitir,seguir){
      siguiente servicio de esta válvula abrirá su propio papel. */
   if(!t.ord)t.ord=(ordenViva(t.act)||{}).id||'';
   t.veredicto=v.estado;                       // 'aprobado' | 'rechazado' | 'incompleto'
+  /* La hora de Lima en que el ensayo dejó de ser un borrador: es lo
+     que ordena el historial cuando en el mismo día pasaron varias. */
+  if(v.estado!=='incompleto'&&!t.horaFin)t.horaFin=horaPeru();
   t.prom=v.estado==='incompleto'?null:v.prom;
   t.desv=v.estado==='incompleto'?null:v.desv;
   const i=CALIBS.findIndex(x=>x.id===t.id);
@@ -9263,18 +9302,24 @@ function psvGrafica(v,ancho,alto){
   if(!v||v.estado==='incompleto')return '';
   /* ── EL GRÁFICO QUE VE EL CLIENTE ────────────────────────────
      Es la única página del certificado que se entiende sin ser del
-     oficio: enseña dónde cayó cada disparo respecto de la banda
-     admisible. Por eso se dibuja como un instrumento y no como una
-     hoja de cálculo — banda con degradado, línea de referencia
-     marcada, cada punto con su halo y su valor, y una franja abajo
-     con las tres cifras que resumen el ensayo.
-     Sigue siendo un SVG sin librerías: entra en el PDF, en el Word y
-     en un celular sin señal.
+     oficio, así que se dibuja como lo dibujaría un banco de pruebas:
+     marco de trazado, rejilla con sus valores, la banda admisible
+     sombreada entre sus dos límites rotulados, la zona de fuera de
+     tolerancia en rojo muy tenue, el set como línea de referencia y
+     el promedio punteado, cada uno con su pastilla de valor. Los
+     disparos van sobre la rejilla, con el número en una cajita para
+     que no se pise con la línea.
+     Sigue siendo un SVG sin librerías: entra igual en el PDF, en el
+     Word y en un celular sin señal.
      ============================================================ */
-  const W=ancho||520, H=alto||248, L=62, R=18, T=30, B=64;
+  const W=ancho||520, H=alto||248;
+  const corto=H<190;                       // la versión ancha del certificado
+  const k=corto?.84:1;                     // escala de las letras
+  const L=corto?52:64, R=corto?92:104, T=corto?16:28, B=corto?40:64;
   const uni=esc(v.und||'psi');
   const gw=W-L-R, gh=H-T-B;
-  const margen=Math.max((v.max-v.min)*0.22, Math.abs(v.prom-v.set)*0.40, v.set*0.004);
+  const F="'IBM Plex Sans',Segoe UI,Roboto,sans-serif";
+  const margen=Math.max((v.max-v.min)*0.28, Math.abs(v.prom-v.set)*0.45, v.set*0.006);
   const lo=Math.min(v.min,...v.disparos)-margen, hi=Math.max(v.max,...v.disparos)+margen;
   const y=p=>T+gh-((p-lo)/(hi-lo||1))*gh;
   const x=i=>L+gw*((i+1)/(v.disparos.length+1));
@@ -9283,78 +9328,108 @@ function psvGrafica(v,ancho,alto){
   const tono=ok?'#1a7f52':'#c0392b';
   const id='g'+Math.abs(Math.round(v.set*1000+v.disparos.length)).toString(36);
   const pts=v.disparos.map((p,i)=>`${x(i)},${y(p)}`).join(' ');
-  /* El área bajo la línea da cuerpo al recorrido; sola, la polilínea
-     se pierde dentro de la banda. */
-  const area=`${L+gw*(1/(v.disparos.length+1))},${T+gh} ${pts} ${x(v.disparos.length-1)},${T+gh}`;
+  /* La rejilla se reparte en valores redondos —1, 2, 5— como en
+     cualquier instrumento: números que se leen, no los que salgan. */
+  const nice=(r,n)=>{ const c=r/(n||4), e=Math.pow(10,Math.floor(Math.log10(c)||0)), m=c/e;
+    return (m<1.5?1:m<3?2:m<7?5:10)*e };
+  const paso=nice(hi-lo, corto?4:5);
+  const ticks=[]; for(let t=Math.ceil(lo/paso)*paso; t<=hi+1e-9; t+=paso)ticks.push(t);
+  /* Pastilla de valor pegada al eje derecho: es como se rotula una
+     referencia en un registrador, y así nunca tapa los puntos. */
+  const pastilla=(yy,txt,col,relleno)=>{
+    const an=Math.max(46,String(txt).length*6.1*k+14), al=15*k;
+    const yc=Math.min(Math.max(yy,T+al/2+1),T+gh-al/2-1);
+    return `<g><rect x="${L+gw+7}" y="${yc-al/2}" width="${an}" height="${al}" rx="${al/2}"
+        fill="${relleno||'#fff'}" stroke="${col}" stroke-width="1"/>
+      <text x="${L+gw+7+an/2}" y="${yc+3.6*k}" text-anchor="middle" font-size="${9.4*k}" font-weight="700"
+        fill="${col}" font-family="${F}" style="font-variant-numeric:tabular-nums">${esc(txt)}</text></g>`;
+  };
   return `<svg class="psv-graf" viewBox="0 0 ${W} ${H}" width="100%" role="img"
     aria-label="Los ${v.disparos.length} disparos frente a la banda admisible. Promedio ${n2(v.prom)} ${uni}, requerido ${n2(v.set)} ${uni}.">
     <defs>
       <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#1a7f52" stop-opacity=".16"/>
-        <stop offset="1" stop-color="#1a7f52" stop-opacity=".05"/>
+        <stop offset="0" stop-color="#1a7f52" stop-opacity=".15"/>
+        <stop offset="1" stop-color="#1a7f52" stop-opacity=".07"/>
       </linearGradient>
       <linearGradient id="${id}a" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="${tono}" stop-opacity=".22"/>
+        <stop offset="0" stop-color="${tono}" stop-opacity=".20"/>
         <stop offset="1" stop-color="${tono}" stop-opacity="0"/>
       </linearGradient>
       <filter id="${id}s" x="-40%" y="-40%" width="180%" height="180%">
-        <feDropShadow dx="0" dy="1.4" stdDeviation="1.6" flood-color="${tono}" flood-opacity=".35"/>
+        <feDropShadow dx="0" dy="1.2" stdDeviation="1.4" flood-color="#101418" flood-opacity=".22"/>
       </filter>
     </defs>
 
-    ${/* la banda admisible, con su etiqueta pegada al borde */''}
-    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="url(#${id}b)" rx="3"/>
-    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="5 4" opacity=".8"/>
-    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1" stroke-dasharray="5 4" opacity=".8"/>
-    <text x="${L+gw-3}" y="${yMax-5}" text-anchor="end" font-size="9" fill="#1a7f52" font-weight="600"
-      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".04em">BANDA ADMISIBLE</text>
+    ${/* el marco de trazado y el fuera de tolerancia, en rojo tenue */''}
+    <rect x="${L}" y="${T}" width="${gw}" height="${gh}" fill="#fcfdfe" stroke="#dfe3e7"/>
+    <rect x="${L}" y="${T}" width="${gw}" height="${Math.max(0,yMax-T)}" fill="#c0392b" opacity=".045"/>
+    <rect x="${L}" y="${yMin}" width="${gw}" height="${Math.max(0,T+gh-yMin)}" fill="#c0392b" opacity=".045"/>
+
+    ${/* la rejilla, con su valor a la izquierda */''}
+    ${ticks.map(t=>`<line x1="${L}" y1="${y(t)}" x2="${L+gw}" y2="${y(t)}" stroke="#eceff2"/>
+      <line x1="${L-4}" y1="${y(t)}" x2="${L}" y2="${y(t)}" stroke="#c8ced4"/>
+      <text x="${L-8}" y="${y(t)+3.4*k}" text-anchor="end" font-size="${9.6*k}" fill="#78818c"
+        font-family="${F}" style="font-variant-numeric:tabular-nums">${n2(t)}</text>`).join('')}
+
+    ${/* la banda admisible entre sus dos límites */''}
+    <rect x="${L}" y="${yMax}" width="${gw}" height="${Math.max(1,yMin-yMax)}" fill="url(#${id}b)"/>
+    <line x1="${L}" y1="${yMax}" x2="${L+gw}" y2="${yMax}" stroke="#1a7f52" stroke-width="1.1" stroke-dasharray="6 4"/>
+    <line x1="${L}" y1="${yMin}" x2="${L+gw}" y2="${yMin}" stroke="#1a7f52" stroke-width="1.1" stroke-dasharray="6 4"/>
+    ${pastilla(yMax,'LSA '+n2(v.max),'#1a7f52','#eef7f2')}
+    ${pastilla(yMin,'LIA '+n2(v.min),'#1a7f52','#eef7f2')}
 
     ${/* el requerido: la referencia contra la que se juzga todo */''}
-    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#5b6470" stroke-width="1.6"/>
-    ${/* La etiqueta se aparta de la línea del promedio: cuando el
-         promedio y el requerido casi coinciden, se montaban una encima
-         de otra y no se leía ninguna. */''}
-    <text x="${L+3}" y="${yProm<ySet?ySet+12:ySet-6}" font-size="9" fill="#5b6470" font-weight="600"
-      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".04em">REQUERIDO ${n2(v.set)}</text>
+    <line x1="${L}" y1="${ySet}" x2="${L+gw}" y2="${ySet}" stroke="#3a424c" stroke-width="1.7"/>
+    ${pastilla(ySet,'SET '+n2(v.set),'#3a424c','#f3f5f7')}
 
-    ${/* el recorrido de los disparos */''}
-    ${v.disparos.length>1?`<polygon points="${area}" fill="url(#${id}a)"/>
-      <polyline fill="none" stroke="${tono}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"
-        points="${pts}"/>`:''}
-    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="1.4" stroke-dasharray="2 4" opacity=".7"/>
+    ${/* el recorrido de los disparos y su promedio */''}
+    ${/* Sin relleno bajo la línea: en un registro de presiones la
+         mancha de color no dice nada y tapa la rejilla. */''}
+    ${v.disparos.length>1?`<polyline fill="none" stroke="${tono}" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round" points="${pts}"/>`:''}
+    <line x1="${L}" y1="${yProm}" x2="${L+gw}" y2="${yProm}" stroke="${tono}" stroke-width="1.3" stroke-dasharray="2 4" opacity=".85"/>
+    ${Math.abs(yProm-ySet)>17*k&&Math.abs(yProm-yMax)>17*k&&Math.abs(yProm-yMin)>17*k?pastilla(yProm,'x̄ '+n2(v.prom),tono,'#fff'):''}
 
     ${v.disparos.map((p,i)=>{
       const dentro=p>=v.min-1e-9&&p<=v.max+1e-9;
       const col=dentro?'#1a7f52':'#c0392b';
-      return `<circle cx="${x(i)}" cy="${y(p)}" r="9" fill="${col}" opacity=".14"/>
-      <circle cx="${x(i)}" cy="${y(p)}" r="${dentro?5:6}" fill="${dentro?col:'#fff'}"
-        stroke="${col}" stroke-width="${dentro?1.6:2.4}" filter="url(#${id}s)"/>
+      const txt=n2(p), an=String(txt).length*6.4*k+10, al=15*k;
+      /* La cajita del valor se pone arriba del punto y, si el punto
+         está pegado al techo, debajo: nunca fuera del marco. */
+      const arriba=y(p)-al-10>T;
+      const cy=arriba?y(p)-al-7:y(p)+9;
+      return `<line x1="${x(i)}" y1="${T+gh}" x2="${x(i)}" y2="${y(p)}" stroke="#dfe3e7" stroke-dasharray="2 3"/>
+      <circle cx="${x(i)}" cy="${y(p)}" r="${8*k}" fill="${col}" opacity=".13"/>
+      <circle cx="${x(i)}" cy="${y(p)}" r="${(dentro?4.6:5.4)*k}" fill="${dentro?col:'#fff'}"
+        stroke="${dentro?'#fff':col}" stroke-width="${dentro?1.6:2.4}" filter="url(#${id}s)"/>
       ${dentro?'':`<path d="M${x(i)-3} ${y(p)-3}l6 6M${x(i)+3} ${y(p)-3}l-6 6"
         stroke="${col}" stroke-width="2" stroke-linecap="round"/>`}
-      <text x="${x(i)}" y="${y(p)-15}" text-anchor="middle" font-size="12.5" font-weight="700"
-        fill="${dentro?'#101418':col}" font-family="'IBM Plex Sans',sans-serif">${n2(p)}</text>
-      <text x="${x(i)}" y="${T+gh+16}" text-anchor="middle" font-size="10" fill="#78818c"
-        font-family="'IBM Plex Sans',sans-serif" letter-spacing=".02em">Prueba ${i+1}</text>`}).join('')}
+      <rect x="${x(i)-an/2}" y="${cy}" width="${an}" height="${al}" rx="3"
+        fill="#fff" stroke="${dentro?'#dfe3e7':col}" stroke-width="1"/>
+      <text x="${x(i)}" y="${cy+al-4.4*k}" text-anchor="middle" font-size="${10.6*k}" font-weight="700"
+        fill="${dentro?'#101418':col}" font-family="${F}" style="font-variant-numeric:tabular-nums">${txt}</text>
+      <line x1="${x(i)}" y1="${T+gh}" x2="${x(i)}" y2="${T+gh+4}" stroke="#c8ced4"/>
+      <text x="${x(i)}" y="${T+gh+15*k}" text-anchor="middle" font-size="${9.8*k}" fill="#5b6470"
+        font-family="${F}" letter-spacing=".02em">Test ${i+1}</text>`}).join('')}
 
-    ${/* el eje: sólo tres números, los que importan */''}
-    <text x="${L-8}" y="${T-10}" text-anchor="end" font-size="9.5" font-weight="700" fill="#78818c"
-      font-family="'IBM Plex Sans',sans-serif" letter-spacing=".05em">${uni}</text>
-    <text x="${L-8}" y="${yMax+4}" text-anchor="end" font-size="10" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.max)}</text>
-    <text x="${L-8}" y="${ySet+4}" text-anchor="end" font-size="10.5" font-weight="600" fill="#3a424c" font-family="'IBM Plex Sans',sans-serif">${n2(v.set)}</text>
-    <text x="${L-8}" y="${yMin+4}" text-anchor="end" font-size="10" fill="#1a7f52" font-family="'IBM Plex Sans',sans-serif">${n2(v.min)}</text>
-    <line x1="${L}" y1="${T-4}" x2="${L}" y2="${T+gh}" stroke="#d7dbe0"/>
-    <line x1="${L}" y1="${T+gh}" x2="${L+gw}" y2="${T+gh}" stroke="#d7dbe0"/>
+    ${/* los ejes y el rótulo de la unidad */''}
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${T+gh}" stroke="#c8ced4"/>
+    <line x1="${L}" y1="${T+gh}" x2="${L+gw}" y2="${T+gh}" stroke="#c8ced4"/>
+    <text x="${L-8}" y="${T-7}" text-anchor="end" font-size="${9.2*k}" font-weight="700" fill="#8a929c"
+      font-family="${F}" letter-spacing=".08em">${uni.toUpperCase()}</text>
+    <text x="${L+gw}" y="${T-7}" text-anchor="end" font-size="${9.2*k}" font-weight="700" fill="#8a929c"
+      font-family="${F}" letter-spacing=".08em">AS LEFT · API 527</text>
 
-    ${/* la franja de abajo: las tres cifras del ensayo, como un panel */''}
-    <line x1="${L}" y1="${H-38}" x2="${W-R}" y2="${H-38}" stroke="#edeff1"/>
+    ${corto?'':`${/* la franja de abajo: las tres cifras del ensayo */''}
+    <line x1="${L}" y1="${H-38}" x2="${W-R+92}" y2="${H-38}" stroke="#edeff1"/>
     ${[['PROMEDIO',n2(v.prom)+' '+uni,'#101418'],
        ['DESVIACIÓN',(v.desv>0?'+':'')+n2(v.desv)+' %',tono],
-       ['RESULTADO',ok?'APROBADO':'RECHAZADO',tono]].map(([k,val,c],i,arr)=>{
-      const cw=(W-L-R)/arr.length, cx=L+cw*i+cw/2;
+       ['RESULTADO',ok?'APROBADO':'RECHAZADO',tono]].map(([q,val,c],i,arr)=>{
+      const cw=(W-L-R+92)/arr.length, cx=L+cw*i+cw/2;
       return `<text x="${cx}" y="${H-24}" text-anchor="middle" font-size="8.5" fill="#8a929c"
-          font-family="'IBM Plex Sans',sans-serif" letter-spacing=".08em">${k}</text>
+          font-family="${F}" letter-spacing=".08em">${q}</text>
         <text x="${cx}" y="${H-9}" text-anchor="middle" font-size="12.5" font-weight="700" fill="${c}"
-          font-family="'IBM Plex Sans',sans-serif">${esc(val)}</text>`}).join('')}
+          font-family="${F}" style="font-variant-numeric:tabular-nums">${esc(val)}</text>`}).join('')}`}
   </svg>`;
 }
 
@@ -9546,7 +9621,8 @@ function verPSV(id){
     ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
-    ${cliente?'':`<button class="btn ${faltaVb&&!(enSalida&&faltanDisparos)?'sec':''}" onclick="openPSV(null,'${c.id}')">Editar</button>`}
+    ${cliente?'':`<button class="btn sec" onclick="openPSV(null,'${c.id}')">Editar</button>`}
+    ${cliente?'':`<button class="btn ${faltaVb?'sec':''}" onclick="guardarVistaPSV()">Guardar</button>`}
     ${enSalida&&faltanDisparos?`<button class="btn" onclick="openPSV('${a.id}',null,'salida')"
       title="Los tres disparos de salida del formato">
       <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>Hacer la prueba de salida</button>`:''}
@@ -10297,14 +10373,28 @@ function pintarElegirInforme(){
     <p class="hint">${n?`${n} válvula${n===1?'':'s'} en el informe`:'No hay ninguna marcada'}</p>`;
   $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
     <span style="flex:1"></span>
-    <button class="btn sec" ${n?'':'disabled'} onclick="infSacar(true)">Word</button>
-    <button class="btn" ${n?'':'disabled'} onclick="infSacar(false)">Ver e imprimir</button>`;
+    <button class="btn quiet" ${n?'':'disabled'} onclick="infSacar('word')">Word</button>
+    <button class="btn sec" ${n?'':'disabled'} onclick="infSacar('pdf')">PDF</button>
+    <button class="btn" ${n?'':'disabled'} onclick="infSacar('ver')">Ver e imprimir</button>`;
 }
-function infSacar(word){
+/* Tres salidas del mismo papel: verlo en pantalla, bajarlo en PDF —el
+   que se le manda al cliente— o en Word para retocarlo antes. El PDF
+   abre el documento y le pide la impresión al navegador, que es lo que
+   ofrece «Guardar como PDF» en cualquier equipo. */
+function informePDF(idOrden,solo){
+  const d=documentoInforme(idOrden,solo);
+  if(!d){toast('No encuentro esa orden');return}
+  const w=window.open('','_blank');
+  if(!w){toast('Permite las ventanas emergentes para guardar el PDF');return}
+  w.document.write(d.html); w.document.close(); w.focus();
+  imprimirCuandoCarguen(w);
+}
+function infSacar(modo){
   if(!INF_SEL.ids.length){toast('Marca al menos una válvula');return}
   const ord=INF_SEL.ord, ids=INF_SEL.ids.slice();
+  const salida=modo==='word'?informeWord:modo==='pdf'?informePDF:imprimirInforme;
   closeModal();
-  setTimeout(()=>(word?informeWord:imprimirInforme)(ord,ids),140);
+  setTimeout(()=>salida(ord,ids),140);
 }
 /* Desde el propio formulario del taller: el informe de la orden a la
    que pertenece esta válvula. */
@@ -10314,7 +10404,7 @@ const ordenDeValvula=actId=>{
   const ab=ls.filter(o=>o.et!=='final');
   return (ab.length?ab:ls).sort((p,q)=>idx(q)-idx(p))[0]||null;
 };
-function informeDeValvula(word){
+function informeDeValvula(modo){
   if(!PSV_TMP)return;
   guardarPSV(false,true);                       // que el papel lleve lo último escrito
   const o=ordenDeValvula(PSV_TMP.act);
@@ -10322,19 +10412,52 @@ function informeDeValvula(word){
   /* Desde el formulario de una válvula se pregunta igual, pero viene
      marcada la que se está llenando: casi siempre es la que se quiere,
      y si hace falta el general se marca el resto. */
-  if(lineasDe(o).length>1&&!word)return elegirInforme(o.id,[o.id]);
-  (word?informeWord:imprimirInforme)(o.id,lineasDe(o).length>1?[o.id]:null);
+  const varias=lineasDe(o).length>1;
+  if(varias&&(modo===true||modo==='ver'||!modo))return elegirInforme(o.id,[o.id]);
+  const salida=(modo==='word'||modo===true)?informeWord:modo==='pdf'?informePDF:imprimirInforme;
+  salida(o.id, varias?[o.id]:null);
+}
+/* ── EL MISMO PAPEL, PERO EN WORD ────────────────────────────
+   Word abre un HTML con extension .doc sin rechistar, y asi no hace
+   falta traerse media libreria para un .docx que el cliente solo va a
+   retocar. Lo que si hay que quitarle es lo que sobra en un
+   documento: la barra de botones de la vista de impresion y el script
+   que espera a que carguen las fotos —Word no ejecuta nada, asi que
+   eso acababa como texto suelto en la primera pagina—. Y se le
+   declara la hoja A4 con sus margenes como los entiende Office, o
+   abre en tamano carta y descuadra el formato.
+   ============================================================ */
+function documentoAWord(html){
+  let doc=String(html||'');
+  if(typeof BARRA_IMPRIMIR==='string')doc=doc.split(BARRA_IMPRIMIR).join('');
+  doc=doc.replace(/<script[\s\S]*?<\/script>/gi,'');
+  return doc
+    .replace(/<html([^>]*)>/i,'<html$1 xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
+    .replace(/<head>/i,'<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->'
+      +'<style>@page WordSection1{size:210mm 297mm;mso-page-orientation:portrait;margin:12mm 10mm}'
+      +'div.WordSection1{page:WordSection1}</style>')
+    .replace(/<body([^>]*)>/i,'<body$1><div class="WordSection1">')
+    .replace(/<\/body>/i,'</div></body>');
+}
+/* Y la descarga: si el navegador no admite el atributo download
+   —algun movil dentro de la app instalada—, se abre en una pestana y
+   se guarda desde ahi. Un boton que no hace nada es lo peor. */
+function bajarWord(html,titulo){
+  const url=URL.createObjectURL(new Blob(['\ufeff',documentoAWord(html)],{type:'application/msword'}));
+  const el=document.createElement('a');
+  if(typeof el.download==='undefined'){
+    if(!window.open(url,'_blank'))toast('Permite las ventanas emergentes para bajar el Word');
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    return;
+  }
+  el.href=url; el.download=(titulo||'documento')+'.doc';
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 function informeWord(idOrden,solo){
   const d=documentoInforme(idOrden,solo);
   if(!d){toast('No encuentro esa orden');return}
-  const html=d.html.replace('<html lang="es">',
-    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
-    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
-  const url=URL.createObjectURL(new Blob(['﻿',html],{type:'application/msword'}));
-  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
-  document.body.appendChild(el); el.click(); el.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  bajarWord(d.html,d.titulo);
   toast('Informe descargado en Word · se puede editar antes de enviarlo');
 }
 
@@ -10910,13 +11033,7 @@ function fichaClientePDF(id){
 }
 function fichaClienteWord(id){
   const d=fichaClienteDoc(id); if(!d)return;
-  const html=d.html.replace('<html lang="es">',
-    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
-    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
-  const url=URL.createObjectURL(new Blob(['﻿',html],{type:'application/msword'}));
-  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
-  document.body.appendChild(el); el.click(); el.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  bajarWord(d.html,d.titulo);
   toast('Ficha descargada en Word · lista para mandársela al cliente');
 }
 
@@ -10987,16 +11104,7 @@ function imprimirCuandoCarguen(w){
 }
 function psvWord(id){
   const d=psvDocumento(id); if(!d)return;
-  /* Word abre un HTML con extensión .doc sin rechistar. Evita cargar
-     media librería para generar un .docx que el cliente sólo va a
-     abrir y retocar. */
-  const html=d.html.replace('<html lang="es">',
-    '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
-    .replace('<head>','<head><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->');
-  const url=URL.createObjectURL(new Blob(['\ufeff',html],{type:'application/msword'}));
-  const el=document.createElement('a'); el.href=url; el.download=`${d.titulo}.doc`;
-  document.body.appendChild(el); el.click(); el.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  bajarWord(d.html,d.titulo);
   toast('Descargado en Word · se puede editar antes de enviarlo');
 }
 
@@ -12067,7 +12175,7 @@ function informeProyecto(id){
        queda marcado como <b>parcial</b> hasta que las ${v.total} válvulas estén finalizadas.</div></div>`:''}`;
   $('#mFoot').innerHTML=`
     <button class="btn sec" onclick="informeExcel('${id}')" title="Para que el cliente cruce los datos">Excel</button>
-    <button class="btn sec" onclick="informeWord('${id}')" title="Para editarlo antes de enviarlo">Word</button>
+    <button class="btn sec" onclick="informeProyectoWord('${id}')" title="Para editarlo antes de enviarlo">Word</button>
     <button class="btn" onclick="informePDF('${id}')" title="Para firmar y archivar">PDF</button>`;
   $('#modal').classList.add('on');
 }
@@ -12148,7 +12256,12 @@ function informePDF(id){
 /* Word abre sin problema un HTML con extensión .doc. Es lo que hace
    media industria y evita cargar una librería de 500 KB para generar
    un .docx que el cliente sólo va a abrir y retocar. */
-function informeWord(id){
+/* El informe de la OC (varias órdenes de un mismo proyecto) en Word.
+   Tenía el mismo nombre que el informe técnico de una orden y, al
+   cargarse el archivo, el segundo tapaba al primero: pulsar «Word» en
+   una orden llamaba a esta función, que no encontraba ningún proyecto
+   con ese id y se volvía sin hacer nada. */
+function informeProyectoWord(id){
   const p=pry(id); if(!p)return;
   const html=`<!doctype html><html xmlns:o="urn:schemas-microsoft-com:office:office"
     xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
@@ -12700,18 +12813,20 @@ function renderWO(){
               ? `<div class="wo-parte ok">Visto bueno puesto · lista para cerrar</div>`
               : `<div class="wo-parte">Falta${ls.length-firmadas===1?'':'n'} ${ls.length-firmadas} firma${
                   ls.length-firmadas===1?'':'s'} de gerencia${jefe?'':' — la pone el jefe'}</div>`;
-            /* Aquí se hace la prueba de salida —los disparos del
-               as-left— y después firma el jefe. Dos botones porque son
-               dos manos distintas. */
-            const disparar=`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
-              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'salida')`}">
-              <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>
-              Hacer la prueba de salida</button>`;
-            return disparar+`<button class="btn ${jefe&&!todas?'':'quiet'} xs" style="width:100%;margin-top:6px;justify-content:center"
-              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
-              <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
-                jefe ? (todas?'Revisar y rehacer la firma':'Revisar y firmar') : 'Ver lo que se hizo'}${
-                ls.length>1?` · ${firmadas} de ${ls.length}`:''}</button>${nota}`;
+            /* Un solo botón: dentro está la prueba de salida entera
+               —los tres disparos, las firmas que ya trae el papel y el
+               sitio donde firma el jefe—. Con varias válvulas lleva a
+               la lista, que cada una tiene la suya. */
+            const disp=ls.map(x=>{const c=recepDe(x.act);
+              return c?disparosDe(c).filter(t=>num(t.v)>0).length>=3:false});
+            const hechas=disp.filter(Boolean).length;
+            const listo=hechas===ls.length;
+            return `<button class="btn ${listo&&todas?'quiet':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
+              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`openPSV('${o.act}',null,'${listo?'firmas':'salida'}')`}">
+              <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>${
+                !listo ? `Hacer la prueba de salida${ls.length>1?` · ${hechas} de ${ls.length}`:''}`
+                : todas ? `Prueba de salida ✓${ls.length>1?` · ${ls.length}`:''}`
+                : `Prueba de salida ✓ · ${jefe?'falta tu firma':'falta la firma del jefe'}`}</button>${nota}`;
           })():''}
           ${nx&&S.rol!=='cliente'?(()=>{
             /* En la columna de recepción el botón sólo tira si la
@@ -12910,6 +13025,15 @@ function revisarYFirmar(idLinea){
      algo hay que corregir, pero no es lo que viene a hacer. */
   FIRMAR_AL_VER='vbAdo';
   verPSV(c.id);
+}
+/* Lo que se hace en esta pantalla —firmar, rehacer una firma— ya
+   queda guardado en el momento; el botón está para cerrar sabiendo
+   que se guardó, que es lo que el que firma quiere ver. */
+function guardarVistaPSV(){
+  guardarLocal();
+  if(typeof correrJob==='function')correrJob('guardado-a-mano');
+  closeModal();
+  toast('Guardado');
 }
 /* Cuando se entra a revisar, la firma que falta se marca y se sube
    hasta ella: es el único paso que da el gerente. */
