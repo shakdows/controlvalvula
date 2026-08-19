@@ -7744,6 +7744,36 @@ function recepDe(actId){
 /* Abre el formulario directamente en la prueba de entrada. Es lo que
    se hace en el mostrador, con la válvula recién bajada del camión. */
 function pruebaDeEntrada(actId){ openPSV(actId,null,'entrada') }
+/* La prueba de entrada de una orden: siempre la de la SIGUIENTE válvula
+   que no la tenga. Con dos o tres válvulas en la misma orden no se
+   puede pasar a la siguiente sin haber llenado la anterior —el
+   protocolo es por válvula—, así que el botón lleva a la que toca y,
+   al guardarla, ofrece seguir con la que queda. */
+function pendientesDeEntrada(g){
+  return ORDENES.filter(x=>grupoDe(x)===g&&x.et==='ent')
+    .filter(x=>!recepcionCerrada(recepDe(x.act)));
+}
+function entradaDeLaOrden(g){
+  const falta=pendientesDeEntrada(g);
+  if(!falta.length){toast('Todas las pruebas de entrada están hechas');return}
+  pruebaDeEntrada(falta[0].act);
+}
+/* Al guardar una prueba de entrada, si a la orden le faltan otras, se
+   avisa y se pasa a la siguiente sin buscarla en el tablero. */
+function seguirEntradas(actId){
+  const o=ORDENES.find(x=>x.act===actId&&x.et==='ent'); if(!o)return false;
+  const falta=pendientesDeEntrada(grupoDe(o));
+  if(!falta.length)return false;
+  const a=ACTIVOS.find(x=>x.id===falta[0].act)||{};
+  $('#mTitle').textContent=`Falta${falta.length===1?'':'n'} ${falta.length} prueba${falta.length===1?'':'s'} de entrada`;
+  $('#mBody').innerHTML=`<div class="callout"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
+    <div>La orden <b class="mono">${esc(o.mat||o.n)}</b> lleva más de una válvula y cada una necesita
+      su propio protocolo <b>AXAD-084</b>. Sigue <b>${esc(a.tag||a.ser||'la siguiente')}</b>.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Después</button>
+    <button class="btn" onclick="closeModal();pruebaDeEntrada('${falta[0].act}')">Hacer la de ${esc(a.tag||a.ser||'la siguiente')}</button>`;
+  $('#modal').classList.add('on');
+  return true;
+}
 
 /* ── Qué se llena en cada columna ────────────────────────────
    El formulario tiene los seis pasos siempre, pero enseñárselos todos
@@ -8705,8 +8735,10 @@ function guardarPSV(emitir,seguir){
      que necesita un ensayo guardado al que agarrarse pero no puede
      echar al técnico de lo que estaba escribiendo. */
   if(seguir){guardarLocal();return id}
+  const actGuardado=t.act;
   PSV_TMP=null; closeModal(); renderAll();
-  if(emitir)setTimeout(()=>imprimirPSV(id),150);
+  if(emitir){setTimeout(()=>imprimirPSV(id),150);return id}
+  setTimeout(()=>seguirEntradas(actGuardado),200);
   return id;
 }
 
@@ -12066,7 +12098,7 @@ function renderWO(){
             const rech=est.filter(c=>c&&c.rcVeredicto==='rechaza'&&recepcionCerrada(c)).length;
             const todo=listas===ls.length;
             return `<button class="btn ${todo?'quiet':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center"
-              onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`pruebaDeEntrada('${o.act}')`}">
+              onclick="event.stopPropagation();${todo?`verOrden('${o.id}')`:`entradaDeLaOrden('${G.g}')`}">
               <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
               Prueba de entrada${ls.length>1?` · ${listas} de ${ls.length}`:todo?' ✓':''}</button>
               ${rech?`<div class="wo-tarde"><span class="dot"></span>${rech} llegó${rech===1?'':'aron'} rechazada${rech===1?'':'s'} — consta en el protocolo</div>`:''}`;
@@ -12141,7 +12173,12 @@ function renderWO(){
               onclick="event.stopPropagation();archivarGrupo('${G.g}')"
               title="Sale del tablero y queda guardada en el historial de cada válvula">
               <svg viewBox="0 0 24 24"><path d="M3 7h18v3H3zM5 10v10h14V10M9 14h6"/></svg>Mandar al historial</button>`:''}
-          <button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center" onclick="event.stopPropagation();verOrden('${o.id}')">Ver detalle</button>
+          ${/* La etiqueta que se pega en la válvula: aparece en cuanto la
+               orden se acepta y la válvula entra a la casa. Antes había
+               que abrir el detalle para encontrarla. */''}
+          ${G.et!=='oc'&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+            onclick="event.stopPropagation();imprimirEtiqueta('${o.act}')" title="La etiqueta de ingreso que se pega en la válvula">
+            <svg viewBox="0 0 24 24"><path d="M3 7h11l6 5-6 5H3z"/><circle cx="7.5" cy="12" r="1.2"/></svg>Etiqueta${varias?'s':''}</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
 }
