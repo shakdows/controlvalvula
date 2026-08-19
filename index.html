@@ -815,9 +815,17 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cmd-f{border-top:1px solid var(--line-2);padding:7px var(--sp-4);display:flex;gap:var(--sp-4);font-size:11px;color:var(--ink-3);flex:0 0 auto}
 
 /* ---- modal ---- */
-.modal{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:oklch(0.235 0.012 255 /.35);padding:var(--sp-5)}
+.modal{position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:oklch(0.235 0.012 255 /.35);padding:var(--sp-4)}
+/* Los cuadros cortos —confirmar, pedir un nombre, elegir una fecha— no
+   necesitan una sábana: se quedan en su ancho de siempre. Lo ancho es
+   para los formularios largos, que son los que se llenan. */
+.modal-c.corto{width:min(660px,100%)}
 .modal.on{display:flex}
-.modal-c{width:min(660px,100%);max-height:86vh;background:var(--surface);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--slow) var(--ease-out)}
+/* En una pantalla de escritorio 660 px es una rendija: el formulario
+   del ensayo tiene dos columnas y se leía apretado, con media pantalla
+   en gris a los lados. Crece con la ventana hasta 1100 px y sube a
+   92vh de alto, que es donde de verdad se trabaja. */
+.modal-c{width:min(1100px,96vw);max-height:92vh;background:var(--surface);border-radius:var(--r-3);box-shadow:var(--shadow-over);display:flex;flex-direction:column;overflow:hidden;animation:pop var(--slow) var(--ease-out)}
 .modal-h{display:flex;align-items:center;justify-content:space-between;padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--line-2)}
 .modal-b{padding:var(--sp-5);padding-bottom:var(--sp-6);overflow:auto;overscroll-behavior:contain}
 .modal-f{padding:var(--sp-3) var(--sp-5);border-top:1px solid var(--line-2);display:flex;justify-content:flex-end;gap:var(--sp-2);background:var(--surface-2)}
@@ -5065,8 +5073,12 @@ function verOrden(idOrAct,esActivo){
               :x.et==='oc' ? ''
               /* Recibida: lo que toca es el protocolo de entrada, una
                  por una — cada válvula se recibe por separado. */
-              :x.et==='ent' ? `<button class="btn ${recepcionCerrada(recepDe(x.act))?'quiet':'sec'} xs" onclick="closeModal();pruebaDeEntrada('${x.act}')">${
-                  recepcionCerrada(recepDe(x.act))?'Ver la entrada ✓':'Prueba de entrada'}</button>`
+              :x.et==='ent' ? (recepcionCerrada(recepDe(x.act))
+                  /* Con su protocolo cerrado, esta válvula ya puede
+                     entrar al taller aunque su compañera siga aquí. */
+                  ? `<button class="btn quiet xs" onclick="closeModal();pruebaDeEntrada('${x.act}')">Ver la entrada ✓</button>
+                     <button class="btn sec xs" onclick="closeModal();tomarOrden('${x.id}')">Pasar a mantenimiento</button>`
+                  : `<button class="btn sec xs" onclick="closeModal();pruebaDeEntrada('${x.act}')">Prueba de entrada</button>`)
               /* Terminada: el jefe entra a LEER lo que puso el taller
                  y a poner su visto bueno. Es el último paso antes del
                  certificado. */
@@ -5124,7 +5136,12 @@ function verOrden(idOrAct,esActivo){
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
     ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
       enEspera     ? `Recibir la válvula${porEntrar>1?`s · ${porEntrar}`:''}`
-      : enRecepcion? `Pasar a mantenimiento${porEntrar>1?` las ${porEntrar}`:''}`
+      : enRecepcion? (()=>{
+          const listas=ls.filter(x=>x.et==='ent'&&recepcionCerrada(recepDe(x.act))).length;
+          return listas>1 ? `Pasar a mantenimiento las ${listas}`
+               : listas===1&&porEntrar>1 ? 'Pasar a mantenimiento la que está lista'
+               : 'Pasar a mantenimiento';
+        })()
                    : 'Finalizar y emitir el certificado'}</button>`:''}`;
   $('#modal').classList.add('on');
 }
@@ -6496,7 +6513,11 @@ function histLinea(a){
           acc:`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Ver el protocolo</button>`});
       }
       const est=histEstado(c);
-      ev.push({f:c.fecha||'', k:est.listo?'cert':'mant',
+      /* Un borrador recién empezado todavía no tiene fecha de ensayo:
+         se le pone la de la prueba de entrada, o la de hoy, para que
+         aparezca en la línea de tiempo. Antes se caía de la lista y
+         parecía que el trabajo se había perdido. */
+      ev.push({f:c.fecha||c.rcFecha||hoyISO(), k:est.listo?'cert':'mant',
         t:est.listo?'Certificado emitido':'Mantenimiento sin terminar',
         doc:est.listo?'AXAD-088':'',
         d:[par('Orden de servicio',c.os),
@@ -7100,10 +7121,17 @@ function psvFaltantes(c){
   /* 2 · la prueba de entrada: el disparo tal como llegó, el veredicto
      de recepción y la firma de quien la recibió. Sin esas tres cosas
      la válvula no debería haber entrado siquiera al taller. */
+  /* La presión de ajuste de la placa es el numero contra el que se
+     juzga TODO: el disparo de entrada, el de salida y el veredicto. Sin
+     ella no se puede cerrar la prueba de entrada ni pasar la valvula al
+     taller, porque no hay con que comparar. */
+  const set=num(c.setEsp);
+  if(!isFinite(set)||set<=0)
+    out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press), la de la placa', paso:2});
   if(!String(c.asFound||'').trim())
     out.push({id:'pv-asFound', que:'el disparo de entrada (as-found, TEST 1)', paso:2});
   if(!c.rcVeredicto)
-    out.push({id:'pv-rcVeredicto', que:'decir si la válvula se acepta o se rechaza', paso:2});
+    out.push({id:'pv-rcVeredicto', que:'marcar el resultado de la prueba de entrada', paso:2});
   if(c.rcVeredicto==='rechaza'&&!String(c.rcMotivo||'').trim())
     out.push({id:'pv-rcMotivo', que:'el motivo del rechazo', paso:2});
   if(!(c.firmas||[]).some(f=>f.rol==='recep'&&f.img))
@@ -7112,9 +7140,8 @@ function psvFaltantes(c){
   if(!paresFoto(c).filter(x=>x.a||x.d).length)
     out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme',paso:3});
   /* 4 · la prueba */
-  const set=num(c.setEsp);
-  if(!isFinite(set)||set<=0)
-    out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press)',paso:4});
+  /* Ya se pide arriba, en la prueba de entrada: sin ella no hay contra
+     qué comparar el disparo. */
   const llenos=valoresDisparo(c).length;
   if(llenos<3)disparosDe(c).forEach((t,i)=>{
     const v=num(t.v);
@@ -7538,7 +7565,7 @@ const RECEP_VALVULA=[
  ['rcMaterial','Material del cuerpo','El del cuerpo, no el del disco. Sale en la placa: SA-216 WCB, acero inoxidable 316…'],
  ['rcTempW',   'Temperatura de trabajo','La del servicio, con su unidad. Va al protocolo tal cual se escriba.'],
  ['rcBonete',  'Bonete','Cerrado, abierto, con fuelle. Decide si la contrapresión afecta al seteo.'],
- ['rcCaperuza','Caperuza (cap · tapa)','Atornillada, con palanca, precintada. Es lo que hay que quitar para regular.'],
+ ['rcCaperuza','Capacidad','La capacidad de descarga de la válvula, la que va en la placa.'],
  ['rcDiseno',  'Diseño','Convencional, balanceada por fuelle, piloto-operada.'],
  ['rcConexion','Conexión','Bridada, roscada NPT, soldada.'],
  ['rcCdpt',    'CDPT','El código de punto del cliente, si lo maneja.']
@@ -7635,18 +7662,17 @@ function bloqueRecepcion(t,a,ayuda,F){
       ayuda('Lo que se ve al recibirla y no cabe en ningún campo: precintos rotos, golpes, si vino sin caperuza. Se imprime en el protocolo.')}</label>
       <textarea class="inp" id="pv-rcComent" rows="2" oninput="psvCampo('rcComent',this.value)">${esc(t.rcComent||'')}</textarea></div>
 
-    <h4 class="snc-sec">¿Se acepta la válvula?
-      <span class="opc">esto es lo que abre la puerta al taller</span></h4>
+    <h4 class="snc-sec">Resultado de la prueba de entrada
+      <span class="opc">cómo llegó · los tres casos pasan a mantenimiento; lo que cambia es lo que dice el papel</span></h4>
     <div class="rc-vd">
-      ${[['acepta','Aceptada','Entra a mantenimiento','ok'],
-         ['rechaza','Rechazada','Se devuelve al cliente','late']].map(([k,n,d,tono])=>`
+      ${RC_VEREDICTOS.map(([k,n,d,tono])=>`
         <label class="rc-op ${t.rcVeredicto===k?'on '+tono:''}">
           <input type="radio" name="rcVd" value="${k}" ${t.rcVeredicto===k?'checked':''}
             onchange="psvRecepVeredicto('${k}')">
           <span><b>${n}</b><small>${d}</small></span></label>`).join('')}
     </div>
     ${t.rcVeredicto==='rechaza'?`<div class="fld" style="margin-top:10px">
-      <label for="pv-rcMotivo">Por qué se rechaza <span class="req-dot">*</span>${
+      <label for="pv-rcMotivo">Por qué no supera la prueba <span class="req-dot">*</span>${
         ayuda('El motivo va al protocolo y es lo que el cliente lee. Sin él no se puede devolver la válvula por escrito.')}</label>
       <textarea class="inp" id="pv-rcMotivo" rows="2" oninput="psvCampo('rcMotivo',this.value)">${esc(t.rcMotivo||'')}</textarea></div>`:''}
     <div id="pvFirmaRecep"></div>
@@ -7672,7 +7698,7 @@ function pintarFirmaRecepcion(){
   caja.innerHTML=`<div class="fpsv ${f?'ok':''}" id="pvFirmaRec" style="margin-top:12px">
     <div class="fpsv-t"><b>Firma del mecánico que hizo la prueba</b>
       <span>${f?`Firmada por ${esc(f.n)}${f.cargo?' · '+esc(f.cargo):''} el ${fPE(f.f)}`
-        :vd==='rechaza'?'Firma la devolución: es la constancia de que la válvula se rechazó y por qué.'
+        :vd==='rechaza'?'Firma el resultado: es la constancia de que la válvula no superó la prueba y por qué.'
         :'Quien le dio el disparo de entrada. Con su firma la válvula queda recibida y puede entrar al taller.'}</span></div>
     ${f?`<img class="fpsv-img" src="${f.img}" alt="Firma de ${esc(f.n)}">`:''}
     <div class="fpsv-b">
@@ -7683,7 +7709,7 @@ function pintarFirmaRecepcion(){
 }
 function firmarRecepcion(){
   if(!PSV_TMP)return;
-  if(!PSV_TMP.rcVeredicto){toast('Marca antes si la válvula se acepta o se rechaza');return}
+  if(!PSV_TMP.rcVeredicto){toast('Marca antes el resultado: supera, no supera o calibrar');return}
   if(PSV_TMP.rcVeredicto==='rechaza'&&!String(PSV_TMP.rcMotivo||'').trim()){
     toast('Escribe por qué se rechaza');$('#pv-rcMotivo')&&$('#pv-rcMotivo').focus();return}
   PSV_FIRMA_VUELTA=PSV_TMP.act;
@@ -7698,9 +7724,13 @@ function quitarFirmaRecepcion(){
 }
 /* ¿Está cerrada la prueba de entrada? Con esto se decide si la orden
    puede pasar de «OC recibida» a «En mantenimiento». */
+/* Cerrada = tiene los cuatro datos con los que se firma: la presión de
+   ajuste de la placa, el disparo con el que llegó, el resultado y la
+   firma del mecánico. */
 function recepcionCerrada(c){
   if(!c)return false;
   return !!String(c.asFound||'').trim()
+      && num(c.setEsp)>0
       && !!c.rcVeredicto
       && (c.rcVeredicto!=='rechaza'||!!String(c.rcMotivo||'').trim())
       && (c.firmas||[]).some(f=>f.rol==='recep'&&f.img);
@@ -7709,6 +7739,18 @@ function recepcionCerrada(c){
    ya no corta el paso: una válvula rechazada recorre las mismas
    columnas y su rechazo viaja escrito en el protocolo. */
 const recepcionAcepta=c=>recepcionCerrada(c)&&c.rcVeredicto==='acepta';
+/* Los tres resultados de la prueba de entrada, en un solo sitio: el
+   formulario, el protocolo impreso y los avisos leen de aquí.
+   «Supera» y «no supera» hablan del disparo con el que llegó;
+   «calibrar» es el caso de siempre —abre bien o mal, pero viene a que
+   se le ajuste el set—. Los tres dejan entrar la válvula al taller: lo
+   que decide el camino es el papel, no una puerta cerrada. */
+const RC_VEREDICTOS=[
+ ['acepta', 'Supera la prueba',    'Disparó dentro de tolerancia',      'ok'],
+ ['rechaza','No supera la prueba', 'Disparó fuera de tolerancia',       'late'],
+ ['calibra','Calibrar',            'Entra a que se le ajuste el set',   'due']
+];
+const rcTexto=k=>(RC_VEREDICTOS.find(x=>x[0]===k)||[])[1]||'Pendiente';
 /* El papel de entrada de una válvula: el borrador que haya, o el
    ensayo que cuelgue de su orden. Es el mismo que abre openPSV. */
 /* AQUÍ ESTABA EL ATASCO. Se buscaba el ensayo «incompleto» y, si no,
@@ -8728,7 +8770,8 @@ function guardarPSV(emitir,seguir){
   registrar('Ensayo PSV', v.estado==='incompleto'
     ? `${a.tag||''} · borrador guardado`
     : `${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
-  toast(v.estado==='incompleto' ? 'Borrador guardado · puedes seguir después'
+  toast(v.estado==='incompleto'
+      ? 'Borrador guardado · sigue desde la misma tarjeta en Órdenes de trabajo, o desde la válvula'
       : `Ensayo ${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}${orden?` · orden ${orden.n} cerrada`:''}`);
   const id=t.id;
   /* «seguir» graba pero deja el formulario abierto: lo usa la firma,
@@ -9284,9 +9327,10 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
 .af .v small{font-size:9.5px;font-weight:500;color:#5b6470}
 .af .n{padding:8px 12px;font-size:8.4px;color:#5b6470;display:flex;align-items:center;margin-left:auto;text-align:right}
 .vd{display:flex;align-items:center;gap:10px;margin-top:9px;padding:9px 13px;border-radius:7px;
-  border:1.5px solid ${vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':'#cfd4d9'};
-  background:${vd==='rechaza'?'#fdf1ef':vd==='acepta'?'#eef7f2':'#fafbfc'}}
-.vd b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:${vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':'#8a929c'}}
+  border:1.5px solid ${vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':vd==='calibra'?'#b46a12':'#cfd4d9'};
+  background:${vd==='rechaza'?'#fdf1ef':vd==='acepta'?'#eef7f2':vd==='calibra'?'#fdf6ec':'#fafbfc'}}
+.vd b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:${
+  vd==='rechaza'?'#c0392b':vd==='acepta'?'#1a7f52':vd==='calibra'?'#b46a12':'#8a929c'}}
 .vd span{font-size:9px;color:#5b6470}
 .txt{border:1px solid #e4e7ea;border-radius:7px;padding:7px 10px;min-height:34px;font-size:9.6px;white-space:pre-wrap}
 .fir{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}
@@ -9334,9 +9378,10 @@ h2{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;c
     ${c.setEsp?esc(c.setEsp)+' '+esc(c.und||'psi'):'—'}</span>
 </div>
 <div class="vd">
-  <b>${vd==='acepta'?'Aceptada':vd==='rechaza'?'Rechazada':'Pendiente'}</b>
-  <span>${vd==='acepta'?'La válvula queda recibida y pasa a mantenimiento.'
-    :vd==='rechaza'?esc(c.rcMotivo||'Se devuelve al cliente.')
+  <b>${esc(rcTexto(vd))}</b>
+  <span>${vd==='acepta'?'Disparó dentro de tolerancia. Queda recibida y pasa a mantenimiento.'
+    :vd==='calibra'?'Entra a mantenimiento para ajustarle la presión de ajuste.'
+    :vd==='rechaza'?esc(c.rcMotivo||'Disparó fuera de tolerancia.')
     :'Todavía no se ha decidido si se acepta o se devuelve.'}</span>
 </div>
 <h2>Comentarios</h2>
@@ -11340,7 +11385,7 @@ function tomarOrden(id,grupo){
   const a=ACTIVOS.find(x=>x.id===o.act)||{};
   /* Si la orden lleva varias válvulas, el ingeniero se hace cargo de
      todas de una vez: es un trabajo, no tres. */
-  const ls=grupo?ORDENES.filter(x=>grupoDe(x)===grupo&&x.et===o.et):[o];
+  let ls=grupo?ORDENES.filter(x=>grupoDe(x)===grupo&&x.et===o.et):[o];
   /* Nada entra al taller sin su prueba de entrada firmada. Es el orden
      de siempre en el mostrador: se recibe, se le da un disparo tal
      como vino, se firma y ahí se decide si pasa o se devuelve. Sin ese
@@ -11351,8 +11396,13 @@ function tomarOrden(id,grupo){
      certificado—: el rechazo queda escrito en su protocolo y en el
      certificado, que es donde tiene que estar. Cortarle el paso aquí
      dejaba el trabajo sin papeles y a la válvula en tierra de nadie. */
+  /* Cada válvula viaja con su propio papel: la que ya tiene la prueba
+     de entrada cerrada entra al taller aunque su compañera siga en el
+     mostrador. Antes se esperaban todas, y una válvula lista se quedaba
+     parada por otra que ni había llegado al banco. */
   const sinPapel=ls.filter(x=>!recepcionCerrada(recepDe(x.act)));
-  if(sinPapel.length){
+  const listas=ls.filter(x=>recepcionCerrada(recepDe(x.act)));
+  if(!listas.length){
     const v=ACTIVOS.find(x=>x.id===sinPapel[0].act)||{};
     toast(sinPapel.length>1
       ? `Faltan ${sinPapel.length} pruebas de entrada · empieza por ${v.tag||v.ser||''}`
@@ -11360,6 +11410,9 @@ function tomarOrden(id,grupo){
     pruebaDeEntrada(sinPapel[0].act);
     return;
   }
+  ls=listas;
+  if(sinPapel.length)setTimeout(()=>toast(`${sinPapel.length} válvula${sinPapel.length===1?'':'s'} se queda${
+    sinPapel.length===1?'':'n'} en prueba de entrada hasta tener su protocolo`),900);
   const rechazadas=ls.filter(x=>{const r=recepDe(x.act);return r&&r.rcVeredicto==='rechaza'});
   if(rechazadas.length)
     setTimeout(()=>toast(`Ojo: ${rechazadas.length} válvula${rechazadas.length===1?'':'s'} llegó${
@@ -12176,7 +12229,10 @@ function renderWO(){
           ${/* La etiqueta que se pega en la válvula: aparece en cuanto la
                orden se acepta y la válvula entra a la casa. Antes había
                que abrir el detalle para encontrarla. */''}
-          ${G.et!=='oc'&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+          ${/* La etiqueta es DE INGRESO: se genera al aceptar la orden y
+               se pega al recibir la válvula. En mantenimiento ya está
+               pegada, así que el botón desaparece. */''}
+          ${G.et==='ent'&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();imprimirEtiqueta('${o.act}')" title="La etiqueta de ingreso que se pega en la válvula">
             <svg viewBox="0 0 24 24"><path d="M3 7h11l6 5-6 5H3z"/><circle cx="7.5" cy="12" r="1.2"/></svg>Etiqueta${varias?'s':''}</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
@@ -14453,8 +14509,9 @@ function faltaParaFinalizar(o){
   if(o.et==='ent'){
     const r=recepDe(o.act);
     const f=[];
+    if(!(num((r||{}).setEsp)>0)) f.push('La presión de ajuste requerida (set press), la de la placa');
     if(!String((r||{}).asFound||'').trim()) f.push('El disparo de entrada (as-found, TEST 1)');
-    if(!(r||{}).rcVeredicto)                f.push('Decir si la válvula se acepta o se rechaza');
+    if(!(r||{}).rcVeredicto)                f.push('Marcar el resultado de la prueba de entrada');
     if(!((r||{}).firmas||[]).some(x=>x.rol==='recep'&&x.img)) f.push('La firma del mecánico que hizo la prueba');
     return {listo:false, falta:f.length?f:['Pasarla a mantenimiento']};
   }
