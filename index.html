@@ -2264,7 +2264,15 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   /* el diálogo llega casi al borde y se ancla abajo, donde está el
      pulgar; el velo sigue cubriendo la pantalla entera */
   .modal{padding:var(--sp-3);align-items:flex-end}
-  .modal-c{max-height:90dvh;margin-bottom:env(safe-area-inset-bottom)}
+  .modal-c{max-height:88dvh;margin-bottom:env(safe-area-inset-bottom)}
+  /* En una tablet el cuadro va CENTRADO. Anclado abajo, al tocar un
+     campo el teclado lo tapaba entero y se escribía a ciegas: en un
+     teléfono el diálogo ocupa casi toda la pantalla y sube con el
+     teclado, pero en una tablet de diez pulgadas se quedaba debajo. */
+  @media(min-width:600px){
+    .modal{align-items:center;padding:var(--sp-4)}
+    .modal-c{max-height:86dvh;margin-bottom:0}
+  }
   .modal-h{padding:var(--sp-3) var(--sp-4)}
   .modal-b{padding:var(--sp-4);padding-bottom:var(--sp-5)}
   .modal-f{padding:var(--sp-3) var(--sp-4);gap:8px}
@@ -5083,7 +5091,13 @@ function verOrden(idOrAct,esActivo){
               /* Terminada: el jefe entra a LEER lo que puso el taller
                  y a poner su visto bueno. Es el último paso antes del
                  certificado. */
-              :(x.et==='final'||x.et==='cert') ? `<button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
+              /* En prueba de salida lo primero son los tres disparos:
+                 cada válvula tiene los suyos y se hacen de una en una.
+                 Después ya firma el jefe. */
+              :x.et==='cert' ? `<button class="btn sec xs" onclick="closeModal();openPSV('${x.act}',null,'salida')">Prueba de salida</button>
+                 <button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
+                   S.rol==='admin'?'Revisar y firmar':'Ver lo que se hizo'}</button>`
+              :x.et==='final' ? `<button class="btn ${S.rol==='admin'?'sec':'quiet'} xs" onclick="closeModal();revisarYFirmar('${x.id}')">${
                   S.rol==='admin'?'Revisar y firmar':'Ver lo que se hizo'}</button>`
               :`<button class="btn quiet xs" onclick="closeModal();registrarEnsayoDeOrden('${x.id}')">Hacer el mantenimiento</button>`}
           </div>`}).join('')}</div>
@@ -5117,12 +5131,12 @@ function verOrden(idOrAct,esActivo){
   const porEntrar=ls.filter(x=>x.et===etC).length;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>
     ${enEspera||varias?'':`<button class="btn sec" onclick="closeModal();verEquipo('${o.act}')">Ver el equipo</button>`}
-    ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
+    ${cliente||enEspera?'':`<button class="btn sec" onclick="imprimirEtiqueta('${o.act}',null,'${grupoDe(o)}')" title="La etiqueta que se pega en la válvula">Etiqueta${varias?'s':''}</button>`}
     ${!cliente&&enRecepcion&&!varias?`<button class="btn sec" onclick="closeModal();pruebaDeEntrada('${o.act}')">Prueba de entrada</button>`:''}
     ${!cliente&&enRecepcion&&recepDe(o.act)?`<button class="btn sec" onclick="imprimirRecepcion('${recepDe(o.act).id}')">Imprimir el protocolo</button>`:''}
-    ${!cliente&&(etC==='final'||etC==='cert')?`<button class="btn sec" onclick="imprimirInforme('${o.id}')"
-       title="El informe DVAD-SER-002 con todas las válvulas de esta orden">Informe técnico</button>
-      <button class="btn sec" onclick="informeWord('${o.id}')" title="El mismo informe, en Word para editarlo">Informe en Word</button>`:''}
+    ${!cliente&&(etC==='final'||etC==='cert')?`<button class="btn sec" onclick="elegirInforme('${o.id}')"
+       title="El informe DVAD-SER-002: de una válvula o el general de la orden">Informe técnico</button>
+      ${varias?'':`<button class="btn sec" onclick="informeWord('${o.id}')" title="El mismo informe, en Word para editarlo">Informe en Word</button>`}`:''}
     ${!cliente&&etC==='final'&&certificadosDeOrden(o.id).length?(()=>{
       /* El jefe es el último que mira. Una orden de dos válvulas son
          dos certificados; se los puede llevar sueltos o en un solo
@@ -5183,19 +5197,27 @@ function fechaPeru(d){
       day:'2-digit',month:'2-digit',year:'numeric'}).format(d||new Date());
   }catch(e){ return fPE((d||new Date()).toISOString().slice(0,10)) }
 }
-function datosEtiqueta(actId){
+function datosEtiqueta(actId,grupo){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
   const m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  /* Si se dice de qué orden es la etiqueta —al recibirla, por ejemplo—
+     manda esa: la válvula podría tener otra abierta y la etiqueta que
+     se está pegando es la del trabajo que acaba de entrar. */
+  const dicha=grupo?ORDENES.find(o=>o.act===a.id&&grupoDe(o)===grupo):null;
   /* La orden abierta manda: la etiqueta se pega cuando la válvula ENTRA,
      así que lo que identifica es el trabajo en curso, no el anterior. */
   const abierta=ORDENES.filter(o=>o.act===a.id&&o.et!=='final')
     .sort((x,y)=>String(y.f||'').localeCompare(String(x.f||'')))[0];
   const ultima=ORDENES.filter(o=>o.act===a.id)
     .sort((x,y)=>String(y.f||'').localeCompare(String(x.f||'')))[0];
-  const orden=abierta||ultima||null;
+  const orden=dicha||abierta||ultima||null;
   const set=a.rng||'';
   return {a,m,e,orden,set,
-    mat:orden?(orden.mat||orden.n||''):'',
+    /* Con varias válvulas en la misma OC, cada una lleva su número de
+       línea —001-1, 001-2—: es lo que distingue una etiqueta de la
+       otra cuando las dos vienen del mismo trabajo. */
+    mat:orden?codigoLinea(orden):'',
+    grupo:orden?grupoDe(orden):'',
     tipo:orden?(orden.tipo||''):'',
     /* La fecha que importa es la de ingreso: cuándo entró al taller.
        Si el ingeniero ya la tomó, esa es la buena; si no, la de la
@@ -5214,8 +5236,8 @@ function datosEtiqueta(actId){
    en el banco, eso es lo único que evita confundir una con otra.
    Todo va centrado: la etiqueta se lee de frente, pegada al cuerpo de
    la válvula, no en una lista. */
-function etiquetaHTML(actId,tam){
-  const D=datosEtiqueta(actId); if(!D)return '';
+function etiquetaHTML(actId,tam,grupo){
+  const D=datosEtiqueta(actId,grupo); if(!D)return '';
   const {a,m,e,set,mat,tipo,ingreso,horaIngreso,ing,etapa}=D;
   const marca=LOGO.replace('<svg ','<svg class="et-lg" ');
   const chico=tam==='p', grande=tam==='g';
@@ -5229,8 +5251,7 @@ function etiquetaHTML(actId,tam){
      media pregunta menos en el taller. */
   if(!chico&&ing)pie.push(['Recibe',ing]);
   return `<div class="et et-${tam}">
-    <div class="et-cab">${marca}<span class="et-emp">ADOLPHUS S.A.</span>
-      ${tipo&&!chico?`<span class="et-vd">${esc(tipo.toUpperCase())}</span>`:''}</div>
+    <div class="et-cab">${marca}<span class="et-emp">ADOLPHUS S.A.</span></div>
     <div class="et-orden"><span>ORDEN</span><b>${esc(mat||'sin orden')}</b></div>
     <div class="et-tag">${esc(a.tag||a.ser||'—')}</div>
     <div class="et-emp2">${esc(e.n||'')}</div>
@@ -5240,21 +5261,31 @@ function etiquetaHTML(actId,tam){
     ${grande&&etapa?`<div class="et-nota">${esc(etapa)}</div>`:''}
   </div>`;
 }
-let ETIQ={act:null, tam:'m', copias:1, extra:[]};
-function imprimirEtiqueta(actId){
-  const D=datosEtiqueta(actId);
+let ETIQ={act:null, tam:'m', copias:1, extra:[], luego:null};
+/* `luego` es la válvula a la que se sigue cuando la etiqueta se abre
+   sola al recibir la orden: primero se rotula lo que acaba de llegar y
+   después se hace la prueba de entrada. */
+function imprimirEtiqueta(actId,luego,grupo){
+  const D=datosEtiqueta(actId,grupo);
   if(!D){toast('No encuentro la válvula');return}
-  ETIQ={act:actId, tam:ETIQ.tam||'m', copias:1, extra:[]};
+  ETIQ={act:actId, tam:ETIQ.tam||'m', copias:1, extra:[], luego:luego||null, grupo:grupo||D.grupo||''};
   /* Las demás válvulas del mismo cliente que ya tienen ensayo: si el
      taller cerró ocho, las ocho salen en la misma hoja. */
   /* Las que entraron con la misma orden: se imprimen juntas, que es
      como llegan al banco. Si no hay orden, las demás de la empresa con
      una abierta. */
+  /* Las que entraron con la misma orden: se rotulan juntas, que es como
+     llegan al banco. */
+  const g=ETIQ.grupo;
   ETIQ.hermanas=ACTIVOS.filter(x=>{
     if(x.cli!==D.a.cli||x.id===actId)return false;
+    if(g)return ORDENES.some(o=>o.act===x.id&&grupoDe(o)===g);
     const o=datosEtiqueta(x.id);
-    return D.mat ? (o&&o.mat===D.mat) : !!(o&&o.mat);
+    return !!(o&&o.mat);
   });
+  /* Una etiqueta por válvula: si la orden trae tres, salen las tres
+     marcadas. Nadie manda a rotular la mitad de un trabajo. */
+  if(g)ETIQ.extra=ETIQ.hermanas.map(x=>x.id);
   $('#mTitle').textContent=`Etiqueta de ingreso · ${D.a.tag||D.a.ser||'la válvula'}`;
   pintarEtiqueta();
   $('#modal').classList.add('on');
@@ -5265,7 +5296,7 @@ function etiqHermana(id,on){
   pintarEtiqueta();
 }
 function pintarEtiqueta(){
-  const D=datosEtiqueta(ETIQ.act); if(!D)return;
+  const D=datosEtiqueta(ETIQ.act,ETIQ.grupo); if(!D)return;
   /* La hoja de estilo de la etiqueta se mete una vez en la página, la
      misma que se manda a imprimir: lo que se ve es lo que sale. */
   if(!document.getElementById('etiqCSS')){
@@ -5294,18 +5325,35 @@ function pintarEtiqueta(){
       <input type="checkbox" ${ETIQ.extra.includes(x.id)?'checked':''} onchange="etiqHermana('${x.id}',this.checked)">
       <span class="py-tag mono">${esc(x.tag||x.ser||'')}</span>
       <span class="py-sub">${esc((MODELOS[x.mod]||{}).m||'')} ${esc(x.mod||'')}</span></label>`).join('')}</div>`:''}
-    <h4 class="snc-sec">Así queda</h4>
-    <div class="et-prev">${etiquetaHTML(ETIQ.act,ETIQ.tam)}</div>
+    <h4 class="snc-sec">Así queda${ETIQ.extra.length?` <span class="opc">una por válvula</span>`:''}</h4>
+    ${/* Se enseñan todas, no sólo la primera: con dos válvulas de la
+         misma OC lo que hay que ver es que una diga -1 y la otra -2. */''}
+    <div class="et-prev">${etiqEnOrden().map(id=>etiquetaHTML(id,ETIQ.tam,ETIQ.grupo)).join('')}</div>
     <p class="hint">${total} etiqueta${total===1?'':'s'} · ${Math.ceil(total/porHoja)} hoja${Math.ceil(total/porHoja)===1?'':'s'} A4.
       Imprime al <b>100 %</b>, sin «ajustar a la página», o el tamaño no sale.</p>`;
-  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cerrar</button>
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="${ETIQ.luego?'etiquetaSeguir()':'closeModal()'}">${ETIQ.luego?'Ahora no':'Cerrar'}</button>
     <span style="flex:1"></span>
-    <button class="btn" onclick="etiquetasAImprimir()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Imprimir ${total}</button>`;
+    <button class="btn ${ETIQ.luego?'sec':''}" onclick="etiquetasAImprimir()"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Imprimir ${total}</button>
+    ${ETIQ.luego?`<button class="btn" onclick="etiquetaSeguir()">Seguir a la prueba de entrada</button>`:''}`;
+}
+/* De la etiqueta al protocolo: la válvula ya está rotulada, ahora se
+   prueba. */
+function etiquetaSeguir(){
+  const a=ETIQ.luego; ETIQ.luego=null;
+  closeModal();
+  if(a)setTimeout(()=>pruebaDeEntrada(a),180);
+}
+/* Por número de línea: la 001-1 antes que la 001-2, tanto en la vista
+   previa como en la hoja. */
+function etiqEnOrden(){
+  const cod=id=>String((datosEtiqueta(id,ETIQ.grupo)||{}).mat||'');
+  return [ETIQ.act].concat(ETIQ.extra)
+    .sort((x,y)=>cod(x).localeCompare(cod(y),'es',{numeric:true}));
 }
 function etiquetasAImprimir(){
-  const ids=[ETIQ.act].concat(ETIQ.extra);
+  const ids=etiqEnOrden();
   const trozos=[];
-  ids.forEach(id=>{for(let k=0;k<ETIQ.copias;k++)trozos.push(etiquetaHTML(id,ETIQ.tam))});
+  ids.forEach(id=>{for(let k=0;k<ETIQ.copias;k++)trozos.push(etiquetaHTML(id,ETIQ.tam,ETIQ.grupo))});
   if(!trozos.length){toast('No hay nada que imprimir');return}
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
@@ -5342,8 +5390,8 @@ const ETIQUETA_CSS=`
 .et-cab{display:flex;align-items:center;justify-content:center;gap:1.6mm;width:100%;margin-top:1mm}
 .et-cab .et-lg{width:3.2mm;height:4mm;flex:0 0 auto}
 .et-emp{font-size:2.2mm;letter-spacing:.11em;font-weight:700;color:#8a929c}
-.et-vd{font-size:2.1mm;font-weight:700;letter-spacing:.06em;padding:.4mm 1.4mm;border-radius:1mm;
-  color:#102d69;background:#e9eef7}
+/* La vista previa del diálogo: una etiqueta por válvula, en fila. */
+.et-prev{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 /* La orden: es el dato con el que el taller busca la válvula */
 .et-orden{display:flex;align-items:baseline;justify-content:center;gap:1.6mm;
   padding:.7mm 2.6mm;border:1.2px solid #102d69;border-radius:1.4mm;background:#f4f7fc}
@@ -7466,6 +7514,35 @@ const firmantesDe=cliId=>{
 /* ── El ensayo ───────────────────────────────────────────────*/
 let PSV_TMP=null;
 
+/* ── UN PAPEL POR ORDEN ──────────────────────────────────────
+   La misma válvula vuelve al taller cada año y cada vez es un trabajo
+   distinto: sus fotos, su desarme, sus disparos. El formulario se
+   abría con lo último que hubiera de esa válvula, así que una orden
+   nueva aparecía con las fotos del servicio anterior ya puestas.
+   Ahora cada ensayo queda amarrado a la línea de orden con la que se
+   hizo —el campo `ord`— y una orden nueva empieza en blanco. Los
+   papeles viejos, que no lo traen, se los queda la orden con la que
+   convivieron: la última que ya existía cuando se escribieron.
+   ════════════════════════════════════════════════════════════ */
+function ordenViva(actId){
+  return ORDENES.filter(x=>x.act===actId&&x.et!=='final'&&!x.arch)
+    .sort((p,q)=>String(q.f||'').localeCompare(String(p.f||'')))[0]||null;
+}
+function psvDeEstaOrden(x,o){
+  if(!x)return false;
+  if(!o)return true;                       // sin orden abierta no hay nada que separar
+  if(x.ord){
+    if(x.ord===o.id)return true;
+    const suya=ORDENES.find(z=>z.id===x.ord);
+    return !!suya&&grupoDe(suya)===grupoDe(o);
+  }
+  if(ORDENES.some(z=>z.calib===x.id&&grupoDe(z)!==grupoDe(o)))return false;
+  const suyo=x.rcFecha||x.fecha||'';
+  const lineas=ORDENES.filter(z=>z.act===x.act)
+    .sort((p,q)=>String(p.f||'').localeCompare(String(q.f||'')));
+  const dueno=lineas.filter(z=>!z.f||!suyo||String(z.f)<=String(suyo)).pop()||lineas[0];
+  return !dueno||grupoDe(dueno)===grupoDe(o);
+}
 function psvNuevo(actId){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
   const prev=CALIBS.filter(c=>c.act===a.id&&c.tipo==='psv')
@@ -7473,6 +7550,9 @@ function psvNuevo(actId){
   const h=HOY.toISOString().slice(0,10);
   return {
     id:'', act:a.id, tipo:'psv', cli:a.cli,
+    /* De qué orden es este papel: lo que impide que el trabajo de hoy
+       se abra con las fotos del del año pasado. */
+    ord:(ordenViva(a.id)||{}).id||'',
     /* Si esta válvula ya tuvo una orden de servicio, se respeta la
        suya; si es nueva, se le da el siguiente número de la casa. */
     /* La orden de servicio del ensayo: la de la orden abierta de esta
@@ -7564,12 +7644,11 @@ function openPSV(actId,edit,seccion){
      creer que se habían borrado los datos: no se borraban, se
      escondían detrás de un formulario nuevo. */
   if(!c&&actId){
-    c=CALIBS.find(x=>x.act===actId&&x.tipo==='psv'&&x.veredicto==='incompleto');
+    const o=ordenViva(actId);
+    c=CALIBS.find(x=>x.act===actId&&x.tipo==='psv'&&x.veredicto==='incompleto'&&psvDeEstaOrden(x,o));
     if(!c){
-      const o=ORDENES.filter(x=>x.act===actId)
-        .sort((p,q)=>String(q.f||'').localeCompare(String(p.f||'')))
-        .find(x=>x.et!=='final')||ORDENES.find(x=>x.act===actId&&x.calib);
-      if(o&&o.calib)c=CALIBS.find(x=>x.id===o.calib);
+      const z=o||ORDENES.find(x=>x.act===actId&&x.calib);
+      if(z&&z.calib)c=CALIBS.find(x=>x.id===z.calib);
     }
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
@@ -7579,6 +7658,13 @@ function openPSV(actId,edit,seccion){
      alguien lo edita creyendo que empieza de cero. */
   const yaEmitido=!!c&&c.veredicto&&c.veredicto!=='incompleto';
   PSV_TMP=c?JSON.parse(JSON.stringify(c)):psvNuevo(a.id);
+  /* El mecánico que recibió y la fecha son de la orden: si se apuntaron
+     al aceptarla, mandan sobre lo que traiga el papel. Así las dos
+     válvulas de la misma OC no acaban con recepciones distintas. */
+  if(PSV_TMP){
+    const ord=ordenViva(PSV_TMP.act);
+    if(ord&&ord.recibe){ PSV_TMP.rcRecibe=ord.recibe; PSV_TMP.rcFecha=ord.recibida||PSV_TMP.rcFecha; }
+  }
   if(retomado)setTimeout(()=>toast('Seguimos con el borrador que quedó a medias'),300);
   if(!PSV_TMP)return;
   /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
@@ -7702,11 +7788,25 @@ function bloqueRecepcion(t,a,ayuda,F){
       <span class="opc">se guarda en su ficha: la próxima vez ya sale puesto</span></h4>
     <div class="two">${RECEP_VALVULA.map(([k,l,p])=>campo(k,l,p)).join('')}</div>
 
-    <h4 class="snc-sec">Quién la probó y cuándo</h4>
-    <div class="two">
-      ${F('rcRecibe','Mecánico que hizo la prueba','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
-      ${F('rcFecha','Fecha en que se probó','El día en que se le dio el disparo de entrada. Va al protocolo.','date')}
-    </div>
+    ${/* Quién recibió y qué día es de la ORDEN DE SERVICIO, no de cada
+         válvula: se escribió una vez al aceptarla y vale para todas las
+         que vinieron en ella. Preguntarlo válvula por válvula era pedir
+         tres veces el mismo dato —y arriesgar tres respuestas. */''}
+    ${(()=>{
+      const ord=ordenViva(t.act);
+      if(ord&&ord.recibe)
+        return `<h4 class="snc-sec">Quién la probó y cuándo
+            <span class="opc">se apuntó al recibir ${esc(codigoLinea(ord)||ord.n||'la orden')} · vale para todas sus válvulas</span></h4>
+          <div class="rc-auto">
+            <div class="rc-a"><span>Mecánico que hizo la prueba</span><b>${esc(ord.recibe)}</b></div>
+            <div class="rc-a"><span>Fecha en que se probó</span><b>${esc(fPE(ord.recibida||t.rcFecha||''))}</b></div>
+          </div>`;
+      return `<h4 class="snc-sec">Quién la probó y cuándo</h4>
+        <div class="two">
+          ${F('rcRecibe','Mecánico que hizo la prueba','El nombre que se apuntó al recibirla. Es quien firma el protocolo abajo.')}
+          ${F('rcFecha','Fecha en que se probó','El día en que se le dio el disparo de entrada. Va al protocolo.','date')}
+        </div>`;
+    })()}
 
     <h4 class="snc-sec">Perno de regulación
       <span class="opc">altura antes de tocarlo y al terminar</span></h4>
@@ -7830,13 +7930,17 @@ const rcTexto=k=>(RC_VEREDICTOS.find(x=>x[0]===k)||[])[1]||'Pendiente';
    Ahora, si no hay borrador ni enlace, se coge el ensayo más reciente
    de esa válvula, que es el que se está haciendo. */
 function recepDe(actId){
-  const mios=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv');
+  const todos=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv');
+  if(!todos.length)return null;
+  /* Sólo los papeles de la orden en curso: los de servicios anteriores
+     no son «el mantenimiento de esta orden», y darlos por buenos hacía
+     pasar la válvula sin haberla probado esta vez. */
+  const abierta=ordenViva(actId);
+  const mios=todos.filter(x=>psvDeEstaOrden(x,abierta));
   if(!mios.length)return null;
   const c=mios.find(x=>x.veredicto==='incompleto');
   if(c)return c;
-  const o=ORDENES.filter(x=>x.act===actId)
-    .sort((p,q)=>String(q.f||'').localeCompare(String(p.f||'')))
-    .find(x=>x.et!=='final')||ORDENES.find(x=>x.act===actId&&x.calib);
+  const o=abierta||ORDENES.find(x=>x.act===actId&&x.calib);
   if(o&&o.calib){
     const l=mios.find(x=>x.id===o.calib);
     if(l)return l;
@@ -8806,6 +8910,9 @@ function guardarPSV(emitir,seguir){
   }
   const nuevo=!t.id;
   if(nuevo)t.id='pv'+Date.now();
+  /* Queda amarrado a la orden con la que se está trabajando: el
+     siguiente servicio de esta válvula abrirá su propio papel. */
+  if(!t.ord)t.ord=(ordenViva(t.act)||{}).id||'';
   t.veredicto=v.estado;                       // 'aprobado' | 'rechazado' | 'incompleto'
   t.prom=v.estado==='incompleto'?null:v.prom;
   t.desv=v.estado==='incompleto'?null:v.desv;
@@ -9254,11 +9361,20 @@ function verPSV(id){
   /* El visto bueno de gerencia es lo último que le falta al
      certificado: si no está, es LA acción de esta pantalla. */
   const faltaVb=!cliente&&S.rol==='admin'&&!(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img);
+  /* Si la válvula está en PRUEBA DE SALIDA y todavía le faltan los
+     disparos, lo que toca no es firmar: es dispararla. El botón lleva
+     derecho al cuadro 4 —los tres test— en vez de dejar al jefe
+     buscando por dónde se meten. */
+  const enSalida=!cliente&&ORDENES.some(x=>x.act===a.id&&x.et==='cert');
+  const faltanDisparos=disparosDe(c).filter(t=>num(t.v)>0).length<3;
   $('#mFoot').innerHTML=`
     ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
-    ${cliente?'':`<button class="btn ${faltaVb?'sec':''}" onclick="openPSV(null,'${c.id}')">Editar</button>`}
+    ${cliente?'':`<button class="btn ${faltaVb&&!(enSalida&&faltanDisparos)?'sec':''}" onclick="openPSV(null,'${c.id}')">Editar</button>`}
+    ${enSalida&&faltanDisparos?`<button class="btn" onclick="openPSV('${a.id}',null,'salida')"
+      title="Los tres disparos de salida del formato">
+      <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>Hacer la prueba de salida</button>`:''}
     ${faltaVb?`<button class="btn" onclick="openFirma('${c.id}','vbAdo')">
       <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Firmar el visto bueno</button>`:''}`;
   $('#modal').classList.add('on');
@@ -9562,9 +9678,17 @@ const MES_LARGO=['enero','febrero','marzo','abril','mayo','junio','julio','agost
 /* Los datos del informe: una orden (con todas sus válvulas) y el
    ensayo de cada una. Se calcula aparte del dibujo para poder
    probarlo sin abrir una ventana. */
-function datosInforme(idOrden){
+/* `solo` es la lista de líneas que se quieren en el informe: con una
+   OC de varias válvulas se puede sacar el papel de una sola —el que se
+   entrega con esa válvula— o el general con todas. Sin lista, van
+   todas, que es como estaba. */
+function datosInforme(idOrden,solo){
   const o=ORDENES.find(x=>x.id===idOrden); if(!o)return null;
-  const ls=lineasDe(o);
+  let ls=lineasDe(o);
+  if(solo&&solo.length){
+    const f=ls.filter(x=>solo.includes(x.id));
+    if(f.length)ls=f;
+  }
   const c=cli((ACTIVOS.find(a=>a.id===o.act)||{}).cli)||{};
   const items=ls.map(l=>{
     const a=ACTIVOS.find(x=>x.id===l.act)||{};
@@ -9594,11 +9718,11 @@ function datosInforme(idOrden){
   const porMedida={};
   items.forEach(x=>{const k=x.a.medida||x.a.sz||'—'; porMedida[k]=(porMedida[k]||0)+1});
   return {o,ls,c,items,conE,fecha,ejec,vb,gente,porMedida,
-          os:(conE[0]&&conE[0].e.os)||o.mat||o.n};
+          os:(conE[0]&&conE[0].e.os)||(ls.length===1?codigoLinea(ls[0]):'')||o.mat||o.n};
 }
 
-function documentoInforme(idOrden){
-  const D=datosInforme(idOrden); if(!D)return null;
+function documentoInforme(idOrden,solo){
+  const D=datosInforme(idOrden,solo); if(!D)return null;
   const {o,c,items,conE,fecha,ejec,vb,gente,porMedida,os}=D;
   const f=new Date(fecha+'T00:00:00');
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
@@ -9943,12 +10067,69 @@ ${/* Como en el Word: unos renglones en blanco para añadir a mano lo
 ${BARRA_IMPRIMIR}
 </body></html>`};
 }
-function imprimirInforme(idOrden){
-  const d=documentoInforme(idOrden);
+function imprimirInforme(idOrden,solo){
+  const d=documentoInforme(idOrden,solo);
   if(!d){toast('No encuentro esa orden');return}
   const w=window.open('','_blank');
   if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   w.document.write(d.html); w.document.close(); w.focus();
+}
+/* ── ¿DE CUÁL VÁLVULA ES EL INFORME? ─────────────────────────
+   Una OC con varias válvulas admite dos papeles distintos: el de cada
+   válvula por separado —el que se entrega con esa válvula— y el
+   general con todas. Se elige con casillas: lo marcado es lo que sale.
+   Con una sola válvula no se pregunta nada.
+   ════════════════════════════════════════════════════════════ */
+let INF_SEL={ord:null, ids:[]};
+function elegirInforme(idOrden,marcar){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o){toast('No encuentro esa orden');return}
+  const ls=lineasDe(o);
+  if(ls.length<2)return imprimirInforme(idOrden);
+  const pre=(marcar&&marcar.length?marcar:ls.map(x=>x.id)).filter(i=>ls.some(x=>x.id===i));
+  INF_SEL={ord:idOrden, ids:pre.length?pre:ls.map(x=>x.id)};
+  $('#mTitle').textContent=`Informe técnico · ${o.mat||o.n}`;
+  pintarElegirInforme();
+  $('#modal').classList.add('on');
+}
+function infMarcar(id,on){
+  INF_SEL.ids=on?INF_SEL.ids.concat([id]):INF_SEL.ids.filter(x=>x!==id);
+  pintarElegirInforme();
+}
+function infTodas(on){
+  const o=ORDENES.find(x=>x.id===INF_SEL.ord);
+  INF_SEL.ids=on&&o?lineasDe(o).map(x=>x.id):[];
+  pintarElegirInforme();
+}
+function pintarElegirInforme(){
+  const o=ORDENES.find(x=>x.id===INF_SEL.ord); if(!o)return;
+  const ls=lineasDe(o), n=INF_SEL.ids.length;
+  $('#mBody').innerHTML=`
+    <div class="callout"><svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+      <div>Marca las válvulas que van en el informe. Con <b>una</b> sale el papel de esa
+        válvula sola; con <b>varias</b>, el informe general de ${esc(o.mat||o.n)} con todas dentro.</div></div>
+    <label class="py-it" style="font-weight:600">
+      <input type="checkbox" ${n===ls.length?'checked':''} onchange="infTodas(this.checked)">
+      <span>Todas · informe general de la orden</span></label>
+    <div class="py-lista">${ls.map(l=>{
+      const a=ACTIVOS.find(x=>x.id===l.act)||{}, m=MODELOS[a.mod]||{};
+      const e=(l.calib&&CALIBS.find(x=>x.id===l.calib))||recepDe(l.act)||null;
+      const pares=e?paresFoto(e).filter(p=>p.a||p.d).length:0;
+      return `<label class="py-it">
+        <input type="checkbox" ${INF_SEL.ids.includes(l.id)?'checked':''} onchange="infMarcar('${l.id}',this.checked)">
+        <span class="py-tag mono">${esc(codigoLinea(l))}</span>
+        <span class="py-sub">${esc(a.tag||a.ser||'')} · ${esc(m.m||'')} ${esc(a.mod||'')}${
+          pares?` · ${pares} foto${pares===1?'':'s'} del desarme`:' · sin fotos todavía'}</span></label>`}).join('')}</div>
+    <p class="hint">${n?`${n} válvula${n===1?'':'s'} en el informe`:'No hay ninguna marcada'}</p>`;
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cancelar</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" ${n?'':'disabled'} onclick="infSacar(true)">Word</button>
+    <button class="btn" ${n?'':'disabled'} onclick="infSacar(false)">Ver e imprimir</button>`;
+}
+function infSacar(word){
+  if(!INF_SEL.ids.length){toast('Marca al menos una válvula');return}
+  const ord=INF_SEL.ord, ids=INF_SEL.ids.slice();
+  closeModal();
+  setTimeout(()=>(word?informeWord:imprimirInforme)(ord,ids),140);
 }
 /* Desde el propio formulario del taller: el informe de la orden a la
    que pertenece esta válvula. */
@@ -9963,10 +10144,14 @@ function informeDeValvula(word){
   guardarPSV(false,true);                       // que el papel lleve lo último escrito
   const o=ordenDeValvula(PSV_TMP.act);
   if(!o){toast('Esta válvula no está en ninguna orden');return}
-  (word?informeWord:imprimirInforme)(o.id);
+  /* Desde el formulario de una válvula se pregunta igual, pero viene
+     marcada la que se está llenando: casi siempre es la que se quiere,
+     y si hace falta el general se marca el resto. */
+  if(lineasDe(o).length>1&&!word)return elegirInforme(o.id,[o.id]);
+  (word?informeWord:imprimirInforme)(o.id,lineasDe(o).length>1?[o.id]:null);
 }
-function informeWord(idOrden){
-  const d=documentoInforme(idOrden);
+function informeWord(idOrden,solo){
+  const d=documentoInforme(idOrden,solo);
   if(!d){toast('No encuentro esa orden');return}
   const html=d.html.replace('<html lang="es">',
     '<html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">')
@@ -11456,7 +11641,10 @@ function confirmarRecibir(id){
   registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} recibida${n>1?'s':''} por ${quien} a las ${hora}`);
   toast(n>1 ? `${n} válvulas recibidas · una prueba de entrada por cada una`
             : `Recibida · ahora la prueba de entrada`);
-  pruebaDeEntrada(ls[0].act);
+  /* La etiqueta se pega cuando la válvula ENTRA: es lo primero que sale
+     al aceptar la orden, una por cada válvula que llegó, y de ahí se
+     sigue al protocolo de entrada. */
+  setTimeout(()=>imprimirEtiqueta(ls[0].act,ls[0].act,grupoDe(ls[0])),200);
 }
 function tomarOrden(id,grupo){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
@@ -11496,7 +11684,12 @@ function tomarOrden(id,grupo){
   if(rechazadas.length)
     setTimeout(()=>toast(`Ojo: ${rechazadas.length} válvula${rechazadas.length===1?'':'s'} llegó${
       rechazadas.length===1?'':'aron'} RECHAZADA${rechazadas.length===1?'':'S'} en la recepción — consta en su protocolo`),900);
+  /* Se guardan las líneas EXACTAS que van a moverse. Antes se volvían a
+     buscar al confirmar —todas las de la etapa— y se llevaba también a
+     la válvula que seguía sin protocolo: una entraba al taller y la
+     otra se colaba detrás. */
   TOMAR_GRUPO=ls.length>1?grupo:null;
+  TOMAR_IDS=ls.map(x=>x.id);
   let yo=''; try{yo=localStorage.getItem(LS_ING)||''}catch(e){}
   $('#mTitle').textContent=`Tomar ${o.mat||o.n}`;
   $('#mBody').innerHTML=`
@@ -11518,7 +11711,7 @@ function tomarOrden(id,grupo){
   $('#modal').classList.add('on');
   setTimeout(()=>{const el=$('#toIng');if(el)el.focus()},80);
 }
-let TOMAR_GRUPO=null;
+let TOMAR_GRUPO=null, TOMAR_IDS=null;
 function confirmarTomar(id){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
   const cIng=$('#toIng'); if(!cIng)return;      // el diálogo ya no está en pantalla
@@ -11526,19 +11719,22 @@ function confirmarTomar(id){
   if(!ing){toast('Escribe tu nombre: es lo que dice quién la tiene');return}
   try{localStorage.setItem(LS_ING,ing)}catch(e){}
   const fec=$('#toFec').value||HOY.toISOString().slice(0,10);
-  const ls=TOMAR_GRUPO?ORDENES.filter(x=>grupoDe(x)===TOMAR_GRUPO&&x.et===o.et):[o];
+  /* Se mueven exactamente las líneas que el diálogo enseñó —las que
+     tienen su prueba de entrada cerrada—, no todas las de la etapa. */
+  const ls=(TOMAR_IDS&&TOMAR_IDS.length
+      ? TOMAR_IDS.map(i=>ORDENES.find(x=>x.id===i)).filter(Boolean)
+      : [o]).filter(x=>recepcionCerrada(recepDe(x.act)));
+  if(!ls.length){toast('Primero la prueba de entrada');return}
   const hora=horaPeru();
   ls.forEach(x=>{x.ing=ing; x.tec=ing; x.tomada=fec; x.tomadaH=hora; moverLinea(x,'mant')});
-  const n=ls.length; TOMAR_GRUPO=null;
+  const n=ls.length; TOMAR_GRUPO=null; TOMAR_IDS=null;
   closeModal(); renderAll();
   registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} tomada por ${ing} a las ${hora}`);
   toast(n>1
     ? `${o.mat||o.n} es tuya · ${n} válvulas, cada una con su ensayo`
     : `${o.mat||o.n} es tuya · registra el mantenimiento cuando termines`);
-  /* La etiqueta se pega cuando la válvula entra, no después: se abre
-     aquí mismo, ya con el número de orden, el tag, quién la tiene y la
-     hora de entrada. Si se deja para luego, se pega mal o no se pega. */
-  setTimeout(()=>imprimirEtiqueta(ls[0].act),260);
+  /* Aquí ya no se rotula nada: la etiqueta salió al recibir la válvula
+     y a estas alturas está pegada en el cuerpo. */
 }
 /* ── El panel de avance ──
    Lo que el gerente y el taller miran para saber por dónde va cada
@@ -12287,18 +12483,25 @@ function renderWO(){
                 return !(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))});
               if(sin.length)return '';
             }
+            /* La válvula que ya tiene su prueba de entrada pasa al
+               taller aunque su compañera siga en el mostrador: el botón
+               cuenta las que están listas, no las que hay. */
+            let cuantas=ls.length, aviso='';
             if(G.et==='ent'){
-              const est=ls.map(x=>recepDe(x.act));
-              const listas=est.filter(recepcionCerrada).length;
-              if(listas<ls.length)
-                return `<div class="wo-parte">Falta${ls.length-listas===1?'':'n'} ${ls.length-listas} prueba${ls.length-listas===1?'':'s'} de entrada para pasar al taller</div>`;
+              const listas=ls.filter(x=>recepcionCerrada(recepDe(x.act))).length;
+              const faltan=ls.length-listas;
+              if(!listas)
+                return `<div class="wo-parte">Falta${faltan===1?'':'n'} ${faltan} prueba${faltan===1?'':'s'} de entrada para pasar al taller</div>`;
+              cuantas=listas;
+              if(faltan)aviso=`<div class="wo-parte">${faltan} válvula${faltan===1?'':'s'} se queda${
+                faltan===1?'':'n'} aquí hasta tener su prueba de entrada</div>`;
             }
-            return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${ls.length}`:''}</button>`;
+            return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${cuantas}`:''}</button>${aviso}`;
           })():''}
           ${/* El desarme del cuadro 3 es lo que llena el informe técnico:
                desde mantenimiento ya se puede sacar y ver cómo va. */''}
           ${(G.et==='mant'||G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
-            onclick="event.stopPropagation();imprimirInforme('${o.id}')" title="El informe técnico DVAD-SER-002 de toda la orden">
+            onclick="event.stopPropagation();elegirInforme('${o.id}')" title="El informe técnico DVAD-SER-002: de una válvula o el general de la orden">
             <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informe técnico</button>`:''}
           ${G.et==='final'&&S.rol==='admin'&&ls.some(x=>x.calib)?`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
             onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
@@ -12315,7 +12518,7 @@ function renderWO(){
                se pega al recibir la válvula. En mantenimiento ya está
                pegada, así que el botón desaparece. */''}
           ${G.et==='ent'&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
-            onclick="event.stopPropagation();imprimirEtiqueta('${o.act}')" title="La etiqueta de ingreso que se pega en la válvula">
+            onclick="event.stopPropagation();imprimirEtiqueta('${o.act}',null,'${G.g}')" title="La etiqueta de ingreso que se pega en la válvula">
             <svg viewBox="0 0 24 24"><path d="M3 7h11l6 5-6 5H3z"/><circle cx="7.5" cy="12" r="1.2"/></svg>Etiqueta${varias?'s':''}</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
@@ -13911,6 +14114,16 @@ function demoImport(){
 let cmdItems=[],cmdCur=0;
 function openCmd(){$('#cmd').classList.add('on');$('#cmdIn').value='';$('#cmdIn').focus();buildCmd('')}
 function closeCmd(){$('#cmd').classList.remove('on')}
+/* El teclado de la tablet tapa media pantalla: cuando se entra a un
+   campo dentro de un cuadro, se lo sube a la vista. El navegador lo
+   hace a veces y a veces no —depende del teclado—, así que se hace
+   aquí y se acabó. */
+addEventListener('focusin',e=>{
+  const el=e.target;
+  if(!el||!el.matches||!el.matches('input,textarea,select'))return;
+  if(!el.closest('.modal.on, .drawer.on'))return;
+  setTimeout(()=>{ try{el.scrollIntoView({block:'center',behavior:'smooth'})}catch(err){} },260);
+});
 function buildCmd(q){
   q=q.toLowerCase().trim();
   const acciones=[
@@ -15197,8 +15410,10 @@ function renderRep(){
   const porMarca=Object.entries(marcaCount).sort((a,b)=>b[1]-a[1]).map(([l,v])=>({label:l,value:v}));
   const tipoCount={};ordScope.forEach(o=>tipoCount[o.tipo]=(tipoCount[o.tipo]||0)+1);
   const porTipo=Object.entries(tipoCount).sort((a,b)=>b[1]-a[1]).map(([l,v])=>({label:l,value:v}));
-  const rep={};ordScope.forEach(o=>o.partes.forEach(p=>rep[p]=(rep[p]||0)+1));
-  SOLICITUDES.filter(s=>!foco||s.cli===foco).forEach(s=>s.items.forEach(it=>rep[it.n]=(rep[it.n]||0)+(it.q||1)));
+  /* Una orden sin lista de repuestos es normal —se crean así— y no
+     puede tumbar la página de indicadores entera. */
+  const rep={};ordScope.forEach(o=>(o.partes||[]).forEach(p=>rep[p]=(rep[p]||0)+1));
+  SOLICITUDES.filter(s=>!foco||s.cli===foco).forEach(s=>(s.items||[]).forEach(it=>rep[it.n]=(rep[it.n]||0)+(it.q||1)));
   const porRep=Object.entries(rep).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([l,v])=>({label:l,value:v,unit:' und'}));
   const cliCount=CLIENTES.map(c=>({label:c.n,value:ACTIVOS.filter(a=>a.cli===c.id).length,
     go:`repCambiar('${c.id}')`,tip:`Ver sólo los indicadores de ${c.n}`}));
@@ -16839,6 +17054,12 @@ function guardarSesionNube(d){
   NUBE_SES={access_token:d.access_token,refresh_token:d.refresh_token,
             expira:Date.now()+((d.expires_in||3600)*1000),uid:d.user&&d.user.id};
   try{localStorage.setItem(LS_NUBE,JSON.stringify(NUBE_SES))}catch(e){}
+  /* El socket de avisos lleva el permiso pegado: cuando la sesión se
+     renueva hay que pasarle el nuevo, o al rato deja de avisar. Y si
+     todavía no estaba abierto —se acaba de entrar—, se abre. */
+  try{ if(typeof rtVivo==='function'&&rtVivo())rtEnviar({topic:'realtime:adolphus',
+        event:'access_token', payload:{access_token:NUBE_SES.access_token}, ref:String(++RT_REF)});
+       else if(typeof rtConectar==='function')rtConectar(); }catch(e){}
 }
 
 /* ── Entrar y registrarse de verdad ──────────────────────────*/
@@ -17472,15 +17693,79 @@ async function correrJob(motivo){
   }finally{ JOB_CORRIENDO=false }
 }
 
+/* ── EN TIEMPO REAL ──────────────────────────────────────────
+   El latido de 45 segundos servía para no perder nada, pero no para
+   enterarse: gerencia abría una orden y el taller la veía cuando le
+   tocaba el turno al reloj —o al salir y volver a entrar—. Ahora la
+   base avisa por un socket en cuanto se escribe una fila, y el latido
+   se queda de red de seguridad para cuando el socket no está.
+   Es el protocolo de Supabase Realtime hablado a mano: no hace falta
+   traer ninguna librería, que este portal es un solo archivo.
+   ════════════════════════════════════════════════════════════ */
+let RT=null, RT_REF=0, RT_LATIDO=null, RT_REINTENTO=0, RT_T=null, RT_DEB=null;
+const rtVivo=()=>!!(RT&&RT.readyState===1);
+function rtEnviar(m){ try{ RT.send(JSON.stringify(m)) }catch(e){} }
+function rtCerrar(){
+  if(RT_LATIDO){clearInterval(RT_LATIDO);RT_LATIDO=null}
+  if(RT_T){clearTimeout(RT_T);RT_T=null}
+  if(RT){try{RT.onclose=null;RT.close()}catch(e){} RT=null}
+}
+function rtConectar(){
+  if(!enNube()||!online()||!NUBE.url||!NUBE.key)return;
+  if(RT&&(RT.readyState===0||RT.readyState===1))return;      // ya está
+  let url;
+  try{ url=NUBE.url.replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+
+        encodeURIComponent(NUBE.key)+'&vsn=1.0.0'; }catch(e){ return }
+  try{ RT=new WebSocket(url) }catch(e){ return }
+  RT.onopen=()=>{
+    RT_REINTENTO=0;
+    /* Se pide sólo la tabla de registros: es donde vive todo lo que se
+       comparte. Quién puede ver qué lo sigue decidiendo Postgres. */
+    rtEnviar({topic:'realtime:adolphus', event:'phx_join', ref:String(++RT_REF), payload:{
+      config:{ postgres_changes:[{event:'*',schema:'public',table:'registros'}] },
+      access_token:(NUBE_SES&&NUBE_SES.access_token)||undefined }});
+    if(RT_LATIDO)clearInterval(RT_LATIDO);
+    RT_LATIDO=setInterval(()=>{ if(rtVivo())rtEnviar({topic:'phoenix',event:'heartbeat',payload:{},ref:String(++RT_REF)}) },25000);
+    pintarNet();
+    /* Mientras el socket estuvo caído pudo escribirse algo: en cuanto
+       vuelve se baja lo que haya, sin esperar al siguiente latido. */
+    correrJob('volvio-el-socket');
+  };
+  RT.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data) }catch(e){ return }
+    if(m.event!=='postgres_changes')return;
+    /* Varias filas de un mismo guardado llegan seguidas: se espera un
+       momento y se baja una sola vez. */
+    clearTimeout(RT_DEB);
+    RT_DEB=setTimeout(()=>correrJob('aviso-de-la-nube'),400);
+  };
+  RT.onclose=()=>{
+    RT=null;
+    if(RT_LATIDO){clearInterval(RT_LATIDO);RT_LATIDO=null}
+    if(!enNube()||!online())return;
+    /* Se reintenta con calma creciente: 2 s, 4 s, 8 s… hasta un minuto. */
+    const espera=Math.min(60000, 2000*Math.pow(2,Math.min(RT_REINTENTO++,5)));
+    RT_T=setTimeout(rtConectar,espera);
+  };
+  RT.onerror=()=>{ try{RT.close()}catch(e){} };
+}
+
 /* Los disparadores del job: el navegador avisa cuando vuelve la red,
    y por si el aviso no llega —pasa— hay un latido de respaldo. */
 let JOB_ARMADO=false;
 function arrancarJob(){
   if(JOB_ARMADO)return; JOB_ARMADO=true;
-  window.addEventListener('online', ()=>{pintarNet();correrJob('volvio-la-señal')});
-  window.addEventListener('offline',()=>pintarNet());
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)correrJob('volviste')});
-  setInterval(()=>correrJob('latido'),45000);
+  window.addEventListener('online', ()=>{pintarNet();rtConectar();correrJob('volvio-la-señal')});
+  window.addEventListener('offline',()=>{pintarNet();rtCerrar()});
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden)return;
+    rtConectar();                       // el móvil corta los sockets al irse a otra app
+    correrJob('volviste');
+  });
+  /* Con el socket vivo, el latido sólo comprueba que no se haya
+     quedado nada colgado; sin él, es lo único que hay. */
+  setInterval(()=>correrJob(rtVivo()?'latido':'latido-sin-socket'), 45000);
+  rtConectar();
 }
 
 /* ============================================================
