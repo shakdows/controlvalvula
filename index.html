@@ -3088,7 +3088,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div class="lbl">Recorrido de demostración</div>
         <select class="inp" id="coverRole" style="margin-bottom:10px">
           <option value="admin">Ingeniería · Adolphus</option>
-          <option value="tec">Servicio técnico</option>
+          <option value="tec">Mantenimiento</option>
           <option value="com">Comercial repuestos</option>
           <option value="cli-minera">Cliente · Minera Los Andes</option>
           <option value="cli-refi">Cliente · Refinería Costa Norte</option>
@@ -3187,7 +3187,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
             <label style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px">Demostración · cambiar de perfil</label>
             <select class="inp chip-sel" id="roleSel" style="height:32px;width:100%">
               <option value="admin">Ingeniería · Adolphus</option>
-              <option value="tec">Servicio técnico</option>
+              <option value="tec">Mantenimiento</option>
               <option value="com">Comercial repuestos</option>
               <option value="cli-minera">Cliente · Minera Los Andes</option>
               <option value="cli-refi">Cliente · Refinería Costa Norte</option>
@@ -3840,7 +3840,7 @@ let RECLAMOS=[
   fIni:'2026-06-16',fFin:'2026-06-30',respCor:'Ana Quispe',
   prov:'Masoneilan',ocProv:'PO-2026-0774',
   hist:[{f:'2026-06-12',t:'Levantado por Ana Quispe'},
-        {f:'2026-06-13',t:'Enviado a Servicio técnico · taller'},
+        {f:'2026-06-13',t:'Enviado a Mantenimiento · taller'},
         {f:'2026-06-30',t:'Cerrado'}]},
  {id:'r2',n:'SNC-2026-002',cli:'minera',act:'a8',f:'2026-07-19',por:'Luis Ramírez',est:'abierto',
   det:'Fuga por el manguito de la válvula pinch a los tres meses del cambio.',
@@ -7479,7 +7479,7 @@ function openPSV(actId,edit,seccion){
     }
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
-  if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
   const retomado=!!c&&!edit;
   /* Un ensayo ya emitido que se vuelve a abrir: hay que decirlo, o
      alguien lo edita creyendo que empieza de cero. */
@@ -12298,7 +12298,7 @@ function registrarEnsayoDeOrden(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
   const a=ACTIVOS.find(x=>x.id===o.act);
   if(!a){toast('La válvula de esta orden ya no existe');return}
-  if(S.rol==='cliente'){toast('El ensayo lo registra el servicio técnico');return}
+  if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
   ORDEN_ACTIVA=id;
   if(o.et!=='mant'){moverLinea(o,'mant');renderAll()}
   closeModal();
@@ -14452,7 +14452,7 @@ function faltaParaFinalizar(o){
 }
 
 /* ── Panel del taller ────────────────────────────────────────
-   El de servicio técnico no necesita el parque ni las marcas: necesita
+   El de mantenimiento no necesita el parque ni las marcas: necesita
    saber qué le va a entrar, qué tiene abierto ahora mismo, qué ya
    entregó, y —lo que más cuesta averiguar— qué le falta exactamente a
    cada válvula para poder cerrarla. */
@@ -14608,7 +14608,7 @@ function renderHomeTaller(){
   $('#homeView').innerHTML=panelInicio(
    avisoNuevoHtml(foco)+
    heroHtml({
-     titulo:'Servicio técnico'+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
+     titulo:'Mantenimiento'+(yo?` <span style="font-weight:400;color:var(--ink-3)">· hola, ${esc(yo)}</span>`:''),
      sub:`${foco?esc(cli(foco).n)+' · ':''}${fechaLarga(HOY)} · ${reparando.length} válvula${reparando.length===1?'':'s'} en el taller · ${enOC.length} por entrar`,
      cifra:pct+'%', pct:pct/100, cifraTono:pct>=80?'ok':pct>=40?'due':'late',
      cifraPie:['Avance del mantenimiento',base?`${fin.length} de ${base} entregadas`:'nada en curso'],
@@ -15580,7 +15580,7 @@ const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.spli
    cerrar y la otra media no. */
 function openCalib(assetId,edit){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur; if(!a)return;
-  if(S.rol==='cliente'){toast('El registro de calibración lo realiza el servicio técnico');return}
+  if(S.rol==='cliente'){toast('El registro de calibración lo realiza el mantenimiento');return}
   // Lo que ya está en el sistema para esta válvula: no se vuelve a pedir.
   const ult=edit?null:CALIBS.filter(c=>c.act===a.id).sort((x,y)=>(y.fin||y.ini||'').localeCompare(x.fin||x.ini||''))[0];
   const nom=edit?edit.nom:(ult?ult.nom:parseFloat((a.rng||'').replace(',','.')));
@@ -16164,7 +16164,7 @@ function saveNewClient(){
 let SERVS=[];
 function openService(assetId){
   const a=ACTIVOS.find(x=>x.id===assetId)||S.cur;if(!a)return;
-  if(S.rol==='cliente'){toast('El parte de servicio lo emite el servicio técnico');return}
+  if(S.rol==='cliente'){toast('El parte de servicio lo emite el mantenimiento');return}
   const m=MODELOS[a.mod]||{},kit=(BOM[m.b||'globo']||[]).filter(p=>p.k).map(p=>p.n);
   const hoyStr=HOY.toISOString().slice(0,10);
   $('#mTitle').textContent=`Parte de servicio · ${a.tag||a.ser||'activo'}`;
@@ -16444,7 +16444,7 @@ function matchAsset(txt,lista){
   return hit||null;
 }
 function openUploadSheet(assetId,fileName){
-  if(S.rol==='cliente'){toast('La carga de hojas de campo la realiza el servicio técnico');return}
+  if(S.rol==='cliente'){toast('La carga de hojas de campo la realiza el mantenimiento');return}
   hcFoto='';
   const psv=ACTIVOS.filter(a=>(!S.inCli||a.cli===S.inCli)&&(!S.cli||a.cli===S.cli));
   const vacio=!psv.length;
@@ -17712,7 +17712,7 @@ const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
    navegador. NO es un hash de contraseñas; eso va del lado del servidor. */
 const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
   return ('0000000'+(h>>>0).toString(16)).slice(-8)};
-const PERFILES={admin:'Administrador',tec:'Servicio técnico',com:'Comercial',cliente:'Cliente'};
+const PERFILES={admin:'Administrador',tec:'Mantenimiento',com:'Comercial',cliente:'Cliente'};
 
 /* Ver la contraseña que se está escribiendo. En el celular, con el
    teclado tapando media pantalla y los puntitos, no hay forma de saber
