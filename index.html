@@ -2890,6 +2890,18 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .py-it:last-child{border-bottom:none}
 .py-it:hover{background:var(--surface-2)}
 .py-it.ya{opacity:.55;cursor:not-allowed}
+/* Una válvula con sus pasos debajo: el tag arriba y las tres casillas
+   en fila, para decidir válvula por válvula sin salir de la lista. */
+.py-it.col{display:block;cursor:default}
+.py-it.col:hover{background:transparent}
+.py-it-t{display:flex;align-items:center;gap:10px;min-width:0}
+.pasos-f{display:flex;flex-wrap:wrap;gap:6px;margin:7px 0 1px}
+.paso-ch{display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  border:1px solid var(--line-2);border-radius:999px;padding:5px 11px 5px 8px;
+  font-size:11.5px;color:var(--ink-2);background:var(--surface);user-select:none}
+.paso-ch:hover{border-color:var(--line-1)}
+.paso-ch input{margin:0;width:14px;height:14px;flex:0 0 auto}
+.paso-ch:has(input:checked){border-color:var(--sel);background:var(--sel-bg);color:var(--sel);font-weight:600}
 .py-tag{font-weight:700;flex:0 0 auto}
 .py-sub{color:var(--ink-3);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* la tarjeta del tablero */
@@ -4576,11 +4588,13 @@ function ordenesEnLote(){
    </div>
    <div class="fld"><label for="loMot">Motivo / qué hay que hacerles</label>
      <textarea class="inp" id="loMot" rows="2" placeholder="Lo que el taller necesita saber antes de abrirlas."></textarea></div>
-   ${pasosHTML()}
-   <h4 class="snc-sec">Van al taller</h4>
-   <div class="py-lista">${libres.map(a=>`<label class="py-it">
-     <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
-     <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</span></label>`).join('')}</div>`
+   <h4 class="snc-sec">Van al taller
+     <span class="opc">marca qué se le hace a cada una · «OC recibida» y «Finalizado» van siempre</span></h4>
+   <div class="py-lista">${libres.map(a=>`<div class="py-it col">
+     <div class="py-it-t"><span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+       <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(cli(a.cli).n)}</span></div>
+     ${pasosFila(a.id)}</div>`).join('')}</div>
+   <p class="hint">Lo que no marques se salta en el tablero: esa válvula pasa de largo por esa columna.</p>`
    :`<div class="empty" style="padding:24px"><b>No queda ninguna por mandar</b>
       Todas las marcadas ya tienen una orden abierta.</div>`}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
@@ -4679,11 +4693,11 @@ function confirmarOrdenesLote(){
   const mat=nuevoMAT();
   const grupo='g'+Date.now();
   const sello=Date.now();
-  const pasos=pasosMarcados();
   const hechas=[];
   LOTE_IDS.forEach((id,i)=>{
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
     if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
+    const pasos=pasosDeFila(id);
     ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,grupo,pasos,
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
     hechas.push(a.tag||a.ser||'');
@@ -11732,8 +11746,24 @@ function pasosHTML(marcados){
     <p class="hint">Lo que no marques se salta en el tablero: la válvula pasa de largo por esa columna.</p>`;
 }
 const pasosMarcados=()=>{
-  const c=[...document.querySelectorAll('.ck-paso')];
+  const c=[...document.querySelectorAll('.ck-paso:not([data-act])')];
   if(!c.length)return TODOS_LOS_PASOS.slice();
+  const m=c.filter(x=>x.checked).map(x=>x.value);
+  return TODOS_LOS_PASOS.filter(k=>m.includes(k));
+};
+/* Y los pasos VÁLVULA POR VÁLVULA: en la misma orden puede venir una
+   que sólo hay que probar y devolver, y otra que entra al taller
+   entera. Cada fila lleva sus tres casillas, marcadas de salida. */
+function pasosFila(actId,marcados){
+  const m=marcados||TODOS_LOS_PASOS;
+  return `<span class="pasos-f" onclick="event.stopPropagation()">${PASOS_ELEGIBLES.map(([k,l,d])=>`
+    <label class="paso-ch" title="${esc(d)}">
+      <input type="checkbox" class="ck-paso" data-act="${esc(actId)}" value="${k}" ${m.includes(k)?'checked':''}>
+      <span>${esc(l)}</span></label>`).join('')}</span>`;
+}
+const pasosDeFila=actId=>{
+  const c=[...document.querySelectorAll('.ck-paso[data-act="'+actId+'"]')];
+  if(!c.length)return pasosMarcados();
   const m=c.filter(x=>x.checked).map(x=>x.value);
   return TODOS_LOS_PASOS.filter(k=>m.includes(k));
 };
@@ -11877,8 +11907,9 @@ function openProyecto(){
    </div>
    <div class="fld"><label for="pyDesc">Descripción / alcance</label>
      <textarea class="inp" id="pyDesc" rows="2" placeholder="Qué pide el cliente en esta orden."></textarea></div>
-   ${pasosHTML()}
-   <h4 class="snc-sec">Válvulas de esta OC <span class="opc" id="pyCuenta"></span></h4>
+   <h4 class="snc-sec">Válvulas de esta OC
+     <span class="opc" id="pyCuenta"></span>
+     <span class="opc">· marca qué se le hace a cada una</span></h4>
    <div id="pyLista" class="py-lista"></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
     <button class="btn" onclick="guardarProyecto()">Abrir la OC</button>`;
@@ -11890,11 +11921,13 @@ function pintarPryValvulas(){
   const libres=ACTIVOS.filter(a=>a.cli===c);
   box.innerHTML=libres.length?libres.map(a=>{
     const abierta=ORDENES.find(o=>o.act===a.id&&o.et!=='final');
-    return `<label class="py-it ${abierta?'ya':''}">
-      <input type="checkbox" class="pyChk" value="${a.id}" ${abierta?'disabled':''} onchange="pryCuenta()">
-      <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
-      <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(area(a)||'')}</span>
-      ${abierta?`<span class="tag sel">ya está en ${esc(abierta.mat||abierta.n)}</span>`:''}</label>`;
+    return `<div class="py-it col ${abierta?'ya':''}">
+      <label class="py-it-t" style="cursor:pointer">
+        <input type="checkbox" class="pyChk" value="${a.id}" ${abierta?'disabled':''} onchange="pryCuenta()">
+        <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+        <span class="py-sub">${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')} · ${esc(area(a)||'')}</span>
+        ${abierta?`<span class="tag sel">ya está en ${esc(abierta.mat||abierta.n)}</span>`:''}</label>
+      ${abierta?'':pasosFila(a.id)}</div>`;
   }).join(''):'<div class="empty" style="padding:20px"><b>Este cliente no tiene válvulas cargadas</b>Cárgalas primero desde Importar o con «Nueva válvula».</div>';
   pryCuenta();
 }
@@ -11913,10 +11946,9 @@ function guardarProyecto(){
   PROYECTOS.unshift({id,oc,cli:cliId,f:fec,tipo,desc:$('#pyDesc').value.trim()});
   /* Una orden por válvula, cada una con su MAT. El correlativo se
      recalcula en cada vuelta para que no se repita dentro del lote. */
-  const pasos=pasosMarcados();
   sel.forEach(actId=>{
     ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
-      act:actId, pry:id, oc, mat:nuevoMAT(), pasos,
+      act:actId, pry:id, oc, mat:nuevoMAT(), pasos:pasosDeFila(actId),
       n:nuevoMAT(), et:'oc', tipo, f:fec, tec:'Por asignar',
       hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
   });
@@ -16274,7 +16306,12 @@ function mandarAMantenimiento(id){
    </div>
    <div class="fld"><label for="mmMot">Motivo / qué hay que hacerle</label>
      <textarea class="inp" id="mmMot" rows="3" placeholder="Lo que el taller necesita saber antes de abrirla.">${venc!==null&&venc<0?`Calibración vencida hace ${-venc} días.`:''}</textarea></div>
-   ${pasosHTML()}
+   <h4 class="snc-sec">Qué se le va a hacer a ${esc(a.tag||a.ser||'esta válvula')}
+     <span class="opc">«OC recibida» y «Finalizado» van siempre</span></h4>
+   <div class="py-lista"><div class="py-it col">
+     <div class="py-it-t"><span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+       <span class="py-sub">${esc(m.m||'')} ${esc(a.mod||'')}</span></div>
+     ${pasosFila(a.id)}</div></div>
    ${(()=>{
      /* La misma orden puede llevar más válvulas de esta empresa. Un
         MAT por válvula obligaba a abrir ocho órdenes para un trabajo
@@ -16284,10 +16321,12 @@ function mandarAMantenimiento(id){
      if(!otras.length)return '';
      return `<h4 class="snc-sec">¿Va alguna válvula más en esta misma orden?
        <span class="opc">se quedan bajo el mismo código MAT</span></h4>
-     <div class="py-lista" id="mmOtras">${otras.map(x=>`<label class="py-it">
-       <input type="checkbox" class="mmChk" value="${x.id}" onchange="mmCuenta()">
-       <span class="py-tag mono">${esc(x.tag||x.ser||'')}</span>
-       <span class="py-sub">${esc((MODELOS[x.mod]||{}).m||'')} ${esc(x.mod||'')} · ${esc(area(x)||'')}</span></label>`).join('')}</div>
+     <div class="py-lista" id="mmOtras">${otras.map(x=>`<div class="py-it col">
+       <label class="py-it-t" style="cursor:pointer">
+         <input type="checkbox" class="mmChk" value="${x.id}" onchange="mmCuenta()">
+         <span class="py-tag mono">${esc(x.tag||x.ser||'')}</span>
+         <span class="py-sub">${esc((MODELOS[x.mod]||{}).m||'')} ${esc(x.mod||'')} · ${esc(area(x)||'')}</span></label>
+       ${pasosFila(x.id)}</div>`).join('')}</div>
      <p class="hint" id="mmCuenta">Sólo ${esc(a.tag||a.ser||'esta válvula')} por ahora. Cada válvula sigue teniendo su propio certificado; lo que se comparte es la orden.</p>`;
    })()}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="editarActivo('${id}')">Volver</button>
@@ -16319,9 +16358,8 @@ function confirmarMandar(id){
   /* Una línea por válvula, mismo código y mismo grupo: el tablero
      enseña una tarjeta, pero cada válvula conserva su ensayo y su
      certificado, que es lo que no se puede compartir. */
-  const pasos=pasosMarcados();
-  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, grupo, pasos,
-    et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
+  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, grupo,
+    pasos:pasosDeFila(x), et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
   MM_PRINCIPAL=null;
   closeModal(); renderAll(); go('wo');
   const nom=ids.map(x=>{const v=ACTIVOS.find(y=>y.id===x);return v?(v.tag||v.ser||''):''}).filter(Boolean);
