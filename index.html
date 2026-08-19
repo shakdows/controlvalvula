@@ -5134,6 +5134,8 @@ function verOrden(idOrAct,esActivo){
     })():''}
     ${!cliente&&!varias&&etC==='mant'
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
+    ${S.rol==='admin'?`<button class="btn quiet" style="color:var(--late)" onclick="borrarOrden('${o.id}')"
+       title="Eliminar esta orden de servicio">Eliminar</button>`:''}
     ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
       enEspera     ? `Recibir la válvula${porEntrar>1?`s · ${porEntrar}`:''}`
       : enRecepcion? (()=>{
@@ -5512,6 +5514,64 @@ function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList
 /* Baja de un equipo mal registrado. Pide clave para evitar borrados accidentales.
    Nota: la validación real debe hacerse en el servidor cuando exista backend. */
 const CLAVE_BAJA='adolphus2026';
+/* ── BORRAR UNA ORDEN DE SERVICIO ────────────────────────────
+   Sólo gerencia. Se borra la ORDEN —sus líneas, su código MAT, su
+   sitio en el tablero—, no el trabajo: los ensayos y los certificados
+   que ya se emitieron se quedan colgando de su válvula, en el
+   historial, porque son documentos firmados y no se tiran porque
+   alguien se equivoque de número.
+   Pide la clave, como la baja de una válvula: es la misma clase de
+   destrozo si se hace sin querer.
+   ════════════════════════════════════════════════════════════ */
+function borrarOrden(id){
+  if(S.rol!=='admin'){toast('Sólo gerencia puede eliminar una orden de servicio');return}
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const ls=lineasDe(o);
+  const a=ACTIVOS.find(x=>x.id===o.act)||{};
+  const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
+  const cert=ls.filter(x=>x.calib).length;
+  $('#mTitle').textContent='Eliminar la orden de servicio';
+  $('#mBody').innerHTML=`
+   <div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Vas a eliminar la orden <b class="mono">${esc(o.mat||o.n)}</b> de <b>${esc(cli(a.cli).n||'')}</b>,
+       con <b>${ls.length} válvula${ls.length===1?'':'s'}</b> — ${esc(tags.slice(0,4).join(', '))}${tags.length>4?'…':''}.
+       Desaparece del tablero y del avance del cliente. Esta acción no se puede deshacer.</div></div>
+   ${cert?`<div class="callout"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+     <div><b>Los ${cert} certificado${cert===1?'':'s'} ya emitido${cert===1?'':'s'} NO se borran.</b>
+       Se quedan en el historial de su válvula, que es donde tienen que estar: son documentos firmados.</div></div>`:''}
+   <div class="fld"><label>Motivo</label>
+     <select class="inp" id="boMotivo"><option>Creada por error</option><option>Duplicada</option>
+       <option>El cliente anuló la orden</option><option>Se rehará con otro número</option><option>Otro</option></select></div>
+   <div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span></label>
+     <input class="inp pend" id="boPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
+     <span class="pend-msg" id="boErr" style="display:none">▲ Contraseña incorrecta</span></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmarBorrarOrden('${id}')">Eliminar la orden</button>`;
+  $('#modal').classList.add('on');
+  const p=$('#boPass');
+  p.oninput=()=>{$('#boErr').style.display='none';p.classList.toggle('pend',!p.value)};
+  p.onkeydown=e=>{if(e.key==='Enter')confirmarBorrarOrden(id)};
+  setTimeout(()=>p.focus(),80);
+}
+function confirmarBorrarOrden(id){
+  const p=$('#boPass');
+  if(!p||p.value!==CLAVE_BAJA){
+    if(p){p.classList.add('pend');p.value='';p.focus()}
+    const e=$('#boErr'); if(e)e.style.display='flex';
+    toast('Contraseña incorrecta — la orden no se eliminó');return;
+  }
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const motivo=($('#boMotivo')||{}).value||'';
+  const ls=lineasDe(o), cod=o.mat||o.n, ids=ls.map(x=>x.id);
+  /* Los ensayos se sueltan de la orden, no se borran: siguen colgados
+     de su válvula con su certificado. */
+  ls.forEach(x=>{ const i=ORDENES.findIndex(y=>y.id===x.id); if(i>=0)ORDENES.splice(i,1) });
+  olvidarVarios('ORDENES',ids);
+  guardarLocal(); closeModal(); renderAll();
+  registrar('Orden',`${cod} eliminada${motivo?' · '+motivo:''} (${ids.length} línea${ids.length===1?'':'s'})`);
+  toast(`Orden ${cod} eliminada`);
+}
+
 function deleteAsset(id){
   if(S.rol==='cliente'){toast('Solo el personal de Adolphus puede eliminar equipos');return}
   const a=ACTIVOS.find(x=>x.id===id);if(!a)return;
