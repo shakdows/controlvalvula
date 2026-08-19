@@ -5051,6 +5051,7 @@ function verOrden(idOrAct,esActivo){
           const f=faltaParaFinalizar(x);
           return `<div class="ord-i ${x.et==='final'?'ok':''}">
             <div class="ord-m"><b>${esc(v.tag||v.ser||'sin tag')}</b>
+              ${ls.length>1?`<span class="tag mono">${esc(codigoLinea(x))}</span>`:''}
               <p>${esc((MODELOS[v.mod]||{}).m||'')} ${esc(v.mod||'')}${v.ar?' · '+esc(area(v)):''}</p>
               ${(()=>{
                 /* De un vistazo: cuál quedó a medias porque el técnico
@@ -6603,7 +6604,7 @@ function histLinea(a){
     const otras=lineasDe(o).length;
     ev.push({f:(fin?(o.arch||o.f):o.f)||'', k:'mant',
       t:fin?'Servicio terminado':'Servicio en curso',
-      doc:o.mat||o.n,
+      doc:codigoLinea(o),
       d:[par('Trabajo',o.tipo),
          otras>1?par('En la misma orden',`${otras} válvulas`):null,
          par('Ingeniero',o.ing),
@@ -7474,7 +7475,13 @@ function psvNuevo(actId){
     id:'', act:a.id, tipo:'psv', cli:a.cli,
     /* Si esta válvula ya tuvo una orden de servicio, se respeta la
        suya; si es nueva, se le da el siguiente número de la casa. */
-    os:prev&&prev.os?prev.os:siguienteOS(), contacto:prev?prev.contacto:'', fecha:h,
+    /* La orden de servicio del ensayo: la de la orden abierta de esta
+       válvula, con su número de línea —OC-001-2—, que es lo que el
+       cliente lee en el certificado. Si no hay orden, se sigue la
+       numeración de la casa. */
+    os:(()=>{const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final')||ORDENES.find(x=>x.act===a.id);
+             return o?codigoLinea(o):(prev&&prev.os?prev.os:siguienteOS())})(),
+    contacto:prev?prev.contacto:'', fecha:h,
     /* El patrón de la casa, ya puesto. Si el trabajo anterior de ESTA
        válvula se hizo con otro, manda el de la casa igual: el que vale
        es con el que se va a medir hoy. */
@@ -11234,6 +11241,18 @@ let PROYECTOS=[];
    Las órdenes de una sola válvula no cambian: su grupo es ella misma. */
 const grupoDe=o=>o.grupo||o.id;
 const lineasDe=o=>ORDENES.filter(x=>grupoDe(x)===grupoDe(o));
+/* Una orden con varias válvulas se numera por dentro: si la OC es la
+   001 y lleva tres válvulas, son la 001-1, la 001-2 y la 001-3. Así,
+   cuando el cliente pregunta por «la dos de la 001», hay una sola cosa
+   que puede ser. Con una sola válvula no se numera: sobra. */
+function codigoLinea(o){
+  if(!o)return '';
+  const base=o.mat||o.n||'';
+  const ls=lineasDe(o);
+  if(ls.length<2)return base;
+  const i=ls.findIndex(x=>x.id===o.id);
+  return `${base}-${i<0?1:i+1}`;
+}
 /* La cabecera del grupo es la línea más atrasada: si de tres válvulas
    una sigue en taller, el trabajo está en taller. Decir «finalizado»
    porque dos acabaron sería mentirle al cliente. */
@@ -12171,7 +12190,10 @@ function renderWO(){
         const tono=tonoOrden(ls);
         return `
         <article class="wo t-${tono}${varias?' multi':''}" draggable="true" ondragstart="dragWO(event,'${G.g}|${G.et}')" ondragend="this.classList.remove('drag')">
-          <div class="wo-t" onclick="verOrden('${o.id}')"><b class="mono">${esc(o.mat||o.n)}</b><span class="tag">${o.tipo}</span></div>
+          ${/* Con una sola válvula en la tarjeta se enseña SU número de
+               línea —001-2—, que es lo que el técnico busca; con varias,
+               el de la orden. */''}
+          <div class="wo-t" onclick="verOrden('${o.id}')"><b class="mono">${esc(varias?(o.mat||o.n):codigoLinea(o))}</b><span class="tag">${o.tipo}</span></div>
           ${tono==='late'?`<div class="wo-tarde"><span class="dot"></span>${esc(porQueTarde(ls))}</div>`:''}
           <div class="wo-n" onclick="verOrden('${o.id}')">${varias
             ? `${ls.length} válvulas <span class="wo-tags">${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</span>`
