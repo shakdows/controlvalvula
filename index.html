@@ -4132,10 +4132,28 @@ function anclarHistorial(){
   if(SALIDA_LIBRE)return;
   try{history.pushState({adolphus:1},'')}catch(e){}
 }
-function atrasDelSistema(){
+/* Un solo motor de «atrás», que usan el botón de la barra y el del
+   teléfono. Devuelve true si de verdad retrocedió.
+   Antes esto vivía sólo dentro del manejador del historial y el botón
+   de la barra dependía de que el navegador tuviera una entrada
+   anterior; si no la tenía —una pestaña recién abierta, la app
+   instalada—, pulsar la flecha no hacía nada. Ahora la flecha no
+   depende del navegador: retrocede por su cuenta y siempre tiene a
+   dónde ir. */
+function retroceder(){
   const q=loQueEstaEncima();
-  if(q){cerrarLoDeEncima(q);anclarHistorial();return}
-  if(PILA.length>1){PILA.pop();volverA(PILA[PILA.length-1]);anclarHistorial();return}
+  if(q){cerrarLoDeEncima(q);return true}
+  if(PILA.length>1){PILA.pop();volverA(PILA[PILA.length-1]);return true}
+  /* Sin pila que gastar, el camino de vuelta es el de la casa: de
+     dentro de una empresa se sale a la lista de empresas, y de
+     cualquier sección se vuelve al inicio. */
+  if(S.inCli){exitClient();go('clients');return true}
+  if(S.page!=='home'){go('home');return true}
+  return false;
+}
+function atras(){ retroceder(); }
+function atrasDelSistema(){
+  if(retroceder()){anclarHistorial();return}
   /* Ya no queda nada detrás. Se avisa una vez; si vuelve a pulsar
      dentro de los tres segundos, se le deja salir. */
   if(SALIR_ARMADO&&Date.now()-SALIR_ARMADO<3000){
@@ -4149,12 +4167,11 @@ function atrasDelSistema(){
 }
 addEventListener('popstate',atrasDelSistema);
 anclarHistorial();
-/* El botón de la barra y el del teléfono son el mismo camino. */
-function atras(){ try{history.back()}catch(e){ atrasDelSistema() } }
-/* Sólo se enseña cuando de verdad hay a dónde volver. */
+/* Se enseña siempre que haya a dónde volver: pila, empresa abierta o
+   simplemente no estar en el inicio. */
 function pintarAtras(){
   const b=document.getElementById('btnAtras'); if(!b)return;
-  b.style.display=PILA.length>1?'':'none';
+  b.style.display=(PILA.length>1||S.inCli||S.page!=='home')?'':'none';
 }
 
 function go(p){
