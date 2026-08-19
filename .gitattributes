@@ -1,12 +1,6 @@
-# Guardar SIEMPRE con finales de línea Unix.
-#
-# Al pegar el archivo en el editor web de GitHub, el navegador lo manda
-# con CRLF. Entonces un cambio de dos líneas aparece como 23.000 líneas
-# modificadas, no se puede leer el diff y cualquier fusión da conflicto
-# en todo el archivo aunque nadie haya tocado lo mismo.
-* text=auto eol=lf
-
-# binarios: que git no los toque
-*.png  binary
-*.jpg  binary
-*.xlsx binary
+# El portal se guarda con saltos de linea de Unix: las subidas por la
+# web de GitHub llegaban con CRLF y cada una chocaba con la rama.
+*.html text eol=lf
+*.js    text eol=lf
+*.json  text eol=lf
+*.webmanifest text eol=lf
