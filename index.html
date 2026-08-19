@@ -12766,7 +12766,13 @@ function renderWO(){
         <span class="n">${cs.length}</span></div>
       <div class="kb-buzon"><span>Soltar en</span><b>${esc(l)}</b></div>
       <div class="kb-b">${cs.map(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
-        const G=o.__g, ls=G.ls, varias=ls.length>1, nx=pasoSiguiente(G.jefe||ls[0]);
+        const G=o.__g, ls=G.ls, varias=ls.length>1;
+        /* Cada válvula puede llevar pasos distintos: el botón manda a
+           donde va la primera que toca y cuenta las que se mueven con
+           ella; las demás salen después con el mismo botón. */
+        const juntas=lasQueVanJuntas(ls,G.et);
+        const nx=juntas.dest?[juntas.dest,WO_IR[juntas.dest]]:null;
+        const vanAhi=juntas.mueven.length||ls.length;
         const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
         const listas=ls.filter(x=>x.et==='final').length;
         const tono=tonoOrden(ls);
@@ -12874,10 +12880,11 @@ function renderWO(){
             /* La válvula que ya tiene su prueba de entrada pasa al
                taller aunque su compañera siga en el mostrador: el botón
                cuenta las que están listas, no las que hay. */
-            let cuantas=ls.length, aviso='';
-            if(G.et==='ent'){
-              const listas=ls.filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act))).length;
-              const faltan=ls.length-listas;
+            let cuantas=vanAhi, aviso='';
+            if(G.et==='ent'&&nx[0]==='mant'){
+              const van=juntas.mueven;
+              const listas=van.filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act))).length;
+              const faltan=van.length-listas;
               if(!listas)
                 return `<div class="wo-parte">Falta${faltan===1?'':'n'} ${faltan} prueba${faltan===1?'':'s'} de entrada para pasar al taller</div>`;
               cuantas=listas;
@@ -13143,12 +13150,31 @@ let dragId=null;
 /* Avanza las válvulas de UNA etapa de la orden. La etapa llega desde la
    tarjeta que se pulsó: si media orden está en taller y media en
    mantenimiento, cada tarjeta mueve lo suyo. */
+/* A dónde va cada línea desde donde está, con sus propios pasos. */
+const destinoDe=o=>(pasoSiguiente(o)||[])[0]||'';
+/* Las que van al MISMO sitio, que son las que pueden moverse juntas.
+   En una orden con pasos distintos por válvula —una sólo se prueba y
+   se devuelve, otra entra al taller— no todas salen de la columna
+   hacia el mismo lado. */
+function lasQueVanJuntas(ls,et){
+  const aqui=ls.filter(x=>x.et===et&&destinoDe(x));
+  if(!aqui.length)return {dest:'',mueven:[],resto:[]};
+  const dest=destinoDe(aqui[0]);
+  return {dest, mueven:aqui.filter(x=>destinoDe(x)===dest),
+          resto:aqui.filter(x=>destinoDe(x)!==dest)};
+}
 function avanzarGrupo(g,etapa){
   const ls=ORDENES.filter(x=>grupoDe(x)===g);
   if(!ls.length)return;
-  const et=etapa||etapaGrupo(ls), nx=pasoSiguiente(ls.find(x=>x.et===et)||ls[0]); if(!nx)return;
-  const mueven=ls.filter(x=>x.et===et);
+  const et=etapa||etapaGrupo(ls);
+  const j=lasQueVanJuntas(ls,et);
+  const nx=j.dest?[j.dest,WO_IR[j.dest]]:null; if(!nx)return;
+  const mueven=j.mueven;
   if(!mueven.length)return;
+  /* Si en la columna quedan válvulas que van a otro paso, se avisa: se
+     resuelve una tanda y el botón vuelve a estar ahí para la otra. */
+  if(j.resto.length)setTimeout(()=>toast(`${j.resto.length} válvula${j.resto.length===1?'':'s'
+    } de esta orden va${j.resto.length===1?'':'n'} a otro paso · el mismo botón las lleva después`),1200);
   if(nx[0]==='final'&&!puedeFinalizar(mueven[0])){toast(avisoNoFinaliza(mueven[0]));return}
   if(mueven.length===1)return advanceWO(mueven[0].id);
   if(nx[0]==='final'){
