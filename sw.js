@@ -13,7 +13,7 @@
    Ahora la aplicación abre de la caché al instante, y si hay internet
    se actualiza sola por detrás para la próxima vez.
    ============================================================ */
-const CACHE = 'adolphus-v48';
+const CACHE = 'adolphus-v49';
 
 /* Ninguna petición a la red puede tardar más que esto. Sin este tope,
    una antena que no lleva a ninguna parte cuelga la promesa para

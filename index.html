@@ -731,6 +731,14 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 .ord-m small.pendiente{color:var(--late);font-weight:500}
 .ord-m small.pendiente b{font-weight:700}
 .ord-m small.lista{color:var(--ok);font-weight:600}
+/* Qué se le va a hacer a esta válvula: lo marcado en la orden, con lo
+   que toca AHORA en azul y lo que no lleva tachado. Es lo que mira el
+   ingeniero para saber cuál coge. */
+.ord-p{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.ord-p-i{font-size:10.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-2);
+  color:var(--ink-2);background:var(--surface)}
+.ord-p-i.ahora{border-color:var(--sel);background:var(--sel-bg);color:var(--sel);font-weight:700}
+.ord-p-i.no{color:var(--ink-3);text-decoration:line-through;opacity:.65}
 /* Cuándo se movió cada válvula, con la hora de Lima. */
 .ord-m small.ord-h{display:block;margin-top:3px;color:var(--ink-3);font-size:11px;
   font-variant-numeric:tabular-nums}
@@ -5111,6 +5119,16 @@ function verOrden(idOrAct,esActivo){
                 return `<small class="pendiente"><b>Falta agregar datos</b>${
                   n>1?` · ${n} cosas`:''}: ${esc(f.falta[0].replace(/^Del mantenimiento falta /,''))}</small>`;
               })()}
+              ${/* Lo que se marcó para ESTA válvula al abrir la orden:
+                   se lee en su fila, que es donde el ingeniero decide
+                   cuál coge. Lo que va a hacer ahora sale en negrita. */''}
+              ${(()=>{
+                const suyos=pasosDe(x), dest=destinoDe(x);
+                return `<div class="ord-p">${PASOS_ELEGIBLES.map(([k,l])=>{
+                  const lleva=suyos.includes(k);
+                  return `<span class="ord-p-i ${lleva?(dest===k?'ahora':'si'):'no'}">${
+                    lleva?(dest===k?'▶ ':'') :'✕ '}${esc(l)}</span>`}).join('')}</div>`;
+              })()}
               ${/* Cuándo se movió ESTA válvula. Cada una entra a su hora
                    —y la hora es la de Lima, no la del aparato desde el
                    que se mira—: es lo que se responde cuando el cliente
@@ -5119,7 +5137,8 @@ function verOrden(idOrAct,esActivo){
                 const h=[];
                 if(x.recibida)h.push(`Recibida ${fPE(x.recibida)}${x.recibidaH?` · ${x.recibidaH} h`:''}`);
                 if(x.tomada)h.push(`A mantenimiento ${fPE(x.tomada)}${x.tomadaH?` · ${x.tomadaH} h`:''}`);
-                if(x.hist&&x.hist.cert)h.push(`A prueba de salida ${fPE(x.hist.cert)}`);
+                const orden=['oc','ent','mant','cert','final'], aqui=orden.indexOf(x.et);
+                if(x.hist&&x.hist.cert&&aqui>=orden.indexOf('cert'))h.push(`A prueba de salida ${fPE(x.hist.cert)}`);
                 if(x.et==='final'&&x.hist&&x.hist.final)h.push(`Finalizada ${fPE(x.hist.final)}`);
                 return h.length?`<small class="ord-h">${esc(h.join(' · '))} <span>hora de Perú</span></small>`:'';
               })()}</div>
@@ -5128,9 +5147,15 @@ function verOrden(idOrAct,esActivo){
               /* Mientras la válvula no ha llegado no hay nada que
                  ensayar: lo único cierto es que entra al taller, y se
                  mete de una en una porque no siempre llegan juntas. */
-              /* Sin botón por línea: a mantenimiento entran las dos
-                 juntas, con el único botón del pie. */
-              :x.et==='oc' ? ''
+              /* Un botón por válvula: dos ingenieros pueden coger cada
+                 uno la suya, y cada válvula se mueve al paso que le
+                 tocó a ella —una al taller y la otra directa a la
+                 prueba de salida, si así se marcó—. */
+              :x.et==='oc' ? (()=>{
+                const dest=destinoDe(x); if(!dest)return '';
+                return `<button class="btn sec xs" onclick="closeModal();advanceWO('${x.id}')">${
+                  esc(WO_IR[dest]||'Avanzar')}</button>`;
+              })()
               /* Recibida: lo que toca es el protocolo de entrada, una
                  por una — cada válvula se recibe por separado. */
               :x.et==='ent' ? (recepcionCerrada(recepDe(x.act))
@@ -5218,15 +5243,24 @@ function verOrden(idOrAct,esActivo){
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
     ${S.rol==='admin'?`<button class="btn quiet" style="color:var(--late)" onclick="borrarOrden('${o.id}')"
        title="Eliminar esta orden de servicio">Eliminar</button>`:''}
-    ${!cliente&&sig?`<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${
-      enEspera     ? `Recibir la válvula${porEntrar>1?`s · ${porEntrar}`:''}`
-      : enRecepcion? (()=>{
-          const listas=ls.filter(x=>x.et==='ent'&&recepcionCerrada(recepDe(x.act))).length;
-          return listas>1 ? `Pasar a mantenimiento las ${listas}`
-               : listas===1&&porEntrar>1 ? 'Pasar a mantenimiento la que está lista'
-               : 'Pasar a mantenimiento';
-        })()
-                   : 'Finalizar y emitir el certificado'}</button>`:''}`;
+    ${/* El botón del pie mueve la tanda que va al mismo sitio; las que
+         llevan otros pasos se mueven desde su propia fila. */''}
+    ${(()=>{
+      if(cliente)return '';
+      const j=lasQueVanJuntas(ls,etC);
+      if(!j.dest||!j.mueven.length)return '';
+      const n=j.mueven.length, mixto=j.resto.length;
+      const listas=j.dest==='mant'
+        ? j.mueven.filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act))).length : n;
+      const txt=j.dest==='ent'   ? `Recibir ${n>1?`las ${n} válvulas`:'la válvula'}`
+              : j.dest==='mant'  ? (listas>1?`Pasar a mantenimiento las ${listas}`
+                                  :listas===1&&n>1?'Pasar a mantenimiento la que está lista'
+                                  :'Pasar a mantenimiento')
+              : j.dest==='cert'  ? `Pasar a prueba de salida${n>1?` · ${n}`:''}`
+                                 : 'Finalizar y emitir el certificado';
+      return `${mixto?`<span class="pie-falta">${mixto} válvula${mixto===1?'':'s'} va${mixto===1?'':'n'} a otro paso · con el botón de su fila</span>`:''
+        }<button class="btn" onclick="closeModal();avanzarGrupo('${grupoDe(o)}','${etC}')">${esc(txt)}</button>`;
+    })()}`;
   $('#modal').classList.add('on');
 }
 
@@ -12912,7 +12946,10 @@ function renderWO(){
           ${/* La etiqueta es DE INGRESO: se genera al aceptar la orden y
                se pega al recibir la válvula. En mantenimiento ya está
                pegada, así que el botón desaparece. */''}
-          ${G.et==='ent'&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+          ${/* Si la orden se salta la prueba de entrada, la válvula llega
+               igual y hay que rotularla: entonces el botón sale en la
+               columna donde esté, hasta que se finalice. */''}
+          ${(G.et==='ent'||(G.et!=='final'&&ls.some(x=>!haceEsePaso(x,'ent'))))&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();imprimirEtiqueta('${o.act}',null,'${G.g}')" title="La etiqueta de ingreso que se pega en la válvula">
             <svg viewBox="0 0 24 24"><path d="M3 7h11l6 5-6 5H3z"/><circle cx="7.5" cy="12" r="1.2"/></svg>Etiqueta${varias?'s':''}</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
@@ -15237,7 +15274,14 @@ function faltaParaFinalizar(o){
       ? {listo:true, falta:[]}
       : {listo:false, falta:['El visto bueno del jefe para emitir el certificado']};
   }
-  if(o.et==='oc')    return {listo:false, falta:['Recibir la válvula — todavía no ha llegado']};
+  if(o.et==='oc'){
+    /* Lo que le falta a esta válvula es SU siguiente paso: si la orden
+       no lleva prueba de entrada, no está esperando que la reciban. */
+    const d=destinoDe(o);
+    return {listo:false, falta:[d==='ent'||!d
+      ? 'Recibir la válvula — todavía no ha llegado'
+      : `${WO_IR[d]} — todavía no ha empezado`]};
+  }
   if(o.et==='ent'){
     const r=recepDe(o.act);
     const f=[];
