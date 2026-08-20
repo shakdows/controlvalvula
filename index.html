@@ -1529,6 +1529,15 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .rc-a.vacio b{font-weight:400;color:var(--ink-3);font-style:italic}
 /* La presión de seteo, con su candado al lado: el campo ocupa lo que
    pueda y el botón de abrir se queda pegado a la derecha. */
+/* El visor de documentos dentro de la app: cuando el navegador no
+   deja abrir una pestaña, el papel se ve aquí, a pantalla completa,
+   con su barra para imprimirlo o guardarlo en PDF. */
+.visor-doc{position:fixed;inset:0;z-index:120;background:var(--surface-2);display:flex;flex-direction:column}
+.visor-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);
+  border-bottom:1px solid var(--line-2);box-shadow:0 2px 10px rgba(16,45,105,.06)}
+.visor-bar b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+.visor-doc iframe{flex:1;width:100%;border:0;background:#fff}
+@media print{.visor-bar{display:none}.visor-doc{position:static}}
 .set-fila{display:flex;align-items:center;gap:8px}
 .set-fila .inp{flex:1;min-width:0}
 .set-fila .set-lock-btn{flex:0 0 auto;white-space:nowrap}
@@ -3143,7 +3152,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <div class="auth-alt">
         <div class="lbl">Recorrido de demostración</div>
         <select class="inp" id="coverRole" style="margin-bottom:10px">
-          <option value="admin">Ingeniería · Adolphus</option>
+          <option value="admin">Gerencia · Adolphus</option>
           <option value="tec">Mantenimiento</option>
           <option value="com">Comercial repuestos</option>
           <option value="cli-minera">Cliente · Minera Los Andes</option>
@@ -3242,7 +3251,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <div style="padding:4px 10px 8px" id="acctDemo">
             <label style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:6px">Demostración · cambiar de perfil</label>
             <select class="inp chip-sel" id="roleSel" style="height:32px;width:100%">
-              <option value="admin">Ingeniería · Adolphus</option>
+              <option value="admin">Gerencia · Adolphus</option>
               <option value="tec">Mantenimiento</option>
               <option value="com">Comercial repuestos</option>
               <option value="cli-minera">Cliente · Minera Los Andes</option>
@@ -3942,7 +3951,7 @@ const cotSub=c=>(c.items||[]).reduce((s,i)=>s+(i.pu!=null?i.pu:precio(i.n))*(i.q
 const cotTot=c=>cotSub(c)*(1+IGV);
 
 const USUARIOS=[
- {n:'Ingeniería Adolphus',m:'ingenieria@adolphus.pe',r:'Administrador',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
+ {n:'Gerencia Adolphus',m:'ingenieria@adolphus.pe',r:'Gerencia',c:'—',x:'Maestros, catálogo, despieces, usuarios y reportes'},
  {n:'Servicio Técnico',m:'servicio@adolphus.pe',r:'Técnico',c:'—',x:'Órdenes de trabajo, informes y certificados'},
  {n:'Comercial Repuestos',m:'ventas@adolphus.pe',r:'Comercial',c:'—',x:'Solicitudes, cotizaciones y stock local'},
  {n:'Mantenimiento Planta',m:'mantenimiento@losandes.pe',r:'Cliente',c:'Minera Los Andes S.A.A.',x:'Lectura de sus activos y solicitud de repuestos'},
@@ -5461,13 +5470,12 @@ function etiquetasAImprimir(){
   const trozos=[];
   ids.forEach(id=>{for(let k=0;k<ETIQ.copias;k++)trozos.push(etiquetaHTML(id,ETIQ.tam,ETIQ.grupo))});
   if(!trozos.length){toast('No hay nada que imprimir');return}
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   /* Las de hoja ocupan el ancho útil entero: si se dejara el margen
      de 8 mm del cuerpo, la impresora las reduciría y el tamaño ya no
      sería el que dice. */
   const deHoja=ETIQ.tam==='a4'||ETIQ.tam==='a5';
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo='Etiquetas';
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Etiquetas Adolphus</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{margin:0;padding:${deHoja?'0':'8mm'};font-family:'Helvetica Neue',Segoe UI,Roboto,sans-serif;
@@ -5485,7 +5493,7 @@ ${ETIQUETA_CSS}
 @media print{.barra{display:none}}
 @page{size:A4;margin:${deHoja?'5mm':'6mm'}}
 </style></head><body>${trozos.join('')}${BARRA_IMPRIMIR}</body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
   registrar('Etiqueta',`${trozos.length} etiquetas impresas`);
 }
 /* El mismo CSS en pantalla y en el papel: si se escribiera dos veces,
@@ -5704,7 +5712,10 @@ function openAsset(id,opt){
 function closeDrawer(){$('#drawer').classList.remove('on');$('#scrim').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true');S.cur=null;renderGrid()}
 /* Baja de un equipo mal registrado. Pide clave para evitar borrados accidentales.
    Nota: la validación real debe hacerse en el servidor cuando exista backend. */
-const CLAVE_BAJA='adolphus2026';
+/* La clave que gerencia teclea para borrar. La eligió el jefe y es la
+   misma para todo lo que se elimina —órdenes y válvulas—: dos claves
+   distintas para lo mismo sólo se acaban apuntando en un papel. */
+const CLAVE_BAJA='1234';
 /* ── LA PRESIÓN DE SETEO LA PONE LA JEFATURA ─────────────────
    Es el número contra el que se juzga todo el trabajo: si se pudiera
    cambiar en el banco, se podría hacer «aprobar» una válvula moviendo
@@ -6593,8 +6604,8 @@ function imprimirCot(id){
   const c=COTIZACIONES.find(x=>x.id===id); if(!c) return;
   const a=ACTIVOS.find(x=>x.id===c.act), cl=cli(c.cli);
   const sub=cotSub(c), igv=sub*IGV, tot=sub+igv;
-  const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana de impresión');return}
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo=`Cotización ${c.n||''}`;
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>${esc(c.n)} · Adolphus</title><style>
    body{font:13px/1.55 system-ui,-apple-system,sans-serif;color:#1d2430;max-width:780px;margin:34px auto;padding:0 26px}
    h1{font-size:20px;margin:0 0 2px} .sub{color:#5b6472;font-size:12.5px;margin-bottom:24px}
@@ -6621,7 +6632,7 @@ function imprimirCot(id){
      <div class="g"><span>Total</span><b>${usd(tot)}</b></div></div>
    ${c.nota?`<div class="nota">${esc(c.nota)}</div>`:''}
    </body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
 }
 
 /* ============================================================
@@ -7152,8 +7163,8 @@ function imprimirPlan(){
   const f=planFoco(); if(!f) return;
   const p=planDe(f), c=cli(f), ok=PLAN_OK[f];
   const mesN=i=>`${MESES_C[p.v[i].getMonth()]} ${String(p.v[i].getFullYear()).slice(2)}`;
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo=`Plan anual · ${c.n||''}`;
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>Plan anual ${esc(c.n)}</title><style>
    *{box-sizing:border-box}
    body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:26px}
@@ -7190,7 +7201,7 @@ function imprimirPlan(){
    <div class="pie">La frecuencia sale de la criticidad de cada válvula y la calibración se ancla a la fecha ya programada
      en la ficha del equipo. Los importes son referenciales y no constituyen una oferta en firme.</div>
    </body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
 }
 
 /* ── Valvulario ──────────────────────────────────────────────
@@ -7205,12 +7216,12 @@ function valvulario(cliId){
   if(!f){toast('Entra a un cliente para generar su valvulario');return}
   const c=cli(f); const eq=ACTIVOS.filter(a=>a.cli===f);
   if(!eq.length){toast(`${c.n} todavía no tiene válvulas cargadas`);return}
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
   const nd=v=>v&&String(v).trim()&&v!=='—'?esc(v):'<span class="f">—</span>';
   const porFam={}; eq.forEach(a=>{const k=CL[a.cl]||'Otras';(porFam[k]=porFam[k]||[]).push(a)});
   const faltan=eq.filter(a=>a.sinId||!a.ser||!a.sz||!a.rt).length;
   const hoyS=HOY.toISOString().slice(0,10);
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo=`Valvulario · ${c.n||''}`;
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>Valvulario ${esc(c.n)}</title><style>
    *{box-sizing:border-box}
    body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:22px}
@@ -7264,7 +7275,7 @@ function valvulario(cliId){
      Documento generado desde el parque instalado registrado en el portal; refleja el estado al ${fPE(hoyS)}.</div>
    <div class="firma"><div>Por Adolphus S.A. — nombre, cargo y fecha</div><div>Por ${esc(c.n)} — nombre, cargo y fecha</div></div>
    </body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
 }
 
 /* ============================================================
@@ -9900,9 +9911,7 @@ function imprimirRecepcion(id){
   const d=documentoRecepcion(c);
   if(!d){toast('No hay prueba de entrada que imprimir');return}
   if(!id&&PSV_TMP)guardarPSV(false,true);
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(d.html); w.document.close(); w.focus();
+  abrirDoc(d.html,d.titulo);
 }
 /* ════════════════════════════════════════════════════════════
    INFORME TÉCNICO DVAD-SER-002
@@ -10369,9 +10378,7 @@ ${BARRA_IMPRIMIR}
 function imprimirInforme(idOrden,solo){
   const d=documentoInforme(idOrden,solo);
   if(!d){toast('No encuentro esa orden');return}
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(d.html); w.document.close(); w.focus();
+  abrirDoc(d.html,d.titulo);
 }
 /* ── ¿DE CUÁL VÁLVULA ES EL INFORME? ─────────────────────────
    Una OC con varias válvulas admite dos papeles distintos: el de cada
@@ -10432,10 +10439,7 @@ function pintarElegirInforme(){
 function informePDF(idOrden,solo){
   const d=documentoInforme(idOrden,solo);
   if(!d){toast('No encuentro esa orden');return}
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para guardar el PDF');return}
-  w.document.write(d.html); w.document.close(); w.focus();
-  imprimirCuandoCarguen(w);
+  abrirDoc(d.html,d.titulo,true);
 }
 function infSacar(modo){
   if(!INF_SEL.ids.length){toast('Marca al menos una válvula');return}
@@ -11076,8 +11080,7 @@ function fichaParaCliente(actId){
 }
 function fichaClientePDF(id){
   const d=fichaClienteDoc(id); if(!d)return;
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(d.html); w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(d.html,d.titulo,true);
 }
 function fichaClienteWord(id){
   const d=fichaClienteDoc(id); if(!d)return;
@@ -11123,21 +11126,69 @@ function imprimirCertificadosOrden(idOrden,modo){
   const cab=/^[\s\S]*?<body[^>]*>/i.exec(docs[0].html);
   const html=(cab?cab[0]:'<!doctype html><html><head><meta charset="utf-8"></head><body>')
     + cuerpo + '</body></html>';
-  const w=window.open('','_blank');
-  if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(html); w.document.close(); w.focus();
+  abrirDoc(html,`${docs.length} certificados`);
   toast(`${docs.length} certificados en un solo documento`);
 }
 
 function imprimirPSV(id){
   const d=psvDocumento(id); if(!d)return false;
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return false}
-  w.document.write(d.html);
-  w.document.close(); w.focus();
+  abrirDoc(d.html,d.titulo);
   return true;
 }
 /* Espera a que la ventana tenga sus fotos dibujadas y entonces imprime.
    Sin esto el PDF salía con los recuadros vacíos. */
+/* ── ABRIR UN DOCUMENTO SIN DEPENDER DE LAS EMERGENTES ───────
+   Los papeles se abrían siempre en una pestaña nueva. Dentro de la
+   app instalada no hay pestañas, y en el navegador el bloqueador se
+   las come: el botón parecía no hacer nada. Ahora se intenta la
+   pestaña —que es lo cómodo en la computadora— y, si no se puede, el
+   documento se enseña dentro de la propia aplicación, en un marco a
+   pantalla completa con su botón de imprimir o guardar en PDF.
+   ════════════════════════════════════════════════════════════ */
+function abrirDoc(html,titulo,imprimirYa){
+  let w=null;
+  try{ w=window.open('','_blank') }catch(e){ w=null }
+  if(w&&w.document){
+    try{
+      w.document.write(html); w.document.close(); w.focus();
+      if(imprimirYa)imprimirCuandoCarguen(w);
+      return true;
+    }catch(e){ try{w.close()}catch(_){} }
+  }
+  verDocDentro(html,titulo,imprimirYa);
+  return true;
+}
+/* El documento dentro de la aplicación: un marco con el papel tal
+   cual, y encima la barra para imprimirlo, guardarlo en PDF o salir. */
+function verDocDentro(html,titulo,imprimirYa){
+  const vie=document.getElementById('visorDoc'); if(vie)vie.remove();
+  const caja=document.createElement('div');
+  caja.id='visorDoc'; caja.className='visor-doc';
+  caja.innerHTML=`<div class="visor-bar">
+      <b>${esc(titulo||'Documento')}</b>
+      <span style="flex:1"></span>
+      <button class="btn quiet" onclick="cerrarVisorDoc()">Cerrar</button>
+      <button class="btn" onclick="imprimirVisorDoc()">
+        <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
+        Imprimir o guardar PDF</button>
+    </div>
+    <iframe id="visorMarco" title="${esc(titulo||'Documento')}"></iframe>`;
+  document.body.appendChild(caja);
+  const f=document.getElementById('visorMarco');
+  try{
+    const d=f.contentWindow.document;
+    d.open(); d.write(html); d.close();
+  }catch(e){ toast('No se pudo preparar el documento'); return }
+  if(imprimirYa)setTimeout(imprimirVisorDoc,400);
+}
+function imprimirVisorDoc(){
+  const f=document.getElementById('visorMarco'); if(!f)return;
+  try{ f.contentWindow.focus(); imprimirCuandoCarguen(f.contentWindow); }
+  catch(e){ toast('El navegador no dejó imprimir desde aquí') }
+}
+function cerrarVisorDoc(){
+  const v=document.getElementById('visorDoc'); if(v)v.remove();
+}
 function imprimirCuandoCarguen(w){
   const t0=Date.now();
   const listas=()=>{
@@ -11573,8 +11624,8 @@ function imprimirSNC(id){
    ['Producto',[sncProducto(a),r.doma&&('cód. DOMA '+r.doma)].filter(Boolean).join(' · ')],
    ['Estado',r.est==='cerrado'?`Cerrado${r.fCierre?' el '+fPE(r.fCierre):''}`:'Abierto']
   ];
-  const w=window.open('','_blank'); if(!w){toast('El navegador bloqueó la ventana de impresión');return}
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo=`Reclamo ${r.n||''}`;
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>${esc(r.n)} · Adolphus</title><style>
    body{font:13px/1.55 system-ui,-apple-system,sans-serif;color:#1d2430;max-width:760px;margin:34px auto;padding:0 26px}
    h1{font-size:20px;margin:0 0 2px} .sub{color:#5b6472;font-size:12.5px;margin-bottom:22px}
@@ -11588,7 +11639,7 @@ function imprimirSNC(id){
    <div class="sub">${esc(cli(r.cli).n)}${a?' · '+esc(a.tag):''} · abierto el ${r.f} por ${esc(r.por)} · Adolphus S.A.</div>
    <ol>${campos.map(([t,v])=>`<li><div><b>${esc(t)}</b><p${v?'':' class="vacio"'}>${v?esc(v):'Pendiente'}</p></div></li>`).join('')}</ol>
    ${BARRA_IMPRIMIR}</body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
 }
 
 function renderReq(){
@@ -12242,7 +12293,7 @@ function informeProyecto(id){
   $('#mFoot').innerHTML=`
     <button class="btn sec" onclick="informeExcel('${id}')" title="Para que el cliente cruce los datos">Excel</button>
     <button class="btn sec" onclick="informeProyectoWord('${id}')" title="Para editarlo antes de enviarlo">Word</button>
-    <button class="btn" onclick="informePDF('${id}')" title="Para firmar y archivar">PDF</button>`;
+    <button class="btn" onclick="informeProyectoPDF('${id}')" title="Para firmar y archivar">PDF</button>`;
   $('#modal').classList.add('on');
 }
 /* El cuerpo del documento, compartido por el PDF y el Word: si se
@@ -12312,12 +12363,16 @@ const INFORME_CSS=`
    .firma{margin-top:26px;display:flex;gap:44px}
    .firma div{flex:1;border-top:1px solid #101418;padding-top:5px;font-size:10px;color:#5b6470}
    @media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}`;
-function informePDF(id){
+/* El PDF del informe de una OC (el del proyecto entero). Llevaba el
+   mismo nombre que el del informe de una orden y lo tapaba: pulsar
+   «PDF» en una orden llamaba aquí, no encontraba proyecto y no hacía
+   nada. Mismo tropiezo que tuvo informeWord. */
+function informeProyectoPDF(id){
   const p=pry(id); if(!p)return;
-  const w=window.open('','_blank'); if(!w){toast('Permite las ventanas emergentes para imprimir');return}
-  w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8">
+  const __titulo=`Informe OC ${p.oc||''}`;
+  const __doc=(`<!doctype html><html lang="es"><head><meta charset="utf-8">
    <title>Informe OC ${esc(p.oc)}</title><style>${INFORME_CSS}</style></head><body>${informeHTML(id)}</body></html>`);
-  w.document.close(); w.focus(); imprimirCuandoCarguen(w);
+  abrirDoc(__doc,__titulo,true);
 }
 /* Word abre sin problema un HTML con extensión .doc. Es lo que hace
    media industria y evita cargar una librería de 500 KB para generar
@@ -16724,7 +16779,11 @@ function confirmDeleteCalib(id){
 /* ============================================================
    12.8 · CREAR USUARIO (dar acceso a clientes)
    ============================================================ */
-const SCOPE_ROL={Administrador:'Maestros, catálogo, despieces, usuarios y reportes',Técnico:'Órdenes de trabajo, informes y certificados',Comercial:'Solicitudes, cotizaciones y stock local',Cliente:'Lectura de sus activos y solicitud de repuestos'};
+const SCOPE_ROL={Gerencia:'Maestros, catálogo, despieces, usuarios y reportes',Mantenimiento:'Órdenes de trabajo, informes y certificados',Comercial:'Solicitudes, cotizaciones y stock local',Cliente:'Lectura de sus activos y solicitud de repuestos'};
+/* Los usuarios ya dados de alta traen los nombres viejos: se siguen
+   entendiendo, sólo que en pantalla se llaman como se llaman ahora. */
+const ROL_VIEJO={Administrador:'Gerencia','Técnico':'Mantenimiento'};
+const rolVisible=r=>ROL_VIEJO[r]||r||'';
 function openNewUser(){
   $('#mTitle').textContent='Invitar a una persona';
   $('#mBody').innerHTML=`
@@ -16743,7 +16802,7 @@ function openNewUser(){
   $('#nuR').onchange=sync;sync();
   $('#modal').classList.add('on');
 }
-const PERFIL_DE_ROL={'Administrador':'admin','Técnico':'tec','Comercial':'com','Cliente':'cliente'};
+const PERFIL_DE_ROL={'Gerencia':'admin','Administrador':'admin','Mantenimiento':'tec','Técnico':'tec','Comercial':'com','Cliente':'cliente'};
 function saveNewUser(){
   const n=$('#nuN').value.trim(),m=$('#nuM').value.trim().toLowerCase(),r=$('#nuR').value,cId=$('#nuC').value;
   if(!n||!m){toast('Indica nombre y correo');return}
@@ -18686,7 +18745,9 @@ const LS_ACC='adolphus.cuentas.v1', LS_SES='adolphus.sesion.v1';
    navegador. NO es un hash de contraseñas; eso va del lado del servidor. */
 const resumen=t=>{let h=2166136261;for(let i=0;i<String(t).length;i++){h^=String(t).charCodeAt(i);h=Math.imul(h,16777619)}
   return ('0000000'+(h>>>0).toString(16)).slice(-8)};
-const PERFILES={admin:'Administrador',tec:'Mantenimiento',com:'Comercial',cliente:'Cliente'};
+/* Como se llaman en la casa: el que manda es gerencia, no «el
+   administrador». */
+const PERFILES={admin:'Gerencia',tec:'Mantenimiento',com:'Comercial',cliente:'Cliente'};
 
 /* Ver la contraseña que se está escribiendo. En el celular, con el
    teclado tapando media pantalla y los puntitos, no hay forma de saber
