@@ -5147,7 +5147,9 @@ function verOrden(idOrAct,esActivo){
                 if(x.recibida)h.push(`Recibida ${fPE(x.recibida)}${x.recibidaH?` · ${x.recibidaH} h`:''}`);
                 if(x.tomada)h.push(`A mantenimiento ${fPE(x.tomada)}${x.tomadaH?` · ${x.tomadaH} h`:''}`);
                 const orden=['oc','ent','mant','cert','final'], aqui=orden.indexOf(x.et);
-                if(x.hist&&x.hist.cert&&aqui>=orden.indexOf('cert'))h.push(`A prueba de salida ${fPE(x.hist.cert)}`);
+                if(aqui>=orden.indexOf('cert')&&(x.salidaF||(x.hist&&x.hist.cert)))
+                  h.push(`A prueba de salida ${fPE(x.salidaF||x.hist.cert)}${x.salidaH?` · ${x.salidaH} h`:''}${
+                    x.salida?` · ${x.salida}`:''}`);
                 if(x.et==='final'&&x.hist&&x.hist.final)h.push(`Finalizada ${fPE(x.hist.final)}`);
                 return h.length?`<small class="ord-h">${esc(h.join(' · '))} <span>hora de Perú</span></small>`:'';
               })()}</div>
@@ -12176,6 +12178,80 @@ function tomarOrden(id,grupo){
   $('#modal').classList.add('on');
   setTimeout(()=>{const el=$('#toIng');if(el)el.focus()},80);
 }
+/* ── QUIÉN HACE LA PRUEBA DE SALIDA ──────────────────────────
+   Los tres disparos del as-left los da una persona, y esa persona
+   firma el certificado. Antes la válvula entraba a esta columna sola,
+   sin nombre y sin fecha: el papel salía después con el hueco de
+   «ejecutado por» y nadie se acordaba de quién había sido.
+   ════════════════════════════════════════════════════════════ */
+const LS_SALIDA='adolphus.salida';
+let SALIDA_IDS=null;
+function pruebaSalidaOrden(id,grupo){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  if(S.rol==='cliente'){toast('La prueba de salida la hace Adolphus');return}
+  const a=ACTIVOS.find(x=>x.id===o.act)||{};
+  let ls=grupo?ORDENES.filter(x=>grupoDe(x)===grupo&&x.et===o.et):[o];
+  /* El trabajo del taller tiene que estar entero antes de disparar:
+     la que no lo tenga se queda, y se dice cuál. */
+  const listo=x=>!haceEsePaso(x,'mant')||(()=>{const c=recepDe(x.act);return !!c&&tallerListo(c)})();
+  const faltan=ls.filter(x=>!listo(x));
+  ls=ls.filter(listo);
+  if(!ls.length){
+    const v=ACTIVOS.find(x=>x.id===faltan[0].act)||{};
+    toast(`Primero termina el mantenimiento de ${v.tag||v.ser||''}`);
+    openPSV(faltan[0].act,null,'fotos'); return;
+  }
+  if(faltan.length)setTimeout(()=>toast(`${faltan.length} válvula${faltan.length===1?'':'s'} se queda${
+    faltan.length===1?'':'n'} en el taller hasta terminar su desarme`),1000);
+  SALIDA_IDS=ls.map(x=>x.id);
+  let yo=''; try{yo=localStorage.getItem(LS_SALIDA)||localStorage.getItem(LS_ING)||''}catch(e){}
+  if(!yo&&typeof SES!=='undefined'&&SES)yo=SES.n||'';
+  $('#mTitle').textContent=`Prueba de salida · ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>
+     <div>Vas a hacer la prueba de salida de ${ls.length>1
+       ? `<b>${ls.length} válvulas</b> de <b>${esc(cli(a.cli).n||'')}</b>`
+       : `<b>${esc(a.tag||a.ser||'')}</b> — ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}
+          de <b>${esc(cli(a.cli).n||'')}</b>`}: los <b>tres disparos del as-left</b>.
+       Tu nombre va al certificado como quien ejecutó el ensayo.</div></div>
+   <div class="two">
+     <div class="fld"><label for="psIng">Técnico que hace la prueba <span class="req-dot">*</span></label>
+       <input class="inp" id="psIng" value="${esc(yo)}" placeholder="p. ej. K. Ortiz" autocomplete="name"></div>
+     <div class="fld"><label for="psFec">Fecha de la prueba</label>
+       <input class="inp" id="psFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
+   </div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" onclick="confirmarSalida('${id}')">Pasar a prueba de salida${ls.length>1?` · ${ls.length}`:''}</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>{const el=$('#psIng');if(el)el.focus()},80);
+}
+function confirmarSalida(id){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  const cQ=$('#psIng'); if(!cQ)return;
+  const quien=cQ.value.trim();
+  if(!quien){toast('Escribe el nombre del técnico que hace la prueba');cQ.focus();return}
+  try{localStorage.setItem(LS_SALIDA,quien)}catch(e){}
+  const fec=$('#psFec').value||HOY.toISOString().slice(0,10);
+  const hora=horaPeru();
+  const ls=(SALIDA_IDS&&SALIDA_IDS.length
+      ? SALIDA_IDS.map(i=>ORDENES.find(x=>x.id===i)).filter(Boolean) : [o]);
+  ls.forEach(x=>{
+    x.salida=quien; x.salidaF=fec; x.salidaH=hora;
+    if(!x.ing||x.ing==='Por asignar'){x.ing=quien; x.tec=quien}
+    /* El que dispara es el que firma: si el papel no tiene puesto un
+       responsable, se le pone éste. */
+    const c=recepDe(x.act);
+    if(c&&!String(c.respNombre||'').trim()){
+      c.respNombre=quien; c.respArea=c.respArea||'Taller de válvulas';
+    }
+    moverLinea(x,'cert');
+  });
+  const n=ls.length; SALIDA_IDS=null;
+  guardarLocal(); closeModal(); renderAll();
+  registrar('Orden',`${o.mat||o.n}${n>1?` · ${n} válvulas`:''} a prueba de salida · ${quien} a las ${hora}`);
+  toast(n>1 ? `${n} válvulas a prueba de salida · las dispara ${quien}`
+            : `A prueba de salida · la dispara ${quien}`);
+}
 let TOMAR_GRUPO=null, TOMAR_IDS=null;
 function confirmarTomar(id){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
@@ -12899,6 +12975,8 @@ function renderWO(){
           ${G.et==='ent'
             ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Probó ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}${o.recibidaH?` · ${o.recibidaH} h`:''}`:''}</div>`
                        :`<div class="wo-ing libre">Sin probar todavía</div>`)
+            : G.et==='cert'&&o.salida
+              ? `<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>La dispara ${esc(o.salida)}${o.salidaF?` · ${fPE(o.salidaF)}${o.salidaH?` · ${o.salidaH} h`:''}`:''}</div>`
             : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}${o.tomadaH?` · ${o.tomadaH} h`:''}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
           ${G.et==='ent'&&S.rol!=='cliente'?(()=>{
@@ -13091,10 +13169,11 @@ function advanceWO(id){
         : `Falta ${v.falta} · ${a.tag||a.ser||''}`);
       openPSV(o.act,null,'fotos'); return;
     }
-    moverLinea(o,'cert'); renderAll();
-    registrar('Orden',`${o.mat||o.n} · a prueba de salida, esperando el visto bueno`);
-    toast('A prueba de salida · le toca al jefe revisar y firmar');
-    return;
+    /* La prueba de salida también tiene dueño: quien la dispara firma
+       el certificado. Se pregunta antes de mover la tarjeta, igual que
+       al pasar al taller — si no, la válvula cambia de columna sin que
+       conste quién la está trabajando. */
+    pruebaSalidaOrden(id); return;
   }
   if(nx[0]==='mant'){tomarOrden(id);return}
   if(nx[0]==='final'){
@@ -13277,7 +13356,7 @@ function avanzarGrupo(g,etapa){
   if(nx[0]==='mant'){tomarOrden(mueven[0].id,g);return}
   /* A prueba de salida entra cada válvula por su cuenta: cada una tiene su
      propio ensayo y su propia firma. */
-  if(nx[0]==='cert'){ mueven.forEach(x=>advanceWO(x.id)); return }
+  if(nx[0]==='cert'){ pruebaSalidaOrden(mueven[0].id, mueven.length>1?g:null); return }
   mueven.forEach(x=>moverLinea(x,nx[0]));
   const et2=ETAPAS.find(e=>e[0]===nx[0])[1];
   registrar('Orden',`${mueven[0].n} · ${mueven.length} válvulas → ${et2}`);
@@ -13346,7 +13425,7 @@ function dropWO(ev,et){
   if(et==='final'&&prev!=='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   if(et==='ent'&&prev==='oc'){recibirOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='mant'&&prev!=='mant'){tomarOrden(mueven[0].id,ls.length>1?gArr:null);return}
-  if(et==='cert'&&prev==='mant'){ mueven.forEach(x=>advanceWO(x.id)); return }
+  if(et==='cert'&&prev!=='cert'){ pruebaSalidaOrden(mueven[0].id, mueven.length>1?gArr:null); return }
   if(et==='final'&&prev!=='final'){
     /* Arrastrar hasta el final no puede certificar por sí solo: antes
        cerraba la orden, ponía una fecha fija escrita a mano y renovaba
