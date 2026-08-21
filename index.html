@@ -1554,6 +1554,15 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 /* El visor de documentos dentro de la app: cuando el navegador no
    deja abrir una pestaña, el papel se ve aquí, a pantalla completa,
    con su barra para imprimirlo o guardarlo en PDF. */
+/* La banda de «quedó algo a medio escribir»: abajo, sin tapar nada,
+   con las dos únicas salidas posibles. */
+.banda-curso{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:115;
+  display:flex;align-items:center;gap:10px;max-width:min(680px,94vw);
+  background:var(--surface);border:1px solid var(--line);border-radius:999px;
+  padding:8px 10px 8px 16px;box-shadow:0 8px 30px rgba(16,45,105,.18);font-size:12.5px}
+.banda-curso svg{width:17px;height:17px;fill:none;stroke:var(--due);stroke-width:1.8;flex:0 0 auto}
+.banda-curso span{flex:1;min-width:0}
+@media(max-width:560px){.banda-curso{border-radius:14px;flex-wrap:wrap;bottom:76px}}
 .visor-doc{position:fixed;inset:0;z-index:120;background:var(--surface-2);display:flex;flex-direction:column}
 .visor-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface);
   border-bottom:1px solid var(--line-2);box-shadow:0 2px 10px rgba(16,45,105,.06)}
@@ -2800,6 +2809,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
   align-items:end;padding:9px 10px;border:1px solid var(--line);border-radius:var(--r-2);
   background:var(--surface-2);border-left:3px solid var(--line)}
 .dsp-f.ok{border-left-color:var(--ok)} .dsp-f.no{border-left-color:var(--late)}
+/* Un disparo por vez: hasta que el anterior no tenga su valor y su
+   foto, el siguiente está apagado. */
+.dsp-f.espera{opacity:.5}
+.dsp-f.espera .inp,.dsp-f.espera .dsp-cam{pointer-events:none}
+.dsp-espera{grid-column:1/-1;font-size:11px;color:var(--ink-3);padding:2px 2px 0}
+.dsp-espera.pide{color:var(--due);font-weight:600}
+.dsp-cam.pide{border-color:var(--due);color:var(--due)}
 .dsp-n{width:26px;height:26px;border-radius:50%;background:var(--surface-3);color:var(--ink-2);
   display:grid;place-items:center;font-size:12.5px;font-weight:700;margin-bottom:5px}
 .dsp-f.ok .dsp-n{background:var(--ok-bg);color:var(--ok)}
@@ -5752,7 +5768,7 @@ const CLAVE_BAJA='1234';
    lo corrige sólo con la clave del jefe, y ese desbloqueo queda
    escrito en la bitácora.
    ════════════════════════════════════════════════════════════ */
-const CLAVE_SET='adolphus2026';
+const CLAVE_SET=CLAVE_BAJA;              // la misma del jefe: 1234
 let SET_ABIERTO=false;                 // dura lo que dure la sesión
 const puedeEditarSet=()=>S.rol==='admin'||SET_ABIERTO;
 /* El candadito que se enseña al lado del campo cuando no se puede
@@ -6137,10 +6153,18 @@ function fichaEditar(k,el){
   const guardar=()=>{
     if(hecho)return; hecho=true;
     const v=inp.value.trim?inp.value.trim():inp.value;
+    const antes=a[k];
     if(String(a[k]==null?'':a[k]).trim()===String(v)){cerrar();return}
     a[k]=v;
     /* Cambiar el modelo rehereda la familia, como en el formulario. */
     if(k==='mod'&&MODELOS[v]&&MODELOS[v].cl)a.cl=MODELOS[v].cl;
+    /* Dos válvulas no pueden llamarse igual: se deshace el cambio. */
+    if(k==='tag'||k==='ser'){
+      const otro=k==='tag'?tagRepetido(v,a.id):serieRepetida(v,a.id);
+      if(otro){ a[k]=antes;
+        toast(`Ya hay otra válvula con ${k==='tag'?'ese tag':'esa serie'} — ${esc(otro.tag||otro.ser||'')}`);
+        paneTec(); return; }
+    }
     if(k==='tag')a.sinId=(!a.ser&&esProv(a.tag))||undefined;
     guardarLocal(); registrar('Válvula',`${a.tag||a.ser||''} · ${k} corregido a "${v}"`);
     renderAll(); paneTec(); toast('Guardado');
@@ -7555,6 +7579,12 @@ function psvFaltantes(c){
     const v=num(t.v);
     if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`,paso:4});
   });
+  /* Cada disparo con su foto: es la prueba de que se hizo, tomada en
+     ese momento y no después. */
+  disparosDe(c).forEach((t,i)=>{
+    if(num(t.v)>0&&!fotosDisparo(t).length)
+      out.push({id:'dspF'+i, que:`la foto del disparo ${i+1}`,paso:4});
+  });
   /* 5 · conclusiones */
   if(!String(c.coment||'').trim())
     out.push({id:'pv-coment', que:'las conclusiones del mantenimiento',paso:5});
@@ -8068,6 +8098,14 @@ function recepAuto(t,a){
 }
 /* Se escribe en los dos sitios a la vez: en el trabajo de hoy y en la
    ficha de la válvula, que es de donde saldrá la próxima vez. */
+/* Un texto que es de la orden, no de una válvula: se escribe en todas
+   sus líneas para que dé igual desde cuál se abra. */
+function ordenTexto(id,k,v){
+  const o=ORDENES.find(x=>x.id===id); if(!o)return;
+  lineasDe(o).forEach(x=>{x[k]=v});
+  clearTimeout(ordenTexto._t);
+  ordenTexto._t=setTimeout(()=>guardarLocal(),800);
+}
 function psvCampoValvula(k,v){
   if(!PSV_TMP)return;
   PSV_TMP[k]=v;
@@ -8094,11 +8132,22 @@ function bloqueRecepcion(t,a,ayuda,F){
         <span>${esc(k)}</span><b>${String(v||'').trim()?esc(String(v)):'sin dato en la placa'}</b></div>`).join('')}
     </div>
     ${faltanAuto?`<p class="rc-nota">Hay ${faltanAuto} dato${faltanAuto===1?'':'s'} que la válvula todavía no tiene.
-      Se completan en <a href="#" onclick="openPlacaPSV('${a.id}');return false">datos de placa</a> y desde entonces salen solos.</p>`:''}
+      Se completan en <a href="#" onclick="openFichaFija('${a.id}');return false">la ficha fija</a> y desde entonces salen solos.</p>`:''}
 
+    ${/* Estos datos son de la VÁLVULA, no del trabajo de hoy: el
+         material del cuerpo o el bonete no cambian de un servicio a
+         otro. Van todos juntos en la ficha fija, la escribe el jefe y
+         aquí sólo se leen — así dos técnicos no acaban escribiendo
+         dos materiales distintos para la misma válvula. */''}
     <h4 class="snc-sec">Lo que hay que mirar en la válvula
-      <span class="opc">se guarda en su ficha: la próxima vez ya sale puesto</span></h4>
-    <div class="two">${RECEP_VALVULA.map(([k,l,p])=>campo(k,l,p)).join('')}</div>
+      <span class="opc">de la ficha fija · la escribe gerencia</span>
+      ${S.rol==='cliente'?'':`<button class="btn quiet xs" style="margin-left:auto"
+        onclick="openFichaFija('${a.id}')">Abrir la ficha fija</button>`}</h4>
+    <div class="rc-auto">
+      ${RECEP_VALVULA.map(([k,l])=>{const v=t[k]!=null&&String(t[k]).trim()!==''?t[k]:a[k];
+        return `<div class="rc-a${String(v||'').trim()?'':' vacio'}">
+          <span>${esc(l)}</span><b>${String(v||'').trim()?esc(String(v)):'sin dato en la ficha'}</b></div>`}).join('')}
+    </div>
 
     ${/* Quién recibió y qué día es de la ORDEN DE SERVICIO, no de cada
          válvula: se escribió una vez al aceptarla y vale para todas las
@@ -8337,7 +8386,10 @@ function seguirEntradas(actId){
 const PASOS_ETAPA={
   oc:  [1,2],
   ent: [1,2],
-  mant:[3],
+  /* En mantenimiento va el desarme Y las firmas: el que hizo el
+     trabajo firma ahí mismo, al terminar, sin esperar a otra
+     pantalla. */
+  mant:[3,6],
   /* En prueba de salida van los disparos Y las firmas: ahí es donde
      el jefe lee lo que hizo el taller —con la firma del mecánico que
      la recibió y la del que la trabajó delante— y pone su visto
@@ -8545,7 +8597,29 @@ function pintarPSV(){
       <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
         ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
         <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea>
-        <span class="hint">Se imprime completo en el certificado, bajo el título <b>Conclusiones</b>.</span></div>
+        <span class="hint">Se imprime completo en el certificado de <b>esta</b> válvula, bajo el título <b>Conclusiones</b>.</span></div>
+      ${/* Y lo general del trabajo: lo que va en el informe DVAD-SER-002,
+           en los renglones que antes había que llenar a mano. Es de la
+           ORDEN, así que se escribe una vez y vale para todas sus
+           válvulas. */''}
+      ${(()=>{
+        const ord=ordenViva(t.act)||ordenDeValvula(t.act);
+        if(!ord)return '';
+        const ls=lineasDe(ord);
+        return `<h4 class="snc-sec">Del informe de la orden
+            <span class="opc">${esc(codigoOS(numOS(ord),/^PSV/i.test(String(ord.mat||'')))||ord.mat||ord.n)}${
+              ls.length>1?` · vale para las ${ls.length} válvulas`:''}</span></h4>
+          <div class="fld"><label for="pv-oConclu">Conclusiones generales del trabajo</label>
+            <textarea class="inp" id="pv-oConclu" rows="3"
+              placeholder="Lo que se concluye del servicio completo, con sus palabras."
+              oninput="ordenTexto('${ord.id}','conclu',this.value)">${esc(ord.conclu||'')}</textarea>
+            <span class="hint">Sale impreso en el informe, bajo <b>Conclusiones</b>, encima de los renglones en blanco.</span></div>
+          <div class="fld"><label for="pv-oRecom">Recomendaciones generales</label>
+            <textarea class="inp" id="pv-oRecom" rows="3"
+              placeholder="Qué recomienda el taller: frecuencia, repuestos a tener, cuidados."
+              oninput="ordenTexto('${ord.id}','recom',this.value)">${esc(ord.recom||'')}</textarea>
+            <span class="hint">Sale impreso en el informe, bajo <b>Recomendaciones generales</b>.</span></div>`;
+      })()}
     </div></details>
 
     <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary>6 · Firmas${marca(cuenta(['pv-resp','pvFirma']))}
@@ -8569,14 +8643,17 @@ function pintarPSV(){
    ${/* El informe técnico de la orden, desde aquí mismo: es el papel
         de esta etapa, igual que el protocolo lo es de la anterior.
         Se abre para revisarlo; se imprime desde su propio botón. */''}
-   <div class="psv-docs">
+   ${/* En la prueba de entrada no pinta nada el informe de la orden:
+        ahí el papel es el protocolo AXAD-084 y sólo ése. El informe
+        lleva el desarme y los disparos, que todavía no existen. */''}
+   ${etapa==='ent'?'':`<div class="psv-docs">
      <div class="t"><b>Informe técnico de la orden</b>
        <span>DVAD-SER-002 · con todas las válvulas de este trabajo, su desarme y sus pruebas.</span></div>
      <button class="btn sec xs" onclick="informeDeValvula('ver')">
        <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Ver e imprimir</button>
      <button class="btn quiet xs" onclick="informeDeValvula('pdf')">PDF</button>
      <button class="btn quiet xs" onclick="informeDeValvula('word')">Word</button>
-   </div>`;
+   </div>`}`;
 
   pintarPSVPie();
   /* Un solo formulario: se pintan todas sus partes. */
@@ -8706,15 +8783,22 @@ function pintarDisparos(){
   const lim=tol?(tol.tipo==='abs'?tol.psi/factorU(u):set*tol.pct/100):null;
   const conFoto=l.filter(t=>fotosDisparo(t).length).length;
   const totalFotos=l.reduce((n,t)=>n+fotosDisparo(t).length,0);
+  /* Un disparo se da, se fotografía, y recién entonces se da el
+     siguiente: así la foto es de ESA prueba y no una sacada al final
+     para rellenar. El primero está siempre abierto; los demás esperan
+     a que el anterior tenga su valor y su foto. */
+  const completo=x=>num(x.v)>0&&fotosDisparo(x).length>0;
   caja.innerHTML=`<div class="dsp">${l.map((t,i)=>{
     const v=num(t.v), hay=isFinite(v)&&v>0;
     const dentro=hay&&lim!=null?Math.abs(v-set)<=lim+1e-9:null;
-    return `<div class="dsp-f ${dentro===null?'':dentro?'ok':'no'}">
+    const espera=i>0&&!l.slice(0,i).every(completo);
+    const faltaFoto=hay&&!fotosDisparo(t).length;
+    return `<div class="dsp-f ${dentro===null?'':dentro?'ok':'no'}${espera?' espera':''}">
       <div class="dsp-n">${i+1}</div>
       <div class="dsp-c">
         <label for="dsp-v${i}">Disparo <span class="u">${esc(u)}</span></label>
         <input class="inp mono" id="dsp-v${i}" inputmode="decimal" value="${esc(t.v||'')}"
-          oninput="psvDisparo(${i},'v',this.value)"></div>
+          ${espera?'disabled':''} oninput="psvDisparo(${i},'v',this.value)"></div>
       <div class="dsp-c">
         <label for="dsp-p${i}">Cierre <span class="u">${esc(u)}</span></label>
         <input class="inp mono bloq" id="dsp-p${i}" value="${esc(t.pc||'')}" readonly tabindex="-1"
@@ -8725,13 +8809,16 @@ function pintarDisparos(){
               onclick="verFotoPSV('disparo',${i},${j})" title="Tócala para verla en grande">
             <button class="dsp-x" onclick="event.stopPropagation();psvBorrarFotoDisparo(${i},${j})" aria-label="Quitar esta foto">×</button>
           </span>`).join('')}
-        <label class="dsp-cam" for="dspF${i}" title="Otra foto de este disparo">
+        <label class="dsp-cam${faltaFoto?' pide':''}" id="dspCam${i}" for="dspF${i}"
+          title="${espera?'Termina el disparo anterior':'Otra foto de este disparo'}">
           <svg viewBox="0 0 24 24">${fotosDisparo(t).length
             ? '<path d="M12 5v14M5 12h14"/>'
             : '<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/>'}</svg>
           <span>${fotosDisparo(t).length?'Otra':'Foto'}</span></label>
         <input id="dspF${i}" type="file" accept="image/*" capture="environment" multiple style="display:none"
-          onchange="psvFotoDisparo(this.files,${i});this.value=''"></div>
+          ${espera?'disabled':''} onchange="psvFotoDisparo(this.files,${i});this.value=''"></div>
+      ${espera?`<div class="dsp-espera">Primero termina la prueba ${i} — su valor y su foto</div>`
+        :faltaFoto?`<div class="dsp-espera pide">Falta la foto de esta prueba para pasar a la siguiente</div>`:''}
       ${/* La casilla de nota se quitó: nadie la llenaba y se comía el
            ancho que necesita la foto. Lo que haya que contar del
            disparo va en las conclusiones, que sí salen en el
@@ -9311,7 +9398,7 @@ function guardarPSV(emitir,seguir){
      echar al técnico de lo que estaba escribiendo. */
   if(seguir){guardarLocal();return id}
   const actGuardado=t.act;
-  PSV_TMP=null; closeModal(); renderAll();
+  PSV_TMP=null; borrarEnCurso(); closeModal(); renderAll();
   if(emitir){setTimeout(()=>imprimirPSV(id),150);return id}
   setTimeout(()=>seguirEntradas(actGuardado),200);
   return id;
@@ -9331,10 +9418,30 @@ const PSV_PLACA=[
  ['setUnd','Unidad',                      'psi'],
  ['medida','Ø entrada × Ø salida',        '1/2" X 3/4"'],
  ['clase', 'Clase / rating',              '#3000'],
- ['capac', 'Capacidad',                   '1848'],
+ ['capac', 'Capacidad certificada',       '1848'],
  ['norma', 'Norma de prueba',             'ASME']
 ];
 let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la placa
+/* ── LA FICHA FIJA DE LA VÁLVULA ─────────────────────────────
+   Todo lo que NO cambia de un servicio a otro —la placa y lo que se
+   mira en el cuerpo— vive aquí, en un solo formulario. Lo escribe
+   gerencia; el taller lo lee, y si hay que corregirlo se abre con la
+   clave del jefe. Antes los mismos datos se podían escribir desde
+   tres sitios y cada técnico ponía lo suyo.
+   ════════════════════════════════════════════════════════════ */
+const openFichaFija=id=>openPlacaPSV(id);
+/* Dos válvulas no pueden llamarse igual: el tag es como se la busca
+   en planta y en el certificado. Se avisa de cuál lo tiene. */
+function tagRepetido(txt,menosId){
+  const t=String(txt||'').trim().toLowerCase();
+  if(!t)return null;
+  return ACTIVOS.find(x=>x.id!==menosId&&String(x.tag||'').trim().toLowerCase()===t)||null;
+}
+function serieRepetida(txt,menosId){
+  const t=String(txt||'').trim().toLowerCase();
+  if(!t)return null;
+  return ACTIVOS.find(x=>x.id!==menosId&&String(x.ser||'').trim().toLowerCase()===t)||null;
+}
 function openPlacaPSV(actId){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return;
   /* Si se entra desde un ensayo sin terminar, ese ensayo no se pierde:
@@ -9348,11 +9455,23 @@ function openPlacaPSV(actId){
      datos. Se muestran los que la válvula tiene de verdad. */
   const soloPSV=['cert','orif','setPress','setUnd','capac','norma'];
   const campos=a.cl==='seguridad'?PSV_PLACA:PSV_PLACA.filter(([k])=>!soloPSV.includes(k));
-  $('#mTitle').textContent=`Datos de placa · ${a.tag||a.ser||''}`;
+  /* La ficha entera está bajo llave: la escribe gerencia y el taller
+     la abre con la clave del jefe. */
+  const fijo=!puedeEditarSet();
+  const bloq=fijo?' set-campo bloq':' set-campo';
+  const ro=fijo?'readonly':'';
+  $('#mTitle').textContent=`Ficha fija · ${a.tag||a.ser||''}`;
   $('#mBody').innerHTML=`
-   <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
-     <div>Saca una foto de la placa y llénala mirándola: la foto se queda pegada a la válvula,
-       así que cualquiera puede comprobar después de dónde salió cada número.</div></div>
+   <div class="callout ${fijo?'warn':''}"><svg viewBox="0 0 24 24">${fijo
+     ?'<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>'
+     :'<path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/>'}</svg>
+     <div>${fijo
+       ? `Ésta es la <b>ficha fija</b> de la válvula: lo que no cambia de un servicio a otro.
+          La escribe <b>gerencia</b>; aquí se lee. Para corregir algo, la clave del jefe.
+          <span class="set-fila" style="margin-top:8px">${setCandado()}</span>`
+       : `Ésta es la <b>ficha fija</b>: la placa y lo que se mira en el cuerpo, todo en un solo sitio.
+          Lo que se guarde aquí sale solo en el protocolo, en el informe y en el certificado
+          de <b>todos</b> los trabajos de esta válvula. Saca una foto de la placa y llénala mirándola.`}</div></div>
    <div class="placa-cols">
      <div class="placa-foto">
        <label class="ev-add" for="plFoto">
@@ -9370,22 +9489,29 @@ function openPlacaPSV(actId){
          <div class="fld"><label>Marca</label><input class="inp" value="${esc(m.m||'')}" disabled></div>
          <div class="fld"><label>Modelo</label><input class="inp" value="${esc(a.mod||'')}" disabled></div>
          <div class="fld"><label for="pl-tag">Tag</label>
-           <input class="inp mono" id="pl-tag" value="${esProv(a.tag)?'':esc(a.tag||'')}" placeholder="${esProv(a.tag)?esc(a.tag):'p. ej. PSV-1300'}" oninput="placaCampo('${a.id}','tag',this.value)"></div>
+           <input class="inp mono${bloq}" id="pl-tag" ${ro} value="${esProv(a.tag)?'':esc(a.tag||'')}" placeholder="${esProv(a.tag)?esc(a.tag):'p. ej. PSV-1300'}" oninput="placaCampo('${a.id}','tag',this.value)">
+           <span class="hint" id="pl-tagAviso"></span></div>
          <div class="fld"><label for="pl-ser">N.º de serie</label>
-           <input class="inp mono" id="pl-ser" value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)"></div>
+           <input class="inp mono${bloq}" id="pl-ser" ${ro} value="${esc(a.ser||'')}" oninput="placaCampo('${a.id}','ser',this.value)">
+           <span class="hint" id="pl-serAviso"></span></div>
        </div>
+       <h4 class="snc-sec">Datos de placa</h4>
        <div class="two">
-        ${campos.map(([k,lbl,ph])=>{
-          /* La presión de ajuste y su unidad son de gerencia: aquí se
-             leen, y sólo se abren con la clave del jefe. */
-          const cerrado=(k==='setPress'||k==='setUnd')&&!puedeEditarSet();
-          return `<div class="fld"><label for="pl-${k}">${lbl}${k==='setPress'?' <span class="req-dot">*</span>':''}</label>
-          <div class="${cerrado?'set-fila':''}">
-            <input class="inp${cerrado?' set-campo bloq':((k==='setPress'||k==='setUnd')?' set-campo':'')}" id="pl-${k}"
-              value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}" ${cerrado?'readonly':''}
-              oninput="placaCampo('${a.id}','${k}',this.value)">
-            ${k==='setPress'?setCandado():''}
-          </div></div>`}).join('')}
+        ${campos.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${lbl}${k==='setPress'?' <span class="req-dot">*</span>':''}</label>
+          <input class="inp${bloq}" id="pl-${k}" ${ro}
+            value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph)}"
+            oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
+       </div>
+       ${/* Lo que se mira en el cuerpo de la válvula: mismo sitio, misma
+            llave. Antes se escribía dentro del protocolo de cada
+            trabajo y cada técnico ponía lo suyo. */''}
+       <h4 class="snc-sec">Lo que se mira en la válvula
+         <span class="opc">sale en el protocolo de todos sus trabajos</span></h4>
+       <div class="two">
+        ${RECEP_VALVULA.map(([k,lbl,ph])=>`<div class="fld"><label for="pl-${k}">${esc(lbl)}</label>
+          <input class="inp${bloq}" id="pl-${k}" ${ro}
+            value="${esc(a[k]==null?'':a[k])}" placeholder="${esc(ph||'')}"
+            oninput="placaCampo('${a.id}','${k}',this.value)"></div>`).join('')}
        </div>
      </div>
    </div>`;
@@ -9416,6 +9542,14 @@ function placaCampo(id,k,v){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
   a[k]=v;
   if(k!=='tag'&&k!=='ser')return;
+  /* Nombre repetido: se avisa mientras se escribe, no al guardar. */
+  const otro=k==='tag'?tagRepetido(v,id):serieRepetida(v,id);
+  const av=$(k==='tag'?'#pl-tagAviso':'#pl-serAviso');
+  if(av){
+    av.innerHTML=otro?`<b style="color:var(--late)">Ya hay una válvula con ${k==='tag'?'ese tag':'esa serie'}: ${esc(otro.tag||otro.ser||'')}${
+      otro.cli?` · ${esc((cli(otro.cli)||{}).n||'')}`:''}</b>`:'';
+  }
+  const inp=$(k==='tag'?'#pl-tag':'#pl-ser'); if(inp)inp.classList.toggle('falta',!!otro);
   /* El tag o la serie de verdad cierran el pendiente de
      identificación. Y si se borran los dos, la válvula no puede
      quedarse sin nombre: vuelve al código provisional. */
@@ -9435,8 +9569,19 @@ function placaFoto(id,f){
 }
 function guardarPlaca(id){
   const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
-  registrar('Válvula',`Datos de placa de ${a.tag||a.ser||''}`);
-  toast('Datos de placa guardados');
+  /* Dos válvulas con el mismo nombre son un problema en planta y en
+     el certificado: no se guarda hasta que se arregle. */
+  const rt=tagRepetido(a.tag,id), rs=serieRepetida(a.ser,id);
+  if(rt||rs){
+    const otro=rt||rs;
+    toast(`Ya hay otra válvula con ${rt?'ese tag':'esa serie'} — ${otro.tag||otro.ser||''}${
+      otro.cli?` de ${(cli(otro.cli)||{}).n||''}`:''}. Cámbialo antes de guardar`);
+    const i=$(rt?'#pl-tag':'#pl-ser'); if(i){i.classList.add('falta');i.focus()}
+    return;
+  }
+  guardarLocal();
+  registrar('Válvula',`Ficha fija de ${a.tag||a.ser||''}`);
+  toast('Ficha fija guardada · sale así en todos sus papeles');
   renderAll();
   /* Si el ensayo estaba a medio llenar, la presión de ajuste recién
      corregida entra en él: es el dato que decide el resultado. */
@@ -10273,6 +10418,9 @@ li{margin-bottom:2px}
    no estaba previsto. */
 .renglones{margin:8px 0 4px;break-inside:avoid;page-break-inside:avoid}
 .renglones span{display:block;border-bottom:1px solid #9aa2ac;height:16px;margin-bottom:7px}
+/* Lo que escribió el taller, en el informe: se distingue de los
+   párrafos que el sistema arma solo. */
+.escrito{white-space:pre-wrap}
 /* ── Que se respeten las hojas, como en el Word ──────────────
    La carátula es UNA hoja: membrete, servicio, cliente y el cuadro de
    firmas, y nada más. Lo que sigue empieza en la siguiente. Antes
@@ -10438,8 +10586,9 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
   : 'No se encontraron problemas en los equipos. Se realizó la calibración en el banco de pruebas y se dejaron los equipos con el set de presión según placa.'}</p>
 
 <h2>Recomendaciones generales</h2>
+${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
 <ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
-<div class="renglones">${'<span></span>'.repeat(3)}</div>
+<div class="renglones">${'<span></span>'.repeat(o.recom?2:3)}</div>
 
 <h2>Conclusiones</h2>
 <p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
@@ -10448,9 +10597,11 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
 ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
   `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
+${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
 ${/* Como en el Word: unos renglones en blanco para añadir a mano lo
-     que no estaba previsto. */''}
-<div class="renglones">${'<span></span>'.repeat(3)}</div>
+     que no estaba previsto. Si ya se escribió la conclusión general,
+     sobran algunos. */''}
+<div class="renglones">${'<span></span>'.repeat(o.conclu?2:3)}</div>
 
 <div class="fir">
   <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}</div>
@@ -16742,6 +16893,15 @@ function guardarActivo(id){
   const tag=V('#edTag'), ser=V('#edSer');
   /* Igual que al dar de alta: sin tag ni serie la válvula no puede
      quedarse sin nombre. Vuelve al provisional y sigue marcada. */
+  /* Nombres únicos: el tag es como se busca la válvula en planta. */
+  const rt=tagRepetido(tag,id), rs=serieRepetida(ser,id);
+  if(rt||rs){
+    const otro=rt||rs;
+    toast(`Ya hay otra válvula con ${rt?'ese tag':'esa serie'} — ${otro.tag||otro.ser||''}${
+      otro.cli?` de ${(cli(otro.cli)||{}).n||''}`:''}`);
+    const el=$(rt?'#edTag':'#edSer'); if(el){el.classList.add('falta');el.focus()}
+    return;
+  }
   if(!tag&&!ser){ a.tag=a.tagProv||(a.tagProv=tagProvisional()); a.ser=''; a.sinId=true; }
   else { a.tag=tag; a.ser=ser; a.sinId=(!ser&&esProv(tag))||undefined; }
   a.cli=V('#edCli')||a.cli; a.ar=V('#edAr')||a.ar;
@@ -18353,6 +18513,74 @@ const bdQuita =(c,k)  =>bdOp(c,'readwrite',o=>o.delete(k));
 const bdTodos =(c)    =>bdOp(c,'readonly', o=>o.getAll());
 const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
 
+/* ── LO QUE SE ESTÁ ESCRIBIENDO NO SE PIERDE ─────────────────
+   Se acaba la batería, se cierra la pestaña sin querer, el móvil
+   descarga la app al pasar a otra cosa, se va la luz en la oficina.
+   Lo escrito en el formulario se iba con ella, y con las fotos del
+   desarme detrás eso es media mañana de trabajo. Ahora se copia solo
+   en el propio equipo cada pocos segundos —y siempre al salir de la
+   pantalla—, y al volver a entrar se ofrece seguir donde se dejó.
+   Da lo mismo el aparato: computadora, tablet o celular.
+   ════════════════════════════════════════════════════════════ */
+let ENCURSO_J='', ENCURSO_T=null;
+function guardarEnCurso(forzar){
+  if(typeof PSV_TMP==='undefined'||!PSV_TMP)return;
+  let j; try{ j=JSON.stringify(PSV_TMP) }catch(e){ return }
+  if(!forzar&&j===ENCURSO_J)return;
+  ENCURSO_J=j;
+  const foto={ts:Date.now(), act:PSV_TMP.act, tmp:JSON.parse(j),
+              seccion:(typeof PSV_ABIERTO_TODO!=='undefined'&&PSV_ABIERTO_TODO)||false};
+  try{ bdPon('estado',foto,'enCurso') }catch(e){}
+  try{ localStorage.setItem('adolphus.enCurso',JSON.stringify({ts:foto.ts,act:foto.act})) }catch(e){}
+}
+function borrarEnCurso(){
+  ENCURSO_J='';
+  try{ bdQuita('estado','enCurso') }catch(e){}
+  try{ localStorage.removeItem('adolphus.enCurso') }catch(e){}
+}
+/* Al abrir la aplicación: si quedó algo a medio escribir, se ofrece.
+   No se abre solo —quizá ya lo terminó en otro equipo—: se pregunta. */
+async function ofrecerEnCurso(){
+  let d=null; try{ d=await bdDame('estado','enCurso') }catch(e){}
+  if(!d||!d.tmp||!d.tmp.act)return;
+  const a=ACTIVOS.find(x=>x.id===d.tmp.act);
+  if(!a){ borrarEnCurso(); return }
+  /* Si lo que quedó a medias ya está guardado igual, no hay nada que
+     recuperar. */
+  const ya=d.tmp.id&&CALIBS.find(x=>x.id===d.tmp.id);
+  if(ya&&JSON.stringify(ya)===JSON.stringify(d.tmp)){ borrarEnCurso(); return }
+  EN_CURSO_PEND=d;
+  const cuando=(()=>{const m=Math.round((Date.now()-(d.ts||0))/60000);
+    return m<1?'hace un momento':m<60?`hace ${m} min`:`hace ${Math.round(m/60)} h`})();
+  bandaEnCurso(`Quedó un trabajo a medio escribir de <b>${esc(a.tag||a.ser||'una válvula')}</b> · ${cuando}`);
+}
+let EN_CURSO_PEND=null;
+function bandaEnCurso(txt){
+  const vieja=document.getElementById('bandaCurso'); if(vieja)vieja.remove();
+  const d=document.createElement('div');
+  d.id='bandaCurso'; d.className='banda-curso';
+  d.innerHTML=`<svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+    <span>${txt}</span>
+    <button class="btn xs" onclick="seguirEnCurso()">Seguir donde quedé</button>
+    <button class="btn quiet xs" onclick="descartarEnCurso()">Descartar</button>`;
+  document.body.appendChild(d);
+}
+function seguirEnCurso(){
+  const d=EN_CURSO_PEND; EN_CURSO_PEND=null;
+  const b=document.getElementById('bandaCurso'); if(b)b.remove();
+  if(!d)return;
+  const a=ACTIVOS.find(x=>x.id===d.tmp.act); if(!a){toast('Esa válvula ya no está');return}
+  PSV_TMP=d.tmp;
+  $('#mTitle').textContent='Mantenimiento · '+(a.tag||a.ser||'');
+  pintarPSV(); $('#modal').classList.add('on');
+  toast('Recuperado lo que estabas escribiendo');
+}
+function descartarEnCurso(){
+  EN_CURSO_PEND=null;
+  const b=document.getElementById('bandaCurso'); if(b)b.remove();
+  borrarEnCurso();
+  toast('Descartado');
+}
 /* La foto de los datos, tal como se guarda y se restaura. */
 function fotoDatos(){
   return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
@@ -18663,6 +18891,12 @@ function arrancarJob(){
   /* Con el socket vivo, el latido sólo comprueba que no se haya
      quedado nada colgado; sin él, es lo único que hay. */
   setInterval(()=>correrJob(rtVivo()?'latido':'latido-sin-socket'), 45000);
+  /* Lo que se está escribiendo se copia solo: cada 4 s mientras
+     cambia, y siempre al irse la pantalla o cerrar. */
+  setInterval(()=>guardarEnCurso(), 4000);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden)guardarEnCurso(true) });
+  window.addEventListener('pagehide',()=>guardarEnCurso(true));
+  window.addEventListener('beforeunload',()=>guardarEnCurso(true));
   rtConectar();
 }
 
@@ -19705,7 +19939,12 @@ restaurarLocal();                       // respaldo inmediato, sin esperar
    ya no existen. Es idempotente, así que llamarla dos veces no
    estorba. */
 migrarEtapas();
-restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}});
+restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}
+  /* Y si el aparato se apagó con un formulario a medias, se ofrece
+     seguir: da igual que fuera el celular, la tablet o la
+     computadora. */
+  setTimeout(()=>{try{ofrecerEnCurso()}catch(e){}},1200);
+});
 /* Si la última vez se entró con cuenta de la nube, la sesión sigue
    viva: se reanuda sin volver a pedir la contraseña. */
 (function reanudarNube(){
