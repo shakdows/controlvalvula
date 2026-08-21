@@ -651,6 +651,10 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 #kanban.arrastrando .kb-col.over .kb-buzon{border-color:var(--sel);color:var(--sel);
   background:var(--surface);box-shadow:0 2px 10px rgba(16,45,105,.12)}
 .kb-buzon b{font-size:12.5px;color:var(--ink-1)}
+/* Eliminar el trabajo: en rojo apagado, para que se vea que está y no
+   invite a pulsarlo sin querer. */
+.wo-borrar{color:var(--late);opacity:.75}
+.wo-borrar:hover{opacity:1;background:color-mix(in oklch,var(--late) 10%,transparent)}
 #kanban.arrastrando .kb-col.over .kb-buzon b{color:var(--sel)}
 /* Cada columna vale un quinto: se dice en su cabecera para que se vea
    cuánto se ha andado sin abrir ninguna tarjeta. */
@@ -13085,6 +13089,13 @@ function renderWO(){
           ${(G.et==='ent'||(G.et!=='final'&&ls.some(x=>!haceEsePaso(x,'ent'))))&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();imprimirEtiqueta('${o.act}',null,'${G.g}')" title="La etiqueta de ingreso que se pega en la válvula">
             <svg viewBox="0 0 24 24"><path d="M3 7h11l6 5-6 5H3z"/><circle cx="7.5" cy="12" r="1.2"/></svg>Etiqueta${varias?'s':''}</button>`:''}
+          ${/* Eliminar el trabajo: hubo un error al abrirlo, se duplicó,
+               el cliente lo anuló. Es cosa de gerencia y de nadie más,
+               así que el botón sólo existe para ella —y aun así pide la
+               clave y no toca los certificados ya emitidos. */''}
+          ${S.rol==='admin'?`<button class="btn quiet xs wo-borrar" style="width:100%;margin-top:6px;justify-content:center"
+            onclick="event.stopPropagation();borrarOrden('${o.id}')" title="Eliminar esta orden · pide la clave de gerencia">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar la orden</button>`:''}
         </article>`}).join('')||'<div style="padding:14px;text-align:center;font-size:12px;color:var(--ink-3)">Vacío</div>'}</div></div>`;
   }).join('');
 }
