@@ -2565,6 +2565,11 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
   border:1px solid color-mix(in oklab,var(--sel) 30%,var(--line));
   background:var(--surface);box-shadow:var(--sh-2);font-size:12.5px}
 .banda-ver span{color:var(--ink-2)}
+/* El sello «en vivo» del chip de estado: verde y pequeño, para que se
+   vea de un vistazo que el aviso del servidor está conectado. */
+#netChip .nv{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:1px 5px;border-radius:999px;margin-left:5px;
+  color:var(--ok);background:color-mix(in oklab,var(--ok) 14%,transparent)}
 @media(max-width:520px){.banda-ver{left:12px;right:12px;transform:none;max-width:none}}
 /* El mismo riel dentro de la válvula: ahí tiene la anchura de la
    columna, así que los pasos se reparten y no se aprietan. */
@@ -19555,9 +19560,14 @@ async function correrJob(motivo){
    traer ninguna librería, que este portal es un solo archivo.
    ════════════════════════════════════════════════════════════ */
 let RT=null, RT_REF=0, RT_LATIDO=null, RT_REINTENTO=0, RT_T=null, RT_DEB=null;
+let RT_UNIDO=false, RT_REF_UNIR='', RT_ULTIMO=0, RT_FALLO='';
 const rtVivo=()=>!!(RT&&RT.readyState===1);
+/* Abierto no es lo mismo que suscrito: lo que trae los avisos es la
+   suscripción, y ésa la puede rechazar el servidor sin cerrar nada. */
+const rtEnVivo=()=>rtVivo()&&RT_UNIDO;
 function rtEnviar(m){ try{ RT.send(JSON.stringify(m)) }catch(e){} }
 function rtCerrar(){
+  RT_UNIDO=false;
   if(RT_LATIDO){clearInterval(RT_LATIDO);RT_LATIDO=null}
   if(RT_T){clearTimeout(RT_T);RT_T=null}
   if(RT){try{RT.onclose=null;RT.close()}catch(e){} RT=null}
@@ -19570,10 +19580,11 @@ function rtConectar(){
         encodeURIComponent(NUBE.key)+'&vsn=1.0.0'; }catch(e){ return }
   try{ RT=new WebSocket(url) }catch(e){ return }
   RT.onopen=()=>{
-    RT_REINTENTO=0;
+    RT_REINTENTO=0; RT_UNIDO=false; RT_FALLO='';
     /* Se pide sólo la tabla de registros: es donde vive todo lo que se
        comparte. Quién puede ver qué lo sigue decidiendo Postgres. */
-    rtEnviar({topic:'realtime:adolphus', event:'phx_join', ref:String(++RT_REF), payload:{
+    RT_REF_UNIR=String(++RT_REF);
+    rtEnviar({topic:'realtime:adolphus', event:'phx_join', ref:RT_REF_UNIR, payload:{
       config:{ postgres_changes:[{event:'*',schema:'public',table:'registros'}] },
       access_token:(NUBE_SES&&NUBE_SES.access_token)||undefined }});
     if(RT_LATIDO)clearInterval(RT_LATIDO);
@@ -19585,14 +19596,26 @@ function rtConectar(){
   };
   RT.onmessage=ev=>{
     let m; try{ m=JSON.parse(ev.data) }catch(e){ return }
+    /* La respuesta a la suscripción: hasta que no llega «ok» no hay
+       avisos en vivo, por mucho que el socket esté abierto. */
+    if(m.event==='phx_reply'&&m.ref===RT_REF_UNIR){
+      const est=m.payload&&m.payload.status;
+      RT_UNIDO=(est==='ok');
+      RT_FALLO=RT_UNIDO?'':(((m.payload||{}).response||{}).reason||est||'sin respuesta');
+      if(!RT_UNIDO)console.warn('[nube] la suscripción en vivo no se aceptó:',RT_FALLO);
+      pintarNet();
+      return;
+    }
+    if(m.event==='phx_error'||m.event==='phx_close'){ RT_UNIDO=false; pintarNet(); return }
     if(m.event!=='postgres_changes')return;
+    RT_ULTIMO=Date.now();
     /* Varias filas de un mismo guardado llegan seguidas: se espera un
        momento y se baja una sola vez. */
     clearTimeout(RT_DEB);
     RT_DEB=setTimeout(()=>correrJob('aviso-de-la-nube'),400);
   };
   RT.onclose=()=>{
-    RT=null;
+    RT=null; RT_UNIDO=false; pintarNet();
     if(RT_LATIDO){clearInterval(RT_LATIDO);RT_LATIDO=null}
     if(!enNube()||!online())return;
     /* Se reintenta con calma creciente: 2 s, 4 s, 8 s… hasta un minuto. */
@@ -19686,6 +19709,14 @@ function pintarNet(){
   c.classList.toggle('sync',SYNCING);
   c.classList.toggle('local',hayNube===false&&online()&&!SYNCING);
 
+  /* «En vivo» no es un adorno: dice que lo que haga otro aparato se
+     ve aquí en el momento. Sin él sigue funcionando, pero con el
+     repaso de cada 45 segundos — y eso hay que poder verlo. */
+  /* Con cuidado: esto se pinta desde el primer guardado, que puede
+     ocurrir antes de que el trozo del socket se haya leído. */
+  let vivo=false, fallo='';
+  try{ vivo=hayNube&&rtEnVivo(); fallo=RT_FALLO||'' }catch(e){}
+  c.classList.toggle('vivo',!!vivo);
   c.innerHTML=SYNCING
     ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
     : !online()
@@ -19693,14 +19724,17 @@ function pintarNet(){
       : !hayNube
         ? `<span class="nd"></span><span class="nl">Solo en este equipo</span>`
         : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
-           :`<span class="nd"></span><span class="nl">Al día</span>`;
+           :`<span class="nd"></span><span class="nl">Al día</span>${
+              vivo?'<span class="nv">en vivo</span>':''}`;
 
   c.title=!online()
     ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirá${n===1?'':'n'} solo${n===1?'':'s'} al recuperar señal.`
     : !hayNube
       ? 'Los datos se están guardando SOLO en este equipo. Para que suban a la nube y se vean desde otra computadora, hay que entrar con una cuenta.'
       : n?`${n} registro${n===1?'':'s'} pendiente${n===1?'':'s'} de subir a la nube`
-         :`Todo sincronizado con la nube`;
+         : vivo
+           ? 'Todo sincronizado. Aviso en vivo conectado: lo que haga otro aparato se ve aquí en el momento.'
+           : `Todo sincronizado, pero sin aviso en vivo${fallo?' ('+fallo+')':''}: los cambios de otros aparatos tardan hasta 45 segundos en aparecer.`;
 }
 function sincronizar(manual){
   if(SYNCING)return;
@@ -19790,6 +19824,43 @@ async function probarNube(){
     else                                    toast('Respondió con HTTP '+r.status);
   }catch(e){ toast('No se pudo conectar: '+e.message) }
 }
+/* Cuánto tarda el servidor y si el aviso en vivo está de verdad
+   conectado. Sólo lee: no escribe ni borra nada. */
+async function probarEnlace(){
+  const caja=document.getElementById('sqPrueba'); if(!caja)return;
+  caja.innerHTML='<div class="ps-empty" style="padding:16px">Midiendo…</div>';
+  const filas=[];
+  const fila=(k,v,c)=>filas.push(`<div class="fx-tile"><span class="fx-k">${esc(k)}</span>
+    <span class="fx-v"${c?` style="color:var(--${c})"`:''}>${v}</span></div>`);
+  /* 1 · el viaje de ida y vuelta al servidor */
+  if(!online()){ fila('Servidor','Sin conexión','due') }
+  else{
+    const t0=Date.now();
+    try{
+      const r=await fetch(NUBE.url+'/rest/v1/registros?select=coleccion&limit=1',
+        {headers:{apikey:NUBE.key, ...(enNube()?{Authorization:'Bearer '+NUBE_SES.access_token}:{})}});
+      const ms=Date.now()-t0;
+      fila('Servidor', r.ok?`${ms} ms`:`HTTP ${r.status}`, r.ok?(ms<600?'ok':'due'):'late');
+    }catch(e){ fila('Servidor','No contesta','late') }
+  }
+  /* 2 · el aviso en vivo */
+  let vivo=false, fallo=''; try{ vivo=rtEnVivo(); fallo=RT_FALLO||'' }catch(e){}
+  fila('Aviso en vivo', vivo?'Conectado':(enNube()?'No conectado':'Sin cuenta'),
+       vivo?'ok':'due');
+  /* 3 · cuándo llegó el último aviso */
+  let ult=0; try{ ult=RT_ULTIMO }catch(e){}
+  fila('Último aviso recibido', ult?`hace ${Math.round((Date.now()-ult)/1000)} s`:'ninguno todavía');
+  /* 4 · lo que falta por subir */
+  fila('Por subir', String(enNube()?PEND_N:SYNCQ.length), (enNube()?PEND_N:SYNCQ.length)?'due':'ok');
+  const explica = !enNube()
+    ? 'Sin cuenta abierta no sube nada: lo que registres se queda en este equipo.'
+    : vivo
+      ? 'El enlace en vivo está conectado: lo que guarde otro aparato aparece aquí en el momento, sin recargar.'
+      : `El enlace en vivo no está conectado${fallo?' ('+esc(fallo)+')':''}. Todo sigue subiendo y bajando igual, pero los cambios de otros aparatos tardan hasta 45 segundos. Suele arreglarse solo al volver a la aplicación o al recuperar señal.`;
+  caja.innerHTML=`<div class="two" style="margin-bottom:6px">${filas.slice(0,2).join('')}</div>
+    <div class="two" style="margin-bottom:6px">${filas.slice(2).join('')}</div>
+    <p class="hint">${explica}</p>`;
+}
 function toggleOffline(){
   OFF_SIM=!OFF_SIM;pintarNet();openSync();
   toast(OFF_SIM?'Modo sin conexión activado — sigue trabajando normal':'Conexión restablecida');
@@ -19830,6 +19901,14 @@ function openSync(){
      <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
      <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
    </div>
+   ${/* La prueba del enlace: para contestar «¿se ve al momento en la
+        tablet?» sin llamar a nadie. */''}
+   <div class="set-row" style="margin-top:10px">
+     <div class="t"><b>Probar el enlace</b>
+       <span>Mide cuánto tarda el servidor y si el aviso en vivo está conectado. No escribe nada.</span></div>
+     <button class="btn sec" onclick="probarEnlace()">Probar</button>
+   </div>
+   <div id="sqPrueba"></div>
    <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
      :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
    ${enNube()?`<div class="set-row" style="margin-top:12px">
