@@ -2533,14 +2533,39 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
 .hs-t{min-width:0;display:grid;gap:1px}
 .hs-t b{font:600 13.5px/1.2 'IBM Plex Mono';letter-spacing:-.01em}
 .hs-t span{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hs-ps{display:flex;flex-wrap:wrap;gap:6px}
-/* El papel que existe es un botón; el que todavía no, se ve apagado y
-   al pasar por encima dice qué falta para tenerlo. */
-.hs-p{font:500 11.5px/1 inherit;padding:6px 10px;border-radius:999px;border:1px solid var(--line);
-  background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
-button.hs-p.ok{cursor:pointer;color:var(--sel);border-color:color-mix(in oklab,var(--sel) 34%,var(--line));
-  background:color-mix(in oklab,var(--sel) 8%,var(--surface))}
-button.hs-p.ok:hover{background:color-mix(in oklab,var(--sel) 16%,var(--surface))}
+.hs-ps{min-width:0}
+/* ── El riel del servicio ─────────────────────────────────────
+   Los cinco pasos en el orden en que se hacen, unidos por una línea:
+   el que ya está, relleno y pulsable; el que falta, hueco. Se lee
+   hasta dónde llegó el trabajo sin contar nada. */
+.hs-tl{display:flex;align-items:flex-start;flex-wrap:wrap;gap:0}
+.hs-h{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;
+  flex:1 1 0;min-width:86px;padding:2px 4px 0;background:none;border:0;font:inherit;
+  color:var(--ink-3);text-align:center}
+/* la línea que une un paso con el siguiente */
+.hs-h::before{content:'';position:absolute;top:6px;left:calc(-50% + 5px);width:calc(100% - 10px);
+  height:2px;background:var(--line)}
+.hs-h:first-child::before{display:none}
+.hs-h.ok+.hs-h::before,.hs-h.ok::before{background:color-mix(in oklab,var(--sel) 45%,var(--line))}
+.hs-pt{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);
+  background:var(--surface);position:relative;z-index:1;flex:0 0 auto}
+.hs-hl{font-size:10.5px;line-height:1.25;letter-spacing:.01em}
+button.hs-h.ok{cursor:pointer;color:var(--sel);font-weight:600}
+button.hs-h.ok .hs-pt{border-color:var(--sel);background:var(--sel);
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--sel) 14%,transparent)}
+button.hs-h.ok:hover .hs-hl{text-decoration:underline}
+button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:var(--r-1)}
+.hs-veces{display:block;margin-top:8px;font-size:10.5px;color:var(--ink-3);text-align:center}
+/* El mismo riel dentro de la válvula: ahí tiene la anchura de la
+   columna, así que los pasos se reparten y no se aprietan. */
+/* El riel primero, a lo ancho, y debajo lo que se pueda hacer con ese
+   servicio: puestos al lado se leían como un paso más de la línea. */
+.tl-i .tl-acc{display:block}
+.tl-acc .hs-tl{max-width:600px}
+.tl-acc2{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.tl-det{margin-top:8px}
+.tl-det summary{cursor:pointer;font-size:11.5px;color:var(--ink-3);padding:2px 0}
+.tl-det[open] summary{margin-bottom:6px}
 .hs-nada{font-size:11.5px;color:var(--ink-3);font-style:italic}
 .hs-e{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .hs-fe{font-size:11px;color:var(--ink-3)}
@@ -2550,6 +2575,13 @@ button.hs-p.ok:hover{background:color-mix(in oklab,var(--sel) 16%,var(--surface)
   .hs-cab{display:none}
   .hs-f{grid-template-columns:1fr;gap:8px;padding:12px 14px}
   .hs-e{justify-content:flex-start}
+  /* En el celular la línea se pone de pie: los pasos uno debajo de
+     otro, con el rótulo al lado y sitio de sobra para el dedo. */
+  .hs-tl{flex-direction:column;align-items:stretch;gap:0}
+  .hs-h{flex-direction:row;justify-content:flex-start;gap:10px;min-height:34px;
+    padding:0 0 0 2px;text-align:left}
+  .hs-h::before{top:-6px;left:7px;width:2px;height:14px}
+  .hs-hl{font-size:12.5px}
 }
 .hv-g{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fill,minmax(206px,1fr));margin-top:var(--sp-4)}
 .hv-c{display:flex;flex-direction:column;text-align:left;padding:0;overflow:hidden;cursor:pointer;
@@ -6953,6 +6985,38 @@ const HIST_FILTROS=[['todo','Todo'],['cert','Con certificado'],
    hizo y en qué quedó. Los datos van en pares con su rótulo —no en una
    ristra de textos separados por puntos— porque así se leen tres hitos
    seguidos sin perderse. */
+/* ── EL RIEL DE UN SERVICIO ──────────────────────────────────
+   Los cinco pasos en el orden en que se hacen —entrada, mantenimiento,
+   prueba de salida, placa y certificado—, unidos por una línea: el que
+   ya está va relleno y es el botón que saca su papel; el que falta se
+   queda hueco y dice por qué.
+   Se usa en los dos sitios donde se pregunta lo mismo —la lista de la
+   empresa y la historia de la válvula—: por dónde va el trabajo y qué
+   papel puedo sacar ahora.
+   ════════════════════════════════════════════════════════════ */
+function rielServicio(c,ord){
+  if(!c)return '';
+  const cliente=S.rol==='cliente';
+  const est=histEstado(c);
+  const disparos=disparosDe(c).filter(t=>num(t.v)>0).length;
+  const paso=(txt,ok,accion,porque)=>`<${ok?'button':'span'} class="hs-h${ok?' ok':''}"
+      ${ok?`onclick="event.stopPropagation();${accion}"`:''} title="${esc(porque)}">
+      <span class="hs-pt"></span><span class="hs-hl">${esc(txt)}</span></${ok?'button':'span'}>`;
+  return `<div class="hs-tl">${[
+    paso('Inicial', recepcionCerrada(c), `imprimirRecepcion('${c.id}')`,
+      recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084':'Todavía sin prueba de entrada'),
+    cliente?'':paso('Mantenimiento', !!ord, ord?`imprimirInforme('${ord.id}',['${ord.id}'])`:'',
+      ord?'Informe técnico del servicio · DVAD-SER-002':'Sin orden de servicio'),
+    paso('Prueba final', disparos>0, `verPSV('${c.id}')`,
+      disparos>0?`Los ${disparos} disparos de salida, como quedó la válvula`:'Todavía sin disparos de salida'),
+    cliente?'':paso('Placa', placaLista(c), `generarPlaca('${c.id}')`,
+      placaLista(c)?'Los datos para grabar la placa · y su Excel'
+                   :'Se activa con los tres disparos y sus fotos'),
+    paso('Certificado', est.listo, `imprimirPSV('${c.id}')`,
+      est.listo?'El certificado AXAD-088 firmado · se abre para imprimir o guardar en PDF'
+               :'Falta '+faltaParaEmitir(c))
+  ].filter(Boolean).join('')}</div>`;
+}
 function histLinea(a){
   /* ── UNA LÍNEA POR SERVICIO ──────────────────────────────────
      El historial de una válvula no es un diario de sucesos: es la
@@ -6995,16 +7059,13 @@ function histLinea(a){
          est.listo?null:par('Le falta',faltaParaEmitir(c))].filter(Boolean),
       nota:est.listo?(c.coment||''):'',
       e:{t:est.t,c:est.c},
-      /* Los tres papeles de ese servicio, cada uno por su lado. */
-      acc:[
-        entrada?`<button class="btn quiet xs" onclick="imprimirRecepcion('${c.id}')">Prueba de entrada · AXAD-084</button>`:'',
-        (ord&&!cliente)?`<button class="btn quiet xs" onclick="imprimirInforme('${ord.id}',['${ord.id}'])">Informe técnico · DVAD-SER-002</button>`:'',
-        est.listo
-          ? `<button class="btn sec xs" onclick="verPSV('${c.id}')">Certificado · AXAD-088</button>
-             <button class="btn quiet xs" onclick="imprimirPSV('${c.id}')">PDF</button>
-             ${cliente?'':`<button class="btn quiet xs" onclick="psvWord('${c.id}')">Word</button>`}`
-          : (cliente?'':`<button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button>`)
-      ].filter(Boolean).join('')});
+      /* Por dónde va el servicio y qué papel se puede sacar, en una
+         sola línea. Debajo, sólo lo que hace falta para seguirlo. */
+      acc:rielServicio(c,ord)+
+        (est.listo?`<div class="tl-acc2">
+             <button class="btn quiet xs" onclick="psvWord('${c.id}')">Certificado en Word</button></div>`
+          :(cliente?'':`<div class="tl-acc2">
+             <button class="btn sec xs" onclick="openPSV(null,'${c.id}')">Seguir llenándolo</button></div>`))});
   });
   /* Las órdenes que todavía no tienen papel —recién abiertas— salen
      igual, para que no parezca que no pasó nada. */
@@ -7094,28 +7155,11 @@ function renderHistorial(){
      puesto — así se sabe qué falta sin abrir nada. */
   const papelesDe=a=>{
     const cliente=S.rol==='cliente';
-    const c=CALIBS.filter(x=>x.act===a.id&&x.tipo==='psv').sort(HIST_ORDEN)[0];
-    if(!c)return {c:null, chips:'<span class="hs-nada">sin servicios todavía</span>', est:null};
+    const suyos=CALIBS.filter(x=>x.act===a.id&&x.tipo==='psv').sort(HIST_ORDEN);
+    const c=suyos[0];
+    if(!c)return {c:null, chips:'<span class="hs-nada">sin servicios todavía</span>', est:null, veces:0};
     const ord=(c.ord&&ORDENES.find(x=>x.id===c.ord))||ORDENES.find(x=>x.calib===c.id)||null;
-    const est=histEstado(c);
-    const disparos=disparosDe(c).filter(t=>num(t.v)>0).length;
-    const chip=(txt,ok,accion,porque)=>ok
-      ? `<button class="hs-p ok" onclick="event.stopPropagation();${accion}" title="${esc(porque)}">${esc(txt)}</button>`
-      : `<span class="hs-p" title="${esc(porque)}">${esc(txt)}</span>`;
-    const chips=[
-      chip('Inicial', recepcionCerrada(c), `imprimirRecepcion('${c.id}')`,
-        recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084':'Todavía sin prueba de entrada'),
-      cliente?'':chip('Mantenimiento', !!ord, ord?`imprimirInforme('${ord.id}',['${ord.id}'])`:'',
-        ord?'Informe técnico del servicio · DVAD-SER-002':'Sin orden de servicio'),
-      chip('Prueba final', disparos>0, `verPSV('${c.id}')`,
-        disparos>0?`Los ${disparos} disparos de salida, como quedó la válvula`:'Todavía sin disparos de salida'),
-      cliente?'':chip('Placa', placaLista(c), `generarPlaca('${c.id}')`,
-        placaLista(c)?'Los datos para grabar la placa · y su Excel'
-                     :'Se activa con los tres disparos y sus fotos'),
-      chip('Certificado', est.listo, `imprimirPSV('${c.id}')`,
-        est.listo?'El certificado AXAD-088 firmado':'Falta '+faltaParaEmitir(c))
-    ].filter(Boolean).join('');
-    return {c, chips, est, ord};
+    return {c, chips:rielServicio(c,ord), est:histEstado(c), ord, veces:suyos.length};
   };
   const lineas=visto.map(({a,ev})=>{
     const m=MODELOS[a.mod]||{}, P=papelesDe(a);
@@ -7129,7 +7173,8 @@ function renderHistorial(){
           <span>${esc([m.m,a.mod].filter(Boolean).join(' ')||'—')}${
             a.ser?' · s/n '+esc(a.ser):''}</span></div>
       </div>
-      <div class="hs-ps">${P.chips}</div>
+      <div class="hs-ps">${P.chips}
+        ${P.veces>1?`<span class="hs-veces">${P.veces} servicios · toca la fila para ver los anteriores</span>`:''}</div>
       <div class="hs-e">${P.est?`<span class="tag ${P.est.c}"><span class="dot"></span>${esc(P.est.t)}</span>`:''}
         ${ult?`<span class="hs-fe mono">${esc(fPE(ult.f))}</span>`:''}</div>
     </div>`;
@@ -7169,7 +7214,7 @@ function renderHistorial(){
       <div class="stat" style="cursor:default"><span class="v mono" style="font-size:17px">${esc(ultimo?fPE(ultimo.f):'—')}</span><span class="k">Lo último</span></div>
     </div>
     ${visto.length?`<div class="panel hs-lista">
-        <div class="hs-cab"><span>Válvula</span><span>Papeles del último servicio</span><span>Estado</span></div>
+        <div class="hs-cab"><span>Válvula</span><span>El servicio, paso a paso · toca el que quieras sacar</span><span>Estado</span></div>
         ${lineas}</div>
       <details class="hs-mas"><summary>Verlas con foto, como antes</summary>
         <div class="hv-g" style="margin-top:10px">${fichas}</div></details>`
@@ -7199,16 +7244,17 @@ function histDetalle(a,c){
           <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span>
           ${x.doc?`<span class="tl-doc">${esc(x.doc)}</span>`:''}</div>
         <div class="tl-t">${esc(x.t)}</div>
-        ${x.d&&x.d.length?`<dl class="tl-d">${x.d.map(([k,v])=>
-          `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`:''}
-        ${x.nota?`<div class="tl-x">${esc(x.nota)}</div>`:''}
         ${x.acc?`<div class="tl-acc">${x.acc}</div>`:''}
+        ${(x.d&&x.d.length)||x.nota?`<details class="tl-det"><summary>Ver el detalle</summary>
+          ${x.d&&x.d.length?`<dl class="tl-d">${x.d.map(([k,v])=>
+            `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`:''}
+          ${x.nota?`<div class="tl-x">${esc(x.nota)}</div>`:''}</details>`:''}
       </div>`).join('')}</div>`).join('');
 
   return `<div class="hd"><div>
       <button class="btn quiet xs" style="margin-bottom:8px" onclick="histVolver()">‹ Todas las válvulas</button>
       <h1>Historial de ${esc(a.tag||a.ser||'la válvula')}</h1>
-      <p>${esc(c.n)} · una línea por servicio, del más nuevo al más viejo. Dentro de cada uno están sus tres papeles.</p></div>
+      <p>${esc(c.n)} · un servicio por línea, del más nuevo al más viejo. Toca el paso del que quieras sacar su papel.</p></div>
       <button class="btn sec" onclick="openAsset('${a.id}')">Abrir la ficha</button></div>
     <div class="ht-cab">
       <div class="photo-frame">${a.foto?`<img src="${a.foto}" alt="Foto de ${esc(a.tag||'')}">`:photoFor(a.mod)}</div>
