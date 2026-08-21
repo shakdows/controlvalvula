@@ -7752,6 +7752,24 @@ function psvFaltantes(c){
     out.push({id:'pvFirma', que:'la firma del ejecutante',paso:6});
   return out;
 }
+/* ── ¿EN QUÉ CUADRO SE VE ESTA CASILLA? ──────────────────────
+   No es lo mismo el paso al que PERTENECE un dato que el cuadro donde
+   está escrito. La presión de ajuste hace falta para cerrar la prueba
+   de entrada, pero se escribe en el cuadro 4; la firma de recepción
+   se firma en el 2 aunque su nombre se parezca al del 6. El contador
+   de cada cuadro tiene que decir lo que hay DENTRO de ese cuadro, o
+   manda a buscar donde no está.
+   ════════════════════════════════════════════════════════════ */
+const CUADRO_DE_CASILLA={
+  'pv-os':1, 'patCaja':1,
+  'pv-asFound':2, 'pv-rcVeredicto':2, 'pv-rcMotivo':2, 'pvFirmaRec':2,
+  'pvFotos':3,
+  'pv-setEsp':4,
+  'pv-coment':5,
+  'pv-resp':6, 'pvFirma':6
+};
+const pasoDeCasilla=x=>CUADRO_DE_CASILLA[x&&x.id]
+  || (/^dsp/.test((x&&x.id)||'') ? 4 : ((x&&x.paso)||0));
 /* Lo que le falta AL TALLER: pasos 3, 4, 5 y su firma. El paso 1 lo
    llena el supervisor y el 2 lo firmó quien recibió la válvula; el
    técnico ni siquiera los ve. Exigírselos para mover la tarjeta era
@@ -8655,7 +8673,7 @@ function pintarPSV(){
   const L=(k,lbl,vacio)=>`<div class="dt-i"><span>${lbl}</span><b>${t[k]?esc(t[k]):`<span class="muted">${vacio||'—'}</span>`}</b></div>`;
   /* Cuántas cosas quedan por paso, para no tener que abrirlos todos. */
   const pend=psvFaltantes(t);
-  const cuenta=ids=>pend.filter(x=>ids.some(p=>String(x.id).startsWith(p)||x.paso===p)).length;
+  const cuenta=p=>pend.filter(x=>pasoDeCasilla(x)===p).length;
   const marca=n=>n?` <span class="psv-pend">faltan ${n}</span>`:' <span class="psv-ok">completo</span>';
   const faltaCab=[['os','orden de servicio'],['fecha','fecha'],
     ['patDesc','equipo patrón'],['patSerie','serie del patrón'],['patCert','certificado del patrón']]
@@ -8689,7 +8707,7 @@ function pintarPSV(){
      <button class="btn quiet xs" onclick="verTodosLosPasos()">Ver todo el formulario</button>
    </div>`:''}
    <div class="psv-secs">
-    <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(['pv-os',1]))}
+    <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(1))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
       ${cabeceraMia?`
       <div class="two">
@@ -8710,12 +8728,12 @@ function pintarPSV(){
        ${bloquePatron(t)}`}
     </div></details>
 
-    <details class="psv-sec${paso(2)}" ${tocan.includes(2)?'open':''}><summary>2 · Prueba de entrada${marca(cuenta(['pv-asFound','pv-rc','pvFirmaRec']))}
+    <details class="psv-sec${paso(2)}" ${tocan.includes(2)?'open':''}><summary>2 · Prueba de entrada${marca(cuenta(2))}
       <span class="psv-req">decide si entra al taller</span></summary><div class="psv-b">
       ${bloqueRecepcion(t,a,ayuda,F)}
     </div></details>
 
-    <details class="psv-sec${paso(3)}" ${tocan.includes(3)?'open':''}><summary>3 · Desarme${marca(cuenta(['pvFotos']))}
+    <details class="psv-sec${paso(3)}" ${tocan.includes(3)?'open':''}><summary>3 · Desarme${marca(cuenta(3))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
@@ -8732,7 +8750,7 @@ function pintarPSV(){
       <div id="pvFotos"></div>
     </div></details>
 
-    <details class="psv-sec${paso(4)}" ${tocan.includes(4)?'open':''}><summary>4 · Prueba de disparo${marca(cuenta(['pv-setEsp','dsp-v']))}
+    <details class="psv-sec${paso(4)}" ${tocan.includes(4)?'open':''}><summary>4 · Prueba de disparo${marca(cuenta(4))}
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span>${
@@ -8756,7 +8774,7 @@ function pintarPSV(){
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary>5 · Conclusiones${marca(cuenta(['pv-coment']))}
+    <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary>5 · Conclusiones${marca(cuenta(5))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
       <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
         ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
@@ -8786,7 +8804,7 @@ function pintarPSV(){
       })()}
     </div></details>
 
-    <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary>6 · Firmas${marca(cuenta(['pv-resp','pvFirma']))}
+    <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary>6 · Firmas${marca(cuenta(6))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
@@ -14099,6 +14117,12 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
 
 /* Avance automático de etapa. En la última se abre el parte de cierre y,
    al guardar, la orden pasa sola a "Cerrada / certificada". */
+/* Abre el ensayo de esa válvula señalando lo que falta: en naranja,
+   con los cuadros desplegados y la lista en el pie. */
+function llevarAFaltantes(actId,seccion,calibId){
+  openPSV(actId,calibId||null,seccion||'salida');
+  setTimeout(()=>{ try{ if(PSV_TMP&&psvFaltantes(PSV_TMP).length)avisarFaltaPSV() }catch(e){} },420);
+}
 function advanceWO(id){
   const o=ORDENES.find(x=>x.id===id);if(!o)return;
   const nx=pasoSiguiente(o);if(!nx)return;
@@ -14121,7 +14145,7 @@ function advanceWO(id){
       toast(!c ? `${a.tag||a.ser||'Esa válvula'} no tiene mantenimiento registrado`
         : f.length ? `Falta ${f[0].que}${f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:''} · ${a.tag||a.ser||''}`
         : `Falta ${v.falta} · ${a.tag||a.ser||''}`);
-      openPSV(o.act,null,'fotos'); return;
+      llevarAFaltantes(o.act,'fotos'); return;
     }
     /* La prueba de salida también tiene dueño: quien la dispara firma
        el certificado. Se pregunta antes de mover la tarjeta, igual que
@@ -14143,13 +14167,13 @@ function advanceWO(id){
       if(!c){
         const a=ACTIVOS.find(x=>x.id===o.act)||{};
         toast(`${a.tag||a.ser||'Esa válvula'} no tiene ensayo registrado`);
-        openPSV(o.act,null,'salida'); return;
+        llevarAFaltantes(o.act,'salida'); return;
       }
       const disp=disparosDe(c).filter(t=>num(t.v)>0).length;
       if(disp<3){
         const a=ACTIVOS.find(x=>x.id===o.act)||{};
         toast(`Faltan los disparos de la prueba de salida · ${a.tag||a.ser||''}`);
-        openPSV(o.act,null,'salida'); return;
+        llevarAFaltantes(o.act,'salida',c.id); return;
       }
       /* Firmado por el jefe: el certificado queda emitido y la orden se
          cierra con él colgado. No hay parte de cierre que llenar — el
@@ -14166,7 +14190,19 @@ function advanceWO(id){
        se cierra con el ensayo. Si no, la válvula quedaba con la
        próxima calibración renovada un año SIN un solo certificado
        detrás, que es la mentira más cara que puede contar esto. */
-    if(/calibra/i.test(o.tipo||'')){registrarEnsayoDeOrden(id);return}
+    /* Finalizar una calibración es cerrar su ensayo. Si al ensayo le
+       falta algo, se abre señalándolo: el aviso de dos segundos no
+       decía en qué cuadro estaba la casilla y el técnico se quedaba
+       mirando una firma que ya había puesto. */
+    if(/calibra/i.test(o.tipo||'')){
+      const c=recepDe(o.act);
+      if(c&&psvFaltantes(c).length){
+        const a=ACTIVOS.find(x=>x.id===o.act)||{};
+        toast(`Falta ${faltaParaEmitir(c)} · ${a.tag||a.ser||''}`);
+        llevarAFaltantes(o.act,'salida',c.id); return;
+      }
+      registrarEnsayoDeOrden(id);return;
+    }
     openCloseWO(id);return;
   }
   moverLinea(o,nx[0]);
