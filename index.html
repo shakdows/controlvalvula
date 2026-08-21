@@ -2556,6 +2556,16 @@ button.hs-h.ok .hs-pt{border-color:var(--sel);background:var(--sel);
 button.hs-h.ok:hover .hs-hl{text-decoration:underline}
 button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:var(--r-1)}
 .hs-veces{display:block;margin-top:8px;font-size:10.5px;color:var(--ink-3);text-align:center}
+/* El aviso de versión nueva: arriba, sobre todo lo demás, y se puede
+   dejar para después — nadie quiere que le recarguen la pantalla a
+   medio ensayo. */
+.banda-ver{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:120;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  max-width:calc(100vw - 24px);padding:9px 12px;border-radius:var(--r-2);
+  border:1px solid color-mix(in oklab,var(--sel) 30%,var(--line));
+  background:var(--surface);box-shadow:var(--sh-2);font-size:12.5px}
+.banda-ver span{color:var(--ink-2)}
+@media(max-width:520px){.banda-ver{left:12px;right:12px;transform:none;max-width:none}}
 /* El mismo riel dentro de la válvula: ahí tiene la anchura de la
    columna, así que los pasos se reparten y no se aprietan. */
 /* El riel primero, a lo ancho, y debajo lo que se pueda hacer con ese
@@ -19406,13 +19416,23 @@ const LOTE_MAX=2*1024*1024;
    parque de válvulas de una empresa nunca es una operación de rutina. */
 function frenoDeMano(filas){
   const bajas=filas.filter(f=>f.borrado);
-  if(bajas.length<10)return filas;
+  if(!bajas.length)return filas;
+  /* La baja que alguien pidió AQUÍ está apuntada en BORRADOS: sube,
+     por muchas que sean. Eliminar un cliente se lleva su parque
+     entero —válvulas, órdenes, certificados—: son decenas de filas de
+     una vez y es exactamente lo que el usuario pidió. Frenarlas era
+     lo que hacía reaparecer al cliente en la siguiente bajada.
+     El freno se queda para la baja que NADIE pidió, que es de donde
+     venía el peligro. */
+  const sinPedir=bajas.filter(b=>!BORRADOS.has(b.k));
+  if(!sinPedir.length)return filas;
   const vivas=Object.keys(ESPEJO).length;
-  if(!vivas||bajas.length<vivas*0.6)return filas;
-  console.error('[nube] '+bajas.length+' bajas de '+vivas+' registros en una sola vez: se frenan');
-  toast(`${bajas.length} bajas de golpe · se subieron los cambios pero no los borrados`);
-  registrar('Nube',`Freno: ${bajas.length} borrados no se subieron por seguridad`);
-  return filas.filter(f=>!f.borrado);
+  if(sinPedir.length<10||!vivas||sinPedir.length<vivas*0.6)return filas;
+  console.error('[nube] '+sinPedir.length+' bajas que nadie pidió, de '+vivas+' registros: se frenan');
+  toast(`${sinPedir.length} bajas que nadie pidió · no se subieron por seguridad`);
+  registrar('Nube',`Freno: ${sinPedir.length} borrados no pedidos no se subieron`);
+  const malas=new Set(sinPedir.map(b=>b.k));
+  return filas.filter(f=>!malas.has(f.k));
 }
 async function drenarPendientes(){
   const filas=frenoDeMano((await bdTodos('pendientes'))||[]);
@@ -19856,15 +19876,82 @@ async function pintarPendientes(){
 /* Guarda la app en el equipo (PWA): al abrirla una vez con señal, queda
    disponible aunque después entres a planta sin internet. Requiere que
    la página se sirva por https (no funciona abriendo el archivo suelto). */
-let SW_LISTA=false;
+let SW_LISTA=false, SW_REG=null, HAY_VERSION=false;
+/* La banda de arriba: aparece cuando la versión nueva ya está bajada y
+   sólo falta aplicarla. No recarga sola —el técnico puede estar a
+   medio ensayo—: lo dice y espera un toque. */
+const ARRANQUE=Date.now();
+function bandaVersion(){
+  if(HAY_VERSION||document.getElementById('bandaVer'))return;
+  HAY_VERSION=true;
+  /* Si acaba de abrirse y no hay nada a medias, se aplica sola: es lo
+     que se espera de un portal —abrirlo y ver lo último—. Sólo una vez
+     por sesión, no vaya a quedarse recargándose en bucle si algún día
+     el servidor devuelve la página distinta cada vez. */
+  let yaFue=false; try{ yaFue=sessionStorage.getItem('adolphus.recargado')==='1' }catch(e){}
+  const aMedias=$('#modal').classList.contains('on')||(typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act);
+  if(!yaFue&&!aMedias&&Date.now()-ARRANQUE<9000){
+    try{ sessionStorage.setItem('adolphus.recargado','1') }catch(e){}
+    aplicarVersion(); return;
+  }
+  const d=document.createElement('div');
+  d.id='bandaVer'; d.className='banda-ver';
+  d.innerHTML=`<span>Hay una versión nueva del portal, ya descargada.</span>
+    <button class="btn xs" onclick="aplicarVersion()">Actualizar ahora</button>
+    <button class="btn quiet xs" onclick="this.parentNode.remove()">Después</button>`;
+  document.body.appendChild(d);
+}
+const NOTA_VERSION=new URL('__version-nueva',location.href).toString();
+async function mirarNotaVersion(){
+  try{
+    if(!('caches' in window))return;
+    const r=await caches.match(NOTA_VERSION);
+    if(r)bandaVersion();
+  }catch(e){}
+}
+async function olvidarNotaVersion(){
+  try{ const ks=await caches.keys();
+    await Promise.all(ks.map(k=>caches.open(k).then(c=>c.delete(NOTA_VERSION))));
+  }catch(e){}
+}
+function aplicarVersion(){
+  /* Si hay algo a medio escribir se guarda antes de recargar: la
+     actualización no puede costarle a nadie su trabajo. */
+  try{ if(typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act)guardarPSV(false,true) }catch(e){}
+  try{ if(typeof guardarEnCurso==='function')guardarEnCurso(true) }catch(e){}
+  try{ if(SW_REG&&SW_REG.waiting)SW_REG.waiting.postMessage('skipWaiting') }catch(e){}
+  olvidarNotaVersion().then(()=>setTimeout(()=>location.reload(),160));
+}
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('sw.js')
-      .then(r=>{SW_LISTA=true;pintarNet();
+      .then(r=>{SW_LISTA=true;SW_REG=r;pintarNet();
+        if(r.waiting&&navigator.serviceWorker.controller)bandaVersion();
         r.addEventListener('updatefound',()=>{const w=r.installing;
-          w&&w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)toast('Hay una versión nueva — se aplicará al reabrir')})});
+          w&&w.addEventListener('statechange',()=>{
+            if(w.state==='installed'&&navigator.serviceWorker.controller)bandaVersion()})});
       })
       .catch(()=>{});
+    /* El propio guardián avisa cuando la copia nueva de la aplicación
+       ya está en el equipo, sin esperar a que se cierre y se abra.
+       El aviso se manda mientras la página todavía se está pintando
+       —son tres megas de portal—, así que hay que abrir la cola de
+       mensajes a mano: con addEventListener a secas el navegador los
+       guarda y no los entrega nunca. */
+    navigator.serviceWorker.onmessage=e=>{
+      if(e.data&&e.data.tipo==='version-nueva')bandaVersion();
+    };
+    try{ navigator.serviceWorker.startMessages() }catch(e){}
+    /* Y se mira la nota que el guardián deja en la caché: el aviso por
+       mensaje se pierde si llega mientras la página todavía se está
+       cargando —son tres megas—, la nota no. */
+    mirarNotaVersion();
+    /* Y se pregunta por una versión nueva cada vez que se vuelve a la
+       aplicación: en el celular no se cierra nunca, se deja de fondo. */
+    const mirar=()=>{ try{ if(SW_REG)SW_REG.update() }catch(e){} mirarNotaVersion(); };
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden)mirar() });
+    window.addEventListener('online',mirar);
+    setInterval(mirar,15*60*1000);
   });
 }
 

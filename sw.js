@@ -13,7 +13,7 @@
    Ahora la aplicación abre de la caché al instante, y si hay internet
    se actualiza sola por detrás para la próxima vez.
    ============================================================ */
-const CACHE = 'adolphus-v58';
+const CACHE = 'adolphus-v59';
 
 /* Ninguna petición a la red puede tardar más que esto. Sin este tope,
    una antena que no lleva a ninguna parte cuelga la promesa para
@@ -37,6 +37,9 @@ const conTope = (req, ms = TOPE_MS) => new Promise((ok, mal) => {
    puede devolver como respuesta a una navegación: el navegador corta
    con ERR_FAILED. Eso era el «no se puede acceder a este sitio». */
 const CASA = new URL('./', self.registration.scope).toString();
+/* La nota que dice «hay una versión nueva ya bajada». Vive en la
+   propia caché para que la aplicación la lea al arrancar. */
+const AVISO = new URL('__version-nueva', self.registration.scope).toString();
 
 const APP = [
   './',
@@ -95,6 +98,7 @@ function refrescarDetras(req) {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  if (req.url === AVISO) return;                 // nota interna: no se sirve
   const url = new URL(req.url);
   const propio = url.origin === location.origin;
   if (!propio && !TERCEROS.includes(url.hostname)) return;   // el resto, que lo vea el navegador
@@ -111,7 +115,35 @@ self.addEventListener('fetch', e => {
                || await c.match('./index.html', { ignoreSearch: true })
                || await c.match(req, { ignoreSearch: true });
       if (hit) {                         // abre ya, y se actualiza por detrás
-        e.waitUntil(conTope(req).then(r => guardarLimpio(c, CASA, r)).catch(() => {}));
+        /* Y si lo que baja NO es lo mismo que se está enseñando, se
+           avisa a la aplicación: en el celular no se cierra nunca, así
+           que esperar a «la próxima vez» era esperar días. */
+        /* La copia para comparar se saca AQUÍ, antes de devolver la
+           respuesta: en cuanto se devuelve, el navegador empieza a
+           leerle el cuerpo y ya no se puede clonar. */
+        const copia = hit.clone();
+        e.waitUntil((async () => {
+          try {
+            const r = await conTope(req);
+            if (!r || !r.ok) return;
+            const nuevo = await r.clone().text();
+            const viejo = await copia.text().catch(() => '');
+            await guardarLimpio(c, CASA, r);
+            /* Se deja una nota en la caché en vez de fiarlo todo al
+               aviso: mientras se navega, la página nueva todavía no
+               es «cliente» del guardián y el mensaje se pierde. La
+               nota es un puñado de bytes y la lee la aplicación en
+               cuanto arranca. */
+            if (viejo && nuevo && viejo !== nuevo) {
+              await c.put(AVISO, new Response(String(Date.now()),
+                { headers: { 'Content-Type': 'text/plain' } }));
+              const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+              cs.forEach(cl => cl.postMessage({ tipo: 'version-nueva' }));
+            } else if (viejo && nuevo) {
+              await c.delete(AVISO);      // ya está al día: se quita la nota
+            }
+          } catch (_) {}
+        })());
         return hit;
       }
       // primera visita: no hay nada guardado, hay que ir a la red
