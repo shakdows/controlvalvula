@@ -7995,6 +7995,13 @@ function openPSV(actId,edit,seccion){
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
+  /* En «Finalizado» el papel está cerrado: entra el jefe, corrige si
+     hace falta y firma. El taller lo lee y nada más. */
+  if(S.rol!=='admin'&&etapaDeValvula(a.id)==='final'){
+    toast('El trabajo ya está finalizado · sólo gerencia puede corregirlo');
+    const cc=c||recepDe(a.id); if(cc&&cc.id)verPSV(cc.id);
+    return;
+  }
   const retomado=!!c&&!edit;
   /* Un ensayo ya emitido que se vuelve a abrir: hay que decirlo, o
      alguien lo edita creyendo que empieza de cero. */
@@ -9918,8 +9925,14 @@ function verPSV(id){
     ${cliente?'':`<button class="btn sec" onclick="imprimirEtiqueta('${a.id}')" title="La etiqueta que se pega en la válvula">Etiqueta</button>`}
     <button class="btn sec" onclick="psvWord('${c.id}')" title="Para corregirlo antes de enviarlo">Word</button>
     <button class="btn sec" onclick="imprimirPSV('${c.id}')">PDF</button>
-    ${cliente?'':`<button class="btn sec" onclick="openPSV(null,'${c.id}')">Editar</button>`}
-    ${cliente?'':`<button class="btn ${faltaVb?'sec':''}" onclick="guardarVistaPSV()">Guardar</button>`}
+    ${(()=>{
+      /* Finalizado y firmado: se lee. Sólo gerencia sigue pudiendo
+         corregir, que para eso es la última palabra. */
+      const cerrado=etapaDeValvula(a.id)==='final'&&S.rol!=='admin';
+      if(cliente||cerrado)return '';
+      return `<button class="btn sec" onclick="openPSV(null,'${c.id}')">Editar</button>
+        <button class="btn ${faltaVb?'sec':''}" onclick="guardarVistaPSV()">Guardar</button>`;
+    })()}
     ${enSalida&&faltanDisparos?`<button class="btn" onclick="openPSV('${a.id}',null,'salida')"
       title="Los tres disparos de salida del formato">
       <svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg>Hacer la prueba de salida</button>`:''}
@@ -13344,11 +13357,12 @@ function renderWO(){
                prueba de entrada está firmada y aceptada. Si está
                rechazada no hay «siguiente»: la válvula se devuelve. */
             if(G.et==='cert'){
-              /* Aquí el paso que toca es la firma del jefe; el botón de
-                 cerrar sale cuando ya está puesta. */
-              const sin=ls.filter(x=>{const c=recepDe(x.act);
-                return !(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))});
-              if(sin.length)return '';
+              /* El paso que toca es mandarlo a Finalizado. La firma del
+                 jefe ya no frena aquí: la pone él en su columna. Lo que
+                 sí hace falta son los tres disparos. */
+              const sinDisparos=ls.filter(x=>{const c=recepDe(x.act);
+                return !c||disparosDe(c).filter(t=>num(t.v)>0).length<3});
+              if(sinDisparos.length===ls.length)return '';
             }
             /* La válvula que ya tiene su prueba de entrada pasa al
                taller aunque su compañera siga en el mostrador: el botón
@@ -13371,10 +13385,26 @@ function renderWO(){
           ${(G.et==='mant'||G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();elegirInforme('${o.id}')" title="El informe técnico DVAD-SER-002: de una válvula o el general de la orden">
             <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informe técnico</button>`:''}
-          ${G.et==='final'&&S.rol==='admin'&&ls.some(x=>x.calib)?`<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
-            onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
-            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Revisar y firmar</button>`:''}
-          ${G.et==='final'&&S.rol!=='cliente'&&G.todas.every(x=>x.et==='final')?`
+          ${/* En «Finalizado» manda el jefe: entra, corrige si hace
+               falta y pone la última firma. El taller lo ve, no lo
+               toca. */''}
+          ${G.et==='final'?(()=>{
+            const sinVb=ls.filter(x=>{const c=recepDe(x.act);
+              return !(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))}).length;
+            const jefe=S.rol==='admin';
+            if(S.rol==='cliente')return '';
+            if(sinVb&&!jefe)
+              return `<div class="wo-parte">Falta${sinVb===1?'':'n'} ${sinVb} firma${sinVb===1?'':'s'} de gerencia — la pone el jefe</div>`;
+            return `<button class="btn ${sinVb?'':'quiet'} xs" style="width:100%;margin-top:8px;justify-content:center"
+                onclick="event.stopPropagation();${varias?`verOrden('${o.id}')`:`revisarYFirmar('${ls[0].id}')`}">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${
+                !jefe?'Ver lo que se hizo'
+                :sinVb?`Revisar y firmar${ls.length>1?` · ${sinVb} de ${ls.length}`:''}`
+                :'Revisar y rehacer la firma'}</button>`;
+          })():''}
+          ${G.et==='final'&&S.rol!=='cliente'&&G.todas.every(x=>x.et==='final')
+            &&G.todas.every(x=>{const c=recepDe(x.act);
+                return c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)})?`
             <button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();archivarGrupo('${G.g}')"
               title="Sale del tablero y queda guardada en el historial de cada válvula">
@@ -13495,11 +13525,20 @@ function advanceWO(id){
        firmado por el taller, y falta que gerencia lo revise. */
     if(o.et==='cert'){
       const c=recepDe(o.act);
-      if(!c||!(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)){
-        if(S.rol!=='admin'){toast('El visto bueno lo pone gerencia');return}
+      /* Sin ensayo no hay nada que finalizar. Con ensayo sí se pasa,
+         aunque falte el visto bueno: el jefe firma ya en «Finalizado»,
+         que es su columna. Lo que no sale sin su firma es el
+         certificado. */
+      if(!c){
         const a=ACTIVOS.find(x=>x.id===o.act)||{};
-        toast(`Revisa y firma ${a.tag||a.ser||''} para emitir el certificado`);
-        if(c)revisarYFirmar(o.id); return;
+        toast(`${a.tag||a.ser||'Esa válvula'} no tiene ensayo registrado`);
+        openPSV(o.act,null,'salida'); return;
+      }
+      const disp=disparosDe(c).filter(t=>num(t.v)>0).length;
+      if(disp<3){
+        const a=ACTIVOS.find(x=>x.id===o.act)||{};
+        toast(`Faltan los disparos de la prueba de salida · ${a.tag||a.ser||''}`);
+        openPSV(o.act,null,'salida'); return;
       }
       /* Firmado por el jefe: el certificado queda emitido y la orden se
          cierra con él colgado. No hay parte de cierre que llenar — el
@@ -13814,7 +13853,20 @@ function modalSucio(){
     }else{MODAL_FOTO=null;MODAL_GUARDA=null}
   }).observe(m,{attributes:true,attributeFilter:['class']});
 })();
-function closeModal(){$('#modal').classList.remove('on')}
+let SALIR_SIN_GUARDAR=false;
+function closeModal(){
+  /* Lo escrito en el ensayo no se pierde por cambiar de pantalla: si
+     el formulario está abierto con algo dentro, se guarda como
+     borrador antes de cerrar. Antes, tocar «Revisar y firmar» desde
+     la tarjeta cerraba el formulario y se llevaba por delante los
+     disparos recién escritos: parecía que firmar los borraba. */
+  try{
+    if(!SALIR_SIN_GUARDAR&&typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act
+       &&document.getElementById('psvDisparos'))guardarPSV(false,true);
+  }catch(e){}
+  SALIR_SIN_GUARDAR=false;
+  $('#modal').classList.remove('on');
+}
 /* El cierre que sí pregunta. Lo usan la X, el clic en el fondo y
    Escape. */
 function cerrarModalPidiendo(){
@@ -13830,7 +13882,7 @@ function cerrarModalPidiendo(){
     <div class="conf-b">
       <button class="btn sec" onclick="cerrarAviso()">Seguir escribiendo</button>
       ${g&&g.guardar?`<button class="btn sec" onclick="cerrarAviso();MODAL_GUARDA_EJEC()">Guardar y salir</button>`:''}
-      <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="cerrarAviso();closeModal()">Cerrar y perderlo</button>
+      <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="cerrarAviso();SALIR_SIN_GUARDAR=true;PSV_TMP=null;borrarEnCurso();closeModal()">Cerrar y perderlo</button>
     </div></div>`;
   document.body.appendChild(av);
   setTimeout(()=>{const b=av.querySelector('.btn.sec');if(b)b.focus()},40);
