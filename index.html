@@ -7002,19 +7002,21 @@ function rielServicio(c,ord){
   const paso=(txt,ok,accion,porque)=>`<${ok?'button':'span'} class="hs-h${ok?' ok':''}"
       ${ok?`onclick="event.stopPropagation();${accion}"`:''} title="${esc(porque)}">
       <span class="hs-pt"></span><span class="hs-hl">${esc(txt)}</span></${ok?'button':'span'}>`;
+  const oid=ord?ord.id:'';
   return `<div class="hs-tl">${[
-    paso('Inicial', recepcionCerrada(c), `imprimirRecepcion('${c.id}')`,
-      recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084':'Todavía sin prueba de entrada'),
-    cliente?'':paso('Mantenimiento', !!ord, ord?`imprimirInforme('${ord.id}',['${ord.id}'])`:'',
-      ord?'Informe técnico del servicio · DVAD-SER-002':'Sin orden de servicio'),
-    paso('Prueba final', disparos>0, `verPSV('${c.id}')`,
-      disparos>0?`Los ${disparos} disparos de salida, como quedó la válvula`:'Todavía sin disparos de salida'),
-    cliente?'':paso('Placa', placaLista(c), `generarPlaca('${c.id}')`,
-      placaLista(c)?'Los datos para grabar la placa · y su Excel'
+    paso('Inicial', recepcionCerrada(c), `abrirPapel('ent','${c.id}','${oid}')`,
+      recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084 · en PDF o Word'
+                         :'Todavía sin prueba de entrada'),
+    cliente?'':paso('Mantenimiento', !!ord, `abrirPapel('mant','${c.id}','${oid}')`,
+      ord?'Informe técnico del servicio · DVAD-SER-002 · en PDF o Word':'Sin orden de servicio'),
+    paso('Prueba final', disparos>0, `abrirPapel('sal','${c.id}','${oid}')`,
+      disparos>0?`Los ${disparos} disparos de salida en su hoja · en PDF o Word`
+                :'Todavía sin disparos de salida'),
+    cliente?'':paso('Placa', placaLista(c), `abrirPapel('placa','${c.id}','${oid}')`,
+      placaLista(c)?'Los datos para grabar la placa · en papel o en Excel'
                    :'Se activa con los tres disparos y sus fotos'),
-    paso('Certificado', est.listo, `imprimirPSV('${c.id}')`,
-      est.listo?'El certificado AXAD-088 firmado · se abre para imprimir o guardar en PDF'
-               :'Falta '+faltaParaEmitir(c))
+    paso('Certificado', est.listo, `abrirPapel('cert','${c.id}','${oid}')`,
+      est.listo?'El certificado AXAD-088 firmado · en PDF o Word':'Falta '+faltaParaEmitir(c))
   ].filter(Boolean).join('')}</div>`;
 }
 function histLinea(a){
@@ -11170,6 +11172,20 @@ function documentoAWord(html){
 /* Y la descarga: si el navegador no admite el atributo download
    —algun movil dentro de la app instalada—, se abre en una pestana y
    se guarda desde ahi. Un boton que no hace nada es lo peor. */
+/* Un nombre de archivo que cualquier sistema acepte, sin perder los
+   acentos: sólo se quitan los signos que rompen la descarga. */
+function nombreArchivo(titulo,ext){
+  /* Y sin acentos: algunos navegadores rechazan el nombre con letras
+     no inglesas y bajan un fichero llamado «download» que nadie sabe
+     de qué válvula es. El acento se pierde en el nombre del archivo,
+     no dentro del documento. */
+  let t=String(titulo||'documento')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^\w .,()\-]+/g,' ')
+        .replace(/\s+/g,' ').trim().slice(0,90);
+  if(!t)t='documento';
+  return t+'.'+ext;
+}
 function bajarWord(html,titulo){
   const url=URL.createObjectURL(new Blob(['\ufeff',documentoAWord(html)],{type:'application/msword'}));
   const el=document.createElement('a');
@@ -11178,7 +11194,10 @@ function bajarWord(html,titulo){
     setTimeout(()=>URL.revokeObjectURL(url),4000);
     return;
   }
-  el.href=url; el.download=(titulo||'documento')+'.doc';
+  /* El nombre del archivo pasa por el navegador: si trae una barra, dos
+     puntos o un salto de línea, Chrome lo tira y baja un fichero
+     llamado «download» que nadie sabe qué es. Se limpia antes. */
+  el.href=url; el.download=nombreArchivo(titulo,'doc');
   document.body.appendChild(el); el.click(); el.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
@@ -11821,6 +11840,152 @@ function imprimirPSV(id){
    documento se enseña dentro de la propia aplicación, en un marco a
    pantalla completa con su botón de imprimir o guardar en PDF.
    ════════════════════════════════════════════════════════════ */
+/* ── LA PRUEBA DE SALIDA EN UNA HOJA ─────────────────────────
+   Los tres disparos del as-left con su foto, el gráfico y el
+   veredicto. Es lo que el taller manda cuando la válvula ya está
+   probada pero el certificado todavía no está firmado.
+   ════════════════════════════════════════════════════════════ */
+function documentoSalida(id){
+  const c=CALIBS.find(x=>x.id===id)||(PSV_TMP&&PSV_TMP.id===id?PSV_TMP:null);
+  if(!c)return null;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
+  const v=psvVeredicto(c), u=c.und||'psi';
+  const l=disparosDe(c).filter(t=>num(t.v)>0);
+  if(!l.length)return null;
+  const ej=(c.firmas||[]).find(f=>f.rol==='ejec');
+  const marca=LOGO.replace('<svg ','<svg width="24" height="30" ');
+  const id2=(k,val)=>`<span>${esc(k)}<b>${esc(val==null||val===''?'—':String(val))}</b></span>`;
+  return {titulo:`Prueba de salida ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Prueba de salida ${esc(a.tag||'')}</title><style>
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:9mm;background:#fff}
+.cab{display:flex;align-items:center;gap:11px;padding:7px 11px;margin-bottom:9px;border-radius:8px;background:#102d69;color:#fff}
+.cab .mk{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-radius:6px;padding:5px 6px}
+.cab .ti{flex:1;min-width:0}
+.cab h1{font-size:12px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff}
+.cab .emp{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:#a8bce0;margin-bottom:3px}
+.cab .cod{flex:0 0 auto;text-align:right;font-size:8px;color:#a8bce0;line-height:1.6}
+.cab .cod b{display:block;font-size:10.5px;color:#fff;letter-spacing:.05em}
+.ident{display:flex;flex-wrap:wrap;margin-bottom:10px;border:1px solid #e4e7ea;border-radius:7px;overflow:hidden}
+.ident span{flex:1;min-width:104px;padding:5px 9px;font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c;border-right:1px solid #edeff1}
+.ident span:last-child{border-right:0}
+.ident b{display:block;font-size:10px;color:#1a1d21;font-weight:600;letter-spacing:0;text-transform:none;margin-top:1px}
+h2{font-size:8.2px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#5b6470;margin:12px 0 4px}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.5px;border:1px solid #e4e7ea;border-radius:7px;overflow:hidden}
+th,td{padding:4px 8px;text-align:center;border-bottom:1px solid #f1f3f5}
+th{background:#f6f7f9;font-size:8.2px;letter-spacing:.05em;text-transform:uppercase;color:#5b6470;font-weight:600}
+tr:last-child td{border-bottom:0}
+td.f img{max-width:34mm;max-height:26mm;border-radius:4px;border:1px solid #e4e7ea;display:block;margin:0 auto}
+.vd{display:flex;align-items:center;gap:14px;margin:10px 0;padding:9px 12px;border-radius:8px;
+  border:1px solid #e4e7ea;background:#f8fafc}
+.vd .e{font:700 15px/1 'Helvetica Neue',sans-serif;letter-spacing:.06em}
+.vd.aprobado .e{color:#1a7f4b} .vd.rechazado .e{color:#b3261e}
+.vd .n{display:flex;gap:16px;flex:1;flex-wrap:wrap}
+.vd .n div{font-size:8.2px;letter-spacing:.06em;text-transform:uppercase;color:#8a929c}
+.vd .n b{display:block;font-size:12px;color:#1a1d21;letter-spacing:0;text-transform:none}
+.gr{border:1px solid #e4e7ea;border-radius:7px;padding:6px;margin-top:6px}
+.fir{display:flex;gap:16px;margin-top:14px}
+.fir div{flex:1;border:1px solid #e4e7ea;border-radius:7px;padding:8px 10px;min-height:26mm}
+.fir span{font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:#8a929c}
+.fir img{display:block;max-height:16mm;margin:4px 0}
+.fir b{display:block;font-size:10px}
+.pie{margin-top:12px;font-size:8.5px;color:#8a929c;display:flex;justify-content:space-between}
+@page{size:A4;margin:8mm}
+</style></head><body>
+<div class="cab"><div class="mk">${marca}</div>
+  <div class="ti"><div class="emp">Adolphus S.A.</div><h1>PRUEBA DE SALIDA · AS LEFT</h1></div>
+  <div class="cod">Válvula<b>${esc(a.tag||a.ser||'')}</b></div></div>
+<div class="ident">
+  ${id2('Cliente',e.n)}${id2('O.S.',c.os)}${id2('Fecha',fPE(c.fecha))}
+  ${id2('Modelo',[m.m,a.mod].filter(Boolean).join(' '))}${id2('Serie',a.ser)}
+  ${id2('Set requerido',c.setEsp?`${c.setEsp} ${u}`:'')}</div>
+<h2>Disparos de salida</h2>
+<table><thead><tr><th>N.º</th><th>Disparó a (${esc(u)})</th><th>Cierre (${esc(u)})</th>
+  <th>Desviación</th><th>Foto de la prueba</th></tr></thead>
+<tbody>${l.map((t,i)=>{
+  const val=num(t.v), d=v.set?((val-v.set)/v.set*100):null;
+  const f=fotosDisparo(t)[0];
+  return `<tr><td>${i+1}</td><td><b>${esc(t.v)}</b></td><td>${esc(t.pc||'—')}</td>
+    <td>${d==null?'—':(d>0?'+':'')+n2(d)+' %'}</td>
+    <td class="f">${f?`<img src="${f}" alt="Foto del disparo ${i+1}">`:'—'}</td></tr>`}).join('')}</tbody></table>
+${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
+  <span class="e">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</span>
+  <div class="n">
+    <div>Promedio<b>${n2(v.prom)} ${esc(u)}</b></div>
+    <div>Requerido<b>${n2(v.set)} ${esc(u)}</b></div>
+    <div>Desviación<b>${v.desv>0?'+':''}${n2(v.desv)} %</b></div>
+    <div>Rango admisible<b>${n2(v.min)} – ${n2(v.max)}</b></div>
+  </div></div>
+<div class="gr">${psvGrafica(v,700,250)}</div>`:''}
+<div class="fir">
+  <div><span>Ejecutó la prueba</span>
+    ${ej&&ej.img?`<img src="${ej.img}" alt="Firma">`:''}
+    <b>${esc((ej&&ej.n)||c.respNombre||'')}</b>
+    <span>${esc((ej&&ej.cargo)||c.respArea||'')}${ej?' · '+esc(fPE(ej.f)):''}</span></div>
+  <div><span>Recibe conforme</span></div>
+</div>
+<div class="pie"><span>Adolphus S.A. · prueba de salida</span><span>${esc(fPE(hoyISO()))}</span></div>
+${BARRA_IMPRIMIR}</body></html>`};
+}
+
+/* ── UN PAPEL, TRES SALIDAS ──────────────────────────────────
+   Cada paso de la línea de tiempo tiene su documento, y de cada
+   documento se quieren las mismas tres cosas: verlo, mandarlo en PDF
+   o retocarlo en Word. Antes el botón hacía una sola de las tres y
+   había que buscar las otras por otro sitio.
+   ════════════════════════════════════════════════════════════ */
+const PAPELES={
+  ent:  {n:'Prueba de entrada', cod:'AXAD-084',
+         doc:(c,o)=>documentoRecepcion(c)},
+  mant: {n:'Informe técnico',   cod:'DVAD-SER-002',
+         doc:(c,o)=>o?documentoInforme(o.id,[o.id]):null},
+  sal:  {n:'Prueba de salida',  cod:'AS LEFT',
+         doc:(c,o)=>documentoSalida(c.id)},
+  placa:{n:'Placa de la válvula', cod:'para grabar',
+         doc:(c,o)=>{const d=datosPlaca(c); return d?documentoPlaca([d],(ACTIVOS.find(x=>x.id===c.act)||{}).tag||''):null}},
+  cert: {n:'Certificado',       cod:'AXAD-088',
+         doc:(c,o)=>psvDocumento(c.id)}
+};
+let PAPEL_ACT=null;
+function abrirPapel(k,calibId,ordId){
+  const c=CALIBS.find(x=>x.id===calibId); if(!c){toast('No encuentro ese ensayo');return}
+  const o=ordId?ORDENES.find(x=>x.id===ordId):null;
+  const P=PAPELES[k]; if(!P)return;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{};
+  PAPEL_ACT={k,c:calibId,o:ordId||''};
+  $('#mTitle').textContent=`${P.n} · ${a.tag||a.ser||''}`;
+  $('#mBody').innerHTML=`
+    <div class="callout"><svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+      <div><b>${esc(P.n)}</b> <span class="mono" style="color:var(--ink-3)">${esc(P.cod)}</span><br>
+        ${esc(a.tag||a.ser||'')} · ${esc(fPE(c.fecha))}${c.os?' · O.S. '+esc(c.os):''}.
+        Míralo en pantalla, mándalo en PDF o bájalo en Word para retocarlo.</div></div>
+    ${k==='sal'?`<p class="hint">Es la hoja de la prueba de salida sola: los disparos con su foto,
+      el gráfico y el veredicto. El certificado completo es el último paso.</p>`:''}
+    ${k==='placa'?`<p class="hint">Además del papel, los mismos datos se bajan en Excel con las
+      trece columnas de la hoja de grabado.</p>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="closeModal()">Cerrar</button>
+    <span style="flex:1"></span>
+    ${k==='placa'?`<button class="btn quiet" onclick="sacarPapel('excel')">Excel</button>`
+                 :`<button class="btn quiet" onclick="sacarPapel('word')">Word</button>`}
+    <button class="btn sec" onclick="sacarPapel('pdf')">PDF</button>
+    <button class="btn" onclick="sacarPapel('ver')">
+      <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Ver e imprimir</button>`;
+  $('#modal').classList.add('on');
+}
+function sacarPapel(modo){
+  const s=PAPEL_ACT; if(!s)return;
+  const c=CALIBS.find(x=>x.id===s.c); if(!c)return;
+  const o=s.o?ORDENES.find(x=>x.id===s.o):null;
+  if(modo==='excel'){ const d=datosPlaca(c);
+    placaExcel(d?[d]:[], (ACTIVOS.find(x=>x.id===c.act)||{}).tag||''); return }
+  const d=PAPELES[s.k].doc(c,o);
+  if(!d){toast('Ese papel todavía no se puede sacar');return}
+  closeModal();
+  setTimeout(()=>{
+    if(modo==='word'){ bajarWord(d.html,d.titulo); toast('Descargado en Word · se puede editar'); }
+    else abrirDoc(d.html,d.titulo,modo==='pdf');
+  },140);
+}
 function abrirDoc(html,titulo,imprimirYa){
   let w=null;
   try{ w=window.open('','_blank') }catch(e){ w=null }
