@@ -2513,6 +2513,44 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
    tiempo con todo lo que se le hizo —entradas, mantenimientos y
    certificados—, filtrable. Así el trabajo terminado se saca del
    tablero de órdenes sin perderlo de vista. */
+/* ── El historial en una línea por válvula ───────────────────
+   Identidad a la izquierda, los cinco papeles en medio y el estado a
+   la derecha. En el celular la línea se parte en tres renglones, con
+   los papeles en fila: siguen siendo botones del tamaño de un dedo. */
+.hs-lista{margin-top:var(--sp-4);padding:0;overflow:hidden}
+.hs-cab,.hs-f{display:grid;grid-template-columns:minmax(200px,1.1fr) minmax(300px,2fr) minmax(140px,auto);
+  gap:12px;align-items:center;padding:10px 14px}
+.hs-cab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+  background:var(--surface-2);border-bottom:1px solid var(--line)}
+.hs-f{border-bottom:1px solid var(--line);cursor:pointer;transition:background var(--fast)}
+.hs-f:last-child{border-bottom:0}
+.hs-f:hover{background:var(--surface-2)}
+.hs-f:focus-visible{outline:2px solid var(--sel);outline-offset:-2px}
+.hs-id{display:flex;align-items:center;gap:10px;min-width:0}
+.hs-ph{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;overflow:hidden;
+  border:1px solid var(--line);border-radius:var(--r-1);background:var(--surface-2)}
+.hs-ph img,.hs-ph svg{max-width:100%;max-height:36px;width:auto;height:auto;object-fit:contain}
+.hs-t{min-width:0;display:grid;gap:1px}
+.hs-t b{font:600 13.5px/1.2 'IBM Plex Mono';letter-spacing:-.01em}
+.hs-t span{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-ps{display:flex;flex-wrap:wrap;gap:6px}
+/* El papel que existe es un botón; el que todavía no, se ve apagado y
+   al pasar por encima dice qué falta para tenerlo. */
+.hs-p{font:500 11.5px/1 inherit;padding:6px 10px;border-radius:999px;border:1px solid var(--line);
+  background:var(--surface-2);color:var(--ink-3);white-space:nowrap}
+button.hs-p.ok{cursor:pointer;color:var(--sel);border-color:color-mix(in oklab,var(--sel) 34%,var(--line));
+  background:color-mix(in oklab,var(--sel) 8%,var(--surface))}
+button.hs-p.ok:hover{background:color-mix(in oklab,var(--sel) 16%,var(--surface))}
+.hs-nada{font-size:11.5px;color:var(--ink-3);font-style:italic}
+.hs-e{display:flex;align-items:center;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.hs-fe{font-size:11px;color:var(--ink-3)}
+.hs-mas{margin-top:var(--sp-3)}
+.hs-mas summary{cursor:pointer;font-size:12px;color:var(--ink-3);padding:4px 0}
+@media(max-width:760px){
+  .hs-cab{display:none}
+  .hs-f{grid-template-columns:1fr;gap:8px;padding:12px 14px}
+  .hs-e{justify-content:flex-start}
+}
 .hv-g{display:grid;gap:var(--sp-3);grid-template-columns:repeat(auto-fill,minmax(206px,1fr));margin-top:var(--sp-4)}
 .hv-c{display:flex;flex-direction:column;text-align:left;padding:0;overflow:hidden;cursor:pointer;
   border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface);font:inherit;color:inherit;
@@ -7049,6 +7087,54 @@ function renderHistorial(){
      en una planta—: lo que las distingue es la serie, así que la serie
      va en su propio renglón y no escondida al final de una línea que
      se corta. */
+  /* ── Los cinco papeles del último servicio ────────────────────
+     El técnico o el jefe entran aquí buscando UN papel de UNA válvula.
+     Se ponen los cinco en la misma línea, en el orden en que se
+     hicieron, y el que todavía no existe se ve apagado con el motivo
+     puesto — así se sabe qué falta sin abrir nada. */
+  const papelesDe=a=>{
+    const cliente=S.rol==='cliente';
+    const c=CALIBS.filter(x=>x.act===a.id&&x.tipo==='psv').sort(HIST_ORDEN)[0];
+    if(!c)return {c:null, chips:'<span class="hs-nada">sin servicios todavía</span>', est:null};
+    const ord=(c.ord&&ORDENES.find(x=>x.id===c.ord))||ORDENES.find(x=>x.calib===c.id)||null;
+    const est=histEstado(c);
+    const disparos=disparosDe(c).filter(t=>num(t.v)>0).length;
+    const chip=(txt,ok,accion,porque)=>ok
+      ? `<button class="hs-p ok" onclick="event.stopPropagation();${accion}" title="${esc(porque)}">${esc(txt)}</button>`
+      : `<span class="hs-p" title="${esc(porque)}">${esc(txt)}</span>`;
+    const chips=[
+      chip('Inicial', recepcionCerrada(c), `imprimirRecepcion('${c.id}')`,
+        recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084':'Todavía sin prueba de entrada'),
+      cliente?'':chip('Mantenimiento', !!ord, ord?`imprimirInforme('${ord.id}',['${ord.id}'])`:'',
+        ord?'Informe técnico del servicio · DVAD-SER-002':'Sin orden de servicio'),
+      chip('Prueba final', disparos>0, `verPSV('${c.id}')`,
+        disparos>0?`Los ${disparos} disparos de salida, como quedó la válvula`:'Todavía sin disparos de salida'),
+      cliente?'':chip('Placa', placaLista(c), `generarPlaca('${c.id}')`,
+        placaLista(c)?'Los datos para grabar la placa · y su Excel'
+                     :'Se activa con los tres disparos y sus fotos'),
+      chip('Certificado', est.listo, `imprimirPSV('${c.id}')`,
+        est.listo?'El certificado AXAD-088 firmado':'Falta '+faltaParaEmitir(c))
+    ].filter(Boolean).join('');
+    return {c, chips, est, ord};
+  };
+  const lineas=visto.map(({a,ev})=>{
+    const m=MODELOS[a.mod]||{}, P=papelesDe(a);
+    const ult=ev[0];
+    return `<div class="hs-f" onclick="histAbrir('${a.id}')" role="button" tabindex="0"
+        onkeydown="if(event.key==='Enter')histAbrir('${a.id}')"
+        title="Entrar a la línea de tiempo de ${esc(a.tag||a.ser||'la válvula')}">
+      <div class="hs-id">
+        <div class="hs-ph">${a.foto?`<img src="${a.foto}" alt="">`:photoFor(a.mod)}</div>
+        <div class="hs-t"><b>${esc(a.tag||a.ser||'(sin tag)')}</b>
+          <span>${esc([m.m,a.mod].filter(Boolean).join(' ')||'—')}${
+            a.ser?' · s/n '+esc(a.ser):''}</span></div>
+      </div>
+      <div class="hs-ps">${P.chips}</div>
+      <div class="hs-e">${P.est?`<span class="tag ${P.est.c}"><span class="dot"></span>${esc(P.est.t)}</span>`:''}
+        ${ult?`<span class="hs-fe mono">${esc(fPE(ult.f))}</span>`:''}</div>
+    </div>`;
+  }).join('');
+
   const fichas=visto.map(({a,ev})=>{
     const m=MODELOS[a.mod]||{};
     const certs=ev.filter(x=>x.k==='cert').length;
@@ -7082,7 +7168,11 @@ function renderHistorial(){
       <div class="stat" style="cursor:default"><span class="v">${parque.length-conHist}</span><span class="k">Sin nada todavía</span></div>
       <div class="stat" style="cursor:default"><span class="v mono" style="font-size:17px">${esc(ultimo?fPE(ultimo.f):'—')}</span><span class="k">Lo último</span></div>
     </div>
-    ${visto.length?`<div class="hv-g">${fichas}</div>`
+    ${visto.length?`<div class="panel hs-lista">
+        <div class="hs-cab"><span>Válvula</span><span>Papeles del último servicio</span><span>Estado</span></div>
+        ${lineas}</div>
+      <details class="hs-mas"><summary>Verlas con foto, como antes</summary>
+        <div class="hv-g" style="margin-top:10px">${fichas}</div></details>`
       :`<div class="panel"><div class="empty"><b>Ninguna válvula coincide</b>Prueba con otro tag, serie o modelo.</div></div>`}`;
 }
 
@@ -9672,6 +9762,14 @@ function datosPlaca(c){
     _act:a, _c:c
   };
 }
+/* El ensayo de una línea de la orden: el que cuelga de ella si ya
+   está cerrada, y si no el que tiene abierto la válvula. En
+   «Finalizado» sólo vale el primero — recepDe() descarta a propósito
+   los papeles que ya cerraron una orden. */
+function ensayoDeLinea(o){
+  if(!o)return null;
+  return (o.calib&&CALIBS.find(x=>x.id===o.calib))||recepDe(o.act)||null;
+}
 /* La placa se graba con lo que dice la prueba de SALIDA, así que
    hasta que los tres disparos no estén —cada uno con su foto— no hay
    nada que grabar: se ofrecería un dato que todavía puede cambiar. */
@@ -9685,7 +9783,7 @@ function placaLista(c){
 function placasDeOrden(idOrden){
   const o=ORDENES.find(x=>x.id===idOrden); if(!o)return [];
   return lineasDe(o).map(x=>{
-    const c=(x.calib&&CALIBS.find(y=>y.id===x.calib))||recepDe(x.act);
+    const c=ensayoDeLinea(x);
     return placaLista(c)?datosPlaca(c):null;
   }).filter(Boolean);
 }
@@ -10068,16 +10166,38 @@ function guardarFirma(calibId,rol){
   if(!n){toast('Escribe el nombre de quien firma');$('#fmNom').focus();return}
   if(!FIRMA_HAY){toast('Falta la firma: dibujala en el recuadro');return}
   const img=$('#fmCanvas').toDataURL('image/png');
-  c.firmas=(c.firmas||[]).filter(f=>f.rol!==rol);
-  c.firmas.push({rol,n,cargo,f:HOY.toISOString().slice(0,10),img});
+  const firma={rol,n,cargo,f:HOY.toISOString().slice(0,10),img};
+  const poner=o=>{ o.firmas=(o.firmas||[]).filter(f=>f.rol!==rol); o.firmas.push(firma) };
+  poner(c);
+  /* ── Lo que está en pantalla manda ───────────────────────────
+     Aquí se perdía el trabajo. Se firmaba sobre el papel del archivo
+     y al volver se releía ESE papel para repintar el formulario.
+     Entre lo uno y lo otro pasan los segundos que se tarda en dibujar
+     la firma, y en ese rato la sincronización con la nube puede haber
+     traído la versión anterior del mismo ensayo y haberla dejado en su
+     sitio. El resultado era exactamente lo que se veía: la firma
+     puesta y la prueba de salida en blanco.
+     Ahora la firma se pone TAMBIÉN en el formulario que el técnico
+     tiene abierto, y se vuelve a él sin releer nada. Lo que se ve es
+     lo que hay. */
+  const abierto = PSV_TMP && PSV_TMP.id && String(PSV_TMP.id)===String(calibId);
+  if(abierto)poner(PSV_TMP);
   const a=ACTIVOS.find(x=>x.id===c.act)||{};
   registrar('Firma',`${n} firmó el ensayo de ${a.tag||''}`);
   toast('Firmado');
+  if(abierto)guardarPSV(false,true);      // el papel queda al día con la pantalla
   guardarLocal();renderAll();
   /* Si se venía del formulario, se vuelve al formulario: el técnico
      estaba a medio ensayo y mandarlo al certificado le hacía perder el
      sitio y volver a abrir todo. */
-  if(PSV_FIRMA_VUELTA){const act=PSV_FIRMA_VUELTA;PSV_FIRMA_VUELTA=null;openPSV(null,calibId);return}
+  if(PSV_FIRMA_VUELTA){
+    PSV_FIRMA_VUELTA=null;
+    if(abierto){
+      $('#mTitle').textContent='Mantenimiento · '+(a.tag||a.ser||'');
+      pintarPSV(); $('#modal').classList.add('on'); return;
+    }
+    openPSV(null,calibId); return;
+  }
   verPSV(calibId);
 }
 
@@ -13641,11 +13761,15 @@ function renderWO(){
           ${/* La placa: en prueba de salida y en finalizado, en cuanto
                alguna válvula tenga su ensayo cerrado. Es lo último que
                hace el taller antes de devolver la válvula. */''}
-          ${(G.et==='cert'||G.et==='final')&&S.rol!=='cliente'
-            &&ls.some(x=>placaLista(recepDe(x.act)))?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
-            onclick="event.stopPropagation();generarPlacaDeOrden('${o.id}')" title="Los datos para grabar la placa · se bajan también en Excel">
-            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Generar placa${
-              ls.filter(x=>placaLista(recepDe(x.act))).length>1?`s · ${ls.filter(x=>placaLista(recepDe(x.act))).length}`:''}</button>`:''}
+          ${(()=>{
+            if((G.et!=='cert'&&G.et!=='final')||S.rol==='cliente')return '';
+            const con=ls.filter(x=>placaLista(ensayoDeLinea(x))).length;
+            if(!con)return '';
+            return `<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+              onclick="event.stopPropagation();generarPlacaDeOrden('${o.id}')" title="Los datos para grabar la placa · se bajan también en Excel">
+              <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Generar placa${
+                con>1?`s · ${con}`:''}</button>`;
+          })()}
           ${/* En «Finalizado» manda el jefe: entra, corrige si hace
                falta y pone la última firma. El taller lo ve, no lo
                toca. */''}
@@ -18578,6 +18702,16 @@ function desdeConSolape(){
   if(!isFinite(t))return NUBE_DESDE;
   return new Date(t-SOLAPE_MS).toISOString();
 }
+/* ¿Está este registro abierto en un formulario en este momento? */
+function enEdicion(col,clave){
+  if(clave==null)return false;
+  const k=String(clave);
+  try{
+    if(col==='CALIBS'&&typeof PSV_TMP!=='undefined'&&PSV_TMP&&String(PSV_TMP.id)===k)return true;
+    if(col==='CALIBS'&&typeof PSV_GUARDADO!=='undefined'&&PSV_GUARDADO&&String(PSV_GUARDADO.id)===k)return true;
+  }catch(e){}
+  return false;
+}
 async function nubeBajar(reemplazar){
   const desde=desdeConSolape();
   const q='/rest/v1/registros?select=coleccion,clave,empresa_id,datos,borrado,actualizado'+
@@ -18612,6 +18746,12 @@ async function nubeBajar(reemplazar){
     const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
     const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
     if(f.borrado){if(i>=0)a.splice(i,1); return}
+    /* Lo que alguien está escribiendo AHORA no se pisa con lo que
+       venga de la nube. Otro equipo puede tener la versión de hace un
+       minuto; ponerla encima le borra al técnico lo que acaba de
+       teclear. Se deja lo de aquí, que en la siguiente vuelta sube y
+       gana — el que está delante de la válvula es el que sabe. */
+    if(enEdicion(f.coleccion,f.clave))return;
     if(i>=0)a[i]=f.datos; else a.push(f.datos);
   });
   /* Lo que baja de la nube puede venir de un equipo que todavía tiene
