@@ -738,6 +738,17 @@ tr.bom-row.hot .pos{background:var(--sel);color:var(--surface)}
 /* Qué se le va a hacer a esta válvula: lo marcado en la orden, con lo
    que toca AHORA en azul y lo que no lleva tachado. Es lo que mira el
    ingeniero para saber cuál coge. */
+/* El dato de la ficha que se puede corregir de un toque: el lapicito
+   sólo aparece cuando el ratón pasa por encima, para no llenar la
+   ficha de iconos. */
+.dt-i.edit{cursor:pointer;border-radius:var(--r-3);transition:background .12s}
+.dt-i.edit:hover{background:var(--surface-2)}
+.dt-lap{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;
+  margin-left:5px;opacity:0;vertical-align:-1px;transition:opacity .12s}
+.dt-i.edit:hover .dt-lap{opacity:.65}
+.dt-in{height:30px;font-size:13px;padding:2px 8px;width:100%;max-width:230px}
+.dt-falta-b{background:none;border:0;padding:0;font:inherit;color:var(--sel);
+  cursor:pointer;text-decoration:underline}
 .ord-p{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .ord-p-i{font-size:10.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line-2);
   color:var(--ink-2);background:var(--surface)}
@@ -1312,6 +1323,13 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .cl-ck:hover{border-color:var(--sel)}
 .cl-card.sel .cl-ck{border-color:var(--sel);background:var(--sel-bg)}
 .cl-ck input{width:15px;height:15px;cursor:pointer;margin:0;accent-color:var(--sel)}
+/* El lapicito de la empresa: al lado de la casilla, para corregir el
+   RUC o el nombre de una que se creó con un error. */
+.cl-lap{position:absolute;top:10px;right:44px;z-index:2;padding:5px;border-radius:6px;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;line-height:0;
+  color:var(--ink-3)}
+.cl-lap:hover{border-color:var(--sel);color:var(--sel)}
+.cl-lap svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
 .cl-head{display:flex;align-items:center;gap:13px;padding:16px 18px;border-bottom:1px solid var(--line-2)}
 .cl-mark{width:46px;height:46px;flex:0 0 auto;border-radius:12px;display:grid;place-items:center;font-weight:700;font-size:17px;
   background:var(--sel-bg);color:var(--sel)}
@@ -4609,6 +4627,7 @@ function ordenesEnLote(){
    </div>
    <div class="fld"><label for="loMot">Motivo / qué hay que hacerles</label>
      <textarea class="inp" id="loMot" rows="2" placeholder="Lo que el taller necesita saber antes de abrirlas."></textarea></div>
+   ${campoNumOS(libres.map(x=>x.id))}
    <h4 class="snc-sec">Van al taller
      <span class="opc">marca qué se le hace a cada una · «OC recibida» y «Finalizado» van siempre</span></h4>
    <div class="py-lista">${libres.map(a=>`<div class="py-it col">
@@ -4711,7 +4730,7 @@ function confirmarOrdenesLote(){
      recibe ni el taller que los cobra. Por dentro sigue habiendo una
      línea por válvula —cada una necesita su propio certificado— y lo
      que las une es el campo 'grupo'. */
-  const mat=nuevoMAT();
+  const {cod:mat,num}=leerNumOS(LOTE_IDS);
   const grupo='g'+Date.now();
   const sello=Date.now();
   const hechas=[];
@@ -4719,7 +4738,7 @@ function confirmarOrdenesLote(){
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
     if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
     const pasos=pasosDeFila(id);
-    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,grupo,pasos,
+    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,num,grupo,pasos,
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
     hechas.push(a.tag||a.ser||'');
   });
@@ -4875,6 +4894,9 @@ function renderClients(){
      return `<div class="cl-card ${marcado?'sel':''}" onclick="openClientAssets('${c.id}')">
        ${manda?`<label class="cl-ck" onclick="event.stopPropagation()">
           <input type="checkbox" class="ck" ${marcado?'checked':''} onchange="marcarCliente('${c.id}',this.checked)"></label>`:''}
+       ${manda?`<button class="cl-lap" title="Corregir los datos de ${esc(c.n)}"
+         onclick="event.stopPropagation();editarCliente('${c.id}')">
+         <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`:''}
        <div class="cl-head"><span class="cl-mark">${ini(c.n)}</span>
          <div><div class="cl-n">${esc(c.n)}</div><div class="cl-s">${c.ruc?`<span class="mono">RUC ${esc(c.ruc)}</span>${c.verif===false?' <span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px" title="El RUC tiene formato correcto pero no se confirmó contra SUNAT">sin verificar</span>':''} · `:'<span class="tag due" style="height:15px;font-size:9.5px;padding:0 5px">sin RUC</span> · '}${esc(c.ind)} · ${esc(c.fac)}</div></div></div>
        <div class="cl-stats">
@@ -6085,24 +6107,89 @@ function fichaMovimientos(a){
      </div>`).join('')}</div>`);
 }
 
+/* ── LA FICHA SE CORRIGE AHÍ MISMO ───────────────────────────
+   Un tamaño mal escrito o una criticidad equivocada se arreglaban
+   abriendo el formulario entero, buscando la casilla y guardando. Con
+   pulsar el dato basta: se convierte en casilla, se escribe y se
+   guarda solo. Lo que NO se toca aquí es lo que sale de otro sitio
+   —la marca y el tipo vienen del modelo, y las fechas las pone el
+   taller al registrar el trabajo—.
+   ════════════════════════════════════════════════════════════ */
+function fichaEditar(k,el){
+  const a=S.cur; if(!a||S.rol==='cliente')return;
+  const cont=el.closest('.dt-i'); if(!cont||cont.querySelector('input,select'))return;
+  const b=cont.querySelector('b'); if(!b)return;
+  const sel=(ops,val)=>`<select class="inp dt-in">${ops.map(([v,l])=>
+      `<option value="${esc(v)}" ${String(val||'')===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  let campo;
+  if(k==='mod')      campo=sel(Object.keys(MODELOS).map(x=>[x,`${(MODELOS[x].m||'')} ${x}`]),a.mod);
+  else if(k==='cl')  campo=sel(Object.entries(CL),a.cl);
+  else if(k==='cr')  campo=sel(['Crítica','Alta','Media','Baja'].map(x=>[x,x]),a.cr);
+  else if(k==='air') campo=sel([['','—'],['OPEN','OPEN'],['CLOSE','CLOSE']],a.air);
+  else if(k==='ar')  campo=sel(Object.entries((cli(a.cli)||{}).areas||{'ar1':'Planta'}),a.ar);
+  else campo=`<input class="inp dt-in" value="${esc(a[k]==null?'':a[k])}">`;
+  b.innerHTML=campo;
+  const inp=b.querySelector('input,select');
+  /* Si se sale sin escribir, el hueco que se abrió para llenarlo
+     vuelve a ser un hueco y el dato regresa a «faltan». */
+  const cerrar=()=>{ if(String(a[k]||'').trim()==='')a[k]=''; paneTec(); };
+  let hecho=false;
+  const guardar=()=>{
+    if(hecho)return; hecho=true;
+    const v=inp.value.trim?inp.value.trim():inp.value;
+    if(String(a[k]==null?'':a[k]).trim()===String(v)){cerrar();return}
+    a[k]=v;
+    /* Cambiar el modelo rehereda la familia, como en el formulario. */
+    if(k==='mod'&&MODELOS[v]&&MODELOS[v].cl)a.cl=MODELOS[v].cl;
+    if(k==='tag')a.sinId=(!a.ser&&esProv(a.tag))||undefined;
+    guardarLocal(); registrar('Válvula',`${a.tag||a.ser||''} · ${k} corregido a "${v}"`);
+    renderAll(); paneTec(); toast('Guardado');
+  };
+  inp.onblur=guardar;
+  /* En el móvil el «hecho» del teclado no siempre da un blur: se
+     guarda igual con el change. */
+  inp.onchange=guardar;
+  inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();guardar()}
+                     if(e.key==='Escape'){hecho=true;cerrar()} };
+  inp.focus(); if(inp.select)inp.select();
+}
+/* Un dato que falta se llena desde su propio nombre: se pinta la fila
+   vacía arriba y se abre para escribir, sin pasar por el formulario. */
+function fichaFaltante(k){
+  const a=S.cur; if(!a)return;
+  a[k]=a[k]||' ';            // deja de estar «vacío» para que se pinte la fila
+  paneTec();
+  setTimeout(()=>{
+    const fila=document.querySelector(`#pn-tec .dt-i[data-campo="${k}"]`);
+    if(fila)fichaEditar(k,fila);
+  },60);
+}
 function paneTec(){
   const a=S.cur,m=MODELOS[a.mod]||{},cliente=S.rol==='cliente';
   /* Se muestra lo que está lleno. Lo que falta no se reparte por toda
      la pantalla: se junta al final, con un solo botón para completarlo. */
   const campos=[
-    ['Tag de planta',a.tag],['N.º de serie',a.ser],['Marca',m.m],['Modelo',a.mod],
-    ['Tipo constructivo',m.t],['Familia',CL[a.cl]],
-    ['Tamaño',a.sz],['Rating / clase',a.rt],['Cv',a.cv],['Rango / set',a.rng],['Falla a',a.air],
-    ['Criticidad',a.cr],['Ubicación',cli(a.cli).n+' · '+area(a)],
+    ['Tag de planta',a.tag,'tag'],['N.º de serie',a.ser,'ser'],['Marca',m.m],['Modelo',a.mod,'mod'],
+    ['Tipo constructivo',m.t],['Familia',CL[a.cl],'cl'],
+    ['Tamaño',a.sz,'sz'],['Rating / clase',a.rt,'rt'],['Cv',a.cv,'cv'],['Rango / set',a.rng,'rng'],
+    ['Falla a',a.air,'air'],
+    ['Criticidad',a.cr,'cr'],['Ubicación',cli(a.cli).n+' · '+area(a),'ar'],
     ['Último servicio',a.ult],['Próxima calibración',a.prox]
   ];
   const hay=campos.filter(([,v])=>v&&v!=='—');
   const faltan=campos.filter(([,v])=>!v||v==='—');
+  const lapiz='<svg class="dt-lap" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
   $('#pn-tec').innerHTML=`
-   <div class="dt">${hay.map(([k,v])=>`<div class="dt-i"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+   <div class="dt">${hay.map(([k,v,campo])=>
+     campo&&!cliente
+       ? `<div class="dt-i edit" data-campo="${campo}" title="Pulsa para corregirlo" onclick="fichaEditar('${campo}',this)">
+            <span>${esc(k)}${lapiz}</span><b>${esc(v)}</b></div>`
+       : `<div class="dt-i"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
    ${faltan.length?`<div class="dt-falta">
-     <div><b>Faltan ${faltan.length} ${faltan.length===1?'dato':'datos'}</b>
-       <span>${faltan.map(([k])=>esc(k)).join(' · ')}</span></div>
+     <div><b>Falta${faltan.length===1?'':'n'} ${faltan.length} ${faltan.length===1?'dato':'datos'}</b>
+       <span>${faltan.map(([k,,campo])=>campo&&!cliente
+         ? `<button class="dt-falta-b" onclick="fichaFaltante('${campo}')">${esc(k)}</button>`
+         : esc(k)).join(' · ')}</span></div>
      ${cliente?'':`<button class="btn sec xs" onclick="editarActivo('${a.id}')">Completarlos ahora</button>`}
    </div>`:''}
    ${cliente?'':`<div style="display:flex;justify-content:flex-end;margin-top:12px">
@@ -11900,7 +11987,11 @@ function codigoLinea(o){
   const ls=lineasDe(o);
   if(ls.length<2)return base;
   const i=ls.findIndex(x=>x.id===o.id);
-  return `${base}-${i<0?1:i+1}`;
+  /* Tres cifras: 100-001, 100-002. Los códigos viejos siguen con su
+     numeración de una cifra para no cambiarles el nombre a papeles
+     que ya se imprimieron. */
+  const n=i<0?1:i+1;
+  return RX_OS.test(base) ? `${base}-${String(n).padStart(3,'0')}` : `${base}-${n}`;
 }
 /* La cabecera del grupo es la línea más atrasada: si de tres válvulas
    una sigue en taller, el trabajo está en taller. Decir «finalizado»
@@ -11961,11 +12052,57 @@ function avisoNoFinaliza(o){
   return `Falta${f.length===1?'':'n'} ${f.length} válvula${f.length===1?'':'s'} de esta orden: ${tags.join(', ')}. `
        + 'El trabajo se cierra cuando estén todas.';
 }
-function nuevoMAT(){
-  let n=0;
-  ORDENES.forEach(o=>{const m=/^MAT-(\d+)$/.exec(String(o.mat||''));if(m)n=Math.max(n,+m[1])});
-  return 'MAT-'+String(n+1).padStart(3,'0');
+/* ── EL NÚMERO DE LA ORDEN DE SERVICIO ───────────────────────
+   Un correlativo de la CASA, no de cada cliente: la primera orden se
+   numera como quiera gerencia —100, 200, la que sea— y de ahí en
+   adelante sigue de uno en uno, cambie de cliente el que cambie. Si
+   el trabajo es de válvulas de seguridad lleva delante «PSV-». Y
+   cuando en la misma orden entran varias válvulas, cada una tiene su
+   línea de tres cifras: 100-001, 100-002, 100-003.
+   Los números viejos —MAT-001, AD-26-0712— se dejan como están y no
+   cuentan para el correlativo: son de antes de esta forma de numerar.
+   ════════════════════════════════════════════════════════════ */
+const OS_BASE=100;                        // por dónde empieza la casa
+const RX_OS=/^(?:PSV-)?(\d{3,})(?:-\d{1,3})?$/i;
+const numOS=o=>{
+  if(!o)return 0;
+  if(typeof o.num==='number'&&isFinite(o.num))return o.num;
+  const m=RX_OS.exec(String(o.mat||o.n||'').trim());
+  return m?+m[1]:0;
+};
+function siguienteNumOS(){
+  let max=0;
+  ORDENES.forEach(o=>{const n=numOS(o); if(n>max)max=n});
+  return max?max+1:OS_BASE;
 }
+/* De seguridad son las PSV: si TODAS las de la orden lo son, el
+   número lleva el prefijo; en un trabajo mezclado no, porque no sería
+   verdad. */
+const esPSV=id=>{const a=ACTIVOS.find(x=>x.id===id);return !!a&&a.cl==='seguridad'};
+const codigoOS=(num,psv)=>`${psv?'PSV-':''}${num}`;
+/* La casilla del número en los diálogos de creación, y su lectura. */
+function campoNumOS(ids){
+  const psv=ids.length&&ids.every(esPSV);
+  const sug=codigoOS(siguienteNumOS(),psv);
+  return `<div class="fld"><label for="ocNum">N.º de orden de servicio
+      <span class="opc">correlativo de la casa · se puede cambiar</span></label>
+    <input class="inp mono" id="ocNum" value="${esc(sug)}" style="max-width:200px">
+    <span class="hint">${psv?'Válvulas de seguridad: lleva <b>PSV-</b> delante. ':''
+      }Con varias válvulas cada una sale como <b class="mono">${esc(sug)}-001</b>, <b class="mono">${esc(sug)}-002</b>…</span></div>`;
+}
+function leerNumOS(ids){
+  const el=$('#ocNum');
+  const psv=ids&&ids.length&&ids.every(esPSV);
+  let cod=el?String(el.value||'').trim().toUpperCase().replace(/\s+/g,''):'';
+  if(!cod)cod=codigoOS(siguienteNumOS(),psv);
+  const m=RX_OS.exec(cod);
+  const num=m?+m[1]:siguienteNumOS();
+  if(!m)cod=codigoOS(num,psv);
+  return {cod, num};
+}
+/* Quedaba de la numeración anterior; se conserva para los caminos que
+   todavía no piden el número a mano. */
+function nuevoMAT(){ return codigoOS(siguienteNumOS(),false) }
 const pry=id=>PROYECTOS.find(p=>p.id===id)||null;
 const ordenesDe=id=>ORDENES.filter(o=>o.pry===id);
 /* El avance de un proyecto es cuántas válvulas están finalizadas.
@@ -11998,6 +12135,7 @@ function openProyecto(){
    </div>
    <div class="fld"><label for="pyDesc">Descripción / alcance</label>
      <textarea class="inp" id="pyDesc" rows="2" placeholder="Qué pide el cliente en esta orden."></textarea></div>
+   <div id="pyNum"></div>
    <h4 class="snc-sec">Válvulas de esta OC
      <span class="opc" id="pyCuenta"></span>
      <span class="opc">· marca qué se le hace a cada una</span></h4>
@@ -12023,8 +12161,18 @@ function pintarPryValvulas(){
   pryCuenta();
 }
 function pryCuenta(){
-  const n=document.querySelectorAll('.pyChk:checked').length, e=$('#pyCuenta');
-  if(e)e.textContent=n?`${n} seleccionada${n>1?'s':''}`:'ninguna seleccionada todavía';
+  const sel=[...document.querySelectorAll('.pyChk:checked')].map(x=>x.value);
+  const e=$('#pyCuenta');
+  if(e)e.textContent=sel.length?`${sel.length} seleccionada${sel.length>1?'s':''}`:'ninguna seleccionada todavía';
+  /* El número depende de lo marcado: si todas son de seguridad lleva
+     PSV delante. Se rehace, pero se respeta lo que haya escrito el
+     jefe a mano. */
+  const caja=$('#pyNum'); if(!caja)return;
+  const escrito=$('#ocNum')&&$('#ocNum').dataset.tocado==='1'?$('#ocNum').value:null;
+  caja.innerHTML=campoNumOS(sel);
+  const i=$('#ocNum');
+  if(i){ if(escrito!=null){i.value=escrito;i.dataset.tocado='1'}
+         i.oninput=()=>{i.dataset.tocado='1'} }
 }
 function guardarProyecto(){
   const cliId=$('#pyCli').value;
@@ -12037,10 +12185,13 @@ function guardarProyecto(){
   PROYECTOS.unshift({id,oc,cli:cliId,f:fec,tipo,desc:$('#pyDesc').value.trim()});
   /* Una orden por válvula, cada una con su MAT. El correlativo se
      recalcula en cada vuelta para que no se repita dentro del lote. */
+  /* Un número para toda la OC; dentro, cada válvula es una línea. */
+  const {cod:mat,num}=leerNumOS(sel);
+  const grupo='g'+Date.now();
   sel.forEach(actId=>{
     ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
-      act:actId, pry:id, oc, mat:nuevoMAT(), pasos:pasosDeFila(actId),
-      n:nuevoMAT(), et:'oc', tipo, f:fec, tec:'Por asignar',
+      act:actId, pry:id, oc, mat, num, grupo, pasos:pasosDeFila(actId),
+      n:mat, et:'oc', tipo, f:fec, tec:'Por asignar',
       hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
   });
   closeModal(); renderAll(); go('wo');
@@ -16521,6 +16672,7 @@ function mandarAMantenimiento(id){
    </div>
    <div class="fld"><label for="mmMot">Motivo / qué hay que hacerle</label>
      <textarea class="inp" id="mmMot" rows="3" placeholder="Lo que el taller necesita saber antes de abrirla.">${venc!==null&&venc<0?`Calibración vencida hace ${-venc} días.`:''}</textarea></div>
+   ${campoNumOS([a.id])}
    <h4 class="snc-sec">Qué se le va a hacer a ${esc(a.tag||a.ser||'esta válvula')}
      <span class="opc">«OC recibida» y «Finalizado» van siempre</span></h4>
    <div class="py-lista"><div class="py-it col">
@@ -16567,13 +16719,14 @@ function confirmarMandar(id){
      número a ojo. */
   const extra=[...document.querySelectorAll('.mmChk:checked')].map(x=>x.value);
   const ids=[id].concat(extra);
-  const mat=nuevoMAT(), grupo='g'+Date.now();
+  const {cod:mat,num}=leerNumOS(ids);
+  const grupo='g'+Date.now();
   const tipo=$('#mmTipo').value, f=$('#mmFec').value||HOY.toISOString().slice(0,10);
   const mot=($('#mmMot').value||'').trim()||'Sin observaciones.';
   /* Una línea por válvula, mismo código y mismo grupo: el tablero
      enseña una tarjeta, pero cada válvula conserva su ensayo y su
      certificado, que es lo que no se puede compartir. */
-  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, grupo,
+  ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, num, grupo,
     pasos:pasosDeFila(x), et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
   MM_PRINCIPAL=null;
   closeModal(); renderAll(); go('wo');
@@ -17145,31 +17298,40 @@ async function buscarSunat(ruc){
   const d=RUC_DEMO[ruc];
   return d?{...d,demo:true}:null;
 }
-let ncVerif=false;
-function openNewClient(){
-  ncVerif=false;
-  $('#mTitle').textContent='Nuevo cliente';
+let ncVerif=false, NC_EDIT=null;
+/* El mismo formulario da de alta y corrige: una empresa creada con el
+   RUC mal escrito, o con el nombre de otra planta, no obliga a
+   borrarla y volver a empezar. */
+function editarCliente(id){
+  if(S.rol==='cliente'||S.rol==='tec'){toast('Los datos del cliente los lleva gerencia');return}
+  openNewClient(id);
+}
+function openNewClient(id){
+  const c=id?cli(id):null;
+  NC_EDIT=c?c.id:null;
+  ncVerif=c?c.verif!==false:false;
+  $('#mTitle').textContent=c?`Editar · ${c.n}`:'Nuevo cliente';
   $('#mBody').innerHTML=`
    <div class="fld"><label>RUC <span class="req-dot">*</span><span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Es el identificador único de la empresa ante SUNAT. Evita duplicar clientes y es obligatorio para facturar.">?</span></label>
      <div style="display:flex;gap:8px">
-       <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1"
+       <input class="inp" id="ncRuc" inputmode="numeric" maxlength="11" value="${esc(c?c.ruc||'':'')}" placeholder="11 dígitos — p. ej. 20100128056" autocomplete="off" style="flex:1"
          oninput="revisarRUC(this.value)">
        ${RUC_API?`<button class="btn sec" onclick="consultarRUC()" style="flex:0 0 auto" id="ncBuscar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Buscar datos</button>`:''}
      </div>
      <div id="ncRucEst" style="font-size:11.5px;margin-top:5px;line-height:1.5">Al escribir los 11 dígitos se comprueba solo si el número es correcto.</div></div>
    <div class="two">
-     <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" placeholder="${RUC_API?'se completa con el RUC':'p. ej. REFINERIA LA PAMPILLA S.A.A.'}"></div>
+     <div class="fld"><label>Razón social <span class="req-dot">*</span></label><input class="inp" id="ncN" value="${esc(c?c.n||'':'')}" placeholder="${RUC_API?'se completa con el RUC':'p. ej. REFINERIA LA PAMPILLA S.A.A.'}"></div>
      <div class="fld"><label>Industria</label><select class="inp" id="ncI">
        <!-- Sin esta primera opción vacía, el desplegable arranca en
             "Minería" y un cliente cuyo rubro nadie eligió queda
             grabado como minero. -->
        <option value="">— sin especificar —</option>
-       ${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option>${x}</option>`).join('')}</select></div>
+       ${['Minería','Petróleo y gas','Industria general','Agroindustria','Energía / generación','Alimentos y bebidas','Papel y celulosa','Otro'].map(x=>`<option ${c&&c.ind===x?'selected':''}>${x}</option>`).join('')}</select></div>
    </div>
-   <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" placeholder="${RUC_API?'se completa con el RUC':'p. ej. Carretera Ventanilla Km 25 - Callao'}"></div>
+   <div class="fld"><label>Domicilio fiscal</label><input class="inp" id="ncDir" value="${esc(c?c.dir||'':'')}" placeholder="${RUC_API?'se completa con el RUC':'p. ej. Carretera Ventanilla Km 25 - Callao'}"></div>
    <div class="two">
-     <div class="fld"><label>Instalación / planta <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" placeholder="p. ej. Planta Arequipa"></div>
-     <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" placeholder="Calderas, Envasado, Servicios"></div>
+     <div class="fld"><label>Instalación / planta <span class="hlp" tabindex="0" role="button" aria-label="Ayuda" data-h="Un mismo RUC puede tener varias plantas. Registra aquí el nombre de esta.">?</span></label><input class="inp" id="ncF" value="${esc(c?c.fac||'':'')}" placeholder="p. ej. Planta Arequipa"></div>
+     <div class="fld"><label>Áreas / unidades (separadas por coma)</label><input class="inp" id="ncA" value="${esc(c?Object.values(c.areas||{}).join(', '):'')}" placeholder="Calderas, Envasado, Servicios"></div>
    </div>
    <details class="fx-more" style="margin-top:12px"><summary>¿Cómo sé si el RUC es correcto?</summary>
      <div class="lgd" style="grid-template-columns:1fr">
@@ -17182,7 +17344,9 @@ function openNewClient(){
    </details>
    <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
      <div>El <b>RUC identifica a la empresa</b> y evita clientes duplicados; el usuario del portal se vincula a él. Si el mismo RUC tiene <b>varias plantas</b>, créalas como clientes distintos con el mismo RUC y distinto nombre de planta.</div></div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveNewClient()">Crear cliente</button>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    ${c&&S.rol==='admin'?`<button class="btn quiet" style="color:var(--late)" onclick="borrarCliente('${c.id}')">Eliminar</button>`:''}
+    <button class="btn" onclick="saveNewClient()">${c?'Guardar cambios':'Crear cliente'}</button>`;
   const r=$('#ncRuc');
   r.oninput=()=>{ncVerif=false;revisarRUC(r.value)};
   /* Enter sólo consulta si hay servicio; si no, no hay nada que
@@ -17198,10 +17362,31 @@ function saveNewClient(){
   if(!rucValido(ruc)){toast('El RUC no es válido — revisa el número');return}
   if(!n){toast('Indica la razón social');return}
   const plantaNueva=$('#ncF').value.trim()||'Instalación principal';
-  const rep=CLIENTES.find(c=>c.ruc===ruc&&(c.fac||'').toLowerCase()===plantaNueva.toLowerCase());
+  const viejo=NC_EDIT?cli(NC_EDIT):null;
+  const rep=CLIENTES.find(c=>c.ruc===ruc&&(c.fac||'').toLowerCase()===plantaNueva.toLowerCase()
+    &&(!viejo||c.id!==viejo.id));
   if(rep){toast(`Ya existe "${rep.n}" con esa planta y ese RUC`);return}
-  const id='cli'+Date.now();
   const areasArr=($('#ncA').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  if(viejo){
+    /* Las áreas conservan su clave: las válvulas apuntan a ella, y
+       renumerarlas dejaría media planta «sin área». Las que estén en
+       uso no se pierden aunque se borren de la lista. */
+    const previas=Object.entries(viejo.areas||{});
+    const usadas=new Set(ACTIVOS.filter(x=>x.cli===viejo.id).map(x=>x.ar));
+    const areas={};
+    (areasArr.length?areasArr:['Planta']).forEach((v,i)=>{
+      const k=(previas[i]&&previas[i][0])||('ar'+(previas.length+i+1)); areas[k]=v;
+    });
+    previas.forEach(([k,v])=>{ if(!areas[k]&&usadas.has(k))areas[k]=v });
+    Object.assign(viejo,{n,ruc,verif:ncVerif,dir:$('#ncDir').value.trim(),
+      ind:$('#ncI').value||'Sin especificar',fac:plantaNueva,areas});
+    NC_EDIT=null; $('#fCli').dataset.built='';
+    guardarLocal(); closeModal(); renderAll();
+    registrar('Cliente',`${n} (RUC ${ruc}) corregido`);
+    toast('Cliente actualizado');
+    return;
+  }
+  const id='cli'+Date.now();
   const areas={};(areasArr.length?areasArr:['Planta']).forEach((v,i)=>{areas['ar'+(i+1)]=v});
   /* Vacío no: quedaría un hueco en las tarjetas y en los filtros.
      Se dice que no se especificó, que es la verdad. */
@@ -17209,6 +17394,46 @@ function saveNewClient(){
     ind:$('#ncI').value||'Sin especificar',fac:plantaNueva,areas});
   $('#fCli').dataset.built='';
   closeModal();renderAll();go('clients');registrar('Cliente',`${n} (RUC ${ruc}) dado de alta`);toast(`Cliente ${n} creado`);
+}
+/* ── Borrar una empresa creada por error ─────────────────────
+   Sólo si está vacía: con válvulas, órdenes o certificados detrás,
+   borrarla se llevaría por delante trabajo hecho. Entonces se dice
+   qué tiene y se deja al jefe decidir. */
+function borrarCliente(id){
+  if(S.rol!=='admin'){toast('Sólo gerencia puede eliminar una empresa');return}
+  const c=cli(id); if(!c)return;
+  const eq=ACTIVOS.filter(x=>x.cli===id).length;
+  const ords=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);return a&&a.cli===id}).length;
+  const cals=CALIBS.filter(x=>x.cli===id).length;
+  if(eq||ords||cals){
+    toast(`${c.n} tiene ${[eq&&`${eq} válvula${eq===1?'':'s'}`,ords&&`${ords} orden${ords===1?'':'es'}`,
+      cals&&`${cals} ensayo${cals===1?'':'s'}`].filter(Boolean).join(' · ')} — no se puede eliminar`);
+    return;
+  }
+  $('#mTitle').textContent='Eliminar la empresa';
+  $('#mBody').innerHTML=`
+   <div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Vas a eliminar <b>${esc(c.n)}</b> (RUC ${esc(c.ruc||'—')}). No tiene válvulas ni trabajos:
+       se va limpia. Esta acción no se puede deshacer.</div></div>
+   <div class="fld"><label for="bcPass">Contraseña de gerencia <span class="req-dot">*</span></label>
+     <input class="inp" id="bcPass" type="password" autocomplete="off" placeholder="la contraseña del gerente"></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="confirmarBorrarCliente('${id}')">Eliminar la empresa</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>{const i=$('#bcPass'); if(i)i.focus()},80);
+}
+function confirmarBorrarCliente(id){
+  const p=$('#bcPass');
+  if(!p||p.value!==CLAVE_BAJA){toast('Contraseña incorrecta — la empresa no se eliminó');
+    if(p){p.value='';p.focus()} return}
+  const c=cli(id); if(!c)return;
+  const i=CLIENTES.findIndex(x=>x.id===id); if(i<0)return;
+  CLIENTES.splice(i,1); olvidar('CLIENTES',id);
+  if(S.cli===id)S.cli=null; if(S.inCli===id)S.inCli=null;
+  $('#fCli').dataset.built='';
+  guardarLocal(); closeModal(); renderAll(); go('clients');
+  registrar('Cliente',`${c.n} eliminada`);
+  toast(`${c.n} eliminada`);
 }
 
 /* ============================================================
@@ -18257,6 +18482,17 @@ async function apuntarPendientes(){
   return mios.length;
 }
 
+/* En cuanto hay algo que subir, se sube. Esperar al latido de 45 s
+   era lo que hacía que el taller viera la orden medio minuto después
+   de crearla: el aviso por socket no puede llegar antes de que la
+   fila esté escrita. Se agrupa un instante para que veinte guardados
+   seguidos no lancen veinte subidas. */
+let SUBIR_T=null;
+function subirPronto(){
+  if(!enNube()||!online())return;
+  clearTimeout(SUBIR_T);
+  SUBIR_T=setTimeout(()=>correrJob('cambio-local'),700);
+}
 /* ── El job ──────────────────────────────────────────────────
    Vacía la tabla de pendientes contra el servidor. Lo que sube, se
    borra de la tabla; lo que falla se queda con un intento más y se
@@ -18449,7 +18685,7 @@ const online=()=>!OFF_SIM&&navigator.onLine;
 function guardarLocal(){
   const foto=fotoDatos();
   bdPon('estado',foto,'datos').catch(()=>{});
-  apuntarPendientes().then(()=>pintarNet()).catch(()=>{});
+  apuntarPendientes().then(n=>{pintarNet(); if(n)subirPronto()}).catch(()=>{});
   try{ localStorage.setItem(LS_KEY,JSON.stringify(foto)) }
   catch(e){
     /* respaldo lleno: sólo avisamos si tampoco tenemos IndexedDB,
