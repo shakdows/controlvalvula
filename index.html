@@ -18967,6 +18967,9 @@ async function nubeBajar(reemplazar){
     const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
     const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
     if(f.borrado){if(i>=0)a.splice(i,1); return}
+    /* Y lo que se borró aquí a propósito no se vuelve a meter porque
+       otro equipo todavía no se haya enterado: ya sube la baja. */
+    if(BORRADOS.has(kk)){if(i>=0)a.splice(i,1); return}
     /* Lo que alguien está escribiendo AHORA no se pisa con lo que
        venga de la nube. Otro equipo puede tener la versión de hace un
        minuto; ponerla encima le borra al técnico lo que acaba de
@@ -19011,6 +19014,44 @@ function olvidar(col,id){
 /* Varias de una vez: borrar un cliente se lleva sus válvulas, sus
    órdenes y sus certificados. */
 const olvidarVarios=(col,ids)=>ids.forEach(x=>olvidar(col,x));
+/* ── LO QUE SE BORRÓ, BORRADO SIGUE ──────────────────────────
+   Los clientes de ejemplo y su parque están escritos dentro del
+   programa: cada actualización los trae de vuelta en memoria y de ahí
+   se subían otra vez a la nube. Quien los eliminó los veía reaparecer
+   con cada versión nueva y parecía que el borrado no funcionaba.
+   Se pasa esta escoba al arrancar y después de traer datos: lo que
+   está en la lista de bajas se quita de memoria, venga de donde
+   venga. La lista vive en el equipo y ninguna actualización la toca.
+   ════════════════════════════════════════════════════════════ */
+function purgarBorrados(){
+  if(!BORRADOS.size)return 0;
+  let n=0;
+  const quitar=(col,arr,campo)=>{
+    for(let i=arr.length-1;i>=0;i--){
+      const id=arr[i][campo||'id'];
+      if(id!=null&&BORRADOS.has(col+SEP+String(id))){arr.splice(i,1);n++}
+    }
+  };
+  quitar('CLIENTES',CLIENTES); quitar('ACTIVOS',ACTIVOS);
+  quitar('ORDENES',ORDENES);   quitar('CALIBS',CALIBS);
+  quitar('SERVS',SERVS);       quitar('DOCS',DOCS);
+  quitar('SOLICITUDES',SOLICITUDES); quitar('RECLAMOS',RECLAMOS);
+  quitar('COTIZACIONES',COTIZACIONES); quitar('PROYECTOS',PROYECTOS);
+  /* Y lo que colgaba de un cliente que ya no está: sus válvulas, y de
+     ellas sus órdenes y sus papeles. Si no, quedan huérfanos por ahí
+     contando en los totales de una empresa que ya no existe. */
+  const cli0=new Set(CLIENTES.map(c=>c.id));
+  for(let i=ACTIVOS.length-1;i>=0;i--)
+    if(ACTIVOS[i].cli&&!cli0.has(ACTIVOS[i].cli)){ACTIVOS.splice(i,1);n++}
+  const act0=new Set(ACTIVOS.map(a=>a.id));
+  for(let i=ORDENES.length-1;i>=0;i--)
+    if(ORDENES[i].act&&!act0.has(ORDENES[i].act)){ORDENES.splice(i,1);n++}
+  for(let i=CALIBS.length-1;i>=0;i--)
+    if(CALIBS[i].act&&!act0.has(CALIBS[i].act)){CALIBS.splice(i,1);n++}
+  for(let i=DOCS.length-1;i>=0;i--)
+    if(DOCS[i].a&&!act0.has(DOCS[i].a)){DOCS.splice(i,1);n++}
+  return n;
+}
 function borradoHecho(kk){
   BORRADOS.delete(kk);
   try{localStorage.setItem(LS_BORRADOS,JSON.stringify([...BORRADOS]))}catch(e){}
@@ -19329,6 +19370,7 @@ function aplicarFoto(d){
   ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
   NUBE_DESDE=d.NUBE_DESDE||null;
   migrarEtapas();
+  purgarBorrados();
   return true;
 }
 /* Las etapas se renombraron a las que usa Adolphus (OC recibida ·
@@ -20690,7 +20732,10 @@ restaurarLocal();                       // respaldo inmediato, sin esperar
    ya no existen. Es idempotente, así que llamarla dos veces no
    estorba. */
 migrarEtapas();
-restaurarCaja().then(ok=>{if(ok){pintarNet();if(SES)renderAll()}
+/* Antes que nada: quitar lo que el usuario eliminó. Los ejemplos que
+   trae el programa dentro no pueden resucitar con cada versión. */
+purgarBorrados();
+restaurarCaja().then(ok=>{purgarBorrados(); if(ok){pintarNet();if(SES)renderAll()}
   /* Y si el aparato se apagó con un formulario a medias, se ofrece
      seguir: da igual que fuera el celular, la tablet o la
      computadora. */
