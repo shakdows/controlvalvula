@@ -5282,6 +5282,10 @@ function verOrden(idOrAct,esActivo){
     ${!cliente&&(etC==='final'||etC==='cert')?`<button class="btn sec" onclick="elegirInforme('${o.id}')"
        title="El informe DVAD-SER-002: de una válvula o el general de la orden">Informe técnico</button>
       ${varias?'':`<button class="btn sec" onclick="informeWord('${o.id}')" title="El mismo informe, en Word para editarlo">Informe en Word</button>`}`:''}
+    ${!cliente&&(etC==='cert'||etC==='final')&&placasDeOrden(o.id).length
+      ? `<button class="btn sec" onclick="generarPlacaDeOrden('${o.id}')"
+          title="Los datos para grabar la placa de metal · con su Excel">Generar placa${
+          placasDeOrden(o.id).length>1?'s':''}</button>` : ''}
     ${!cliente&&etC==='final'&&certificadosDeOrden(o.id).length?(()=>{
       /* El jefe es el último que mira. Una orden de dos válvulas son
          dos certificados; se los puede llevar sueltos o en un solo
@@ -8990,9 +8994,34 @@ function pintarPSVResultado(){
      actualiza tecla a tecla y el cursor se queda donde estaba. */
   colorearDisparos();
   const v=psvVeredicto(PSV_TMP), b=psvBlowdown(PSV_TMP), u=PSV_TMP.und||'psi';
+  /* ── El renglón de la placa ──────────────────────────────────
+     Terminada la prueba de salida hay que grabar la placa de metal
+     que se remacha en el cuerpo. Todos esos datos ya están cargados
+     —el tag, la serie, el set, la capacidad, el tipo—, así que el
+     botón los junta y se los enseña al técnico como van en la placa:
+     copiarlos a mano a una hoja de cálculo era trabajo repetido y una
+     ocasión más de equivocarse.
+     Se ve desde el primer momento, apagado y diciendo qué falta: así
+     el técnico sabe que existe y para qué se está llenando la prueba.
+     Se enciende con los tres disparos y sus fotos — la placa se graba
+     una sola vez y con el dato definitivo. */
+  const bloquePlaca=(()=>{
+    const listo=placaLista(PSV_TMP);
+    const faltan=psvFaltantes(PSV_TMP).filter(x=>(x.paso||9)===4);
+    return `<div class="psv-docs">
+      <div class="t"><b>Placa de la válvula</b>
+        <span>${listo
+          ? 'Los datos para grabar, tal como van en la placa · y la misma fila en Excel.'
+          : `Se enciende al cerrar la prueba: falta ${esc(faltan.length?faltan[0].que:'completar los tres disparos')}.`}</span></div>
+      <button class="btn ${listo?'':'quiet'} xs" ${listo?'':'disabled'}
+        onclick="generarPlaca(PSV_TMP&&PSV_TMP.id)" title="Los datos de la placa, para grabarla e imprimirla">
+        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Generar placa</button>
+    </div>`;
+  })();
   if(v.estado==='incompleto'){
     caja.innerHTML=`<div class="psv-res esp"><b>Falta ${esc(v.falta)}</b>
-      <span>Con la presión requerida y al menos un disparo ya se calcula el resultado.</span></div>`;
+      <span>Con la presión requerida y al menos un disparo ya se calcula el resultado.</span></div>
+      ${bloquePlaca}`;
     return;
   }
   caja.innerHTML=`
@@ -9023,7 +9052,8 @@ function pintarPSVResultado(){
         <div class="psv-graf-svg">${psvGrafica(v)}</div>
         ${critHtml('lado')}
       </div>
-    </div>`;
+    </div>
+    ${bloquePlaca}`;
 }
 
 /* ── Fotos del mantenimiento: antes y después ────────────────
@@ -9426,7 +9456,11 @@ const PSV_PLACA=[
  ['medida','Ø entrada × Ø salida',        '1/2" X 3/4"'],
  ['clase', 'Clase / rating',              '#3000'],
  ['capac', 'Capacidad certificada',       '1848'],
- ['norma', 'Norma de prueba',             'ASME']
+ ['norma', 'Norma de prueba',             'ASME'],
+ /* Los dos que faltaban para poder grabar la placa tal cual: la
+    contrapresión y el número de figura del fabricante. */
+ ['backP', 'Contrapresión (back press)',   '0'],
+ ['figura','Tipo / figura (TYPE)',         '19110LCF-2-CC-MS-31-10-10-LA']
 ];
 let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la placa
 /* ── LA FICHA FIJA DE LA VÁLVULA ─────────────────────────────
@@ -9460,7 +9494,7 @@ function openPlacaPSV(actId){
      el orificio API, la presión de ajuste, la capacidad certificada.
      En una mariposa esos campos no existen y pedirlos sería inventar
      datos. Se muestran los que la válvula tiene de verdad. */
-  const soloPSV=['cert','orif','setPress','setUnd','capac','norma'];
+  const soloPSV=['cert','orif','setPress','setUnd','capac','norma','backP','figura'];
   const campos=a.cl==='seguridad'?PSV_PLACA:PSV_PLACA.filter(([k])=>!soloPSV.includes(k));
   /* La ficha entera está bajo llave: la escribe gerencia y el taller
      la abre con la clave del jefe. */
@@ -9596,6 +9630,225 @@ function guardarPlaca(id){
     PSV_GUARDADO.setEsp=a.setPress; PSV_GUARDADO.und=a.setUnd||PSV_GUARDADO.und;
   }
   volverDePlaca(id);
+}
+
+/* ── LA PLACA DE LA VÁLVULA ──────────────────────────────────
+   Al terminar la prueba de salida hay que grabar la placa de metal
+   que se remacha en el cuerpo. Todos esos datos ya están en el
+   sistema —el tag, la serie, el set, la capacidad, el tipo—, así que
+   copiarlos a mano a una hoja de cálculo es trabajo repetido y una
+   ocasión más de equivocarse. Este papel los junta como van en la
+   placa y como van en la fila del listado, para que el técnico grabe
+   leyendo y no recordando.
+   ════════════════════════════════════════════════════════════ */
+const MES_PLACA=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+function undPlaca(u){
+  const t=String(u||'psi').toLowerCase();
+  if(t.includes('kg'))return 'KG/CM2-G';
+  if(t.includes('bar'))return 'BAR-G';
+  if(t.includes('kpa'))return 'KPA-G';
+  return 'PSIG';
+}
+function datosPlaca(c){
+  if(!c)return null;
+  const a=ACTIVOS.find(x=>x.id===c.act)||{}, m=MODELOS[a.mod]||{};
+  const ord=(c.ord&&ORDENES.find(x=>x.id===c.ord))
+    ||ORDENES.find(x=>x.calib===c.id)||ordenViva(a.id)||ordenDeValvula(a.id);
+  const f=String(c.fecha||hoyISO()).slice(0,10).split('-');
+  return {
+    os:    ord?codigoLinea(ord):(c.os||''),
+    tag:   a.tag||'',
+    serial:a.ser||'',
+    year:  f[0]||'',
+    month: MES_PLACA[(+f[1]||1)-1]||'',
+    date:  String(+f[2]||''),
+    set:   String(c.setEsp||a.setPress||''),
+    und:   undPlaca(c.und||a.setUnd),
+    cdtp:  String(a.rcCdpt||''),
+    back:  String(a.backP||'0'),
+    cap:   String(a.capac||''),
+    type:  String(a.figura||a.mod||''),
+    name:  String(m.m||'').toUpperCase(),
+    _act:a, _c:c
+  };
+}
+/* La placa se graba con lo que dice la prueba de SALIDA, así que
+   hasta que los tres disparos no estén —cada uno con su foto— no hay
+   nada que grabar: se ofrecería un dato que todavía puede cambiar. */
+function placaLista(c){
+  if(!c)return false;
+  if(valoresDisparo(c).length<3)return false;
+  return psvFaltantes(c).filter(x=>(x.paso||9)===4).length===0;
+}
+/* Las válvulas de una orden que ya tienen su ensayo con disparos:
+   son las que se pueden grabar. */
+function placasDeOrden(idOrden){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o)return [];
+  return lineasDe(o).map(x=>{
+    const c=(x.calib&&CALIBS.find(y=>y.id===x.calib))||recepDe(x.act);
+    return placaLista(c)?datosPlaca(c):null;
+  }).filter(Boolean);
+}
+const PLACA_CAB=['OS','TAG','SERIAL','YEAR','MONTH','DATE','SET PRESS','PRESS UNITS',
+                 'CDPT','BACK PRESS','CAP','TYPE','NAME'];
+const placaFila=d=>[d.os,d.tag,d.serial,d.year,d.month,d.date,d.set,d.und,
+                    d.cdtp,d.back,d.cap,d.type,d.name];
+/* El dibujo de la placa, con el mismo reparto que la de metal. */
+function placaHTML(d){
+  const li=(k,v,ancho)=>`<div class="pl-c${ancho?' w':''}"><span>${esc(k)}</span><b>${esc(v||'')}</b></div>`;
+  return `<div class="pl-metal">
+    <div class="pl-cab"><b>ADOLPHUS SA</b><span>ventas@adolphus.pe</span></div>
+    <div class="pl-rej">
+      ${li('SERIAL N°',d.serial)}${li('DATE',d.date)}
+      ${li('JOB N°',d.os)}${li('M:',d.month)}
+      ${li('TAG',d.tag)}${li('Y:',d.year)}
+      ${li('SET PRESS',d.set)}${li('PRESS UNITS',d.und)}
+      ${li('CDTP',d.cdtp)}${li('BACK PRESS',d.back)}
+      ${li('CAP',d.cap)}${li('TYPE',d.type)}
+      ${li('NAME',d.name,true)}
+    </div></div>`;
+}
+/* El dibujo de la placa se usa en dos sitios —el papel que se imprime
+   y la pantalla del taller—, así que va aparte: lo que se ve en el
+   celular es exactamente lo que sale por la impresora. */
+const PLACA_METAL_CSS=`
+.pl-lista{display:flex;flex-wrap:wrap;gap:8mm}
+/* La placa: fondo metálico y letras grabadas, para que se vea igual
+   que la de verdad y no quepa duda de dónde va cada dato. */
+.pl-metal{width:92mm;border:1.4px solid #6f767d;border-radius:2mm;padding:3mm 3.4mm;
+  background:linear-gradient(160deg,#f3f4f6,#e2e5e8 45%,#eef0f2);page-break-inside:avoid;
+  box-sizing:border-box;color:#1a1d21;font-family:'Helvetica Neue',Segoe UI,Roboto,sans-serif}
+.pl-cab{text-align:center;margin-bottom:2mm}
+.pl-cab b{display:block;font-size:4.4mm;letter-spacing:.06em;color:#2b3138}
+.pl-cab span{font-size:2.4mm;color:#5b6470}
+.pl-rej{display:grid;grid-template-columns:1fr 1fr;gap:1.2mm 3mm}
+.pl-c{display:flex;align-items:baseline;gap:1.6mm;border-bottom:.3mm solid #b9bfc5;padding-bottom:.6mm}
+.pl-c.w{grid-column:1/-1}
+.pl-c span{font-size:2.3mm;letter-spacing:.04em;color:#5b6470;flex:0 0 auto;min-width:17mm}
+.pl-c b{font-size:3.2mm;font-weight:700;color:#1a1d21;word-break:break-word}
+/* Y dentro del programa: la placa centrada y la fila del listado con
+   desplazamiento propio, que en un celular no cabe de ancho. */
+.pl-vista{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:10px 0 4px}
+@media(max-width:520px){.pl-vista .pl-metal{zoom:.72}}
+table.pl-tabla{font-size:11px;white-space:nowrap}
+table.pl-tabla th{font-size:10px;letter-spacing:.04em;text-transform:none}
+table.pl-tabla td{font-family:var(--mono,ui-monospace,monospace)}
+`;
+const PLACA_CSS=`
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{font:12px/1.5 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#101418;margin:0;padding:12mm 10mm;background:#fff}
+h1{font-size:15px;margin:0 0 2px} .sub{color:#5b6470;font-size:11px;margin:0 0 14px}
+table.lst{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:10.5px}
+table.lst th,table.lst td{border:1px solid #101418;padding:4px 6px;text-align:center;white-space:nowrap}
+table.lst th{background:#eef1f4;font-size:9.5px;letter-spacing:.04em}
+table.lst td.l{text-align:left}
+h2{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#5b6470;margin:16px 0 8px}
+${PLACA_METAL_CSS}
+.pie{margin-top:14px;font-size:9.5px;color:#8a929c;display:flex;justify-content:space-between}
+@page{size:A4;margin:8mm}
+`;
+/* El papel: la fila del listado y la placa dibujada, una por válvula. */
+function documentoPlaca(lista,titulo){
+  const ds=(lista||[]).filter(Boolean);
+  if(!ds.length)return null;
+  const c=cli((ds[0]._act||{}).cli)||{};
+  return {titulo:`Placas ${titulo||''}`.trim(), html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Placas ${esc(titulo||'')}</title><style>${PLACA_CSS}</style></head><body>
+<h1>Datos para grabar la placa</h1>
+<p class="sub">${esc(c.n||'')} · ${ds.length} válvula${ds.length===1?'':'s'} · ${esc(fPE(hoyISO()))}</p>
+<table class="lst"><thead><tr>${PLACA_CAB.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+<tbody>${ds.map(d=>`<tr>${placaFila(d).map((v,i)=>
+  `<td class="${i===11?'l':''}">${esc(v||'')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+<h2>Placas, una por válvula</h2>
+<div class="pl-lista">${ds.map(placaHTML).join('')}</div>
+<div class="pie"><span>Adolphus S.A. · datos de placa</span><span>${esc(fPE(hoyISO()))}</span></div>
+${BARRA_IMPRIMIR}</body></html>`};
+}
+/* Y en Excel, con las mismas columnas de la hoja que ya usan. */
+function placaExcel(lista,titulo){
+  const ds=(lista||[]).filter(Boolean);
+  if(!ds.length){toast('No hay datos de placa todavía');return}
+  const cuerpo=ds.map(placaFila);
+  const nombre=`Placas ${titulo||''}`.trim();
+  if(typeof XLSX==='undefined'){
+    bajarCSV(nombre+'.csv',[PLACA_CAB,...cuerpo]);
+    toast('Descargado en CSV · se abre en Excel igual');
+    return;
+  }
+  try{
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet([PLACA_CAB,...cuerpo]);
+    ws['!cols']=PLACA_CAB.map((h,i)=>({wch:i===11?34:Math.max(9,h.length+3)}));
+    XLSX.utils.book_append_sheet(wb,ws,'Placas');
+    XLSX.writeFile(wb,nombre+'.xlsx');
+    toast('Datos de placa descargados en Excel');
+  }catch(e){ bajarCSV(nombre+'.csv',[PLACA_CAB,...cuerpo]); toast('Descargado en CSV'); }
+}
+/* Desde el ensayo: la placa de ESTA válvula. Desde la orden: las de
+   todas las que ya tienen su prueba. */
+let PLACA_VUELVE=null;
+function generarPlaca(calibId){
+  /* Se entra desde el propio ensayo, y la pantalla de la placa usa el
+     mismo cuadro: lo escrito se guarda ANTES de cambiarla y se guarda
+     el camino de vuelta. Perder los disparos por mirar la placa sería
+     el peor cambio posible. */
+  const enEnsayo=!!(PSV_TMP&&document.getElementById('psvDisparos'));
+  if(enEnsayo){ try{guardarPSV(false,true)}catch(e){} }
+  const c=CALIBS.find(x=>x.id===calibId)||(PSV_TMP&&PSV_TMP.id===calibId?PSV_TMP:null);
+  const d=datosPlaca(c);
+  if(!d){toast('No encuentro el ensayo de esa válvula');return}
+  PLACA_VUELVE=enEnsayo?{act:c.act, abrir:'salida'}:null;
+  verPlacas([d], d.tag||d.serial||'');
+}
+/* La vuelta al ensayo, con todo como estaba. */
+function volverDePlacas(){
+  const v=PLACA_VUELVE; PLACA_VUELVE=null;
+  if(v&&v.act){ openPSV(v.act,null,v.abrir); return }
+  closeModal();
+}
+function generarPlacaDeOrden(idOrden){
+  PLACA_VUELVE=null;
+  const ds=placasDeOrden(idOrden);
+  if(!ds.length){toast('Ninguna válvula de esta orden tiene su ensayo todavía');return}
+  const o=ORDENES.find(x=>x.id===idOrden)||{};
+  verPlacas(ds, o.mat||o.n||'');
+}
+/* La pantalla: se ve la placa, se imprime y se baja el Excel. */
+let PLACA_LISTA=null, PLACA_TIT='';
+function verPlacas(lista,titulo){
+  PLACA_LISTA=lista; PLACA_TIT=titulo||'';
+  /* El mismo dibujo que se imprime, metido una vez en la página. */
+  if(!document.getElementById('placaCSS')){
+    const st=document.createElement('style'); st.id='placaCSS'; st.textContent=PLACA_METAL_CSS;
+    document.head.appendChild(st);
+  }
+  $('#mTitle').textContent=`Generar placa · ${titulo||''}`;
+  $('#mBody').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
+     <div>Todo esto sale de lo que ya está cargado —la ficha fija y la prueba de salida—.
+       Imprímelo y grábalo tal cual; si algo no cuadra, se corrige en la ficha de la válvula
+       y aquí cambia solo.</div></div>
+   <div class="pl-vista">${lista.map(placaHTML).join('')}</div>
+   <h4 class="snc-sec">La fila del listado</h4>
+   <div style="overflow-x:auto"><table class="grid pl-tabla"><thead><tr>${
+     PLACA_CAB.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>
+     <tbody>${lista.map(x=>`<tr>${placaFila(x).map(v=>`<td>${esc(v||'')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+   ${lista.some(x=>!x.cap||!x.type||!x.cdtp)?`<p class="hint" style="color:var(--due)">
+     Hay huecos —capacidad, tipo o CDTP—: se llenan en la <b>ficha fija</b> de la válvula y aparecen aquí.</p>`:''}`;
+  $('#mFoot').innerHTML=`<button class="btn quiet" onclick="volverDePlacas()">${
+      PLACA_VUELVE?'Volver al ensayo':'Cerrar'}</button>
+    <span style="flex:1"></span>
+    <button class="btn sec" onclick="placaExcel(PLACA_LISTA,PLACA_TIT)"
+      title="La misma fila, en la hoja de cálculo">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M9 13l6 6M15 13l-6 6"/></svg>Excel</button>
+    <button class="btn" onclick="imprimirPlacas()">
+      <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>Imprimir</button>`;
+  $('#modal').classList.add('on');
+}
+function imprimirPlacas(){
+  const doc=documentoPlaca(PLACA_LISTA,PLACA_TIT);
+  if(!doc){toast('No hay nada que imprimir');return}
+  abrirDoc(doc.html,doc.titulo);
 }
 
 /* ── La gráfica del ensayo ───────────────────────────────────
@@ -13385,6 +13638,14 @@ function renderWO(){
           ${(G.et==='mant'||G.et==='final'||G.et==='cert')&&S.rol!=='cliente'?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
             onclick="event.stopPropagation();elegirInforme('${o.id}')" title="El informe técnico DVAD-SER-002: de una válvula o el general de la orden">
             <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informe técnico</button>`:''}
+          ${/* La placa: en prueba de salida y en finalizado, en cuanto
+               alguna válvula tenga su ensayo cerrado. Es lo último que
+               hace el taller antes de devolver la válvula. */''}
+          ${(G.et==='cert'||G.et==='final')&&S.rol!=='cliente'
+            &&ls.some(x=>placaLista(recepDe(x.act)))?`<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+            onclick="event.stopPropagation();generarPlacaDeOrden('${o.id}')" title="Los datos para grabar la placa · se bajan también en Excel">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Generar placa${
+              ls.filter(x=>placaLista(recepDe(x.act))).length>1?`s · ${ls.filter(x=>placaLista(recepDe(x.act))).length}`:''}</button>`:''}
           ${/* En «Finalizado» manda el jefe: entra, corrige si hace
                falta y pone la última firma. El taller lo ve, no lo
                toca. */''}
