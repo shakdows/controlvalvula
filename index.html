@@ -2178,7 +2178,13 @@ tr.bom-row.sel .pos{background:var(--sel);color:var(--surface)}
      un toque y no compite por los 390 px de ancho. */
   .bar{height:56px;padding:0 6px 0 4px;gap:2px}
   .bar::before,.bar::after{display:none}
-  .bar>.net-chip,.bar>#themeBtn,.bar>[onclick="openHelp()"],.bar>[onclick="logout()"]{display:none}
+  .bar>#themeBtn,.bar>[onclick="openHelp()"],.bar>[onclick="logout()"]{display:none}
+  /* El chip se queda SIEMPRE: es donde se ve si esto sube o no. */
+  .bar>.net-chip{display:inline-flex;height:32px;padding:0 8px;gap:4px;flex:0 0 auto}
+  .bar>.net-chip .nv{display:none}
+  /* Y cuando algo va mal, el rótulo vuelve: «No sube» tiene que
+     leerse, no adivinarse por un punto de color. */
+  .bar>.net-chip.mal .nl,.bar>.net-chip.local .nl,.bar>.net-chip.off .nl{display:inline;font-size:11px}
   .crumbs{font-size:13.5px;gap:5px;flex:1;min-width:0;white-space:nowrap;overflow:hidden}
   /* de la miga sólo sobrevive la hoja: el resto lo dice la pestaña */
   .crumbs>span{display:none}
@@ -2579,7 +2585,11 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 #netChip .nv{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
   padding:1px 5px;border-radius:999px;margin-left:5px;
   color:var(--ok);background:color-mix(in oklab,var(--ok) 14%,transparent)}
-@media(max-width:520px){.banda-ver{left:12px;right:12px;transform:none;max-width:none}}
+/* Debajo de la barra, no encima: tapando la cabecera escondía justo
+   el chip que dice si esto sube o no. */
+@media(max-width:760px){.banda-ver{top:62px}}
+@media(max-width:520px){.banda-ver{left:10px;right:10px;transform:none;max-width:none;
+  padding:8px 10px;font-size:12px}}
 /* El mismo riel dentro de la válvula: ahí tiene la anchura de la
    columna, así que los pasos se reparten y no se aprietan. */
 /* El riel primero, a lo ancho, y debajo lo que se pueda hacer con ese
@@ -4094,7 +4104,25 @@ const USUARIOS=[
 /* ============================================================
    2 · ESTADO Y UTILIDADES
    ============================================================ */
-const HOY=new Date('2026-07-23T00:00:00');
+/* La fecha de HOY en Perú, sea cual sea el reloj del aparato: un
+   celular con el huso cambiado no puede firmar un certificado con
+   otro día. Se recalcula al volver a la aplicación, para que un
+   equipo que se queda encendido toda la noche pase de día. */
+function hoyEnPeru(){
+  try{
+    const f=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Lima',
+      year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+    const d=new Date(f+'T00:00:00');
+    return isNaN(d)?new Date():d;
+  }catch(e){ return new Date() }
+}
+let HOY=hoyEnPeru();
+function refrescarHoy(){
+  const d=hoyEnPeru();
+  if(d.getTime()!==HOY.getTime()){ HOY=d; try{renderAll()}catch(e){} }
+}
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden)refrescarHoy() });
+setInterval(refrescarHoy,10*60000);
 const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
          focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'org',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
