@@ -2562,6 +2562,10 @@ button.hs-h.ok .hs-pt{border-color:var(--sel);background:var(--sel);
 button.hs-h.ok:hover .hs-hl{text-decoration:underline}
 button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:var(--r-1)}
 .hs-veces{display:block;margin-top:8px;font-size:10.5px;color:var(--ink-3);text-align:center}
+/* La cabecera de la cola de pendientes, con su botón de insistir. */
+.sq-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;margin-top:10px;border:1px solid var(--line);border-bottom:0;
+  border-radius:var(--r-2) var(--r-2) 0 0;background:var(--surface-2);font-size:12.5px}
 /* El aviso de versión nueva: arriba, sobre todo lo demás, y se puede
    dejar para después — nadie quiere que le recarguen la pantalla a
    medio ensayo. */
@@ -17745,6 +17749,19 @@ function guardarActivo(id){
    ============================================================ */
 let CALIBS=[];
 const fmtDT=s=>{if(!s)return '—';const [d,t]=s.split('T');const [Y,M,D]=d.split('-');return `${D}/${M}/${Y}${t?' · '+t:''}`};
+/* Un instante cualquiera, escrito en hora de Perú. toISOString() da
+   la hora de Greenwich: a las once de la noche en Lima ya es el día
+   siguiente allí, y en pantalla salía mañana a las cuatro. */
+function instantePeru(x){
+  const d=(x instanceof Date)?x:new Date(x);
+  if(isNaN(d))return '';
+  try{
+    const p={}; new Intl.DateTimeFormat('es-PE',{timeZone:'America/Lima',
+      year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})
+      .formatToParts(d).forEach(o=>p[o.type]=o.value);
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  }catch(e){ return d.toISOString().slice(0,16) }
+}
 /* Sólo para ABRIR una calibración ya guardada con el formato antiguo.
    Las nuevas se registran todas por openPSV, sea cual sea la clase de
    válvula: un solo formulario, con fotos, firmas y certificado. Dejar
@@ -19781,11 +19798,26 @@ async function marcarIntento(){
   await bdOp('pendientes','readwrite',o=>filas.forEach(f=>o.put({...f,intentos:(f.intentos||0)+1})));
 }
 
-/* Programa el siguiente intento, esperando cada vez más. */
+/* Programa el siguiente intento, esperando cada vez más. Con la
+   aplicación delante se insiste rápido —hay alguien mirando el
+   contador—; de fondo se espacia para no gastar batería ni datos. */
 function reintentar(){
   if(JOB_T)clearTimeout(JOB_T);
-  JOB_ESPERA=JOB_ESPERA?Math.min(JOB_MAX,JOB_ESPERA*2):JOB_MIN;
+  const mirando=!document.hidden;
+  const min=mirando?4000:JOB_MIN, max=mirando?60000:JOB_MAX;
+  JOB_ESPERA=JOB_ESPERA?Math.min(max,JOB_ESPERA*2):min;
   JOB_T=setTimeout(()=>correrJob(),JOB_ESPERA);
+}
+/* «Inténtalo ahora», a mano. Sin esperas ni escalones. */
+async function reintentarYa(){
+  if(!enNube()){toast('Primero hay que entrar con la cuenta');return}
+  if(!online()){toast('Sin conexión · se sube solo en cuanto vuelva la señal');return}
+  JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
+  toast('Subiendo lo que falta…');
+  await correrJob('a-mano');
+  const q=(await bdCuenta('pendientes'))||0;
+  toast(q?`Quedan ${q} por subir · se sigue intentando`:'Todo subido');
+  try{ if($('#modal').classList.contains('on'))openSync() }catch(e){}
 }
 /* El último fallo de la nube, con su hora: para poder decir POR QUÉ
    no sube, en vez de dejar un contador subiendo en silencio. */
@@ -19904,10 +19936,18 @@ function arrancarJob(){
   window.addEventListener('online', ()=>{pintarNet();rtConectar();correrJob('volvio-la-señal')});
   window.addEventListener('offline',()=>{pintarNet();rtCerrar()});
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden)return;
+    if(document.hidden){
+      /* Al irse a otra aplicación se intenta subir lo que quede: el
+         celular sigue vivo un rato y ese rato basta. Nada se pierde
+         si no da tiempo —la cola vive en el equipo—, pero cuanto
+         antes llegue, antes lo ve el taller. */
+      if(PEND_N)correrJob('me-voy');
+      return;
+    }
     rtConectar();                       // el móvil corta los sockets al irse a otra app
     correrJob('volviste');
   });
+  window.addEventListener('pagehide',()=>{ if(PEND_N)correrJob('se-cierra') });
   /* Con el socket vivo, el latido sólo comprueba que no se haya
      quedado nada colgado; sin él, es lo único que hay. */
   setInterval(()=>correrJob(rtVivo()?'latido':'latido-sin-socket'), 45000);
@@ -20279,20 +20319,25 @@ async function pintarPendientes(){
       ? `<div class="sq-list">${SYNCQ.slice().reverse().map(x=>`
           <div class="sq-i"><span class="tag ${x.off?'due':''}"><span class="dot"></span>${esc(x.tipo)}</span>
             <span class="sq-t"><b>${esc(x.desc)}</b><span>${x.off?'registrado sin conexión':'registrado con conexión'}</span></span>
-            <span class="sq-d">${fmtDT(x.ts.slice(0,16))}</span></div>`).join('')}</div>`
+            <span class="sq-d">${fmtDT(instantePeru(x.ts))}</span></div>`).join('')}</div>`
       : `<div class="ps-empty" style="padding:22px">Sin cuenta en la nube: todo se guarda sólo en este equipo.</div>`;
     return;
   }
   const filas=(await bdTodos('pendientes'))||[];
   PEND_N=filas.length;pintarNet();
+  /* El peso importa: la fila que se atasca casi siempre es la del
+     ensayo con seis fotos, y saber cuál es ahorra media hora. */
+  const kb=f=>Math.round(((f.datos?JSON.stringify(f.datos).length:0))/1024);
   caja.innerHTML=filas.length
-    ? `<div class="sq-list">${filas.slice(0,60).map(f=>`
+    ? `<div class="sq-cab"><b>${filas.length} sin subir</b>
+         <button class="btn sec xs" onclick="reintentarYa()">Reintentar ahora</button></div>
+       <div class="sq-list">${filas.slice(0,60).map(f=>`
         <div class="sq-i">
           <span class="tag ${f.intentos?'due':''}"><span class="dot"></span>${esc(COL_N[f.coleccion]||f.coleccion)}</span>
           <span class="sq-t"><b class="mono">${esc((f.datos&&(f.datos.tag||f.datos.n))||f.clave)}</b>
-            <span>${f.borrado?'se dio de baja':'se creó o se modificó'}${
+            <span>${f.borrado?'se dio de baja':'se creó o se modificó'} · ${kb(f)} KB${
               f.intentos?` · ${f.intentos} intento${f.intentos===1?'':'s'} fallido${f.intentos===1?'':'s'}`:''}</span></span>
-          <span class="sq-d">${fmtDT(new Date(f.ts).toISOString().slice(0,16))}</span></div>`).join('')}
+          <span class="sq-d">${fmtDT(instantePeru(f.ts))}</span></div>`).join('')}
        ${filas.length>60?`<div class="ps-empty" style="padding:12px">y ${filas.length-60} más</div>`:''}</div>`
     : `<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`;
 }
