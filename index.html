@@ -5279,11 +5279,9 @@ function verOrden(idOrAct,esActivo){
       return `<section class="fx-blk" style="margin-top:0;border-top:0;padding-top:0">
         <div class="fx-blk-h"><h3>Válvulas de esta orden</h3>
           <span class="count">${fin} de ${ls.length} finalizadas</span>
-          ${/* Cambiar las válvulas de una orden es cosa de gerencia: un
-               descuido en el taller saca del trabajo una válvula ya
-               empezada y se lleva por delante lo hecho. */''}
-          ${S.rol==='admin'?`<button class="btn quiet xs" onclick="editarValvulasOrden('${o.id}')"
-            title="Añadir o quitar válvulas de esta orden">Añadir o quitar</button>`:''}</div>
+          ${/* Aquí estaba «Añadir o quitar» (editarValvulasOrden): se
+               retiró a pedido de gerencia. La lista es para trabajar
+               las válvulas, no para cambiar el alcance de la orden. */''}</div>
         <div class="ord-v">${ls.map(x=>{
           const v=ACTIVOS.find(y=>y.id===x.act)||{};
           const et=ETAPAS.find(e=>e[0]===x.et)||['',x.et];
@@ -5433,10 +5431,12 @@ function verOrden(idOrAct,esActivo){
       ? `<button class="btn sec" onclick="closeModal();openPSV('${o.act}')">Seguir el mantenimiento</button>` : ''}
     ${S.rol==='admin'?`<button class="btn quiet" style="color:var(--late)" onclick="borrarOrden('${o.id}')"
        title="Eliminar esta orden de servicio">Eliminar</button>`:''}
-    ${/* El botón del pie mueve la tanda que va al mismo sitio; las que
-         llevan otros pasos se mueven desde su propia fila. */''}
+    ${/* Con varias válvulas el pie NO mueve la tanda: cada una lleva
+         sus pasos y se jala desde su propia fila, que es justo para lo
+         que se entra a esta lista. Con una sola, el botón del pie es
+         el de siempre. */''}
     ${(()=>{
-      if(cliente)return '';
+      if(cliente||varias)return '';
       const j=lasQueVanJuntas(ls,etC);
       if(!j.dest||!j.mueven.length)return '';
       const n=j.mueven.length, mixto=j.resto.length;
@@ -13989,7 +13989,6 @@ function renderWO(){
            ella; las demás salen después con el mismo botón. */
         const juntas=lasQueVanJuntas(ls,G.et);
         const nx=juntas.dest?[juntas.dest,WO_IR[juntas.dest]]:null;
-        const vanAhi=juntas.mueven.length||ls.length;
         const tags=ls.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v?(v.tag||v.ser||'—'):'—'});
         const listas=ls.filter(x=>x.et==='final').length;
         const tono=tonoOrden(ls);
@@ -14111,18 +14110,24 @@ function renderWO(){
             /* La válvula que ya tiene su prueba de entrada pasa al
                taller aunque su compañera siga en el mostrador: el botón
                cuenta las que están listas, no las que hay. */
-            let cuantas=vanAhi, aviso='';
+            let aviso='';
             if(G.et==='ent'&&nx[0]==='mant'){
               const van=juntas.mueven;
               const listas=van.filter(x=>!haceEsePaso(x,'ent')||recepcionCerrada(recepDe(x.act))).length;
               const faltan=van.length-listas;
               if(!listas)
                 return `<div class="wo-parte">Falta${faltan===1?'':'n'} ${faltan} prueba${faltan===1?'':'s'} de entrada para pasar al taller</div>`;
-              cuantas=listas;
               if(faltan)aviso=`<div class="wo-parte">${faltan} válvula${faltan===1?'':'s'} se queda${
                 faltan===1?'':'n'} aquí hasta tener su prueba de entrada</div>`;
             }
-            return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}${varias?` · ${cuantas}`:''}</button>${aviso}`;
+            /* Con varias válvulas NO se mueve la tanda desde la tarjeta:
+               cada una lleva sus pasos y va a su sitio, así que la
+               única puerta es «Ver las válvulas» y allí se jala una a
+               una. Los avisos sí se quedan: dicen por qué algo espera.
+               Con una sola válvula no hay lista que abrir y el botón
+               sigue donde estaba. */
+            if(varias)return aviso;
+            return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}</button>${aviso}`;
           })():''}
           ${/* El desarme del cuadro 3 es lo que llena el informe técnico:
                desde mantenimiento ya se puede sacar y ver cómo va. */''}
