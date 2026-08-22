@@ -11158,7 +11158,7 @@ const INFORME_VER='1';
 const INFORME_FIRMAS=[
   ['Elaborado por','Junior Torres','Asesor técnico MARC'],
   ['Revisado por', 'Jose Rojas',   'Coordinador de servicios'],
-  ['Aprobado por', 'Larry Ramirez','Gerente de operaciones']
+  ['Aprobado por', 'Larry Ramirez','Key Account Manager']
 ];
 function membreteInforme(pagina,total,fecha){
   return `<div class="mem">
@@ -11310,15 +11310,22 @@ body{font:14px/1.6 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;mar
 .mem .lg{flex:0 0 auto;display:flex;align-items:center;padding:8px 12px;border-right:1px solid #1a1d21}
 .mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px 13px;
   border-right:1px solid #1a1d21;font-weight:700;font-size:13px;letter-spacing:.02em;line-height:1.35}
-/* La caja de la derecha: un poco más grande y con todo centrado en su
-   casilla, como en el formato de la casa. */
-.mem .dt{flex:0 0 235px;display:grid;grid-template-columns:auto 1fr;font-size:10.6px;
-  align-items:center}
-.mem .dt span{padding:5px 8px;border-bottom:1px solid #1a1d21;color:#5b6470;text-align:center}
-.mem .dt b{padding:5px 8px;border-bottom:1px solid #1a1d21;border-left:1px solid #1a1d21;
-  font-weight:700;text-align:center}
-.mem .dt i{grid-column:1/-1;padding:4px 8px;font-style:normal;text-align:center;font-size:8.6px;color:#5b6470}
-.mem .dt i b{padding:0;border:0;font-weight:700;color:#1a1d21}
+/* La caja de la derecha. Cada casilla ocupa su fila ENTERA y el texto
+   se centra dentro: con el contenido centrado en la rejilla, la casilla
+   del valor se encogía a su propio alto —«Versión (Fecha)» ocupa dos
+   renglones y su valor uno— y el cuadro salía con un escalón. */
+.mem .dt{flex:0 0 240px;display:grid;grid-template-columns:auto 1fr;font-size:10.6px;
+  align-items:stretch}
+.mem .dt span,.mem .dt b{display:flex;align-items:center;justify-content:center;
+  padding:5px 8px;border-bottom:1px solid #1a1d21;text-align:center;line-height:1.25}
+.mem .dt span{color:#5b6470}
+.mem .dt b{border-left:1px solid #1a1d21;font-weight:700}
+/* El renglón de la página: ancho entero, sin borde debajo —es el
+   último— y del mismo cuerpo que el resto del cuadro. */
+.mem .dt i{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:.32em;
+  padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
+.mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
+.mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
 .mem .lg svg{display:block}
 /* El cuadro de firmas de la carátula: letra pequeña, como el formato
    de la casa — cabe en su renglón y no compite con el título. */
@@ -11347,14 +11354,13 @@ table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
 table.tv{font-size:11.5px;table-layout:fixed}
 table.tv th,table.tv td{padding:7px 6px;white-space:nowrap}
 table.tv th:nth-child(2),table.tv td:nth-child(2),
-table.tv th:nth-child(6),table.tv td:nth-child(6){white-space:normal}
-table.tv th:nth-child(1),table.tv td:nth-child(1){width:15%}
-table.tv th:nth-child(2),table.tv td:nth-child(2){width:18%}
-table.tv th:nth-child(3),table.tv td:nth-child(3){width:11%}
-table.tv th:nth-child(4),table.tv td:nth-child(4){width:12%}
-table.tv th:nth-child(5),table.tv td:nth-child(5){width:11%}
-table.tv th:nth-child(6),table.tv td:nth-child(6){width:19%}
-table.tv th:nth-child(7),table.tv td:nth-child(7){width:14%}
+table.tv th:nth-child(5),table.tv td:nth-child(5){white-space:normal}
+table.tv th:nth-child(1),table.tv td:nth-child(1){width:17%}
+table.tv th:nth-child(2),table.tv td:nth-child(2){width:21%}
+table.tv th:nth-child(3),table.tv td:nth-child(3){width:13%}
+table.tv th:nth-child(4),table.tv td:nth-child(4){width:14%}
+table.tv th:nth-child(5),table.tv td:nth-child(5){width:20%}
+table.tv th:nth-child(6),table.tv td:nth-child(6){width:15%}
 th,td{border:1px solid #cfd4d9;padding:7px 10px;text-align:left;vertical-align:top}
 th{background:#f1f4f8;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#3a424c}
 td.c,th.c{text-align:center}
@@ -11531,14 +11537,11 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${/* La primera casilla es el número de la orden y cada fila es una
        LÍNEA suya —PSV-393-01, PSV-393-02—, como en el formato de la
        casa: el TAG de planta va en su propia columna. */''}
-  <tr><th>${esc(o.mat||o.n||os)}</th><th>Descripción</th><th>Tamaño</th><th>Set de placa</th><th>Placa</th><th>Marca</th><th>N.º de serie</th></tr>
+  <tr><th>${esc(o.mat||o.n||os)}</th><th>Descripción</th><th>Tamaño</th><th>Set de placa</th><th>Marca</th><th>N.º de serie</th></tr>
   ${items.map(({l,a,m,e})=>`<tr>
     <td><b>${esc(codigoLinea(l))}</b></td><td>Calibración de válvulas</td><td>${raya(a.medida||a.sz)}</td>
     <td>${raya(a.setPress?a.setPress+' '+(a.setUnd||'psi'):(e&&e.setEsp?e.setEsp+' '+(e.und||'psi'):''))}</td>
-    ${/* La placa: aquí va un dato que todavía no se registra. Se deja
-         en blanco a propósito — una raya en un papel firmado invita a
-         escribir a mano justo lo que debería salir del sistema. */''}
-    <td></td><td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
+    <td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
 </table>
 
 <h2>Alcance</h2>
