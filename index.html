@@ -19133,6 +19133,7 @@ async function nubeBajar(reemplazar){
     if(f.borrado){delete ESPEJO[kk]} else {ESPEJO[kk]={j:jsonCanon(f.datos),emp:f.empresa_id||null}}
     if(f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
 
+    if(f.coleccion==='MAESTRO'&&f.clave==='RESET'){ atenderReset(f.datos); return }
     if(f.coleccion==='MAESTRO'){
       const m=NUBE_MAESTROS.find(x=>x.k===f.clave); if(!m||f.borrado)return;
       const d=m.obj(); Object.keys(d).forEach(k=>delete d[k]); Object.assign(d,f.datos||{});
@@ -19532,6 +19533,112 @@ function fotoDatos(){
    está aquí se añade, y lo que está en los dos se queda con lo del
    archivo. Nada desaparece por restaurar.
    ════════════════════════════════════════════════════════════ */
+/* ── EMPEZAR DE CERO ─────────────────────────────────────────
+   Deja el sistema como recién instalado: sin empresas, sin válvulas,
+   sin órdenes ni certificados, aquí y en la nube — y en los demás
+   equipos, en cuanto se conecten.
+   Es lo más destructivo que hace el portal, así que: sólo gerencia,
+   con la clave, con el aviso delante y con la copia de seguridad
+   descargada ANTES de tocar nada. Si algo hiciera falta después, se
+   restaura desde ese archivo.
+   ════════════════════════════════════════════════════════════ */
+const LS_RESET='adolphus.reset.visto';
+function pedirEmpezarDeCero(){
+  if(S.rol!=='admin'){toast('Sólo gerencia puede hacer esto');return}
+  const cuenta=CLIENTES.length+ACTIVOS.length+ORDENES.length+CALIBS.length+DOCS.length;
+  $('#mTitle').textContent='Empezar de cero';
+  $('#mBody').innerHTML=`
+   <div class="callout bad"><svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Se borra <b>todo</b>: empresas, válvulas, órdenes, certificados, fotos y firmas.
+       Aquí, en la nube y <b>en los demás equipos</b> en cuanto se conecten.
+       Son <b>${cuenta}</b> registros. Esto no se puede deshacer desde el portal.</div></div>
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+     <div>Antes de borrar nada se descarga una <b>copia de seguridad</b> en este equipo.
+       Con ese archivo se puede volver a dejar todo como está ahora, desde
+       <b>Ajustes → Restaurar una copia</b>. Guárdalo bien.</div></div>
+   <div class="fld"><label>Contraseña de gerencia <span class="req-dot">*</span></label>
+     <input class="inp pend" id="ceroClave" type="password" placeholder="escribe la contraseña" autocomplete="off">
+     <span class="pend-msg" id="ceroErr" style="display:none">▲ Contraseña incorrecta</span></div>
+   <div class="fld"><label>Escribe <b>EMPEZAR DE CERO</b> para confirmar <span class="req-dot">*</span></label>
+     <input class="inp" id="ceroTexto" placeholder="EMPEZAR DE CERO" autocomplete="off"></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <span style="flex:1"></span>
+    <button class="btn" style="background:var(--late);border-color:var(--late)"
+      onclick="confirmarEmpezarDeCero()">Descargar la copia y borrar todo</button>`;
+  $('#modal').classList.add('on');
+  setTimeout(()=>{const i=$('#ceroClave'); if(i)i.focus()},80);
+}
+async function confirmarEmpezarDeCero(){
+  const c=$('#ceroClave'), t=$('#ceroTexto');
+  if(!c||c.value!==CLAVE_BAJA){
+    if(c){c.classList.add('pend');c.value='';c.focus()}
+    const e=$('#ceroErr'); if(e)e.style.display='flex';
+    toast('Contraseña incorrecta — no se borró nada'); return;
+  }
+  if(!t||t.value.trim().toUpperCase()!=='EMPEZAR DE CERO'){
+    toast('Escribe EMPEZAR DE CERO para confirmar'); if(t)t.focus(); return;
+  }
+  /* 1 · la copia, siempre primero */
+  try{ copiaSeguridad() }catch(e){ toast('No se pudo descargar la copia · no se borró nada'); return }
+  closeModal();
+  toast('Copia descargada · borrando…');
+  await new Promise(r=>setTimeout(r,900));   // que termine la descarga
+  const marca=new Date().toISOString();
+  /* 2 · la nube: se vacía y se deja la marca del borrón */
+  if(enNube()&&online()){
+    try{
+      await nubeFetch('/rest/v1/registros?coleccion=neq.__ninguna__',
+        {metodo:'DELETE',cab:{Prefer:'return=minimal'}});
+      await nubeFetch('/rest/v1/registros',{metodo:'POST',
+        cab:{Prefer:'resolution=merge-duplicates,return=minimal'},
+        cuerpo:[{coleccion:'MAESTRO',clave:'RESET',empresa_id:null,
+                 datos:{ts:marca},borrado:false}]});
+    }catch(e){
+      toast('No se pudo vaciar la nube: '+e.message+' · no se borró nada de este equipo');
+      return;
+    }
+  }
+  /* 3 · y este equipo */
+  vaciarEsteEquipo(marca);
+  /* Y la caché del programa: se pidió empezar de cero, así que la
+     próxima carga baja la aplicación entera otra vez, sin restos. */
+  try{
+    if('caches' in window){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))) }
+    if(navigator.serviceWorker){ const rs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(rs.map(r=>r.unregister())) }
+  }catch(e){}
+  toast('Todo borrado · el portal arranca limpio');
+  setTimeout(()=>location.reload(),900);
+}
+/* Vaciar lo de aquí. Se apunta cada registro como dado de baja para
+   que los ejemplos que trae el programa dentro no vuelvan solos. */
+function vaciarEsteEquipo(marca){
+  try{
+    NUBE_COLS.forEach(({c,arr})=>{ const a=arr();
+      a.forEach(x=>{ if(x&&x.id)olvidar(c,x.id) });
+      a.length=0; });
+    Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
+    ESPEJO={}; NUBE_DESDE=null; SYNCQ=[];
+    S.inCli=null; S.cli=null; S.picked=new Set(); S.cliSel=new Set();
+    try{ localStorage.setItem(LS_RESET,marca) }catch(e){}
+    bdOp('pendientes','readwrite',o=>o.clear()).catch(()=>{});
+    borrarEnCurso();
+    guardarLocal();
+  }catch(e){ console.error('[cero]',e) }
+}
+/* Y el borrón viaja: el equipo que ve una marca más nueva que la suya
+   se vacía él también, sin preguntar — alguien ya lo decidió, con su
+   contraseña, en otro aparato. */
+function atenderReset(datos){
+  const m=datos&&datos.ts; if(!m)return false;
+  let visto=''; try{ visto=localStorage.getItem(LS_RESET)||'' }catch(e){}
+  if(visto>=m)return false;
+  vaciarEsteEquipo(m);
+  toast('Se empezó de cero desde otro equipo · este quedó igual');
+  try{renderAll()}catch(e){}
+  return true;
+}
+
 function copiaSeguridad(){
   const d=fotoDatos();
   d.marca='adolphus'; d.cuando=new Date().toISOString();
@@ -20315,6 +20422,16 @@ function openSync(){
        <button class="btn sec xs" onclick="copiaSeguridad()">Guardar copia</button>
        <button class="btn quiet xs" onclick="pedirCopia()">Restaurar copia</button>
      </div></div>
+   ${/* Lo más destructivo que hace el portal va al final, apartado y
+        en rojo: dejar el sistema como recién instalado. */''}
+   ${S.rol==='admin'?`<div class="set-row" style="margin-top:12px;
+       border-color:color-mix(in oklab,var(--late) 35%,var(--line))">
+     <div class="t"><b style="color:var(--late)">Empezar de cero</b>
+       <span>Borra todo —empresas, válvulas, órdenes y certificados— aquí, en la nube y en
+         los demás equipos en cuanto se conecten. Descarga la copia de seguridad antes de
+         borrar nada. Pide la contraseña de gerencia.</span></div>
+     <button class="btn quiet xs" style="color:var(--late)" onclick="pedirEmpezarDeCero()">Empezar de cero</button>
+   </div>`:''}
    <div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
