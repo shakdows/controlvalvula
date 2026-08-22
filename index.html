@@ -2565,6 +2565,15 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
   border:1px solid color-mix(in oklab,var(--sel) 30%,var(--line));
   background:var(--surface);box-shadow:var(--sh-2);font-size:12.5px}
 .banda-ver span{color:var(--ink-2)}
+/* La de «no estás en la nube» va en ámbar: no es un error del que
+   haya que asustarse, es una advertencia que hay que ver. */
+.banda-local{border-color:color-mix(in oklab,var(--due) 45%,var(--line));
+  background:color-mix(in oklab,var(--due) 10%,var(--surface))}
+.banda-local b{color:var(--ink)}
+/* Y el chip en rojo cuando hay cosas que no logran subir. */
+#netChip.mal{border-color:color-mix(in oklab,var(--late) 45%,var(--line));
+  background:color-mix(in oklab,var(--late) 10%,var(--surface));color:var(--late)}
+#netChip.mal .nd{background:var(--late)}
 /* El sello «en vivo» del chip de estado: verde y pequeño, para que se
    vea de un vistazo que el aviso del servidor está conectado. */
 #netChip .nv{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
@@ -18608,7 +18617,7 @@ function pintarRescate(){
            <button class="btn" onclick="logout()">Entrar con mi cuenta</button>
          </div>`}`;
 }
-function renderAll(){pintarRescate();renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){try{bandaLocal();pintarNet()}catch(e){}pintarRescate();renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
@@ -19662,6 +19671,14 @@ function reintentar(){
   JOB_ESPERA=JOB_ESPERA?Math.min(JOB_MAX,JOB_ESPERA*2):JOB_MIN;
   JOB_T=setTimeout(()=>correrJob(),JOB_ESPERA);
 }
+/* El último fallo de la nube, con su hora: para poder decir POR QUÉ
+   no sube, en vez de dejar un contador subiendo en silencio. */
+let NUBE_FALLO=null;
+function apuntarFalloNube(e){
+  const m=(e&&e.message)||'sin respuesta del servidor';
+  NUBE_FALLO={ts:Date.now(), msg:m, status:(e&&e.status)||0};
+  try{pintarNet()}catch(x){}
+}
 let JOB_CORRIENDO=false;
 async function correrJob(motivo){
   if(JOB_CORRIENDO||SYNCING)return;
@@ -19672,6 +19689,7 @@ async function correrJob(motivo){
     await apuntarPendientes();
     const subidas=await drenarPendientes();
     const bajadas=await nubeBajar(false);
+    NUBE_FALLO=null;                     // la vuelta salió entera
     JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
     guardarLocal();
     if(subidas||bajadas){
@@ -19680,6 +19698,7 @@ async function correrJob(motivo){
         toast(`Volvió la señal · ${subidas} cambio${subidas===1?'':'s'} subido${subidas===1?'':'s'}`);
     }else pintarNet();
   }catch(e){
+    apuntarFalloNube(e);
     await marcarIntento();
     pintarNet();
     reintentar();
@@ -19853,20 +19872,29 @@ function pintarNet(){
   let vivo=false, fallo='';
   try{ vivo=hayNube&&rtEnVivo(); fallo=RT_FALLO||'' }catch(e){}
   c.classList.toggle('vivo',!!vivo);
+  /* Un fallo reciente con cosas esperando NO es «por subir»: es «no
+     sube». La diferencia importa cuando llevas media jornada
+     trabajando. */
+  let atasco=null;
+  try{ if(hayNube&&n&&NUBE_FALLO&&Date.now()-NUBE_FALLO.ts<10*60000)atasco=NUBE_FALLO }catch(e){}
+  c.classList.toggle('mal',!!atasco);
   c.innerHTML=SYNCING
     ? `<span class="nd"></span><span class="nl">Sincronizando…</span>`
     : !online()
       ? `<span class="nd"></span><span class="nl">Sin conexión</span>${n?`<span class="qn">${n}</span>`:''}`
       : !hayNube
         ? `<span class="nd"></span><span class="nl">Solo en este equipo</span>`
-        : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
-           :`<span class="nd"></span><span class="nl">Al día</span>${
-              vivo?'<span class="nv">en vivo</span>':''}`;
+        : atasco
+          ? `<span class="nd"></span><span class="nl">No sube</span><span class="qn">${n}</span>`
+          : n?`<span class="nd"></span><span class="nl">Por subir</span><span class="qn">${n}</span>`
+             :`<span class="nd"></span><span class="nl">Al día</span>${
+                vivo?'<span class="nv">en vivo</span>':''}`;
 
   c.title=!online()
     ? `Trabajando sin conexión. ${n} cambio${n===1?'':'s'} guardado${n===1?'':'s'} en este equipo; subirá${n===1?'':'n'} solo${n===1?'':'s'} al recuperar señal.`
     : !hayNube
       ? 'Los datos se están guardando SOLO en este equipo. Para que suban a la nube y se vean desde otra computadora, hay que entrar con una cuenta.'
+      : atasco?`${n} registro${n===1?'':'s'} sin subir · ${atasco.msg}. Se reintenta solo; si sigue, entra a Conexión y sincronización.`
       : n?`${n} registro${n===1?'':'s'} pendiente${n===1?'':'s'} de subir a la nube`
          : vivo
            ? 'Todo sincronizado. Aviso en vivo conectado: lo que haga otro aparato se ve aquí en el momento.'
@@ -20002,6 +20030,10 @@ async function probarEnlace(){
   fila('Último aviso recibido', ult?`hace ${Math.round((Date.now()-ult)/1000)} s`:'ninguno todavía');
   /* 4 · lo que falta por subir */
   fila('Por subir', String(enNube()?PEND_N:SYNCQ.length), (enNube()?PEND_N:SYNCQ.length)?'due':'ok');
+  /* 5 · y si algo falló, POR QUÉ */
+  let ultimoFallo=null; try{ ultimoFallo=NUBE_FALLO }catch(e){}
+  if(ultimoFallo)fila('Último fallo',
+    esc(ultimoFallo.msg)+` · hace ${Math.round((Date.now()-ultimoFallo.ts)/1000)} s`,'late');
   const explica = !enNube()
     ? 'Sin cuenta abierta no sube nada: lo que registres se queda en este equipo.'
     : vivo
@@ -20156,6 +20188,25 @@ let SW_LISTA=false, SW_REG=null, HAY_VERSION=false;
 /* La banda de arriba: aparece cuando la versión nueva ya está bajada y
    sólo falta aplicarla. No recarga sola —el técnico puede estar a
    medio ensayo—: lo dice y espera un toque. */
+/* ── ESTE EQUIPO NO ESTÁ EN LA NUBE ──────────────────────────
+   El chip de arriba es pequeño y en el celular no lo mira nadie. Si
+   se está trabajando en local, lo que se registre no lo verá ningún
+   otro aparato — y eso hay que decirlo en grande, una vez, con el
+   camino para arreglarlo al lado.
+   ════════════════════════════════════════════════════════════ */
+function bandaLocal(){
+  const vieja=document.getElementById('bandaLocal');
+  const hace=(()=>{try{return enNube()}catch(e){return false}})();
+  if(hace||!SES){ if(vieja)vieja.remove(); return }
+  if(vieja)return;
+  const d=document.createElement('div');
+  d.id='bandaLocal'; d.className='banda-ver banda-local';
+  d.innerHTML=`<span><b>Este equipo no está conectado a la nube.</b>
+      Lo que registres aquí no lo verá ningún otro equipo.</span>
+    <button class="btn xs" onclick="closeModal();logout()">Entrar con mi cuenta</button>
+    <button class="btn quiet xs" onclick="this.parentNode.remove()">Ahora no</button>`;
+  document.body.appendChild(d);
+}
 const ARRANQUE=Date.now();
 function bandaVersion(){
   if(HAY_VERSION||document.getElementById('bandaVer'))return;
