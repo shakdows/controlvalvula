@@ -19115,6 +19115,21 @@ async function nubeBajar(reemplazar){
    Un registro de más se borra otra vez en diez segundos; los datos de
    una empresa no se recuperan.
    ============================================================ */
+/* ── REPARAR EL MARCADOR DESFASADO ───────────────────────────
+   Los equipos que ya vienen de la versión con el fallo tienen el
+   marcador adelantado y les faltan filas que nunca volverán a pedir.
+   Se les borra el marcador una vez —la primera vez que abren esta
+   versión— y bajan todo de nuevo. Son unos cientos de filas: se nota
+   un segundo y queda arreglado para siempre.
+   ════════════════════════════════════════════════════════════ */
+const LS_EPOCA='adolphus.sync.epoca', SYNC_EPOCA='2026-08-22-marcador';
+function repararMarcador(){
+  let e=''; try{ e=localStorage.getItem(LS_EPOCA)||'' }catch(x){}
+  if(e===SYNC_EPOCA)return false;
+  NUBE_DESDE=null;                       // que baje todo otra vez
+  try{ localStorage.setItem(LS_EPOCA,SYNC_EPOCA) }catch(x){}
+  return true;
+}
 const LS_BORRADOS='adolphus.borrados.v1';
 let BORRADOS=new Set();
 try{BORRADOS=new Set(JSON.parse(localStorage.getItem(LS_BORRADOS)||'[]'))}catch(e){}
@@ -19245,9 +19260,12 @@ async function nubeSubirDirecto(){
       const kk=f.coleccion+SEP+f.clave;
       if(f.borrado)delete ESPEJO[kk]; else ESPEJO[kk]={j:f._j,emp:f.empresa_id};
     });
-    (eco||[]).forEach(f=>{
-      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
-    });
+    /* Aquí estaba el fallo que dejaba a cada equipo ciego a lo del
+       otro: subir NO adelanta el marcador. Sólo lo mueve lo que se ha
+       bajado de verdad; lo que otro equipo escribió mientras nosotros
+       subíamos sigue estando por delante del marcador y se baja en la
+       misma vuelta. Volver a bajar una fila propia no cuesta nada;
+       perderse la del compañero cuesta el trabajo del día. */
   }
   return mios.length;
 }
@@ -19614,9 +19632,12 @@ async function drenarPendientes(){
       await bdQuita('pendientes',f.k);
       subidas++;
     }
-    (eco||[]).forEach(f=>{
-      if(f&&f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
-    });
+    /* Aquí estaba el fallo que dejaba a cada equipo ciego a lo del
+       otro: subir NO adelanta el marcador. Sólo lo mueve lo que se ha
+       bajado de verdad; lo que otro equipo escribió mientras nosotros
+       subíamos sigue estando por delante del marcador y se baja en la
+       misma vuelta. Volver a bajar una fila propia no cuesta nada;
+       perderse la del compañero cuesta el trabajo del día. */
     PEND_N=Math.max(0,filas.length-subidas); pintarNet();   // el contador baja mientras sube
   }
   PEND_N=(await bdCuenta('pendientes'))||0;
@@ -19931,6 +19952,20 @@ async function probarNube(){
     else                                    toast('Respondió con HTTP '+r.status);
   }catch(e){ toast('No se pudo conectar: '+e.message) }
 }
+/* Traerse TODO de la nube otra vez, sin borrar nada de aquí: se
+   olvida el marcador y se vuelve a pedir desde el principio. Es el
+   remedio cuando un equipo no ve lo que hicieron los demás. */
+async function bajarTodoDeNuevo(){
+  if(!enNube()){toast('Primero hay que entrar con la cuenta');return}
+  if(!online()){toast('Sin conexión');return}
+  NUBE_DESDE=null; ESPEJO={};
+  toast('Trayendo todo de la nube…');
+  try{
+    const n=await nubeBajar(false);
+    purgarBorrados(); guardarLocal(); renderAll(); pintarNet();
+    toast(`Traídos ${n} registro${n===1?'':'s'} de la nube`);
+  }catch(e){ toast('No se pudo traer: '+e.message) }
+}
 /* Cuánto tarda el servidor y si el aviso en vivo está de verdad
    conectado. Sólo lee: no escribe ni borra nada. */
 async function probarEnlace(){
@@ -20015,6 +20050,11 @@ function openSync(){
        <span>Mide cuánto tarda el servidor y si el aviso en vivo está conectado. No escribe nada.</span></div>
      <button class="btn sec" onclick="probarEnlace()">Probar</button>
    </div>
+   ${enNube()?`<div class="set-row">
+     <div class="t"><b>Traer todo de la nube otra vez</b>
+       <span>Si este equipo no ve algo que se hizo en otro, esto lo vuelve a pedir todo desde el principio. No borra nada de aquí.</span></div>
+     <button class="btn sec" onclick="bajarTodoDeNuevo()">Traer todo</button>
+   </div>`:''}
    <div id="sqPrueba"></div>
    <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
      :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
@@ -20921,7 +20961,12 @@ migrarEtapas();
 /* Antes que nada: quitar lo que el usuario eliminó. Los ejemplos que
    trae el programa dentro no pueden resucitar con cada versión. */
 purgarBorrados();
-restaurarCaja().then(ok=>{purgarBorrados(); if(ok){pintarNet();if(SES)renderAll()}
+restaurarCaja().then(ok=>{
+  purgarBorrados();
+  /* Y si este equipo venía con el marcador adelantado, se le borra
+     para que baje de nuevo todo lo que se había perdido. */
+  if(repararMarcador()){ ESPEJO={}; try{correrJob('marcador-reparado')}catch(e){} }
+  if(ok){pintarNet();if(SES)renderAll()}
   /* Y si el aparato se apagó con un formulario a medias, se ofrece
      seguir: da igual que fuera el celular, la tablet o la
      computadora. */
