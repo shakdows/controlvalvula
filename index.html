@@ -12406,12 +12406,15 @@ function comprimirFoto(f){
       im.onerror=()=>falla(new Error('no se pudo abrir la imagen'));
       im.onload=()=>{
         try{
-          const k=Math.min(1,1400/Math.max(im.width,im.height));
+          /* 1200 px y 0,75 de calidad: una foto de mantenimiento se
+             ve igual de bien y pesa la mitad. El servidor corta a los
+             ocho segundos y un ensayo son seis fotos. */
+          const k=Math.min(1,1200/Math.max(im.width,im.height));
           const c=document.createElement('canvas');
           c.width=Math.max(1,Math.round(im.width*k));
           c.height=Math.max(1,Math.round(im.height*k));
           c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-          listo(c.toDataURL('image/jpeg',0.82));
+          listo(c.toDataURL('image/jpeg',0.75));
         }catch(err){falla(err)}
       };
       im.src=e.target.result;
@@ -19293,18 +19296,24 @@ async function nubeSubirDirecto(){
   recuperarLoQueFalta(vistos);
   const mios=cambios.filter(puedoEscribir);
   if(!mios.length)return 0;
-  for(let i=0;i<mios.length;i+=100){
-    const lote=mios.slice(i,i+100);
-    /* Pedimos de vuelta la fila sellada: así sabemos la marca de tiempo
-       que puso la base y no nos volvemos a bajar lo que acabamos de
-       escribir —que llegaría con retraso y pisaría el trabajo nuevo. */
-    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
-      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
-      cuerpo:lote.map(({_j,...f})=>f)});
-    lote.forEach(f=>{
-      const kk=f.coleccion+SEP+f.clave;
-      if(f.borrado)delete ESPEJO[kk]; else ESPEJO[kk]={j:f._j,emp:f.empresa_id};
-    });
+  /* Por peso, no por cantidad, y con la misma partición: en la primera
+     siembra van todas las fotos de golpe y es cuando más fácil se pasa
+     de los ocho segundos del servidor. */
+  let i=0;
+  while(i<mios.length){
+    const lote=[]; let peso=0;
+    while(i<mios.length){
+      const p=(mios[i]._j?mios[i]._j.length:0)+200;
+      if(lote.length&&peso+p>LOTE_MAX)break;
+      lote.push(mios[i]); peso+=p; i++;
+      if(peso>LOTE_MAX)break;
+    }
+    const fallos=[];
+    await subirTanda(lote.map(f=>({...f,k:f.coleccion+SEP+f.clave})),
+      async f=>{ const kk=f.k;
+        if(f.borrado)delete ESPEJO[kk]; else ESPEJO[kk]={j:f._j,emp:f.empresa_id};
+      }, fallos);
+    if(fallos.length)throw fallos[0];
     /* Aquí estaba el fallo que dejaba a cada equipo ciego a lo del
        otro: subir NO adelanta el marcador. Sólo lo mueve lo que se ha
        bajado de verdad; lo que otro equipo escribió mientras nosotros
@@ -19626,7 +19635,9 @@ const JOB_MIN=5000, JOB_MAX=300000;      // de 5 s a 5 min
    nunca: revienta la memoria al armar el JSON o lo rechaza el
    servidor. Se cortan en 2 MB, y una fila que sola pase de ahí viaja
    sola —es lo mejor que se puede hacer con ella—. */
-const LOTE_MAX=2*1024*1024;
+/* El servidor corta a los 8 segundos. Trescientos kilos por envío
+   pasan de sobra hasta con mala señal; dos megas no pasaban nunca. */
+const LOTE_MAX=300*1024;
 /* Freno de mano, por si algún día se me escapa otro camino: por muchas
    bajas que se hayan apuntado, no se vacía una colección entera de la
    nube en una sola sincronización sin que quede constancia. Vaciar el
@@ -19654,7 +19665,7 @@ function frenoDeMano(filas){
 async function drenarPendientes(){
   const filas=frenoDeMano((await bdTodos('pendientes'))||[]);
   if(!filas.length){PEND_N=0;return 0}
-  let subidas=0, i=0;
+  let subidas=0, i=0; const fallos=[];
   while(i<filas.length){
     const lote=[]; let peso=0;
     while(i<filas.length){
@@ -19664,29 +19675,106 @@ async function drenarPendientes(){
       lote.push(f); peso+=p; i++;
       if(peso>LOTE_MAX)break;
     }
-    const eco=await nubeFetch('/rest/v1/registros',{metodo:'POST',
-      cab:{Prefer:'resolution=merge-duplicates,return=representation'},
-      cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
-                           empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
-    /* Se descuenta lote por lote: si la señal se corta a la mitad, lo
+    /* Se descuenta fila por fila: si la señal se corta a la mitad, lo
        que ya subió no se vuelve a subir y lo que falta sigue en la
-       tabla de pendientes. */
-    for(const f of lote){
+       tabla de pendientes.
+       Y no se pide la devolución de lo escrito: no la usamos para
+       nada —el marcador lo mueve la BAJADA— y hacía al servidor
+       mandar de vuelta los mismos megas que acababa de recibir. */
+    const confirmar=async f=>{
       if(f.borrado){delete ESPEJO[f.k]; borradoHecho(f.k);}
       else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
       await bdQuita('pendientes',f.k);
       subidas++;
-    }
-    /* Aquí estaba el fallo que dejaba a cada equipo ciego a lo del
-       otro: subir NO adelanta el marcador. Sólo lo mueve lo que se ha
-       bajado de verdad; lo que otro equipo escribió mientras nosotros
-       subíamos sigue estando por delante del marcador y se baja en la
-       misma vuelta. Volver a bajar una fila propia no cuesta nada;
-       perderse la del compañero cuesta el trabajo del día. */
-    PEND_N=Math.max(0,filas.length-subidas); pintarNet();   // el contador baja mientras sube
+      PEND_N=Math.max(0,filas.length-subidas); pintarNet();
+    };
+    await subirTanda(lote,confirmar,fallos);
   }
   PEND_N=(await bdCuenta('pendientes'))||0;
+  /* Lo que no pasó se queda esperando, pero hay que decirlo: si no,
+     el contador baja y parece que subió todo. */
+  if(fallos.length)throw fallos[0];
   return subidas;
+}
+/* Encoger una foto ya guardada, sin volver a pedírsela a nadie: se
+   dibuja en un lienzo más chico y se vuelve a comprimir. */
+function encogerFoto(d,lado,calidad){
+  return new Promise(ok=>{
+    if(typeof d!=='string'||!/^data:image\//.test(d))return ok(d);
+    const im=new Image();
+    im.onerror=()=>ok(d);
+    im.onload=()=>{
+      try{
+        const k=Math.min(1,lado/Math.max(im.width,im.height));
+        const c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(im.width*k));
+        c.height=Math.max(1,Math.round(im.height*k));
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        const r=c.toDataURL('image/jpeg',calidad);
+        ok(r.length<d.length?r:d);
+      }catch(e){ ok(d) }
+    };
+    im.src=d;
+  });
+}
+/* Recorre el registro entero y encoge lo que sea una foto grande. */
+async function aligerar(v,lado,cal){
+  if(typeof v==='string')
+    return (/^data:image\//.test(v)&&v.length>80000) ? await encogerFoto(v,lado,cal) : v;
+  if(Array.isArray(v)){ const o=[]; for(const x of v)o.push(await aligerar(x,lado,cal)); return o }
+  if(v&&typeof v==='object'){ const o={}; for(const k of Object.keys(v))o[k]=await aligerar(v[k],lado,cal); return o }
+  return v;
+}
+/* Y que la versión ligera se quede también en el equipo: si no, la
+   próxima vez vuelve a pesar lo mismo y volvemos al atasco. */
+function guardarAligerada(f,datos){
+  try{
+    const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
+    const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
+    if(i>=0)a[i]=datos;
+    guardarLocal();
+  }catch(e){}
+}
+/* Un envío. Si el servidor lo corta por tiempo, se parte en dos y se
+   reintenta: un ensayo con seis fotos no cabe en un lote con otros,
+   pero solo sí. Una fila que no pasa ni sola se anota y se sigue con
+   las demás — una foto enorme no puede bloquear el día entero. */
+async function subirTanda(lote,confirmar,fallos){
+  if(!lote.length)return;
+  try{
+    await nubeFetch('/rest/v1/registros',{metodo:'POST',
+      cab:{Prefer:'resolution=merge-duplicates,return=minimal'},
+      cuerpo:lote.map(f=>({coleccion:f.coleccion,clave:f.clave,
+                           empresa_id:f.empresa_id,datos:f.datos,borrado:f.borrado}))});
+    for(const f of lote)await confirmar(f);
+  }catch(e){
+    if(lote.length===1){
+      const f=lote[0];
+      /* Última carta: encoger las fotos y probar otra vez. Sólo se
+         intenta una vez por fila y sólo si de verdad tiene fotos
+         grandes; si aun así no pasa, se anota y se sigue con las
+         demás. */
+      if(!f._aligerada&&f.datos&&JSON.stringify(f.datos).length>200000){
+        try{
+          const ligera=await aligerar(f.datos,900,.6);
+          const antes=JSON.stringify(f.datos).length, ahora=JSON.stringify(ligera).length;
+          if(ahora<antes*0.9){
+            console.warn('[nube] fila pesada · '+Math.round(antes/1024)+' KB → '+Math.round(ahora/1024)+' KB');
+            f.datos=ligera; f._aligerada=true;
+            guardarAligerada(f,ligera);
+            await bdPon('pendientes',{...f},f.k).catch(()=>{});
+            return await subirTanda([f],confirmar,fallos);
+          }
+        }catch(x){}
+      }
+      console.warn('[nube] esta fila no pasa:',f.k,e.message);
+      fallos.push(e);
+      return;
+    }
+    const m=Math.ceil(lote.length/2);
+    await subirTanda(lote.slice(0,m),confirmar,fallos);
+    await subirTanda(lote.slice(m),confirmar,fallos);
+  }
 }
 async function marcarIntento(){
   const filas=(await bdTodos('pendientes'))||[];
