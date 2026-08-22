@@ -3342,9 +3342,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <option value="admin">Gerencia · Adolphus</option>
           <option value="tec">Mantenimiento</option>
           <option value="com">Comercial repuestos</option>
-          <option value="cli-minera">Cliente · Minera Los Andes</option>
-          <option value="cli-refi">Cliente · Refinería Costa Norte</option>
-          <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
+          <!-- Las empresas las pone pintarPerfiles() con las que existan -->
         </select>
         <button class="btn sec" style="width:100%;justify-content:center" onclick="enterApp()">Entrar con datos de ejemplo</button>
         <button class="btn quiet" data-instalar style="display:none;width:100%;margin-top:10px"
@@ -3441,9 +3439,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
               <option value="admin">Gerencia · Adolphus</option>
               <option value="tec">Mantenimiento</option>
               <option value="com">Comercial repuestos</option>
-              <option value="cli-minera">Cliente · Minera Los Andes</option>
-              <option value="cli-refi">Cliente · Refinería Costa Norte</option>
-              <option value="cli-agro">Cliente · Agroindustrias del Valle</option>
+              <!-- Las empresas las pone pintarPerfiles() con las que existan -->
             </select>
           </div>
           <hr>
@@ -4575,10 +4571,37 @@ function toggleDensity(){
   document.documentElement.dataset.density=c?'cozy':'compact';
   toast(c?'Densidad cómoda':'Densidad compacta');
 }
+/* ── LOS PERFILES QUE SE PUEDEN MIRAR ────────────────────────
+   Los tres de la casa y UNO POR EMPRESA, sacados de las que hay dadas
+   de alta. Antes estaban escritos en el HTML: la empresa que uno
+   acababa de crear no salía, y no había forma de entrar a su portal
+   para ver lo que ve el cliente.
+   ════════════════════════════════════════════════════════════ */
+function pintarPerfiles(){
+  const emp=CLIENTES.slice().sort((a,b)=>String(a.n||'').localeCompare(String(b.n||''),'es'));
+  const html=emp.map(c=>`<option value="cli-${esc(c.id)}">Cliente · ${esc(c.n||'')}</option>`).join('');
+  ['#roleSel','#coverRole'].forEach(sel=>{
+    const e=$(sel); if(!e)return;
+    const antes=e.value;
+    /* Se conservan los tres de la casa y se rehace la parte de las
+       empresas: así añadir un cliente lo mete en la lista sin recargar. */
+    [...e.querySelectorAll('option')].forEach(o=>{ if(o.value.startsWith('cli-'))o.remove() });
+    e.insertAdjacentHTML('beforeend',html);
+    if([...e.options].some(o=>o.value===antes))e.value=antes;
+  });
+}
 function applyRole(v){
   S.rol=v.startsWith('cli')?'cliente':v;
   S.cli=v.startsWith('cli')?v.slice(4):null;
-  $('#ava').textContent={admin:'IA',tec:'ST',com:'CR','cli-minera':'ML','cli-refi':'RC','cli-agro':'AV'}[v];
+  /* Iniciales del redondel. La última palabra la tiene pintarCuenta(),
+     que pone las de quien entró; esto es sólo el respaldo para cuando
+     no hay cuenta — antes era una lista con las tres empresas de
+     ejemplo escritas a mano y con una nueva daba «undefined». */
+  $('#ava').textContent=({admin:'IA',tec:'ST',com:'CR'})[v]||(()=>{
+    const c=cli(S.cli)||{};
+    return String(c.n||'?').replace(/[^A-Za-zÁÉÍÓÚÑ ]/g,'').split(/\s+/)
+      .filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'CL';
+  })();
   $('#wsSub').textContent=S.cli?'Portal de cliente':'Control de fluidos · Lima';
   const c=S.rol==='cliente';
   // El cliente ve directo sus válvulas; el personal de Adolphus entra por cliente.
@@ -11129,6 +11152,14 @@ const MES_LARGO=['enero','febrero','marzo','abril','mayo','junio','julio','agost
    la casa: el logotipo con las letras, el título en un bloque y, a la
    derecha, código, versión con su fecha y la hoja. */
 const INFORME_VER='1';
+/* La cadena de aprobación del informe. No es quien hizo el ensayo —eso
+   cambia con cada trabajo— sino quién responde por el documento, que
+   en la casa son siempre los mismos. Se cambian aquí, una vez. */
+const INFORME_FIRMAS=[
+  ['Elaborado por','Junior Torres','Asesor técnico MARC'],
+  ['Revisado por', 'Jose Rojas',   'Coordinador de servicios'],
+  ['Aprobado por', 'Larry Ramirez','Gerente de operaciones']
+];
 function membreteInforme(pagina,total,fecha){
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
@@ -11311,6 +11342,19 @@ table.roles td.rol{font-size:8px;color:#5b6470;line-height:1.3}
 .port .ref b{font-family:'IBM Plex Mono',ui-monospace,monospace;color:#1a1d21;letter-spacing:.02em}
 /* Tablas */
 table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
+/* La tabla de válvulas: siete columnas en 186 mm. Sin esto «PSV-102» se
+   parte en dos y la fila parece dos válvulas. */
+table.tv{font-size:11.5px;table-layout:fixed}
+table.tv th,table.tv td{padding:7px 6px;white-space:nowrap}
+table.tv th:nth-child(2),table.tv td:nth-child(2),
+table.tv th:nth-child(6),table.tv td:nth-child(6){white-space:normal}
+table.tv th:nth-child(1),table.tv td:nth-child(1){width:15%}
+table.tv th:nth-child(2),table.tv td:nth-child(2){width:18%}
+table.tv th:nth-child(3),table.tv td:nth-child(3){width:11%}
+table.tv th:nth-child(4),table.tv td:nth-child(4){width:12%}
+table.tv th:nth-child(5),table.tv td:nth-child(5){width:11%}
+table.tv th:nth-child(6),table.tv td:nth-child(6){width:19%}
+table.tv th:nth-child(7),table.tv td:nth-child(7){width:14%}
 th,td{border:1px solid #cfd4d9;padding:7px 10px;text-align:left;vertical-align:top}
 th{background:#f1f4f8;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#3a424c}
 td.c,th.c{text-align:center}
@@ -11372,12 +11416,15 @@ li{margin-bottom:2px}
    colgando más abajo que las otras. */
 .fir{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;
   align-items:end;page-break-inside:avoid}
+/* Con una sola firma no se estira de lado a lado: se centra en el
+   ancho de una rúbrica, que es como se firma un papel. */
+.fir.una{grid-template-columns:70mm;justify-content:center;margin-top:34px}
 .fir .b{text-align:center;display:flex;flex-direction:column;justify-content:flex-end}
 .fir .sg{height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}
 .fir img{max-height:44px;max-width:100%;object-fit:contain;display:block;margin:0 auto}
-.fir .l{border-top:1px solid #1a1d21;padding-top:4px;font-size:9px}
-.fir .l b{display:block;font-size:9.8px}
-.fir .l span{color:#8a929c;font-size:8.4px}
+.fir .l{border-top:1px solid #1a1d21;padding-top:5px;font-size:11px}
+.fir .l b{display:block;font-size:12.5px}
+.fir .l span{color:#5b6470;font-size:10.5px}
 .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eef0f2;font-size:8.2px;color:#8a929c;text-align:center}
 /* Los renglones en blanco del formato: para escribir a mano lo que
    no estaba previsto. */
@@ -11455,11 +11502,10 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 
 <table class="roles">
   <tr><th class="c">Usuario final</th><th class="c">Cliente</th><th class="c">Orden de compra</th></tr>
-  <tr><td>${raya(c.n)}</td><td>${raya(c.n)}</td><td>${raya('')}</td></tr>
-  <tr><th class="c">Elaborado por</th><th class="c">Revisado por</th><th class="c">Aprobado por</th></tr>
-  <tr><td>${raya(ejec?ejec.n:(conE[0]&&conE[0].e.respNombre))}</td>
-      <td>${raya(vb?vb.n:'')}</td><td>${raya('')}</td></tr>
-  <tr><td class="rol">Asesor técnico MARC</td><td class="rol">Coordinador de servicios</td><td class="rol">Key Account Manager</td></tr>
+  <tr><td>${raya(c.n)}</td><td>${raya(c.n)}</td><td>${raya(o.oc)}</td></tr>
+  <tr>${INFORME_FIRMAS.map(([rol])=>`<th class="c">${esc(rol)}</th>`).join('')}</tr>
+  <tr>${INFORME_FIRMAS.map(([,quien])=>`<td>${esc(quien)}</td>`).join('')}</tr>
+  <tr>${INFORME_FIRMAS.map(([,,cargo])=>`<td class="rol">${esc(cargo)}</td>`).join('')}</tr>
 </table>
 <div class="cara-pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')}</div>
 </section>
@@ -11481,7 +11527,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   <b>${esc(c.n||'')}</b>.</p>
 
 <h2 class="sn">Detalle de válvulas a intervenir</h2>
-<table>
+<table class="tv">
   ${/* La primera casilla es el número de la orden y cada fila es una
        LÍNEA suya —PSV-393-01, PSV-393-02—, como en el formato de la
        casa: el TAG de planta va en su propia columna. */''}
@@ -11489,7 +11535,10 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${items.map(({l,a,m,e})=>`<tr>
     <td><b>${esc(codigoLinea(l))}</b></td><td>Calibración de válvulas</td><td>${raya(a.medida||a.sz)}</td>
     <td>${raya(a.setPress?a.setPress+' '+(a.setUnd||'psi'):(e&&e.setEsp?e.setEsp+' '+(e.und||'psi'):''))}</td>
-    <td>${raya(a.cert)}</td><td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
+    ${/* La placa: aquí va un dato que todavía no se registra. Se deja
+         en blanco a propósito — una raya en un papel firmado invita a
+         escribir a mano justo lo que debería salir del sistema. */''}
+    <td></td><td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
 </table>
 
 <h2>Alcance</h2>
@@ -11567,14 +11616,19 @@ ${/* PENDIENTES: lo que queda por hacer después de entregar —la
 ${String(o.pend||'').trim()?`<h2>Pendientes</h2>
 <p class="escrito">${esc(o.pend).replace(/\n/g,'<br>')}</p>`:''}
 
-<div class="fir">
-  <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}</div>
-    <div class="l"><b>${ejec?esc(ejec.n):'&nbsp;'}</b><span>Elaborado por · Asesor técnico</span></div></div>
-  <div class="b"><div class="sg">${vb&&vb.img?`<img src="${vb.img}" alt="">`:''}</div>
-    <div class="l"><b>${vb?esc(vb.n):'&nbsp;'}</b><span>Revisado por · Coordinador de servicios</span></div></div>
-  <div class="b"><div class="sg"></div>
-    <div class="l"><b>&nbsp;</b><span>Aprobado por · Key Account Manager</span></div></div>
-</div>
+${/* Una sola firma: la del técnico que hizo el mantenimiento, con su
+     rúbrica y su nombre —el del ensayo—. Quién revisa y quién aprueba
+     ya consta en la carátula; repetirlo aquí con dos rayas sin firmar
+     hace parecer que el trabajo no se revisó. */''}
+${(()=>{
+  const quien=(ejec&&ejec.n)||(conE[0]&&conE[0].e.respNombre)||'';
+  const cargo=(ejec&&ejec.cargo)||(conE[0]&&conE[0].e.respArea)||'Técnico';
+  return `<div class="fir una">
+    <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="Firma">`:''}</div>
+      <div class="l"><b>${esc(quien)||'&nbsp;'}</b>
+        <span>${esc(cargo)} · realizó el mantenimiento y la calibración</span></div></div>
+  </div>`;
+})()}
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
   de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
@@ -19261,7 +19315,7 @@ function pintarRescate(){
 /* La portada va al FINAL: sus tarjetas copian los números del menú
    lateral, y esos números los ponen al día las listas. Pintarla
    primero era enseñar los de la pasada anterior. */
-function renderAll(){try{bandaLocal();pintarNet()}catch(e){}pintarRescate();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderHome();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){try{bandaLocal();pintarNet();pintarPerfiles()}catch(e){}pintarRescate();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderHome();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
