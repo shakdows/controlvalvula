@@ -16088,7 +16088,7 @@ function accesosHtml(solo){
          title="Cambiar la imagen de ${esc(lbl)}">
          <svg viewBox="0 0 24 24"><path d="M4 7h3l1.5-2h7L17 7h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg></span>`:''}
       <span class="acc-n">${esc(lbl)}</span>
-      ${ct?`<span class="acc-c">${esc(ct)}</span>`:''}
+      ${ct&&ct!=='0'?`<span class="acc-c">${esc(ct)}</span>`:''}
     </button>`;
   }).join('');
   /* En la pantalla de inicio van sueltos, sin caja ni título: son los
@@ -18651,6 +18651,14 @@ function pintarRescate(){
   const el=$('#rescate'); if(!el)return;
   const vacio=!CLIENTES.length&&!ACTIVOS.length&&!ORDENES.length&&!CALIBS.length;
   if(!vacio){el.style.display='none';el.innerHTML='';return}
+  /* Vacío a propósito no es vacío por accidente. Si el espejo dice que
+     la nube tampoco tiene nada aparte de la configuración —recién
+     instalado, o recién empezado de cero—, no hay nada que rescatar y
+     el aviso saldría mintiendo. */
+  if(enNube()){
+    const nubeConDatos=Object.keys(ESPEJO||{}).some(k=>!k.startsWith('MAESTRO'));
+    if(!nubeConDatos){el.style.display='none';el.innerHTML='';return}
+  }
   el.style.display='';
   /* Vacío y CON sesión: la nube tiene los datos y este equipo no; el
      botón los pide otra vez desde cero. Vacío y sin sesión: primero
@@ -18672,7 +18680,10 @@ function pintarRescate(){
            <button class="btn" onclick="logout()">Entrar con mi cuenta</button>
          </div>`}`;
 }
-function renderAll(){try{bandaLocal();pintarNet()}catch(e){}pintarRescate();renderHome();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+/* La portada va al FINAL: sus tarjetas copian los números del menú
+   lateral, y esos números los ponen al día las listas. Pintarla
+   primero era enseñar los de la pasada anterior. */
+function renderAll(){try{bandaLocal();pintarNet()}catch(e){}pintarRescate();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderHome();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
