@@ -2578,6 +2578,12 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .hs-f.hs-sin{opacity:.72}
 /* El recordatorio de dónde vive el patrón de siempre. */
 .pat-fijo{display:block;margin-top:6px;font-size:11px;color:var(--ink-3)}
+/* Falta el patrón de la casa: no es un descuido del que ensaya. */
+.pat-falta{margin:8px 0;padding:9px 11px;border-radius:var(--r-2);font-size:12px;line-height:1.5;
+  border:1px solid color-mix(in oklab,var(--due) 45%,var(--line));
+  background:color-mix(in oklab,var(--due) 8%,var(--surface))}
+.pat-falta b{color:var(--ink)}
+.pat-falta .btn{margin-left:6px;vertical-align:baseline}
 /* La lista del taller encima de la casilla del nombre. */
 .tec-pick{display:flex;flex-direction:column;gap:5px}
 .tec-pick .tec-sel{color:var(--ink-2)}
@@ -7038,22 +7044,30 @@ const TECNICOS=['Junior Torres','Jose Rojas','Jose Manrique',
    id: quien la lee no se entera de que ahora hay una lista al lado. */
 function campoTecnico(id,valor,extra){
   const v=String(valor==null?'':valor);
-  const suyo=TECNICOS.includes(v);
+  /* Un nombre que no es de la casa —alguien de fuera, o el que se
+     escribió antes de que existiera la lista— no se pierde: se enseña
+     en la casilla, con la lista puesta en «Otro». */
+  const fuera=!!v&&!TECNICOS.includes(v);
   return `<div class="tec-pick">
     <select class="inp tec-sel" onchange="ponerTecnico('${id}',this.value)"
-      aria-label="Elegir del personal del taller">
-      <option value="">— elige del taller —</option>
+      aria-label="Quién lo hace">
+      <option value="" ${v?'':'selected'}>— sin asignar —</option>
       ${TECNICOS.map(t=>`<option value="${esc(t)}" ${t===v?'selected':''}>${esc(t)}</option>`).join('')}
-      ${suyo||!v?'':`<option value="${esc(v)}" selected>${esc(v)}</option>`}
+      <option value="__otro__" ${fuera?'selected':''}>Otro — lo escribo</option>
     </select>
     <input class="inp" id="${id}" value="${esc(v)}" autocomplete="off"
-      placeholder="o escribe el nombre" ${extra||''}></div>`;
+      placeholder="Nombre y apellido" style="${fuera?'':'display:none'}" ${extra||''}></div>`;
 }
-/* Elegir de la lista escribe en la casilla. Se avisa con un evento
-   «input» porque hay formularios que guardan según se escribe. */
+/* La lista manda; la casilla sólo sale con «Otro». El valor vive
+   siempre en la casilla —es la que leen los formularios— y se avisa con
+   un evento «input» porque hay pantallas que guardan según se escribe. */
 function ponerTecnico(id,v){
-  const e=document.getElementById(id); if(!e||!v)return;
-  e.value=v;
+  const e=document.getElementById(id); if(!e)return;
+  if(v==='__otro__'){
+    e.style.display=''; e.value=''; e.focus();
+  }else{
+    e.style.display='none'; e.value=v;
+  }
   e.dispatchEvent(new Event('input',{bubbles:true}));
 }
 const CAMPOS_PATRON=[
@@ -7933,8 +7947,12 @@ function psvFaltantes(c){
   const conEnt=hace.includes('ent'), conMant=hace.includes('mant'), conCert=hace.includes('cert');
   /* 1 · contra qué se mide */
   if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio',paso:1});
-  if(!String(c.patSerie||'').trim())out.push({id:'patCaja', que:'la serie del equipo patrón',paso:1});
-  if(!String(c.patCert||'').trim()) out.push({id:'patCaja', que:'el certificado del patrón',paso:1});
+  /* El patrón es de la casa, no de este trabajo: se dice así, para que
+     el que ensaya sepa que no es suyo y a quién pedírselo. */
+  if(!String(c.patSerie||'').trim())
+    out.push({id:'patCaja', que:'la serie del equipo patrón · la pone gerencia una vez',paso:1});
+  if(!String(c.patCert||'').trim())
+    out.push({id:'patCaja', que:'el certificado del patrón · lo pone gerencia una vez',paso:1});
   /* 2 · la prueba de entrada: el disparo tal como llegó, el veredicto
      de recepción y la firma de quien la recibió. Sin esas tres cosas
      la válvula no debería haber entrado siquiera al taller. */
@@ -8134,9 +8152,23 @@ function bloquePatron(t){
     <div class="pat-caja ${igualQueLaCasa?'':'otro'}" id="patCaja">
       <div class="dt">${CAMPOS_PATRON.map(([k,l])=>
         `<div class="dt-i"><span>${l}</span><b>${t[k]?esc(t[k]):'<span class="muted">—</span>'}</b></div>`).join('')}</div>
+      ${(()=>{
+        /* Sin serie ni certificado del patrón no hay certificado que
+           valga: es contra lo que se mide. Se avisa aquí, y se dice
+           que es cosa de una vez y de quién. */
+        const falta=[!String(t.patSerie||'').trim()&&'la serie',
+                     !String(t.patCert||'').trim()&&'el certificado'].filter(Boolean);
+        if(!falta.length)return '';
+        return `<div class="pat-falta">
+          <b>Falta ${falta.join(' y ')} del equipo patrón.</b>
+          Es el mismo instrumento para todos los trabajos: se pone <b>una sola vez</b> y vale
+          para los que vengan. ${S.rol==='admin'
+            ? `<button class="btn sec xs" onclick="closeModal();goSettings('org')">Ponerlo ahora</button>`
+            : 'Lo pone gerencia en Ajustes · Organización — avísale y sigue con lo tuyo.'}</div>`;
+      })()}
       ${puedeCambiar?`<button class="btn quiet xs" onclick="cambiarPatron()"
-        title="Para este trabajo, o para todos si marcas la casilla">Cambiar el patrón</button>
-        ${S.rol==='admin'?`<span class="pat-fijo">El patrón de siempre se cambia en
+        title="Sólo para este trabajo, si de verdad se midió con otro">Cambiar el patrón de este trabajo</button>
+        ${S.rol==='admin'?`<span class="pat-fijo">El de siempre se cambia en
           <a href="#" onclick="closeModal();goSettings('org');return false">Ajustes · Organización</a></span>`:''}`:''}
     </div>`;
 }
@@ -8546,7 +8578,8 @@ function recepAuto(t,a){
    ['Serie',                     a.ser],
    ['Certificación',             a.cert],
    ['Clase (norma de conexión)', a.clase||a.rt],
-   ['Código ADSA / MAT',          o.mat||o.n],
+   ['Código ADSA / MAT',          codigoLinea(o)],
+   ['Orden de compra del cliente', o.oc],
    ['Área',                      area(a)],
    ['Ubicación / servicio',      a.ubic],
    ['Presión de placa',          set],
@@ -13263,11 +13296,16 @@ function avisoRestoAbierto(o){
    ════════════════════════════════════════════════════════════ */
 const OS_BASE=100;                        // por dónde empieza la casa
 const RX_OS=/^(?:PSV-)?(\d{3,})(?:-\d{1,3})?$/i;
+/* Los números de la casa van de 100 en adelante y no pasan de seis
+   cifras. Un «450006785» es una orden de compra del cliente colada en
+   el sitio equivocado, y tomarla por correlativo hacía que la
+   siguiente orden fuera la 450006786. */
+const TOPE_OS=999999;
 const numOS=o=>{
   if(!o)return 0;
   if(typeof o.num==='number'&&isFinite(o.num))return o.num;
   const m=RX_OS.exec(String(o.mat||o.n||'').trim());
-  return m?+m[1]:0;
+  return m&&+m[1]<=TOPE_OS?+m[1]:0;
 };
 function siguienteNumOS(){
   let max=0;
@@ -13278,7 +13316,10 @@ function siguienteNumOS(){
    número lleva el prefijo; en un trabajo mezclado no, porque no sería
    verdad. */
 const esPSV=id=>{const a=ACTIVOS.find(x=>x.id===id);return !!a&&a.cl==='seguridad'};
-const codigoOS=(num,psv)=>`${psv?'PSV-':''}${num}`;
+/* Todas las órdenes de trabajo de la casa llevan PSV delante: es el
+   nombre del trabajo, no la clase de la válvula. (El segundo argumento
+   se sigue admitiendo para no tocar a quien la llama.) */
+const codigoOS=(num,psv)=>`PSV-${num}`;
 /* La casilla del número en los diálogos de creación, y su lectura. */
 function campoNumOS(ids){
   const psv=ids.length&&ids.every(esPSV);
@@ -13451,7 +13492,7 @@ function recibirOrden(id,grupo){
        <b>protocolo de entrada AXAD-084</b>: son quién hizo la prueba y cuándo.</div></div>
    <div class="two">
      <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span>
-         <span class="opc">despliega los del taller, o escribe otro</span></label>
+         <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
        ${campoTecnico('rcIng',yo)}</div>
      <div class="fld"><label for="rcFec">Fecha en que se probó</label>
        <input class="inp" id="rcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
@@ -13547,7 +13588,7 @@ function tomarOrden(id,grupo){
        Tu nombre queda en la tarjeta para que el resto del taller sepa que ya está tomada.</div></div>
    <div class="two">
      <div class="fld"><label for="toIng">Tu nombre <span class="req-dot">*</span>
-         <span class="opc">despliega los del taller, o escribe otro</span></label>
+         <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
        ${campoTecnico('toIng',yo)}</div>
      <div class="fld"><label for="toFec">Fecha de inicio</label>
        <input class="inp" id="toFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
@@ -13595,7 +13636,7 @@ function pruebaSalidaOrden(id,grupo){
        Tu nombre va al certificado como quien ejecutó el ensayo.</div></div>
    <div class="two">
      <div class="fld"><label for="psIng">Técnico que hace la prueba <span class="req-dot">*</span>
-         <span class="opc">despliega los del taller, o escribe otro</span></label>
+         <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
        ${campoTecnico('psIng',yo)}</div>
      <div class="fld"><label for="psFec">Fecha de la prueba</label>
        <input class="inp" id="psFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
@@ -14756,7 +14797,7 @@ function openCloseWO(id){
    <div class="two">
      <div class="fld"><label>Fecha de ejecución</label><input class="inp" id="cwFec" type="date" value="${hoyStr}"></div>
      <div class="fld"><label for="cwTec">Técnico responsable
-         <span class="opc">despliega los del taller, o escribe otro</span></label>
+         <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
        ${campoTecnico('cwTec',o.tec&&o.tec!=='Por asignar'?o.tec:'')}</div>
    </div>
    <div class="fld"><label>Trabajo realizado / hallazgos</label><textarea class="inp" id="cwHall" rows="3">${esc(o.hall||'')}</textarea></div>
@@ -14947,7 +14988,7 @@ function openWO(actId,tipo){
      <div class="fld"><label>Tipo</label><select class="inp" id="woTipo">${['Preventivo','Correctivo','Calibración','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option ${t===tipo?'selected':''}>${t}</option>`).join('')}</select></div>
      <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
    <div class="fld"><label for="woTec">Técnico responsable
-       <span class="opc">despliega los del taller, o escribe otro</span></label>
+       <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
      ${campoTecnico('woTec','')}</div>
    <div class="fld"><label>Alcance / hallazgos</label><textarea class="inp" id="woHall" rows="3" placeholder="Qué se va a hacer, qué se encontró…"></textarea></div>
    ${pasosHTML()}`;
@@ -19622,6 +19663,7 @@ async function nubeBajar(reemplazar){
      existe se queda fuera de todas las columnas. La traducción se
      hacía sólo al arrancar; ahora también después de cada bajada. */
   migrarEtapas();
+  migrarNumeros();
   return filas.length;
 }
 
@@ -20144,6 +20186,7 @@ function fundirFoto(d){
   dicc(MODELOS,d.MODELOS); dicc(MODELO_DEF,d.MODELO_DEF);
   dicc(PLAN_TARIFA,d.PLAN_TARIFA); dicc(PLAN_OK,d.PLAN_OK); dicc(ACCESO_IMG,d.ACCESO_IMG);
   migrarEtapas();
+  migrarNumeros();
   return n;
 }
 
@@ -20163,6 +20206,7 @@ function aplicarFoto(d){
   ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
   NUBE_DESDE=d.NUBE_DESDE||null;
   migrarEtapas();
+  migrarNumeros();
   purgarBorrados();
   return true;
 }
@@ -20175,6 +20219,34 @@ function aplicarFoto(d){
    llegado: eso es "OC recibida". Y 'taller' desapareció como etapa
    propia: lo que estaba en el taller está en mantenimiento. */
 const ETAPAS_VIEJAS={solicitada:'oc',programada:'oc',taller:'mant',certificada:'final'};
+/* ── LAS ÓRDENES QUE SE GUARDARON CON EL NÚMERO DEL CLIENTE ──
+   Mientras el formulario pedía «N.º de orden» a secas, lo que se
+   escribía —a menudo la orden de compra del cliente— se guardaba como
+   número de la orden. Esas órdenes llevan un número que no es suyo, y
+   lo enseñan en la etiqueta que se pega en la válvula.
+   Se les devuelve un correlativo de la casa y el número del cliente se
+   guarda donde le toca, que es de donde no debió salir. Las de una
+   misma OC comparten número, así que se renumeran juntas.
+   ════════════════════════════════════════════════════════════ */
+function migrarNumeros(){
+  const esMalo=o=>{
+    if(typeof o.num==='number'&&isFinite(o.num))return false;
+    const m=RX_OS.exec(String(o.mat||o.n||'').trim());
+    return !!m&&+m[1]>TOPE_OS;
+  };
+  const malos=[...new Set(ORDENES.filter(esMalo).map(o=>String(o.mat||o.n)))];
+  if(!malos.length)return 0;
+  malos.forEach(viejo=>{
+    const ls=ORDENES.filter(o=>String(o.mat||o.n)===viejo);
+    const num=siguienteNumOS();          // ya no cuenta los malos: hay tope
+    const mat=codigoOS(num,ls.every(x=>esPSV(x.act)));
+    ls.forEach(o=>{
+      if(!o.oc)o.oc=viejo;               // el número del cliente, a su sitio
+      o.mat=mat; o.n=mat; o.num=num;
+    });
+  });
+  return malos.length;
+}
 function migrarEtapas(){
   let n=0;
   ORDENES.forEach(o=>{
@@ -21832,6 +21904,7 @@ restaurarLocal();                       // respaldo inmediato, sin esperar
    ya no existen. Es idempotente, así que llamarla dos veces no
    estorba. */
 migrarEtapas();
+migrarNumeros();
 /* Antes que nada: quitar lo que el usuario eliminó. Los ejemplos que
    trae el programa dentro no pueden resucitar con cada versión. */
 purgarBorrados();
