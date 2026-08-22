@@ -14085,6 +14085,17 @@ function renderWO(){
                 : todas ? `Prueba de salida ✓${ls.length>1?` · ${ls.length}`:''}`
                 : `Prueba de salida ✓ · ${jefe?'falta tu firma':'falta la firma del jefe'}`}</button>${nota}`;
           })():''}
+          ${/* Con varias válvulas, la puerta para verlas UNA POR UNA:
+               la lista de la orden, donde cada una tiene su fila y su
+               botón para jalarla al paso que le toca. Ya se abría
+               tocando el título, pero nada lo decía. En taller y en
+               prueba de salida no hace falta: su propio botón ya lleva
+               a la misma lista. */''}
+          ${varias&&S.rol!=='cliente'&&G.et!=='mant'&&G.et!=='cert'
+            ? `<button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+                onclick="event.stopPropagation();verOrden('${o.id}')">
+                <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+                Ver las válvulas · ${ls.length}</button>` : ''}
           ${nx&&S.rol!=='cliente'?(()=>{
             /* En la columna de recepción el botón sólo tira si la
                prueba de entrada está firmada y aceptada. Si está
