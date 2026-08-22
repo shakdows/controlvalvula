@@ -6972,6 +6972,9 @@ const histDe=a=>CALIBS.filter(c=>c.act===a.id)
 
 function histEstado(c){
   if(c.tipo==='psv'){
+    /* El mantenimiento que se cerró sin disparos: está hecho, y decir
+       «sin terminar» de un trabajo entregado es mentir en el papel. */
+    if(c.veredicto==='hecho')return {t:'Mantenimiento hecho',c:'ok',listo:true};
     const v=psvVeredicto(c);
     if(v.estado==='incompleto'||!psvListoParaEmitir(c))return {t:'Sin terminar',c:'due',listo:false};
     return v.estado==='aprobado'?{t:'Aprobado',c:'ok',listo:true}:{t:'Rechazado',c:'late',listo:true};
@@ -7018,16 +7021,20 @@ function rielServicio(c,ord){
       ${ok?`onclick="event.stopPropagation();${accion}"`:''} title="${esc(porque)}">
       <span class="hs-pt"></span><span class="hs-hl">${esc(txt)}</span></${ok?'button':'span'}>`;
   const oid=ord?ord.id:'';
+  /* Los pasos que la orden no encargó no salen en la línea: un hueco
+     apagado para siempre se lee como trabajo sin terminar. */
+  const hace=ord?pasosDe(ord):TODOS_LOS_PASOS.slice();
+  const si=k=>hace.includes(k);
   return `<div class="hs-tl">${[
-    paso('Inicial', recepcionCerrada(c), `abrirPapel('ent','${c.id}','${oid}')`,
+    si('ent')?paso('Inicial', recepcionCerrada(c), `abrirPapel('ent','${c.id}','${oid}')`,
       recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084 · en PDF o Word'
-                         :'Todavía sin prueba de entrada'),
+                         :'Todavía sin prueba de entrada'):'',
     cliente?'':paso('Mantenimiento', !!ord, `abrirPapel('mant','${c.id}','${oid}')`,
       ord?'Informe técnico del servicio · DVAD-SER-002 · en PDF o Word':'Sin orden de servicio'),
-    paso('Prueba final', disparos>0, `abrirPapel('sal','${c.id}','${oid}')`,
+    si('cert')?paso('Prueba final', disparos>0, `abrirPapel('sal','${c.id}','${oid}')`,
       disparos>0?`Los ${disparos} disparos de salida en su hoja · en PDF o Word`
-                :'Todavía sin disparos de salida'),
-    cliente?'':paso('Placa', placaLista(c), `abrirPapel('placa','${c.id}','${oid}')`,
+                :'Todavía sin disparos de salida'):'',
+    (cliente||!si('cert'))?'':paso('Placa', placaLista(c), `abrirPapel('placa','${c.id}','${oid}')`,
       placaLista(c)?'Los datos para grabar la placa · en papel o en Excel'
                    :'Se activa con los tres disparos y sus fotos'),
     paso('Certificado', est.listo, `abrirPapel('cert','${c.id}','${oid}')`,
@@ -7698,11 +7705,28 @@ function disparosDe(c){
 }
 const valoresDisparo=c=>disparosDe(c).map(t=>num(t.v)).filter(x=>isFinite(x)&&x>0);
 
+/* ── QUÉ SE LE PIDIÓ A ESTA VÁLVULA ──────────────────────────
+   Gerencia marca por válvula qué pasos se hacen. Si una entra sólo a
+   mantenimiento, pedirle la firma de la prueba de entrada es pedirle
+   un papel que nadie va a hacer: el trabajo se queda clavado y el
+   técnico busca una casilla que no debería existir para él.
+   ════════════════════════════════════════════════════════════ */
+function pasosDelEnsayo(c){
+  if(!c)return TODOS_LOS_PASOS.slice();
+  const o=(c.ord&&ORDENES.find(x=>x.id===c.ord))
+        ||ORDENES.find(x=>x.calib===c.id)
+        ||ordenViva(c.act)||ordenDeValvula(c.act);
+  return o?pasosDe(o):TODOS_LOS_PASOS.slice();
+}
+const ensayoHace=(c,k)=>pasosDelEnsayo(c).includes(k);
 /* Qué casilla concreta falta, no sólo cuántas. Un botón apagado con un
    título escondido deja al técnico mirando un formulario que él ve
    lleno; hay que señalarle la casilla. */
 function psvFaltantes(c){
   const out=[];
+  /* Contra lo que se pidió, no contra el formato entero. */
+  const hace=pasosDelEnsayo(c);
+  const conEnt=hace.includes('ent'), conMant=hace.includes('mant'), conCert=hace.includes('cert');
   /* 1 · contra qué se mide */
   if(!String(c.os||'').trim())      out.push({id:'pv-os',   que:'la orden de servicio',paso:1});
   if(!String(c.patSerie||'').trim())out.push({id:'patCaja', que:'la serie del equipo patrón',paso:1});
@@ -7715,33 +7739,39 @@ function psvFaltantes(c){
      ella no se puede cerrar la prueba de entrada ni pasar la valvula al
      taller, porque no hay con que comparar. */
   const set=num(c.setEsp);
-  if(!isFinite(set)||set<=0)
+  /* La presión de ajuste sólo hace falta si hay algo que juzgar con
+     ella: un disparo de entrada o los de salida. */
+  if((conEnt||conCert)&&(!isFinite(set)||set<=0))
     out.push({id:'pv-setEsp', que:'la presión de ajuste requerida (set press), la de la placa', paso:2});
-  if(!String(c.asFound||'').trim())
-    out.push({id:'pv-asFound', que:'el disparo de entrada (as-found, TEST 1)', paso:2});
-  if(!c.rcVeredicto)
-    out.push({id:'pv-rcVeredicto', que:'marcar el resultado de la prueba de entrada', paso:2});
-  if(c.rcVeredicto==='rechaza'&&!String(c.rcMotivo||'').trim())
-    out.push({id:'pv-rcMotivo', que:'el motivo del rechazo', paso:2});
-  if(!(c.firmas||[]).some(f=>f.rol==='recep'&&f.img))
-    out.push({id:'pvFirmaRec', que:'la firma del mecánico que hizo la prueba de entrada', paso:2});
+  if(conEnt){
+    if(!String(c.asFound||'').trim())
+      out.push({id:'pv-asFound', que:'el disparo de entrada (as-found, TEST 1)', paso:2});
+    if(!c.rcVeredicto)
+      out.push({id:'pv-rcVeredicto', que:'marcar el resultado de la prueba de entrada', paso:2});
+    if(c.rcVeredicto==='rechaza'&&!String(c.rcMotivo||'').trim())
+      out.push({id:'pv-rcMotivo', que:'el motivo del rechazo', paso:2});
+    if(!(c.firmas||[]).some(f=>f.rol==='recep'&&f.img))
+      out.push({id:'pvFirmaRec', que:'la firma del mecánico que hizo la prueba de entrada', paso:2});
+  }
   /* 3 · el desarme: al menos una pieza fotografiada */
-  if(!paresFoto(c).filter(x=>x.a||x.d).length)
+  if(conMant&&!paresFoto(c).filter(x=>x.a||x.d).length)
     out.push({id:'pvFotos', que:'fotografiar al menos una pieza del desarme',paso:3});
   /* 4 · la prueba */
   /* Ya se pide arriba, en la prueba de entrada: sin ella no hay contra
      qué comparar el disparo. */
-  const llenos=valoresDisparo(c).length;
-  if(llenos<3)disparosDe(c).forEach((t,i)=>{
-    const v=num(t.v);
-    if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`,paso:4});
-  });
-  /* Cada disparo con su foto: es la prueba de que se hizo, tomada en
-     ese momento y no después. */
-  disparosDe(c).forEach((t,i)=>{
-    if(num(t.v)>0&&!fotosDisparo(t).length)
-      out.push({id:'dspF'+i, que:`la foto del disparo ${i+1}`,paso:4});
-  });
+  if(conCert){
+    const llenos=valoresDisparo(c).length;
+    if(llenos<3)disparosDe(c).forEach((t,i)=>{
+      const v=num(t.v);
+      if(!(isFinite(v)&&v>0))out.push({id:'dsp-v'+i, que:`el disparo ${i+1}`,paso:4});
+    });
+    /* Cada disparo con su foto: es la prueba de que se hizo, tomada en
+       ese momento y no después. */
+    disparosDe(c).forEach((t,i)=>{
+      if(num(t.v)>0&&!fotosDisparo(t).length)
+        out.push({id:'dspF'+i, que:`la foto del disparo ${i+1}`,paso:4});
+    });
+  }
   /* 5 · conclusiones */
   if(!String(c.coment||'').trim())
     out.push({id:'pv-coment', que:'las conclusiones del mantenimiento',paso:5});
@@ -7785,12 +7815,19 @@ const tallerListo=c=>faltaDelTaller(c).length===0;
    cuanto hay disparos, que es cuando sirve—. Emitir el certificado es
    otra cosa: para eso tienen que estar los seis pasos. */
 function psvListoParaEmitir(c){
+  /* Sin prueba de salida no hay disparos que promediar: el papel de
+     esa válvula es el del mantenimiento que se le pidió, y se cierra
+     con eso. Exigir un veredicto que la orden no encargó dejaba el
+     trabajo sin poder cerrarse nunca. */
+  if(!ensayoHace(c,'cert'))return psvFaltantes(c).length===0;
   return psvVeredicto(c).estado!=='incompleto' && psvFaltantes(c).length===0;
 }
 function faltaParaEmitir(c){
-  const v=psvVeredicto(c);
-  if(v.estado==='incompleto')return v.falta;
   const f=psvFaltantes(c);
+  if(ensayoHace(c,'cert')){
+    const v=psvVeredicto(c);
+    if(v.estado==='incompleto')return v.falta;
+  }
   return f.length ? f[0].que+(f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:'') : '';
 }
 
@@ -8651,7 +8688,19 @@ function pintarPSV(){
   const a=ACTIVOS.find(x=>x.id===t.act)||{}, m=MODELOS[a.mod]||{};
   /* La etapa en la que está esa válvula manda lo que se enseña. */
   const etapa=etapaDeValvula(t.act);
-  const tocan=PASOS_ETAPA[etapa]||[1,2,3,4,5,6];
+  const tocan0=PASOS_ETAPA[etapa]||[1,2,3,4,5,6];
+  /* Y lo que la orden NO encargó no se enseña: una válvula que entra
+     sólo a mantenimiento no tiene prueba de entrada que llenar, y
+     dejar el cuadro ahí es invitar a llenar lo que nadie pidió. */
+  const hace=pasosDelEnsayo(t);
+  const noVa=n=>(n===2&&!hace.includes('ent'))||(n===3&&!hace.includes('mant'))
+              ||(n===4&&!hace.includes('cert'));
+  /* Y siempre se enseña el cuadro donde falta algo. Ésta es la regla
+     que evita el peor enredo posible: que el portal pida una casilla
+     y la esconda en un cuadro que esta columna no muestra. Si hace
+     falta, se ve. */
+  const conFalta=new Set(psvFaltantes(t).map(pasoDeCasilla));
+  const tocan=[1,2,3,4,5,6].filter(n=>!noVa(n)&&(tocan0.includes(n)||conFalta.has(n)));
   const paso=n=>(PSV_ABIERTO_TODO||tocan.includes(n))?'':' oculto';
   const escondidos=PSV_ABIERTO_TODO?[]:[1,2,3,4,5,6].filter(n=>!tocan.includes(n));
   /* El texto de ejemplo dentro de la casilla se confunde con un dato ya
@@ -9560,10 +9609,17 @@ function guardarPSV(emitir,seguir){
   }
   const nuevo=!t.id;
   if(nuevo)t.id='pv'+Date.now();
+  /* ¿Este trabajo lleva prueba de salida? Si no, no hay disparos que
+     promediar y el cierre no puede esperar un veredicto que nadie
+     encargó. */
+  const soloMant=!ensayoHace(t,'cert');
+  const cierra = v.estado!=='incompleto' || (soloMant&&emitir&&psvListoParaEmitir(t));
   /* Queda amarrado a la orden con la que se está trabajando: el
      siguiente servicio de esta válvula abrirá su propio papel. */
   if(!t.ord)t.ord=(ordenViva(t.act)||{}).id||'';
-  t.veredicto=v.estado;                       // 'aprobado' | 'rechazado' | 'incompleto'
+  /* 'aprobado' | 'rechazado' | 'incompleto', y 'hecho' para el
+     mantenimiento que se cierra sin disparos. */
+  t.veredicto = v.estado!=='incompleto' ? v.estado : (cierra?'hecho':'incompleto');
   /* La hora de Lima en que el ensayo dejó de ser un borrador: es lo
      que ordena el historial cuando en el mismo día pasaron varias. */
   if(v.estado!=='incompleto'&&!t.horaFin)t.horaFin=horaPeru();
@@ -9580,26 +9636,34 @@ function guardarPSV(emitir,seguir){
      próxima calibración: la válvula no está conforme y tiene que
      seguir apareciendo como pendiente. */
   let orden=null;
-  if(v.estado!=='incompleto'&&a.id){
+  if(cierra&&a.id){
     const fec=(t.fecha||HOY.toISOString().slice(0,10)).slice(0,10);
     a.ult=fec;
     if(v.estado==='aprobado'){
       const d=new Date(fec+'T00:00:00'); d.setFullYear(d.getFullYear()+1);
       a.prox=d.toISOString().slice(0,10);
     }
-    const resumen=`Ensayo AXAD-088${t.os?' · O.S. '+t.os:''}. Promedio ${n2(v.prom)} ${t.und} sobre ${n2(v.set)} ${t.und} (${v.desv>0?'+':''}${n2(v.desv)} %). Resultado: ${v.estado}.`;
+    /* Sin disparos no se puede hablar de promedio ni de desviación: el
+       resumen dice lo que de verdad se hizo. */
+    const resumen = v.estado==='incompleto'
+      ? `Mantenimiento${t.os?' · O.S. '+t.os:''}. ${t.coment||'Trabajo realizado en taller.'}`.trim()
+      : `Ensayo AXAD-088${t.os?' · O.S. '+t.os:''}. Promedio ${n2(v.prom)} ${t.und} sobre ${n2(v.set)} ${t.und} (${v.desv>0?'+':''}${n2(v.desv)} %). Resultado: ${v.estado}.`;
     const quien=((t.firmas||[]).find(f=>f.rol==='ejec')||{}).n||'';
     orden=cerrarOrdenConEnsayo(a.id,t.id,fec,quien,resumen);
     if(!DOCS.some(d=>d.calib===t.id))
       DOCS.unshift({a:a.id,t:'CERT',n:`Certificado AXAD-088 · ${a.tag||a.ser||''} · ${fPE(fec)}.pdf`,f:fec,w:'420 KB',calib:t.id});
   }
 
-  registrar('Ensayo PSV', v.estado==='incompleto'
+  registrar('Ensayo PSV', !cierra
     ? `${a.tag||''} · borrador guardado`
-    : `${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
-  toast(v.estado==='incompleto'
+    : v.estado==='incompleto'
+      ? `${a.tag||''} · mantenimiento cerrado`
+      : `${a.tag||''} · ${v.estado} (${n2(v.prom)} ${t.und})`);
+  toast(!cierra
       ? 'Borrador guardado · sigue desde la misma tarjeta en Órdenes de trabajo, o desde la válvula'
-      : `Ensayo ${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}${orden?` · orden ${orden.n} cerrada`:''}`);
+      : v.estado==='incompleto'
+        ? `Mantenimiento cerrado${orden?` · orden ${orden.n} cerrada`:''}`
+        : `Ensayo ${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}${orden?` · orden ${orden.n} cerrada`:''}`);
   const id=t.id;
   /* «seguir» graba pero deja el formulario abierto: lo usa la firma,
      que necesita un ensayo guardado al que agarrarse pero no puede
@@ -10302,7 +10366,8 @@ function verPSV(id){
   $('#mBody').innerHTML=`
     <div class="psv-tope ${v.estado}">
       <div class="pt-vd">
-        <span class="pt-e">${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO':'SIN TERMINAR'}</span>
+        <span class="pt-e">${v.estado==='aprobado'?'APROBADO':v.estado==='rechazado'?'RECHAZADO'
+          :c.veredicto==='hecho'?'MANTENIMIENTO REALIZADO':'SIN TERMINAR'}</span>
         ${v.estado!=='incompleto'?`<b class="mono">${n2(v.prom)} <i>${esc(u)}</i></b>
           <span class="pt-sub">promedio de los 3 disparos · requerido ${n2(v.set)} ${esc(u)}</span>`
          :`<span class="pt-sub">Falta ${esc(v.falta)}</span>`}
@@ -14104,9 +14169,15 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
      y ahí espera la firma de gerencia. */
   if(o.et!=='final'&&!(c=>c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))(CALIBS.find(x=>x.id===calibId))){
     if(o.et!=='cert'){
-      moverLinea(o,'cert');
-      registrar('Orden',`${o.mat||o.n} · ensayo guardado, a prueba de salida`);
-      toast('Guardado · pasa a prueba de salida, le toca al jefe');
+      /* Y si esta válvula no lleva prueba de salida —la orden no la
+         pidió—, no se la manda a una columna que no le toca: pasa
+         directa a finalizado, donde el jefe pone su firma. */
+      const destino=haceEsePaso(o,'cert')?'cert':'final';
+      moverLinea(o,destino);
+      registrar('Orden',`${o.mat||o.n} · ensayo guardado, a ${destino==='cert'?'prueba de salida':'finalizado'}`);
+      toast(destino==='cert'
+        ? 'Guardado · pasa a prueba de salida, le toca al jefe'
+        : 'Guardado · pasa a finalizado, falta la firma del jefe');
     }
     return o;
   }
