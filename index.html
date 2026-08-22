@@ -9087,8 +9087,9 @@ function pintarPSV(){
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
           ayuda('Nombre y apellido de quien hizo el trabajo. Viene puesto de quien tomó la orden.')}</label>
-          <input class="inp" id="pv-resp" value="${esc(t.respNombre||'')}"
-            oninput="psvCampo('respNombre',this.value)">
+          <input class="inp" id="pv-resp" list="dlTecPV" value="${esc(t.respNombre||'')}"
+            autocomplete="off" oninput="psvCampo('respNombre',this.value)">
+          ${listaTecnicos('dlTecPV')}
           <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
         <div class="fld"><label for="pv-area">Área a la que pertenece${
           ayuda('El área de Adolphus a la que pertenece quien hizo el trabajo. Sale en el certificado.')}</label>
@@ -13421,8 +13422,11 @@ function recibirOrden(id,grupo){
           de <b>${esc(cli(a.cli).n||'')}</b>`}. Tu nombre y esta fecha van al
        <b>protocolo de entrada AXAD-084</b>: son quién hizo la prueba y cuándo.</div></div>
    <div class="two">
-     <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span></label>
-       <input class="inp" id="rcIng" value="${esc(yo)}" placeholder="p. ej. L. Palma" autocomplete="name"></div>
+     <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span>
+         <span class="opc">despliega los del taller, o escribe otro</span></label>
+       <input class="inp" id="rcIng" list="dlTecRC" value="${esc(yo)}"
+         placeholder="elige o escribe el nombre" autocomplete="off">
+       ${listaTecnicos('dlTecRC')}</div>
      <div class="fld"><label for="rcFec">Fecha en que se probó</label>
        <input class="inp" id="rcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -13516,8 +13520,11 @@ function tomarOrden(id,grupo){
           de <b>${esc(cli(a.cli).n||'')}</b>`}${o.oc?`, OC <b class="mono">${esc(o.oc)}</b>`:''}.
        Tu nombre queda en la tarjeta para que el resto del taller sepa que ya está tomada.</div></div>
    <div class="two">
-     <div class="fld"><label for="toIng">Tu nombre <span class="req-dot">*</span></label>
-       <input class="inp" id="toIng" value="${esc(yo)}" placeholder="p. ej. K. Ortiz" autocomplete="name"></div>
+     <div class="fld"><label for="toIng">Tu nombre <span class="req-dot">*</span>
+         <span class="opc">despliega los del taller, o escribe otro</span></label>
+       <input class="inp" id="toIng" list="dlTecTO" value="${esc(yo)}"
+         placeholder="elige o escribe el nombre" autocomplete="off">
+       ${listaTecnicos('dlTecTO')}</div>
      <div class="fld"><label for="toFec">Fecha de inicio</label>
        <input class="inp" id="toFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -13563,8 +13570,11 @@ function pruebaSalidaOrden(id,grupo){
           de <b>${esc(cli(a.cli).n||'')}</b>`}: los <b>tres disparos del as-left</b>.
        Tu nombre va al certificado como quien ejecutó el ensayo.</div></div>
    <div class="two">
-     <div class="fld"><label for="psIng">Técnico que hace la prueba <span class="req-dot">*</span></label>
-       <input class="inp" id="psIng" value="${esc(yo)}" placeholder="p. ej. K. Ortiz" autocomplete="name"></div>
+     <div class="fld"><label for="psIng">Técnico que hace la prueba <span class="req-dot">*</span>
+         <span class="opc">despliega los del taller, o escribe otro</span></label>
+       <input class="inp" id="psIng" list="dlTecPS" value="${esc(yo)}"
+         placeholder="elige o escribe el nombre" autocomplete="off">
+       ${listaTecnicos('dlTecPS')}</div>
      <div class="fld"><label for="psFec">Fecha de la prueba</label>
        <input class="inp" id="psFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -14732,7 +14742,7 @@ function openCloseWO(id){
    <div class="fld"><label>Trabajo realizado / hallazgos</label><textarea class="inp" id="cwHall" rows="3">${esc(o.hall||'')}</textarea></div>
    <div class="fld"><label>Repuestos utilizados</label>
      <div style="display:flex;flex-wrap:wrap;gap:7px;border:1px solid var(--line-2);border-radius:var(--r-2);padding:10px;max-height:150px;overflow:auto">
-       ${piezas.map(p=>`<label class="tag" style="cursor:pointer;gap:6px"><input type="checkbox" class="cwP" value="${p.n}" ${o.partes.includes(p.n)?'checked':''}> ${p.n}</label>`).join('')}
+       ${piezas.map(p=>`<label class="tag" style="cursor:pointer;gap:6px"><input type="checkbox" class="cwP" value="${p.n}" ${(o.partes||[]).includes(p.n)?'checked':''}> ${p.n}</label>`).join('')}
      </div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveCloseWO('${id}')">Guardar y cerrar orden</button>`;
   $('#modal').classList.add('on');
