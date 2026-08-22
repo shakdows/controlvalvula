@@ -2566,6 +2566,15 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
    renglones de la misma válvula parecen el mismo repetido. */
 .hs-cual{display:block;margin-top:2px;font-size:10.5px;color:var(--ink-3);
   font-family:'IBM Plex Mono';letter-spacing:-.01em}
+/* La tarjeta de «no está en la lista»: se ve que no es un modelo más. */
+.nm-card.nm-otro{border-style:dashed;border-color:var(--sel);color:var(--sel)}
+.nm-card.nm-otro .nm-ph{display:flex;align-items:center;justify-content:center;color:var(--sel)}
+.nm-card.nm-otro .nm-cd{color:var(--sel)}
+/* El bloque del modelo que no estaba en la lista. */
+.otro-mod{margin-top:8px;padding:11px 12px;border:1px solid var(--sel);border-radius:var(--r-2);
+  background:color-mix(in oklab,var(--sel) 5%,var(--surface))}
+.otro-t{font-size:12px;font-weight:600;color:var(--sel);margin-bottom:8px}
+.otro-p{margin:8px 0 0;font-size:11.5px;color:var(--ink-3);line-height:1.45}
 .hs-f.hs-sin{opacity:.72}
 /* El recordatorio de dónde vive el patrón de siempre. */
 .pat-fijo{display:block;margin-top:6px;font-size:11px;color:var(--ink-3)}
@@ -6269,6 +6278,72 @@ function fichaMovimientos(a){
        <span class="t"><b>${esc(o.n)}</b><small>${esc(o.tipo)} · ${esc(o.tec)}</small></span>
        <span class="tag ${o.et==='final'?'ok':'due'}"><span class="dot"></span>${esc(ETAPAS.find(e=>e[0]===o.et)[1])}</span>
      </div>`).join('')}</div>`);
+}
+
+/* ── UN MODELO QUE NO ESTABA ─────────────────────────────────
+   El bloque que se abre al elegir «Otro modelo»: el código, de quién
+   es, qué es y con qué despiece se trabaja. Se usa igual en el alta y
+   en la ficha, así que vive en un solo sitio.
+   ════════════════════════════════════════════════════════════ */
+const OTRO_MODELO='__otro__';
+const DESPIECES=[['psv','Válvula de seguridad / alivio (PSV)'],
+                 ['globo','Válvula de control de globo'],
+                 ['cuchilla','Válvula de cuchilla / compuerta'],
+                 ['act','Actuador']];
+function bloqueOtroModelo(pre){
+  return `<div id="${pre}Otro" class="otro-mod" style="display:none">
+    <div class="otro-t">Modelo nuevo — queda dado de alta para toda la casa</div>
+    <div class="two">
+      <div class="fld"><label for="${pre}OtroCod">Código del modelo <span class="req-dot">*</span></label>
+        <input class="inp" id="${pre}OtroCod" placeholder="p. ej. 26-1512 · 2600 · JOS-E" autocomplete="off"></div>
+      <div class="fld"><label for="${pre}OtroMarca">Marca <span class="req-dot">*</span></label>
+        <input class="inp" id="${pre}OtroMarca" placeholder="p. ej. Farris · Anderson Greenwood" autocomplete="off"></div>
+      <div class="fld"><label for="${pre}OtroTipo">Tipo</label>
+        <input class="inp" id="${pre}OtroTipo" placeholder="p. ej. PSV de resorte" autocomplete="off"></div>
+      <div class="fld"><label for="${pre}OtroBom">Despiece con el que se trabaja</label>
+        <select class="inp" id="${pre}OtroBom">${DESPIECES.map(([k,l])=>
+          `<option value="${k}">${l}</option>`).join('')}</select></div>
+    </div>
+    <p class="otro-p">El despiece es la lista de piezas que sale en el desarme y en el informe.
+      Elige el que más se parezca; siempre se le pueden añadir piezas después.</p>
+  </div>`;
+}
+/* Enseña u oculta el bloque según lo elegido. */
+function verOtroModelo(sel,pre){
+  const d=document.getElementById(pre+'Otro'); if(!d)return;
+  const abierto=sel&&sel.value===OTRO_MODELO;
+  d.style.display=abierto?'':'none';
+  if(abierto)setTimeout(()=>{const i=document.getElementById(pre+'OtroCod'); if(i)i.focus()},60);
+}
+/* Da de alta el modelo escrito y devuelve su código. Si algo falta,
+   avisa y devuelve null: no se inventa un modelo a medias, porque de
+   él cuelgan el despiece y lo que dice el certificado. */
+function altaOtroModelo(pre){
+  const g=k=>{const e=document.getElementById(pre+'Otro'+k); return e?e.value.trim():''};
+  const cod=g('Cod'), marca=g('Marca');
+  if(!cod||!marca){
+    toast(!cod?'Escribe el código del modelo':'Escribe la marca del modelo');
+    const e=document.getElementById(pre+'Otro'+(cod?'Marca':'Cod')); if(e)e.focus();
+    return null;
+  }
+  /* Si ya existe con ese código no se pisa: se usa el que hay. Dos
+     personas dando de alta «1900» no pueden reescribirse el despiece
+     la una a la otra. */
+  const yaEsta=Object.keys(MODELOS).find(k=>k.toLowerCase()===cod.toLowerCase());
+  if(yaEsta){ toast(`Ese modelo ya estaba: ${MODELOS[yaEsta].m} ${yaEsta}`); return yaEsta }
+  const bom=g('Bom')||'psv';
+  const clase=bom==='psv'?'seguridad':bom==='act'?'actuador':bom==='cuchilla'?'onoff':'control';
+  MODELOS[cod]={m:marca, c:clase, t:g('Tipo')||'—', d:'Dado de alta en obra', b:bom};
+  /* La familia se pone sola desde el despiece elegido. Sin esto la
+     casilla se quedaba con lo que hubiera de antes y una PSV acababa
+     registrada como «control» — y entonces no pide calibración, ni
+     presión de seteo, ni programa la próxima. */
+  const fam=document.getElementById(pre+'Cl');
+  if(fam)fam.value=clase;
+  guardarLocal();
+  registrar('Modelo',`Modelo nuevo: ${marca} ${cod} · despiece ${bom}`);
+  toast(`${marca} ${cod} dado de alta · ya sale en la lista`);
+  return cod;
 }
 
 /* ── LA FICHA SE CORRIGE AHÍ MISMO ───────────────────────────
@@ -17516,7 +17591,14 @@ function openNewAsset(preCli){
     <div class="nm-card" data-m="${k}" data-b="${esc((m.m+' '+k+' '+(m.t||'')+' '+(CL[m.c]||'')).toLowerCase())}" onclick="selNaMod('${k}')">
       <div class="nm-ph">${photoFor(k)}</div>
       <div class="nm-bd"><span class="nm-mk">${esc(m.m)}</span><span class="nm-cd">${esc(k)}</span><span class="nm-ty">${esc(m.t)}</span></div>
-    </div>`).join('');
+    </div>`).join('')
+    +`<div class="nm-card nm-otro" data-m="${OTRO_MODELO}" data-b="otro modelo nuevo escribir"
+        onclick="selNaMod('${OTRO_MODELO}')">
+      <div class="nm-ph"><svg viewBox="0 0 24 24" style="width:34px;height:34px;stroke:currentColor;
+        fill:none;stroke-width:1.6"><path d="M12 5v14M5 12h14"/></svg></div>
+      <div class="nm-bd"><span class="nm-mk">No está en la lista</span>
+        <span class="nm-cd">Otro modelo</span><span class="nm-ty">lo escribo yo</span></div>
+    </div>`;
   $('#mTitle').textContent=fijo?`Nueva válvula · ${cli(fijo).n}`:'Nueva válvula';
   $('#mBody').innerHTML=`
    ${fijo
@@ -17531,7 +17613,10 @@ function openNewAsset(preCli){
      <span class="count" id="naCuenta"></span>
    </div>
    <div class="nm-grid" id="naGrid">${gallery}</div>
-   <div id="naNada" class="empty" style="display:none;padding:22px"><b>Ningún modelo con ese texto</b>Prueba con el código o la marca.</div>
+   <div id="naNada" class="empty" style="display:none;padding:22px"><b>Ningún modelo con ese texto</b>
+     Prueba con el código o la marca, o
+     <a href="#" onclick="selNaMod('${OTRO_MODELO}');return false" style="color:var(--sel);font-weight:600">dalo de alta tú</a>.</div>
+   ${bloqueOtroModelo('na')}
    <div id="naHint" class="callout" style="display:none;margin-bottom:14px"></div>
    <label style="font-size:12px;color:var(--ink-2);font-weight:600;display:block;margin-bottom:4px">2 · Identifica este equipo <span style="color:var(--ink-3);font-weight:400">— opcional: si no tienes la placa a mano, déjalo en blanco y lo completas después</span></label>
    <div class="two">
@@ -17560,18 +17645,26 @@ function openNewAsset(preCli){
 /* Filtra la galería sin volver a pintarla: repintar perdería la
    selección y el desplazamiento, y con la cámara del celular
    abierta eso se nota. */
+/* La tarjeta de «Otro modelo» no se filtra nunca: es justo la que hace
+   falta cuando el texto no encuentra nada. */
 function filtrarModelos(q){
   const t=String(q||'').toLowerCase().trim();
   let n=0;
   document.querySelectorAll('#naGrid .nm-card').forEach(c=>{
+    /* La de «otro modelo» se queda SIEMPRE: es la que hace falta justo
+       cuando el texto no encuentra nada, y esconderla ahí sería
+       cerrar la única puerta. */
+    if(c.classList.contains('nm-otro')){ c.style.display=''; return }
     const ok=!t||(c.dataset.b||'').includes(t);
     c.style.display=ok?'':'none'; if(ok)n++;
   });
+  /* La rejilla nunca se oculta del todo, porque dentro sigue la salida.
+     Lo que se dice es que ningún modelo conocido coincide. */
   const nada=$('#naNada'); if(nada)nada.style.display=n?'none':'';
-  const g=$('#naGrid'); if(g)g.style.display=n?'':'none';
   const ct=$('#naCuenta'); if(ct)ct.textContent=t?`${n} de ${Object.keys(MODELOS).length}`:'';
 }
 function clearNaMod(){
+  const o=document.getElementById('naOtro'); if(o)o.style.display='none';
   naSel='';
   document.querySelectorAll('.nm-card').forEach(c=>c.classList.remove('on'));
   ['#naSz','#naRt','#naRng','#naCv','#naProx','#naUlt'].forEach(id=>{const el=$(id);if(el)el.value=''});
@@ -17585,6 +17678,20 @@ function selNaMod(k){
   naSel=k;const m=MODELOS[k]||{},d=MODELO_DEF[k]||{};
   document.querySelectorAll('.nm-card').forEach(c=>c.classList.toggle('on',c.dataset.m===k));
   const cb=$('#naClear');if(cb)cb.style.display='';
+  /* Un modelo que aún no existe no tiene ficha que heredar: se abre el
+     bloque para escribirlo y la ficha técnica se llena a mano. */
+  const otro=$('#naOtro');
+  if(k===OTRO_MODELO){
+    if(otro){otro.style.display=''; otro.scrollIntoView({block:'center',behavior:'smooth'});
+      setTimeout(()=>{const i=$('#naOtroCod'); if(i)i.focus()},260)}
+    const h=$('#naHint');
+    if(h){h.style.display='';h.innerHTML=`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+      <div>Escribe el modelo aquí abajo y queda dado de alta para toda la casa.
+      La ficha técnica —tamaño, clase, rango— la pones tú: no hay de dónde heredarla.</div>`}
+    const lbl=$('#naSpecsLbl'); if(lbl)lbl.innerHTML='rellénala con lo que diga la placa';
+    return;
+  }
+  if(otro)otro.style.display='none';
   // autocompleta toda la ficha técnica típica del modelo
   const set=(id,v)=>{const el=$(id);if(el)el.value=v??''};
   set('#naCl',m.c);set('#naSz',d.sz);set('#naRt',d.rt);set('#naRng',d.rng);
@@ -17621,11 +17728,16 @@ function tagProvisional(){
 }
 function saveNewAsset(){
   if(!naSel){toast('Elige el modelo de válvula (paso 1)');return}
+  /* El modelo escrito a mano se da de alta primero: la válvula tiene
+     que colgar de un modelo que exista, o su despiece y su certificado
+     apuntarían a la nada. */
+  let modelo=naSel;
+  if(modelo===OTRO_MODELO){ modelo=altaOtroModelo('na'); if(!modelo)return }
   let tag=$('#naTag').value.trim();const ser=$('#naSer').value.trim();
   const sinId=!tag&&!ser;
   if(sinId)tag=tagProvisional();
-  const m=MODELOS[naSel]||{},id='new'+Date.now();
-  ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:naSel,
+  const m=MODELOS[modelo]||{},id='new'+Date.now();
+  ACTIVOS.unshift({id,cli:$('#naCli').value,ar:$('#naAr').value,cl:($('#naCl')&&$('#naCl').value)||m.c,tag,ser,mod:modelo,
     sinId:sinId||undefined, tagProv:sinId?tag:undefined,
     sz:$('#naSz').value.trim(),rt:$('#naRt').value.trim(),cv:($('#naCv')?$('#naCv').value.trim():''),air:($('#naAir')?$('#naAir').value:''),
     rng:$('#naRng').value.trim(),cr:$('#naCr').value,ult:$('#naUlt').value,prox:$('#naProx').value});
@@ -17686,7 +17798,8 @@ function editarActivo(id){
   if(S.rol==='cliente'){toast('Los datos del equipo los mantiene Adolphus');return}
   const m=MODELOS[a.mod]||{};
   const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${c.id===a.cli?'selected':''}>${esc(c.n)}</option>`).join('');
-  const mOpts=Object.entries(MODELOS).map(([k,x])=>`<option value="${k}" ${k===a.mod?'selected':''}>${esc(x.m)} ${esc(k)} — ${esc(x.t)}</option>`).join('');
+  const mOpts=Object.entries(MODELOS).map(([k,x])=>`<option value="${k}" ${k===a.mod?'selected':''}>${esc(x.m)} ${esc(k)} — ${esc(x.t)}</option>`).join('')
+    +`<option value="${OTRO_MODELO}">Otro modelo — lo escribo yo</option>`;
   const clOpts=Object.entries(CL).map(([k,l])=>`<option value="${k}" ${k===a.cl?'selected':''}>${l}</option>`).join('');
   const crOpts=['Baja','Media','Alta','Crítica'].map(c=>`<option ${c===a.cr?'selected':''}>${c}</option>`).join('');
   const airOpts=['','OPEN','CLOSE'].map(c=>`<option value="${c}" ${c===(a.air||'')?'selected':''}>${c||'—'}</option>`).join('');
@@ -17721,7 +17834,8 @@ function editarActivo(id){
        <h4 class="snc-sec">Qué es</h4>
        <div class="two">
          <div class="fld" style="grid-column:1/-1"><label for="edMod">Modelo <span class="opc">cambiarlo rehereda marca, tipo y despiece</span></label>
-           <select class="inp" id="edMod">${mOpts}</select></div>
+           <select class="inp" id="edMod" onchange="verOtroModelo(this,'ed')">${mOpts}</select>
+           ${bloqueOtroModelo('ed')}</div>
          <div class="fld"><label for="edCl">Familia</label><select class="inp" id="edCl">${clOpts}</select></div>
          <div class="fld"><label for="edCr">Criticidad</label><select class="inp" id="edCr">${crOpts}</select></div>
          <div class="fld"><label for="edSz">Tamaño</label><input class="inp" id="edSz" value="${esc(a.sz||'')}" placeholder='2"x3"'></div>
@@ -17940,7 +18054,12 @@ function guardarActivo(id){
   if(!tag&&!ser){ a.tag=a.tagProv||(a.tagProv=tagProvisional()); a.ser=''; a.sinId=true; }
   else { a.tag=tag; a.ser=ser; a.sinId=(!ser&&esProv(tag))||undefined; }
   a.cli=V('#edCli')||a.cli; a.ar=V('#edAr')||a.ar;
-  a.mod=V('#edMod')||a.mod; a.cl=V('#edCl')||a.cl; a.cr=V('#edCr')||a.cr;
+  /* «Otro modelo»: primero se da de alta y después se le cuelga la
+     válvula. Si no se pudo, se para aquí — dejarla con el modelo
+     viejo sería guardar una cosa distinta de la que se ve. */
+  let mod=V('#edMod');
+  if(mod===OTRO_MODELO){ mod=altaOtroModelo('ed'); if(!mod)return }
+  a.mod=mod||a.mod; a.cl=V('#edCl')||a.cl; a.cr=V('#edCr')||a.cr;
   a.sz=V('#edSz'); a.rt=V('#edRt'); a.rng=V('#edRng'); a.cv=V('#edCv');
   a.air=V('#edAir'); a.nota=V('#edNota');
   /* La presión de seteo requerida: en una válvula de seguridad es
