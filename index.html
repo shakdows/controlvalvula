@@ -14543,11 +14543,11 @@ function renderWO(){
                 ` · ${resto.map(x=>`${x.n} ${x.l.toLowerCase()}`).join(' · ')}`}</div>`:''}`;
           })():''}
           ${G.et==='ent'
-            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Probó ${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}${o.recibidaH?` · ${o.recibidaH} h`:''}`:''}</div>`
+            ? (o.recibe?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.recibe)}${o.recibida?` · ${fPE(o.recibida)}${o.recibidaH?` · ${o.recibidaH}`:''}`:''}</div>`
                        :`<div class="wo-ing libre">Sin probar todavía</div>`)
             : G.et==='cert'&&o.salida
-              ? `<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>La dispara ${esc(o.salida)}${o.salidaF?` · ${fPE(o.salidaF)}${o.salidaH?` · ${o.salidaH} h`:''}`:''}</div>`
-            : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · desde ${fPE(o.tomada)}${o.tomadaH?` · ${o.tomadaH} h`:''}`:''}</div>`
+              ? `<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.salida)}${o.salidaF?` · ${fPE(o.salidaF)}${o.salidaH?` · ${o.salidaH}`:''}`:''}</div>`
+            : o.ing?`<div class="wo-ing"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${esc(o.ing)}${o.tomada?` · ${fPE(o.tomada)}${o.tomadaH?` · ${o.tomadaH}`:''}`:''}</div>`
             :G.et==='mant'?`<div class="wo-ing libre">Sin ingeniero asignado</div>`:''}
           ${G.et==='ent'&&S.rol!=='cliente'?(()=>{
             /* La válvula llegó: lo primero es recibirla —un disparo tal
