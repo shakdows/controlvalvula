@@ -11182,7 +11182,10 @@ function datosInforme(idOrden,solo){
   const porMedida={};
   items.forEach(x=>{const k=x.a.medida||x.a.sz||'—'; porMedida[k]=(porMedida[k]||0)+1});
   return {o,ls,c,items,conE,fecha,ejec,vb,gente,porMedida,
-          os:(conE[0]&&conE[0].e.os)||(ls.length===1?codigoLinea(ls[0]):'')||o.mat||o.n};
+          /* El código lo manda la ORDEN, no la copia que se guardó en
+             el ensayo: si ese día la orden llevaba el número de compra
+             del cliente, el ensayo lo arrastraría para siempre. */
+          os:(ls.length===1?codigoLinea(ls[0]):'')||o.mat||o.n};
 }
 
 function documentoInforme(idOrden,solo){
@@ -20313,6 +20316,11 @@ function migrarNumeros(){
     ls.forEach(o=>{
       if(!o.oc)o.oc=viejo;               // el número del cliente, a su sitio
       o.mat=mat; o.n=mat; o.num=num;
+      /* El ensayo guardó una copia del número el día que se abrió, y de
+         ahí lo leen el certificado, la prueba de salida y la placa: si
+         no se corrige aquí, el papel sigue diciendo el del cliente. */
+      const linea=codigoLinea(o);
+      CALIBS.forEach(c=>{ if(c.act===o.act&&String(c.os||'').startsWith(viejo))c.os=linea });
     });
   });
   return malos.length;
