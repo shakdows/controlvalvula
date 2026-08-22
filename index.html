@@ -10614,7 +10614,59 @@ const HOJA_CSS=`
   .pliego:last-of-type{break-after:auto;page-break-after:auto}
   .pliego-n{display:none}
 }`;
-const BARRA_IMPRIMIR=ESPERAR_FOTOS+`<style>${HOJA_CSS}</style><div class="barra">
+/* ── EL VISOR DE FOTOS ───────────────────────────────────────
+   En la hoja la foto va pequeña porque manda el papel; en pantalla se
+   amplía de un clic y se puede bajar suelta. No se imprime. */
+const VISOR_FOTOS=`<style>
+@media print{#visor{display:none!important}}
+@media screen{img.ampliable{cursor:zoom-in;transition:filter .15s}
+  img.ampliable:hover{filter:brightness(1.06)}}
+#visor{position:fixed;inset:0;z-index:9999;background:rgba(10,16,30,.94);display:none;
+  align-items:center;justify-content:center;flex-direction:column;gap:13px;padding:24px}
+#visor.on{display:flex}
+#visor img{max-width:94vw;max-height:76vh;object-fit:contain;border-radius:8px;background:#fff;
+  box-shadow:0 18px 60px rgba(0,0,0,.55)}
+#visor .cap{color:#c9d4e8;font:12.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;
+  text-align:center;max-width:70ch}
+#visor .vb{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#visor button,#visor a{font:600 13px/1 'Helvetica Neue',Segoe UI,Roboto,sans-serif;
+  padding:10px 16px;border-radius:8px;cursor:pointer;text-decoration:none;
+  border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.09);color:#fff}
+#visor a.d{background:#fff;color:#102d69;border-color:#fff}
+</style>
+<div id="visor" role="dialog" aria-modal="true" aria-label="Foto ampliada">
+  <img id="visorImg" alt=""><div class="cap" id="visorCap"></div>
+  <div class="vb"><a class="d" id="visorBaja" download>Descargar esta foto</a>
+    <button type="button" onclick="cerrarVisor()">Cerrar</button></div>
+</div>
+<script>
+(function(){
+  var v=document.getElementById('visor'), im=document.getElementById('visorImg'),
+      cp=document.getElementById('visorCap'), ba=document.getElementById('visorBaja');
+  if(!v)return;
+  /* El nombre del archivo sin acentos ni signos: Chrome descarta la
+     descarga entera si el nombre lleva algo que no sea ASCII. */
+  ${/* Las barras van dobladas a prop\u00f3sito: esto vive dentro de una
+       plantilla, y ah\u00ed \u00ab\\s\u00bb se queda en una \u00abs\u00bb pelada \u2014el documento
+       recib\u00eda /s+/g y llamaba \u00abDi-paro\u00bb al disparo\u2014. */''}
+  function limpio(x){return String(x||'foto').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'')
+    .replace(/[^A-Za-z0-9 ._-]/g,'').trim().replace(/\\s+/g,'-').slice(0,70)||'foto'}
+  window.abrirVisor=function(src,txt){
+    im.src=src; im.alt=txt||''; cp.textContent=txt||'';
+    ba.href=src; ba.setAttribute('download',limpio(txt)+'.jpg');
+    v.classList.add('on'); document.body.style.overflow='hidden';
+  };
+  window.cerrarVisor=function(){v.classList.remove('on');im.removeAttribute('src');
+    document.body.style.overflow=''};
+  v.addEventListener('click',function(e){if(e.target===v)cerrarVisor()});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')cerrarVisor()});
+  document.addEventListener('click',function(e){
+    var g=e.target&&e.target.closest&&e.target.closest('img.ampliable'); if(!g)return;
+    abrirVisor(g.currentSrc||g.src, g.getAttribute('data-cap')||g.alt||'');
+  });
+})();
+<\/script>`;
+const BARRA_IMPRIMIR=ESPERAR_FOTOS+VISOR_FOTOS+`<style>${HOJA_CSS}</style><div class="barra">
   <button onclick="window.close()">Cerrar</button>
   <button class="p" onclick="imprimirCuandoEsteTodo()">
     <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
@@ -12039,7 +12091,7 @@ function documentoSalida(id){
   return {titulo:`Prueba de salida ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Prueba de salida ${esc(a.tag||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:9mm;background:#fff}
+body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;background:#fff}
 .cab{display:flex;align-items:center;gap:11px;padding:7px 11px;margin-bottom:9px;border-radius:8px;background:#102d69;color:#fff}
 .cab .mk{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-radius:6px;padding:5px 6px}
 .cab .ti{flex:1;min-width:0}
@@ -12056,7 +12108,29 @@ table{width:100%;border-collapse:separate;border-spacing:0;font-size:9.5px;borde
 th,td{padding:4px 8px;text-align:center;border-bottom:1px solid #f1f3f5}
 th{background:#f6f7f9;font-size:8.2px;letter-spacing:.05em;text-transform:uppercase;color:#5b6470;font-weight:600}
 tr:last-child td{border-bottom:0}
-td.f img{max-width:34mm;max-height:26mm;border-radius:4px;border:1px solid #e4e7ea;display:block;margin:0 auto}
+/* La miniatura, del mismo tamaño para todas: recortada al centro para
+   que una captura vertical no estire la fila. La foto entera está en
+   el anexo, y en pantalla se amplía de un clic. */
+td.f{width:26mm;padding:5px}
+td.f img{width:22mm;height:16mm;object-fit:cover;border-radius:4px;border:1px solid #dfe3e8;
+  display:block;margin:0 auto;background:#f6f7f9}
+.tocar{font-size:8.4px;color:#8a929c;margin:4px 0 0;text-align:right}
+@media print{.tocar{display:none}}
+tbody tr td{height:20mm}
+/* El anexo: hoja nueva y cada foto entera, que es donde se lee el
+   manómetro. */
+.anx h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#102d69;
+  margin:0 0 2px;padding-bottom:4px;border-bottom:2px solid #102d69}
+.anx-s{font-size:9px;color:#5b6470;margin:0 0 10px}
+.anx-g{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.anx-g.d2{grid-template-columns:repeat(2,1fr)}
+.anx-g.d1{grid-template-columns:1fr}
+.anx-g figure{margin:0;border:1px solid #e4e7ea;border-radius:6px;overflow:hidden;
+  background:#fafbfc;page-break-inside:avoid;break-inside:avoid}
+.anx-g img{display:block;max-width:100%;max-height:118mm;margin:0 auto;object-fit:contain}
+.anx-g.d1 img{max-height:150mm}
+.anx-g figcaption{font-size:8.6px;color:#5b6470;padding:5px 8px;border-top:1px solid #eef0f2;text-align:center}
+.anx-g figcaption b{color:#1a1d21}
 .vd{display:flex;align-items:center;gap:14px;margin:10px 0;padding:9px 12px;border-radius:8px;
   border:1px solid #e4e7ea;background:#f8fafc}
 .vd .e{font:700 15px/1 'Helvetica Neue',sans-serif;letter-spacing:.06em}
@@ -12073,6 +12147,7 @@ td.f img{max-width:34mm;max-height:26mm;border-radius:4px;border:1px solid #e4e7
 .pie{margin-top:12px;font-size:8.5px;color:#8a929c;display:flex;justify-content:space-between}
 @page{size:A4;margin:8mm}
 </style></head><body>
+<section class="pliego">
 <div class="cab"><div class="mk">${marca}</div>
   <div class="ti"><div class="emp">Adolphus S.A.</div><h1>PRUEBA DE SALIDA · AS LEFT</h1></div>
   <div class="cod">Válvula<b>${esc(a.tag||a.ser||'')}</b></div></div>
@@ -12088,7 +12163,11 @@ td.f img{max-width:34mm;max-height:26mm;border-radius:4px;border:1px solid #e4e7
   const f=fotosDisparo(t)[0];
   return `<tr><td>${i+1}</td><td><b>${esc(t.v)}</b></td><td>${esc(t.pc||'—')}</td>
     <td>${d==null?'—':(d>0?'+':'')+n2(d)+' %'}</td>
-    <td class="f">${f?`<img src="${f}" alt="Foto del disparo ${i+1}">`:'—'}</td></tr>`}).join('')}</tbody></table>
+    <td class="f">${f?`<img class="ampliable" src="${f}"
+        alt="Disparo ${i+1} · ${esc(a.tag||a.ser||'')} · ${esc(t.v)} ${esc(u)}"
+        data-cap="Disparo ${i+1} de ${l.length} · ${esc(a.tag||a.ser||'')} · disparó a ${esc(t.v)} ${esc(u)}">`
+      :'—'}</td></tr>`}).join('')}</tbody></table>
+${l.some(t=>fotosDisparo(t)[0])?`<p class="tocar">Toca una foto para verla en grande y descargarla · en el papel van enteras en el anexo</p>`:''}
 ${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
   <span class="e">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</span>
   <div class="n">
@@ -12106,6 +12185,23 @@ ${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
   <div><span>Recibe conforme</span></div>
 </div>
 <div class="pie"><span>Adolphus S.A. · prueba de salida</span><span>${esc(fPE(hoyISO()))}</span></div>
+</section>
+${/* El anexo, en hoja aparte: en la tabla la foto es una marca, aquí
+     es la prueba. Es donde se lee la aguja del manómetro. */''}
+${l.some(t=>fotosDisparo(t)[0])?`<section class="pliego anx">
+  <h2>Anexo fotográfico · disparos de salida</h2>
+  <div class="anx-s">${esc(a.tag||a.ser||'')} · ${esc(e.n||'')} · O.S. ${esc(c.os||'—')} ·
+    cada disparo con la foto tomada en ese momento.</div>
+  <div class="anx-g${(x=>x>2?'':x===2?' d2':' d1')(l.filter(t=>fotosDisparo(t)[0]).length)}">${l.map((t,i)=>{
+    const f=fotosDisparo(t)[0]; if(!f)return '';
+    const val=num(t.v), d=v.set?((val-v.set)/v.set*100):null;
+    const cap=`Disparo ${i+1} de ${l.length} · ${a.tag||a.ser||''} · disparó a ${t.v} ${u}`;
+    return `<figure><img class="ampliable" src="${f}" alt="${esc(cap)}" data-cap="${esc(cap)}">
+      <figcaption><b>Disparo ${i+1}</b> · disparó a ${esc(t.v)} ${esc(u)}${
+        d==null?'':` · ${(d>0?'+':'')+n2(d)} %`}</figcaption></figure>`}).join('')}</div>
+  <div class="pie"><span>Adolphus S.A. · anexo de la prueba de salida</span>
+    <span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+</section>`:''}
 ${BARRA_IMPRIMIR}</body></html>`};
 }
 
