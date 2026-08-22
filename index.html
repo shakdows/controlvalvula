@@ -3732,10 +3732,11 @@ const LOGO_MEMBRETE=(alto=40)=>`<svg viewBox="0 0 260 158" height="${alto}"
   xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Adolphus S.A.">
   <g transform="translate(94,2) scale(0.095)"><path fill="#d21430"
     d="M379 0 L0 922 L159 922 L28 855 L175 905 L378.5 404 L582 905 L729 855 L598 922 L756 922 Z"/></g>
-  <text x="130" y="128" text-anchor="middle" fill="#d21430"
+  ${/* Sólo el triángulo es rojo: las letras van en el azul de la casa. */''}
+  <text x="130" y="128" text-anchor="middle" fill="#102d69"
     font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="40" font-weight="700"
     letter-spacing="-1.5">adolphus</text>
-  <text x="130" y="148" text-anchor="middle" fill="#d21430"
+  <text x="130" y="148" text-anchor="middle" fill="#102d69"
     font-family="Helvetica Neue,Helvetica,Arial,sans-serif" font-size="12.5"
     letter-spacing=".2">Tecnología y Experiencia</text>
 </svg>`;
@@ -8435,7 +8436,7 @@ function psvNuevo(actId){
        mantenimiento; volver a pedirlo es preguntar dos veces lo mismo.
        Se trae de la orden, y si no hay, del último que trabajó en este
        equipo. */
-    respNombre:quienTomo(a.id), respArea:'Taller de válvulas',
+    respNombre:quienTomo(a.id), respArea:'Técnico',
     /* Casi siempre trabaja uno; cuando son dos o tres, se añaden. */
     equipo:[]
   };
@@ -8749,7 +8750,7 @@ function firmarRecepcion(){
   PSV_FIRMA_VUELTA=PSV_TMP.act;
   const id=guardarPSV(false,true);
   const yo=(typeof SES!=='undefined'&&SES)?SES:null;
-  if(id)openFirma(id,'recep',PSV_TMP.rcRecibe||(yo?yo.n:''),(yo?yo.cargo||'Taller de válvulas':'Taller de válvulas'));
+  if(id)openFirma(id,'recep',PSV_TMP.rcRecibe||(yo?yo.n:''),(yo&&yo.cargo)||'Técnico');
 }
 function quitarFirmaRecepcion(){
   if(!PSV_TMP)return;
@@ -9148,12 +9149,17 @@ function pintarPSV(){
             <textarea class="inp" id="pv-oConclu" rows="3"
               placeholder="Lo que se concluye del servicio completo, con sus palabras."
               oninput="ordenTexto('${ord.id}','conclu',this.value)">${esc(ord.conclu||'')}</textarea>
-            <span class="hint">Sale impreso en el informe, bajo <b>Conclusiones</b>, encima de los renglones en blanco.</span></div>
+            <span class="hint">Sale impreso en el informe, bajo <b>Conclusiones</b>.</span></div>
           <div class="fld"><label for="pv-oRecom">Recomendaciones generales</label>
             <textarea class="inp" id="pv-oRecom" rows="3"
               placeholder="Qué recomienda el taller: frecuencia, repuestos a tener, cuidados."
               oninput="ordenTexto('${ord.id}','recom',this.value)">${esc(ord.recom||'')}</textarea>
-            <span class="hint">Sale impreso en el informe, bajo <b>Recomendaciones generales</b>.</span></div>`;
+            <span class="hint">Sale impreso en el informe, bajo <b>Recomendaciones generales</b>.</span></div>
+          <div class="fld"><label for="pv-oPend">Pendientes <span class="opc">si queda algo por hacer</span></label>
+            <textarea class="inp" id="pv-oPend" rows="2"
+              placeholder="Lo que queda para después: calibración en sitio, un reporte que llega luego…"
+              oninput="ordenTexto('${ord.id}','pend',this.value)">${esc(ord.pend||'')}</textarea>
+            <span class="hint">Si lo dejas en blanco, ese apartado no sale en el informe.</span></div>`;
       })()}
     </div></details>
 
@@ -9165,8 +9171,8 @@ function pintarPSV(){
           ${campoTecnico('pv-resp',t.respNombre||'',
             `oninput="psvCampo('respNombre',this.value)"`)}
           <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
-        <div class="fld"><label for="pv-area">Área a la que pertenece${
-          ayuda('El área de Adolphus a la que pertenece quien hizo el trabajo. Sale en el certificado.')}</label>
+        <div class="fld"><label for="pv-area">Cargo${
+          ayuda('El cargo de quien hizo el trabajo. Sale bajo su firma en el certificado y en el informe.')}</label>
           <input class="inp" id="pv-area" list="areasAdolphus" value="${esc(t.respArea||'')}"
             oninput="psvCampo('respArea',this.value)">
           <datalist id="areasAdolphus">${AREAS_ADOLPHUS.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div>
@@ -9384,8 +9390,10 @@ function critHtml(modo){
     </div>`;
 }
 
-const AREAS_ADOLPHUS=['Taller de válvulas','Banco de pruebas','Servicio en campo',
-  'Instrumentación','Mecánica','Calidad'];
+/* Los cargos de la casa: es lo que va bajo la firma en el certificado
+   —quién responde por el trabajo—, no en qué taller está. */
+const AREAS_ADOLPHUS=['Técnico','Técnico de servicios','Supervisor técnico',
+  'Asesor técnico','Coordinador de servicios','Jefe de taller','Gerente de operaciones'];
 /* La firma, dentro del formulario. Antes sólo se podía firmar desde el
    certificado ya emitido, que es tarde: quien acaba de ensayar la
    válvula está delante de la pantalla y es quien tiene que firmar. */
@@ -11254,7 +11262,10 @@ function documentoInforme(idOrden,solo){
   return {titulo:`Informe tecnico ${os} ${c.n||''}`.trim(), html:ponerMembretes(`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>${INFORME_COD} ${esc(os)}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font:10.5px/1.55 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm;background:#fff}
+/* El informe se compone a 12 px, no a 10,5: es un papel que se entrega
+   y se lee, y a cuerpo pequeño el que lo recibe tiene que acercárselo
+   a la cara. Crece alguna hoja; se lee. */
+body{font:14px/1.6 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm;background:#fff}
 .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;background:rgba(255,255,255,.94);
   padding:8px;border-radius:10px;box-shadow:0 6px 22px rgba(16,45,105,.18);border:1px solid #e4e7ea}
 .barra button{font:600 13px/1 'Helvetica Neue',Segoe UI,Roboto,sans-serif;cursor:pointer;border-radius:7px;
@@ -11266,11 +11277,15 @@ body{font:10.5px/1.55 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;
 /* La cabecera del formato: título, código, versión y página */
 .mem{display:flex;align-items:stretch;border:1px solid #1a1d21;margin-bottom:16px}
 .mem .lg{flex:0 0 auto;display:flex;align-items:center;padding:8px 12px;border-right:1px solid #1a1d21}
-.mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px 12px;
-  border-right:1px solid #1a1d21;font-weight:700;font-size:10.5px;letter-spacing:.02em;line-height:1.35}
-.mem .dt{flex:0 0 190px;display:grid;grid-template-columns:auto 1fr;font-size:8.6px}
-.mem .dt span{padding:4px 8px;border-bottom:1px solid #1a1d21;color:#5b6470}
-.mem .dt b{padding:4px 8px;border-bottom:1px solid #1a1d21;border-left:1px solid #1a1d21;font-weight:600}
+.mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px 13px;
+  border-right:1px solid #1a1d21;font-weight:700;font-size:13px;letter-spacing:.02em;line-height:1.35}
+/* La caja de la derecha: un poco más grande y con todo centrado en su
+   casilla, como en el formato de la casa. */
+.mem .dt{flex:0 0 235px;display:grid;grid-template-columns:auto 1fr;font-size:10.6px;
+  align-items:center}
+.mem .dt span{padding:5px 8px;border-bottom:1px solid #1a1d21;color:#5b6470;text-align:center}
+.mem .dt b{padding:5px 8px;border-bottom:1px solid #1a1d21;border-left:1px solid #1a1d21;
+  font-weight:700;text-align:center}
 .mem .dt i{grid-column:1/-1;padding:4px 8px;font-style:normal;text-align:center;font-size:8.6px;color:#5b6470}
 .mem .dt i b{padding:0;border:0;font-weight:700;color:#1a1d21}
 .mem .lg svg{display:block}
@@ -11278,6 +11293,11 @@ body{font:10.5px/1.55 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;
    de la casa — cabe en su renglón y no compite con el título. */
 table.roles th,table.roles td{font-size:8.6px;padding:4px 6px;text-align:center}
 table.roles td.rol{font-size:8px;color:#5b6470;line-height:1.3}
+/* En la carátula los rótulos van pequeños, pero los NOMBRES no: son lo
+   que se lee —quién elaboró, quién revisó, de quién es el trabajo—. */
+.caratula table.roles th{font-size:11px;padding:6px 8px}
+.caratula table.roles td{font-size:14px;font-weight:600;padding:8px}
+.caratula table.roles td.rol{font-size:11px;font-weight:400;color:#3a424c}
 /* La portada */
 .port{text-align:center;padding:30px 0 34px;border-bottom:2px solid #102d69;margin-bottom:16px}
 .port .s{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5b6470}
@@ -11290,9 +11310,9 @@ table.roles td.rol{font-size:8px;color:#5b6470;line-height:1.3}
   text-transform:uppercase;letter-spacing:.06em}
 .port .ref b{font-family:'IBM Plex Mono',ui-monospace,monospace;color:#1a1d21;letter-spacing:.02em}
 /* Tablas */
-table{width:100%;border-collapse:collapse;font-size:9.6px;margin-bottom:12px}
-th,td{border:1px solid #cfd4d9;padding:5px 8px;text-align:left;vertical-align:top}
-th{background:#f1f4f8;font-weight:600;font-size:8.8px;letter-spacing:.04em;text-transform:uppercase;color:#5b6470}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
+th,td{border:1px solid #cfd4d9;padding:7px 10px;text-align:left;vertical-align:top}
+th{background:#f1f4f8;font-weight:700;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:#3a424c}
 td.c,th.c{text-align:center}
 .roles td{text-align:center;height:34px}
 .roles .rol{font-size:8.4px;color:#8a929c;text-transform:uppercase;letter-spacing:.05em}
@@ -11301,8 +11321,8 @@ td.c,th.c{text-align:center}
    que añadir o quitar un apartado no obliga a renumerar a mano. */
 .hoja{counter-reset:none}
 body{counter-reset:apt}
-h2{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#102d69;
-   margin:16px 0 6px;padding-bottom:3px;border-bottom:1px solid #dfe3e8}
+h2{font-size:14.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#102d69;
+   margin:20px 0 9px;padding-bottom:5px;border-bottom:1px solid #dfe3e8}
 h2:not(.sn){counter-increment:apt}
 h2:not(.sn)::before{content:counter(apt) ". "}
 h2:not(.sn)::after{content:":"}
@@ -11314,7 +11334,7 @@ ul{margin:0 0 9px;padding-left:18px}
 li{margin-bottom:2px}
 /* «Dirigido : valor», con los dos puntos en su columna para que todo
    quede alineado como en el papel de la casa. */
-.dat{display:grid;grid-template-columns:auto auto 1fr;gap:3px 8px;font-size:10.5px;margin-bottom:14px}
+.dat{display:grid;grid-template-columns:auto auto 1fr;gap:6px 12px;font-size:14px;margin-bottom:18px}
 .dat span{font-weight:700;color:#1a1d21}
 .dat span::after{content:''}
 .dat i{font-style:normal;color:#1a1d21}
@@ -11331,20 +11351,20 @@ li{margin-bottom:2px}
 .fot-g{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .fot-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
 .fot-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
-.fot-g figcaption{font-size:8.4px;color:#5b6470;padding:4px 6px;border-top:1px solid #eef0f2;text-align:center}
+.fot-g figcaption{font-size:12px;color:#3a424c;padding:6px 8px;border-top:1px solid #eef0f2;text-align:center}
 /* El antes y el después de la MISMA pieza, siempre juntos y en la
    misma fila. Cada pareja es un bloque que no se parte. */
 .par{margin-bottom:9px;break-inside:avoid;page-break-inside:avoid}
 .par:last-child{margin-bottom:0}
-.par-t{font-size:8.6px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
-  color:#102d69;margin-bottom:4px}
-.par-ac{font-weight:500;letter-spacing:0;text-transform:none;color:#5b6470;font-size:8.4px}
+.par-t{font-size:12.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:#102d69;margin-bottom:6px}
+.par-ac{font-weight:500;letter-spacing:0;text-transform:none;color:#3a424c;font-size:12px}
 .par-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .par-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
 .par-g img{display:block;width:auto;height:auto;max-width:100%;max-height:74mm;margin:0 auto;object-fit:contain}
-.par-g figcaption{font-size:8.4px;color:#5b6470;padding:4px 6px;border-top:1px solid #eef0f2;text-align:center}
+.par-g figcaption{font-size:12px;color:#3a424c;padding:6px 8px;border-top:1px solid #eef0f2;text-align:center}
 .par-no{display:flex;align-items:center;justify-content:center;min-height:40mm;border:1px dashed #cfd4d9;
-  border-radius:5px;font-size:8.4px;color:#8a929c;background:#fafbfc}
+  border-radius:5px;font-size:12px;color:#8a929c;background:#fafbfc}
 /* Las firmas del final */
 /* Las tres firmas a la misma altura. La rúbrica va ENCIMA de la línea,
    dentro de un hueco de alto fijo: así el que firmó y el que todavía no
@@ -11381,21 +11401,21 @@ li{margin-bottom:2px}
    así la hoja nunca queda con todo apelmazado en la cabecera. */
 .caratula{display:flex;flex-direction:column;min-height:247mm}
 .caratula .hueco{flex:1 1 auto}
-.caratula .hueco.a{flex-grow:2;min-height:24mm}
-.caratula .hueco.b{flex-grow:3;min-height:32mm}
+.caratula .hueco.a{flex-grow:2;min-height:18mm}
+.caratula .hueco.b{flex-grow:2;min-height:22mm}
 /* La carátula es una portada: se lee a un metro, encima de la mesa.
    Con el cuerpo del informe (10,5 px) quedaba diminuta y con media
    hoja en blanco. Aquí todo va en grande y con el gris subido de
    tono, que en papel el gris claro casi no imprime. */
 .caratula .port{margin:0;padding:0 0 30px}
-.caratula .port .s{font-size:11px;letter-spacing:.3em;color:#5b6470}
-.caratula .port h1{font-size:30px;line-height:1.2;margin:12px 0 26px}
-.caratula .port .cl{font-size:22px;font-weight:700}
-.caratula .port .me{font-size:14px;margin-top:12px;color:#3a424c}
-.caratula .port .ref{font-size:12.5px;margin-top:26px;color:#3a424c}
-.caratula .port .ref b{font-size:13px}
+.caratula .port .s{font-size:14px;letter-spacing:.34em;color:#5b6470}
+.caratula .port h1{font-size:32px;line-height:1.25;margin:20px 0 46px}
+.caratula .port .cl{font-size:23px;font-weight:700}
+.caratula .port .me{font-size:15px;margin-top:38px;color:#3a424c}
+.caratula .port .ref{font-size:13.5px;margin-top:44px;color:#3a424c}
+.caratula .port .ref b{font-size:14px}
 .caratula .mem .ti{font-size:12.5px}
-.caratula .mem .dt{font-size:9.8px}
+.caratula .mem .dt{font-size:11.4px}
 .caratula .mem .dt span{color:#3a424c}
 .caratula .roles{font-size:12.5px}
 .caratula .roles th{font-size:10.5px;color:#3a424c}
@@ -11528,7 +11548,7 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
 <h2>Recomendaciones generales</h2>
 ${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
 <ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
-<div class="renglones">${'<span></span>'.repeat(o.recom?2:3)}</div>
+
 
 <h2>Conclusiones</h2>
 <p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
@@ -11538,19 +11558,14 @@ ${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
 ${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
   `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
 ${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
-${/* Como en el Word: unos renglones en blanco para añadir a mano lo
-     que no estaba previsto. Si ya se escribió la conclusión general,
-     sobran algunos. */''}
-<div class="renglones">${'<span></span>'.repeat(o.conclu?2:3)}</div>
 
-${/* PENDIENTES: el formato de la casa lo lleva y el nuestro no. Es lo
-     que queda por hacer después de entregar —la calibración en sitio,
-     un reporte que llega luego— y es justo lo que el cliente busca al
-     final del informe. Se escribe a mano en la orden; si no hay nada
-     apuntado, se dejan los renglones para ponerlo con bolígrafo. */''}
-<h2>Pendientes</h2>
-${o.pend?`<p class="escrito">${esc(o.pend).replace(/\n/g,'<br>')}</p>`
-  :`<div class="renglones"><span></span><span></span></div>`}
+
+${/* PENDIENTES: lo que queda por hacer después de entregar —la
+     calibración en sitio, un reporte que llega luego—. Si no se apuntó
+     nada, el apartado no sale: un título con la hoja en blanco debajo,
+     en un papel firmado, parece un trabajo a medias. */''}
+${String(o.pend||'').trim()?`<h2>Pendientes</h2>
+<p class="escrito">${esc(o.pend).replace(/\n/g,'<br>')}</p>`:''}
 
 <div class="fir">
   <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="">`:''}</div>
@@ -13737,7 +13752,7 @@ function confirmarSalida(id){
        responsable, se le pone éste. */
     const c=recepDe(x.act);
     if(c&&!String(c.respNombre||'').trim()){
-      c.respNombre=quien; c.respArea=c.respArea||'Taller de válvulas';
+      c.respNombre=quien; c.respArea=c.respArea||'Técnico';
     }
     moverLinea(x,'cert');
   });
