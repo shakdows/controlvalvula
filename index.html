@@ -7857,6 +7857,20 @@ const pasoDeCasilla=x=>CUADRO_DE_CASILLA[x&&x.id]
    válvula y fotografiar pieza por pieza. Los disparos ya no se piden
    aquí —son la prueba de salida, la columna siguiente—, así que
    exigirlos para avanzar dejaba la tarjeta clavada. */
+/* ── CUÁNDO SE PUEDE EXIGIR CADA CUADRO ──────────────────────
+   El cuadro de los disparos es de la prueba de salida, no del taller:
+   se dispara con la válvula ya armada. Pedirlo mientras se desarma es
+   pedir un ensayo que todavía no se puede hacer.
+   Un cuadro YA PASADO al que le falta algo sí se enseña siempre —es un
+   agujero que se queda atrás y hay que taparlo—; uno que aún no toca,
+   espera. */
+const CUADRO_VENCE={1:'oc',2:'ent',3:'mant',4:'cert',5:'final',6:'mant'};
+function cuadroYaToca(cuadro,etapa){
+  const o=ETAPAS.map(([k])=>k);
+  const cuando=o.indexOf(CUADRO_VENCE[cuadro]||'oc');
+  const ahora=o.indexOf(etapa);
+  return ahora<0||cuando<=ahora;
+}
 const faltaDelTaller=c=>psvFaltantes(c).filter(x=>(x.paso||9)===3);
 const tallerListo=c=>faltaDelTaller(c).length===0;
 /* El veredicto lo dan las presiones —y con eso se dibuja el gráfico en
@@ -8641,10 +8655,11 @@ function seguirEntradas(actId){
 /* ── Qué se llena en cada columna ────────────────────────────
    El formulario tiene los seis pasos siempre, pero enseñárselos todos
    al técnico que está en el banco es pedirle que adivine cuáles le
-   tocan. En «En mantenimiento» lo suyo es desarmar, disparar,
-   concluir y firmar: los pasos 1 y 2 ya los hizo otro y ya están
-   completos. Se pliegan y se guardan detrás de una línea; si necesita
-   mirarlos —el patrón, a qué presión llegó— los abre de un toque.  */
+   tocan. En «En mantenimiento» lo suyo es desarmar y firmar: los
+   pasos 1 y 2 ya los hizo otro, y los disparos son de después —se
+   hacen con la válvula ya armada, en la prueba de salida—. Lo que no
+   toca se pliega detrás de una línea; si necesita mirarlo —el patrón,
+   a qué presión llegó— lo abre de un toque.  */
 /* Un cuadro por columna. En mantenimiento se DESARMA —cuadro 3, el
    que llena el informe DVAD-SER-002—; en la prueba de salida se
    DISPARA —cuadro 4, el as-left—. Las conclusiones y las firmas
@@ -8748,7 +8763,8 @@ function pintarPSV(){
      y la esconda en un cuadro que esta columna no muestra. Si hace
      falta, se ve. */
   const conFalta=new Set(psvFaltantes(t).map(pasoDeCasilla));
-  const tocan=[1,2,3,4,5,6].filter(n=>!noVa(n)&&(tocan0.includes(n)||conFalta.has(n)));
+  const tocan=[1,2,3,4,5,6].filter(n=>!noVa(n)&&
+    (tocan0.includes(n)||(conFalta.has(n)&&cuadroYaToca(n,etapa))));
   const paso=n=>(PSV_ABIERTO_TODO||tocan.includes(n))?'':' oculto';
   const escondidos=PSV_ABIERTO_TODO?[]:[1,2,3,4,5,6].filter(n=>!tocan.includes(n));
   /* El texto de ejemplo dentro de la casilla se confunde con un dato ya
@@ -8798,11 +8814,26 @@ function pintarPSV(){
    ${/* En la prueba de entrada no se enseña: la válvula acaba de llegar
         y todavía no hay nada hecho, así que decir «los pasos 3, 4, 5 y 6
         ya están hechos» es mentira y encima estorba. */''}
-   ${escondidos.length&&etapa!=='ent'?`<div class="psv-hay" id="psvVerTodo">
-     <span>Los pasos ${escondidos.join(', ')} ya están hechos —
-       ${etapa==='mant'?'aquí te toca el mantenimiento':'aquí te toca lo tuyo'}.</span>
-     <button class="btn quiet xs" onclick="verTodosLosPasos()">Ver todo el formulario</button>
-   </div>`:''}
+   ${(()=>{
+     /* Decir «los pasos 4 y 5 ya están hechos» estando en el taller es
+        falso: no están hechos, están por hacer. Se separan los que
+        quedaron atrás de los que vienen después. */
+     if(!escondidos.length||etapa==='ent')return '';
+     const hechos=escondidos.filter(x=>cuadroYaToca(x,etapa));
+     const luego =escondidos.filter(x=>!cuadroYaToca(x,etapa));
+     const y=a=>a.length>1?a.slice(0,-1).join(', ')+' y '+a[a.length-1]:a[0];
+     const partes=[];
+     if(hechos.length)partes.push(`${hechos.length>1?'Los pasos':'El paso'} ${y(hechos)} ${
+       hechos.length>1?'ya están hechos':'ya está hecho'}`);
+     if(luego.length)partes.push(`${luego.length>1?'los':'el'} ${y(luego)} ${
+       luego.length>1?'vienen':'viene'} después`);
+     return `<div class="psv-hay" id="psvVerTodo">
+       <span>${partes.join('; ')} — ${
+         etapa==='mant'?'aquí te toca el mantenimiento'
+        :etapa==='cert'?'aquí te toca la prueba de salida':'aquí te toca lo tuyo'}.</span>
+       <button class="btn quiet xs" onclick="verTodosLosPasos()">Ver todo el formulario</button>
+     </div>`;
+   })()}
    <div class="psv-secs">
     <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(1))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
@@ -9200,11 +9231,12 @@ function pintarPSVPie(){
   const p=$('#mFoot'); if(!p||!PSV_TMP)return;
   const v=psvVeredicto(PSV_TMP), listo=psvListoParaEmitir(PSV_TMP);
   const queFalta=faltaParaEmitir(PSV_TMP);
-  /* Si el trabajo lleva varias válvulas, aquí no se emite nada: el
-     certificado de una sola cierra media orden y deja al cliente con un
-     papel por la mitad. Se guarda, y el certificado sale cuando estén
-     todas. Con una válvula sola sí se emite, pero preguntando: es el
-     único botón de la aplicación que no tiene vuelta atrás. */
+  /* Cada válvula se certifica con su propio ensayo, tenga hermanas o
+     no: la que está lista se entrega y no espera a la que aún no ha
+     llegado al taller. Los certificados de una misma orden se sacan
+     después sueltos o en un solo documento, desde la ficha de la
+     orden. Se pregunta antes: es el único botón de la aplicación que
+     no tiene vuelta atrás. */
   const orden=ORDEN_ACTIVA?ORDENES.find(x=>x.id===ORDEN_ACTIVA):ordenAbiertaDe(PSV_TMP.act);
   const hermanas=orden?lineasDe(orden).length:1;
   /* «Cancelar» pasa por el aviso: quien lo pulsa por costumbre no
@@ -9212,13 +9244,13 @@ function pintarPSVPie(){
      salir» ahí mismo. */
   p.innerHTML=`<button class="btn quiet" onclick="cerrarModalPidiendo()">Cancelar</button>
     <span style="flex:1"></span>
-    ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · el certificado sale cuando estén todas</span>`:''}
+    ${hermanas>1?`<span class="pie-falta">Orden de ${hermanas} válvulas · esta se cierra sola, las otras siguen su camino</span>`:''}
     ${/* «Guardar», a secas: lo que se guarda a medias sigue siendo el
          mismo papel y se retoma donde se dejó. Llamarlo borrador hacía
          dudar de si lo escrito quedaba o no. */''}
-    <button class="btn${hermanas>1?'':' sec'}" onclick="guardarPSV(false)">Guardar</button>
-    ${hermanas>1?'':`<button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
-      title="${listo?'Cierra el mantenimiento y numera el certificado':esc('Falta '+queFalta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
+    <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
+    <button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
+      title="${listo?'Cierra el mantenimiento y numera el certificado':esc('Falta '+queFalta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`;
 }
 /* Emitir es cerrar: el certificado se numera, la válvula renueva su
    vigencia y la orden se da por terminada. Se pregunta una vez. */
@@ -12937,17 +12969,13 @@ function restoDeLaOrden(todas,et){
 /* Nadie finaliza hasta que TODAS hayan llegado a mantenimiento. Cerrar
    la orden con una válvula todavía en el taller es entregar un trabajo
    a medias con el número de orden completo detrás. */
-function faltanPorLlegar(o){
-  const orden=ETAPAS.map(([k])=>k);
-  return lineasDe(o).filter(x=>orden.indexOf(x.et)<orden.indexOf('mant'));
-}
-function puedeFinalizar(o){return faltanPorLlegar(o).length===0}
-function avisoNoFinaliza(o){
-  const f=faltanPorLlegar(o);
+/* Lo que se dice al cerrar una válvula de un trabajo de varias: se
+   entrega la suya y se avisa de las que siguen abiertas. */
+function avisoRestoAbierto(o){
+  const f=lineasDe(o).filter(x=>x.et!=='final');
   if(!f.length)return '';
   const tags=f.map(x=>{const v=ACTIVOS.find(y=>y.id===x.act);return v&&(v.tag||v.ser)||'—'});
-  return `Falta${f.length===1?'':'n'} ${f.length} válvula${f.length===1?'':'s'} de esta orden: ${tags.join(', ')}. `
-       + 'El trabajo se cierra cuando estén todas.';
+  return `Queda${f.length===1?'':'n'} ${f.length} válvula${f.length===1?'':'s'} de esta orden: ${tags.join(', ')}`;
 }
 /* ── EL NÚMERO DE LA ORDEN DE SERVICIO ───────────────────────
    Un correlativo de la CASA, no de cada cliente: la primera orden se
@@ -14222,13 +14250,10 @@ function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
   if(fecha)o.f=fecha;
   if(tec&&tec!=='Por asignar')o.tec=tec;
   if(resumen)o.hall=resumen;
-  /* El certificado de esta válvula queda guardado igual; lo que espera
-     es el cierre de la orden, que es de todas. */
-  if(!puedeFinalizar(o)){
-    registrar('Orden',`${o.mat||o.n} · ensayo guardado, la orden sigue abierta`);
-    toast(avisoNoFinaliza(o));
-    return o;
-  }
+  /* Esta válvula sigue su camino aunque sus hermanas vayan detrás: se
+     cierra la suya y, si queda alguna abierta, se dice cuál. */
+  const resto=avisoRestoAbierto(o);
+  if(resto)setTimeout(()=>toast(resto+' · cada una se cierra por su cuenta'),1400);
   /* Guardar el ensayo YA NO CIERRA la orden. Desde que hay una columna
      de prueba de salida, cerrarla aquí se saltaba al jefe: el taller
      guardaba y el trabajo aparecía finalizado sin que nadie lo hubiera
@@ -14267,7 +14292,6 @@ function advanceWO(id){
   /* Pasar a mantenimiento es hacerse cargo: se pide el nombre del
      ingeniero antes de mover la tarjeta, que es el sentido de esta
      etapa —saber quién la tiene y desde cuándo. */
-  if(nx[0]==='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   /* Recibir la válvula tiene nombre y fecha: van al protocolo. */
   if(nx[0]==='ent'){recibirOrden(id);return}
   /* De mantenimiento a prueba de salida: el trabajo del taller tiene que
@@ -14433,7 +14457,6 @@ function saveCloseWO(id){
   const a=ACTIVOS.find(x=>x.id===o.act);
   o.f=$('#cwFec').value||o.f;o.tec=$('#cwTec').value||o.tec;o.hall=$('#cwHall').value||o.hall;
   o.partes=Array.from(document.querySelectorAll('.cwP')).filter(c=>c.checked).map(c=>c.value);
-  if(!puedeFinalizar(o)){closeModal();renderAll();toast(avisoNoFinaliza(o));return}
   moverLinea(o,'final');
   /* La vigencia sólo se renueva si hubo un ensayo. Un parte de
      mantenimiento cuenta como intervención —cambia "último
@@ -14483,9 +14506,11 @@ function avanzarGrupo(g,etapa){
      resuelve una tanda y el botón vuelve a estar ahí para la otra. */
   if(j.resto.length)setTimeout(()=>toast(`${j.resto.length} válvula${j.resto.length===1?'':'s'
     } de esta orden va${j.resto.length===1?'':'n'} a otro paso · el mismo botón las lleva después`),1200);
-  if(nx[0]==='final'&&!puedeFinalizar(mueven[0])){toast(avisoNoFinaliza(mueven[0]));return}
   if(mueven.length===1)return advanceWO(mueven[0].id);
   if(nx[0]==='final'){
+    /* Varias a la vez no se certifican de un botonazo: cada una tiene
+       su ensayo y su número. Se abre la lista y se cierran una a una,
+       en el orden que el taller quiera. */
     toast('Cada válvula se certifica con su propio ensayo');
     verOrden(mueven[0].id); return;
   }
@@ -14559,7 +14584,6 @@ function dropWO(ev,et){
   const prev=etArr||etapaGrupo(ls.length?ls:[o]);
   const mueven=(ls.length?ls:[o]).filter(x=>x.et===prev);
   if(!mueven.length)return;
-  if(et==='final'&&prev!=='final'&&!puedeFinalizar(o)){toast(avisoNoFinaliza(o));return}
   if(et==='ent'&&prev==='oc'){recibirOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='mant'&&prev!=='mant'){tomarOrden(mueven[0].id,ls.length>1?gArr:null);return}
   if(et==='cert'&&prev!=='cert'){ pruebaSalidaOrden(mueven[0].id, mueven.length>1?gArr:null); return }
@@ -17902,9 +17926,10 @@ function generateCalib(assetId,editId){
      trabajo salía dos veces en el tablero. */
   const oExist=ORDENES.find(o=>o.calib===rec.id);
   if(oExist){oExist.f=(fin||ini).slice(0,10);oExist.tec=tec;oExist.hall=hall;
-    /* Mismo candado: el certificado se guarda, pero la orden no se
-       cierra mientras falte una válvula del mismo trabajo. */
-    if(puedeFinalizar(oExist))moverLinea(oExist,'final'); else toast(avisoNoFinaliza(oExist));}
+    /* Esta válvula se cierra con su ensayo; las hermanas siguen su
+       camino y se juntan en Finalizado cuando les toque. */
+    moverLinea(oExist,'final');
+    const resto=avisoRestoAbierto(oExist); if(resto)toast(resto);}
   else if(!cerrarOrdenConEnsayo(a.id,rec.id,(fin||ini).slice(0,10),tec,hall)){
     const onum='AD-'+String(HOY.getFullYear()).slice(2)+'-'+String(900+ORDENES.length);
     ORDENES.unshift({id:'o'+Date.now(),act:a.id,n:onum,et:'final',tipo:'Calibración',f:(fin||ini).slice(0,10),tec,hall,partes:[],calib:rec.id});}
