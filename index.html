@@ -2580,6 +2580,13 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .banda-local{border-color:color-mix(in oklab,var(--due) 45%,var(--line));
   background:color-mix(in oklab,var(--due) 10%,var(--surface))}
 .banda-local b{color:var(--ink)}
+/* La de «subiendo»: azul, con su riel de progreso. */
+.banda-sube{flex-direction:column;align-items:stretch;gap:6px;min-width:230px;
+  border-color:color-mix(in oklab,var(--sel) 35%,var(--line))}
+.banda-sube .bs-t{font-size:12.5px;color:var(--ink-2);text-align:center}
+.banda-sube .bs-riel{display:block;height:5px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.banda-sube .bs-riel i{display:block;height:100%;background:var(--sel);border-radius:99px;
+  transition:width .25s ease}
 /* Y el chip en rojo cuando hay cosas que no logran subir. */
 #netChip.mal{border-color:color-mix(in oklab,var(--late) 45%,var(--line));
   background:color-mix(in oklab,var(--late) 10%,var(--surface));color:var(--late)}
@@ -19123,7 +19130,7 @@ async function nubeBajar(reemplazar){
   }
   filas.forEach(f=>{
     const kk=f.coleccion+SEP+f.clave;
-    if(f.borrado){delete ESPEJO[kk]} else {ESPEJO[kk]={j:JSON.stringify(f.datos),emp:f.empresa_id||null}}
+    if(f.borrado){delete ESPEJO[kk]} else {ESPEJO[kk]={j:jsonCanon(f.datos),emp:f.empresa_id||null}}
     if(f.actualizado&&(!NUBE_DESDE||f.actualizado>NUBE_DESDE))NUBE_DESDE=f.actualizado;
 
     if(f.coleccion==='MAESTRO'){
@@ -19191,6 +19198,10 @@ let BAJAR_TODO=false;
 function repararMarcador(){
   let e=''; try{ e=localStorage.getItem(LS_EPOCA)||'' }catch(x){}
   if(e===SYNC_EPOCA)return false;
+  /* Sólo el marcador. El espejo NO se toca: es la lista de lo que la
+     nube ya tiene, y vaciarlo hace que este equipo dé todo lo suyo
+     por nuevo y lo suba encima —resucitando lo que otro equipo dio de
+     baja—. Nos pasó con las tres empresas de ejemplo. */
   NUBE_DESDE=null; BAJAR_TODO=true;      // que baje todo otra vez
   try{ localStorage.setItem(LS_EPOCA,SYNC_EPOCA) }catch(x){}
   return true;
@@ -19278,6 +19289,15 @@ function recuperarLoQueFalta(vistos){
 /* ── Subir ───────────────────────────────────────────────────
    No se manda todo cada vez: se compara contra el espejo de lo que la
    nube ya tiene y sólo viaja lo que cambió. */
+/* El mismo contenido escrito siempre igual, con las claves en orden.
+   Es lo que permite comparar lo de aquí con lo de la nube sin que un
+   cambio de orden de claves parezca un cambio de datos. */
+function jsonCanon(v){
+  if(v===null||typeof v!=='object')return JSON.stringify(v);
+  if(Array.isArray(v))return '['+v.map(jsonCanon).join(',')+']';
+  const ks=Object.keys(v).sort();
+  return '{'+ks.map(k=>JSON.stringify(k)+':'+jsonCanon(v[k])).join(',')+'}';
+}
 function filasLocales(){
   const out=[];
   NUBE_COLS.forEach(({c,arr,emp})=>arr().forEach(x=>{
@@ -19306,7 +19326,7 @@ async function nubeSubirDirecto(){
   const cambios=[], vistos=new Set();
   filasLocales().forEach(f=>{
     const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
-    const j=JSON.stringify(f.datos);
+    const j=jsonCanon(f.datos);
     if(!ESPEJO[kk]||ESPEJO[kk].j!==j)cambios.push({...f,borrado:false,_j:j});
   });
   bajasApuntadas(vistos).forEach(b=>cambios.push({...b,_j:null}));
@@ -19613,7 +19633,7 @@ async function apuntarPendientes(){
   const vistos=new Set(), filas=[];
   filasLocales().forEach(f=>{
     const kk=f.coleccion+SEP+f.clave; vistos.add(kk);
-    const j=JSON.stringify(f.datos);
+    const j=jsonCanon(f.datos);
     if(!ESPEJO[kk]||ESPEJO[kk].j!==j)
       filas.push({k:kk,coleccion:f.coleccion,clave:f.clave,empresa_id:f.empresa_id,
                   datos:f.datos,borrado:false,ts:Date.now(),intentos:0});
@@ -19700,14 +19720,16 @@ async function drenarPendientes(){
        mandar de vuelta los mismos megas que acababa de recibir. */
     const confirmar=async f=>{
       if(f.borrado){delete ESPEJO[f.k]; borradoHecho(f.k);}
-      else ESPEJO[f.k]={j:JSON.stringify(f.datos),emp:f.empresa_id};
+      else ESPEJO[f.k]={j:jsonCanon(f.datos),emp:f.empresa_id};
       await bdQuita('pendientes',f.k);
       subidas++;
       PEND_N=Math.max(0,filas.length-subidas); pintarNet();
+      barraSubiendo(subidas,filas.length);
     };
     await subirTanda(lote,confirmar,fallos);
   }
   PEND_N=(await bdCuenta('pendientes'))||0;
+  barraSubiendo(1,0);                    // se quita
   /* Lo que no pasó se queda esperando, pero hay que decirlo: si no,
      el contador baja y parece que subió todo. */
   if(fallos.length)throw fallos[0];
@@ -19751,6 +19773,23 @@ function guardarAligerada(f,datos){
     if(i>=0)a[i]=datos;
     guardarLocal();
   }catch(e){}
+}
+/* ── LA BARRA DE «SUBIENDO» ──────────────────────────────────
+   Un contador quieto no dice si está trabajando o si se colgó. Con
+   fotos de por medio una subida son minutos, y hay que verla avanzar.
+   ════════════════════════════════════════════════════════════ */
+function barraSubiendo(hechas,total){
+  let d=document.getElementById('bandaSube');
+  if(hechas>=total||!total){ if(d)d.remove(); return }
+  if(!d){
+    d=document.createElement('div');
+    d.id='bandaSube'; d.className='banda-ver banda-sube';
+    d.innerHTML=`<span class="bs-t"></span><span class="bs-riel"><i></i></span>`;
+    document.body.appendChild(d);
+  }
+  const pct=Math.round(hechas*100/total);
+  d.querySelector('.bs-t').textContent=`Subiendo ${hechas} de ${total}…`;
+  d.querySelector('.bs-riel i').style.width=pct+'%';
 }
 /* Un envío. Si el servidor lo corta por tiempo, se parte en dos y se
    reintenta: un ensayo con seis fotos no cabe en un lote con otros,
@@ -19834,9 +19873,12 @@ async function correrJob(motivo){
   JOB_CORRIENDO=true;
   try{
     if(!await nubeVigente())return;
+    /* Bajar antes que subir: un equipo que estuvo desconectado no
+       sabe lo que se dio de baja mientras tanto, y subiendo primero
+       escribe encima sus copias viejas. */
+    const bajadas=await nubeBajar(false);
     await apuntarPendientes();
     const subidas=await drenarPendientes();
-    const bajadas=await nubeBajar(false);
     NUBE_FALLO=null;                     // la vuelta salió entera
     JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
     guardarLocal();
@@ -20150,7 +20192,7 @@ async function probarNube(){
 async function bajarTodoDeNuevo(){
   if(!enNube()){toast('Primero hay que entrar con la cuenta');return}
   if(!online()){toast('Sin conexión');return}
-  NUBE_DESDE=null; ESPEJO={};
+  NUBE_DESDE=null;                       // el espejo NO: ver repararMarcador
   toast('Trayendo todo de la nube…');
   try{
     const n=await nubeBajar(false);
@@ -20372,16 +20414,10 @@ const ARRANQUE=Date.now();
 function bandaVersion(){
   if(HAY_VERSION||document.getElementById('bandaVer'))return;
   HAY_VERSION=true;
-  /* Si acaba de abrirse y no hay nada a medias, se aplica sola: es lo
-     que se espera de un portal —abrirlo y ver lo último—. Sólo una vez
-     por sesión, no vaya a quedarse recargándose en bucle si algún día
-     el servidor devuelve la página distinta cada vez. */
-  let yaFue=false; try{ yaFue=sessionStorage.getItem('adolphus.recargado')==='1' }catch(e){}
-  const aMedias=$('#modal').classList.contains('on')||(typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act);
-  if(!yaFue&&!aMedias&&Date.now()-ARRANQUE<9000){
-    try{ sessionStorage.setItem('adolphus.recargado','1') }catch(e){}
-    aplicarVersion(); return;
-  }
+  /* Y nada de recargar por su cuenta: recargar te deja en la portada,
+     y estar trabajando en las órdenes de una empresa y aparecer en el
+     inicio molesta más de lo que ayuda. Se avisa y se aplica cuando
+     el que trabaja quiera. */
   const d=document.createElement('div');
   d.id='bandaVer'; d.className='banda-ver';
   d.innerHTML=`<span>Hay una versión nueva del portal, ya descargada.</span>
@@ -20402,7 +20438,23 @@ async function olvidarNotaVersion(){
     await Promise.all(ks.map(k=>caches.open(k).then(c=>c.delete(NOTA_VERSION))));
   }catch(e){}
 }
+/* Al aplicar la versión se vuelve a la misma pantalla: se apunta
+   dónde estábamos y al arrancar se va allí. */
+function apuntarDondeEstoy(){
+  try{ sessionStorage.setItem('adolphus.donde',JSON.stringify(
+    {page:S.page, cli:S.inCli||'', tab:S.tab||''})) }catch(e){}
+}
+function volverDondeEstaba(){
+  let d=null; try{ d=JSON.parse(sessionStorage.getItem('adolphus.donde')||'null') }catch(e){}
+  try{ sessionStorage.removeItem('adolphus.donde') }catch(e){}
+  if(!d||!d.page)return;
+  try{
+    if(d.cli&&CLIENTES.some(c=>c.id===d.cli))enterClient(d.cli,d.page);
+    else go(d.page);
+  }catch(e){}
+}
 function aplicarVersion(){
+  apuntarDondeEstoy();
   /* Si hay algo a medio escribir se guarda antes de recargar: la
      actualización no puede costarle a nadie su trabajo. */
   try{ if(typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act)guardarPSV(false,true) }catch(e){}
@@ -20897,6 +20949,10 @@ function abrirSesion(c,recordar,aviso){
   guardarCuentas();
   applyRole(rolDe(c));
   entrarAlPanel();
+  /* Si se venía de aplicar una versión nueva, se vuelve a la pantalla
+     donde estaba el que trabaja: entrar al panel es lo correcto la
+     primera vez, no después de una actualización. */
+  setTimeout(()=>{try{volverDondeEstaba()}catch(e){}},120);
   toast(aviso?aviso.replace(/<[^>]+>/g,''):`Hola, ${c.n.split(' ')[0]}`);
 }
 /* ── La portada en dos pasos (celular y tablet) ──────────────
@@ -21183,9 +21239,11 @@ migrarEtapas();
 purgarBorrados();
 restaurarCaja().then(ok=>{
   purgarBorrados();
+  /* Y si ya había sesión abierta al arrancar, también. */
+  setTimeout(()=>{try{ if(SES)volverDondeEstaba() }catch(e){}},1200);
   /* Y si este equipo venía con el marcador adelantado, se le borra
      para que baje de nuevo todo lo que se había perdido. */
-  if(repararMarcador()){ ESPEJO={}; setTimeout(()=>{try{correrJob('marcador-reparado')}catch(e){}},1500) }
+  if(repararMarcador())setTimeout(()=>{try{correrJob('marcador-reparado')}catch(e){}},1500);
   if(ok){pintarNet();if(SES)renderAll()}
   /* Y si el aparato se apagó con un formulario a medias, se ofrece
      seguir: da igual que fuera el celular, la tablet o la
