@@ -2578,6 +2578,14 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .hs-f.hs-sin{opacity:.72}
 /* El recordatorio de dónde vive el patrón de siempre. */
 .pat-fijo{display:block;margin-top:6px;font-size:11px;color:var(--ink-3)}
+/* La lista del taller encima de la casilla del nombre. */
+.tec-pick{display:flex;flex-direction:column;gap:5px}
+.tec-pick .tec-sel{color:var(--ink-2)}
+/* El número que pone la casa: se lee, no se escribe. */
+.num-auto{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;padding:9px 12px;
+  border:1px solid var(--line);border-radius:var(--r-2);background:var(--surface-2)}
+.num-auto b{font-size:15px;letter-spacing:.02em;color:var(--ink)}
+.num-auto span{font-size:11.5px;color:var(--ink-3);line-height:1.4}
 .pat-fijo a{color:var(--sel);font-weight:600}
 /* La cabecera de la cola de pendientes, con su botón de insistir. */
 .sq-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
@@ -7026,8 +7034,28 @@ let PATRON={
    nombre encima: el que entra mañana no espera a que yo lo añada. */
 const TECNICOS=['Junior Torres','Jose Rojas','Jose Manrique',
                 'Wilson Chapoñan','Larry Ramirez','Christian Soto'];
-const listaTecnicos=(id)=>`<datalist id="${id}">${
-  TECNICOS.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
+/* La lista + la casilla. La casilla es la que manda y conserva su
+   id: quien la lee no se entera de que ahora hay una lista al lado. */
+function campoTecnico(id,valor,extra){
+  const v=String(valor==null?'':valor);
+  const suyo=TECNICOS.includes(v);
+  return `<div class="tec-pick">
+    <select class="inp tec-sel" onchange="ponerTecnico('${id}',this.value)"
+      aria-label="Elegir del personal del taller">
+      <option value="">— elige del taller —</option>
+      ${TECNICOS.map(t=>`<option value="${esc(t)}" ${t===v?'selected':''}>${esc(t)}</option>`).join('')}
+      ${suyo||!v?'':`<option value="${esc(v)}" selected>${esc(v)}</option>`}
+    </select>
+    <input class="inp" id="${id}" value="${esc(v)}" autocomplete="off"
+      placeholder="o escribe el nombre" ${extra||''}></div>`;
+}
+/* Elegir de la lista escribe en la casilla. Se avisa con un evento
+   «input» porque hay formularios que guardan según se escribe. */
+function ponerTecnico(id,v){
+  const e=document.getElementById(id); if(!e||!v)return;
+  e.value=v;
+  e.dispatchEvent(new Event('input',{bubbles:true}));
+}
 const CAMPOS_PATRON=[
   ['patDesc','Descripción'],['patModelo','Modelo'],['patMarca','Marca'],
   ['patSerie','N.º de serie'],['patEscala','Escala'],['patExact','Clase de exactitud'],
@@ -9087,9 +9115,8 @@ function pintarPSV(){
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
           ayuda('Nombre y apellido de quien hizo el trabajo. Viene puesto de quien tomó la orden.')}</label>
-          <input class="inp" id="pv-resp" list="dlTecPV" value="${esc(t.respNombre||'')}"
-            autocomplete="off" oninput="psvCampo('respNombre',this.value)">
-          ${listaTecnicos('dlTecPV')}
+          ${campoTecnico('pv-resp',t.respNombre||'',
+            `oninput="psvCampo('respNombre',this.value)"`)}
           <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
         <div class="fld"><label for="pv-area">Área a la que pertenece${
           ayuda('El área de Adolphus a la que pertenece quien hizo el trabajo. Sale en el certificado.')}</label>
@@ -13256,11 +13283,17 @@ const codigoOS=(num,psv)=>`${psv?'PSV-':''}${num}`;
 function campoNumOS(ids){
   const psv=ids.length&&ids.every(esPSV);
   const sug=codigoOS(siguienteNumOS(),psv);
-  return `<div class="fld"><label for="ocNum">N.º de orden de servicio de Adolphus
-      <span class="opc">correlativo de la casa · se puede cambiar</span></label>
-    <input class="inp mono" id="ocNum" value="${esc(sug)}" style="max-width:200px">
-    <span class="hint">${psv?'Válvulas de seguridad: lleva <b>PSV-</b> delante. ':''
-      }Con varias válvulas cada una sale como <b class="mono">${esc(sug)}-001</b>, <b class="mono">${esc(sug)}-002</b>…</span></div>`;
+  /* Se enseña, no se teclea: es el número con el que el cliente va a
+     pedir su certificado, así que hay que verlo — pero escribirlo a
+     mano es pedir que alguien lo repita o lo salte. La casilla oculta
+     mantiene el trato con leerNumOS(). */
+  return `<div class="fld"><label>N.º de orden de servicio de Adolphus
+      <span class="opc">lo pone la casa, solo</span></label>
+    <div class="num-auto"><b class="mono">${esc(sug)}</b>
+      <span>correlativo de la casa · ${psv?'lleva <b>PSV-</b> por ser de seguridad · ':''
+        }${ids.length>1?`cada válvula sale como <b class="mono">${esc(sug)}-001</b>, <b class="mono">${esc(sug)}-002</b>…`
+          :'la siguiente orden llevará el número que sigue'}</span></div>
+    <input type="hidden" id="ocNum" value="${esc(sug)}"></div>`;
 }
 function leerNumOS(ids){
   const el=$('#ocNum');
@@ -13358,15 +13391,10 @@ function pryCuenta(){
   const sel=[...document.querySelectorAll('.pyChk:checked')].map(x=>x.value);
   const e=$('#pyCuenta');
   if(e)e.textContent=sel.length?`${sel.length} seleccionada${sel.length>1?'s':''}`:'ninguna seleccionada todavía';
-  /* El número depende de lo marcado: si todas son de seguridad lleva
-     PSV delante. Se rehace, pero se respeta lo que haya escrito el
-     jefe a mano. */
+  /* El número lo pone la casa y se rehace con lo marcado: si todas
+     son de seguridad, lleva PSV delante. */
   const caja=$('#pyNum'); if(!caja)return;
-  const escrito=$('#ocNum')&&$('#ocNum').dataset.tocado==='1'?$('#ocNum').value:null;
   caja.innerHTML=campoNumOS(sel);
-  const i=$('#ocNum');
-  if(i){ if(escrito!=null){i.value=escrito;i.dataset.tocado='1'}
-         i.oninput=()=>{i.dataset.tocado='1'} }
 }
 function guardarProyecto(){
   const cliId=$('#pyCli').value;
@@ -13424,9 +13452,7 @@ function recibirOrden(id,grupo){
    <div class="two">
      <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span>
          <span class="opc">despliega los del taller, o escribe otro</span></label>
-       <input class="inp" id="rcIng" list="dlTecRC" value="${esc(yo)}"
-         placeholder="elige o escribe el nombre" autocomplete="off">
-       ${listaTecnicos('dlTecRC')}</div>
+       ${campoTecnico('rcIng',yo)}</div>
      <div class="fld"><label for="rcFec">Fecha en que se probó</label>
        <input class="inp" id="rcFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -13522,9 +13548,7 @@ function tomarOrden(id,grupo){
    <div class="two">
      <div class="fld"><label for="toIng">Tu nombre <span class="req-dot">*</span>
          <span class="opc">despliega los del taller, o escribe otro</span></label>
-       <input class="inp" id="toIng" list="dlTecTO" value="${esc(yo)}"
-         placeholder="elige o escribe el nombre" autocomplete="off">
-       ${listaTecnicos('dlTecTO')}</div>
+       ${campoTecnico('toIng',yo)}</div>
      <div class="fld"><label for="toFec">Fecha de inicio</label>
        <input class="inp" id="toFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -13572,9 +13596,7 @@ function pruebaSalidaOrden(id,grupo){
    <div class="two">
      <div class="fld"><label for="psIng">Técnico que hace la prueba <span class="req-dot">*</span>
          <span class="opc">despliega los del taller, o escribe otro</span></label>
-       <input class="inp" id="psIng" list="dlTecPS" value="${esc(yo)}"
-         placeholder="elige o escribe el nombre" autocomplete="off">
-       ${listaTecnicos('dlTecPS')}</div>
+       ${campoTecnico('psIng',yo)}</div>
      <div class="fld"><label for="psFec">Fecha de la prueba</label>
        <input class="inp" id="psFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
    </div>`;
@@ -14735,9 +14757,7 @@ function openCloseWO(id){
      <div class="fld"><label>Fecha de ejecución</label><input class="inp" id="cwFec" type="date" value="${hoyStr}"></div>
      <div class="fld"><label for="cwTec">Técnico responsable
          <span class="opc">despliega los del taller, o escribe otro</span></label>
-       <input class="inp" id="cwTec" list="dlTecCW" autocomplete="off"
-         value="${esc(o.tec&&o.tec!=='Por asignar'?o.tec:'')}" placeholder="elige o escribe quién lo hizo">
-       ${listaTecnicos('dlTecCW')}</div>
+       ${campoTecnico('cwTec',o.tec&&o.tec!=='Por asignar'?o.tec:'')}</div>
    </div>
    <div class="fld"><label>Trabajo realizado / hallazgos</label><textarea class="inp" id="cwHall" rows="3">${esc(o.hall||'')}</textarea></div>
    <div class="fld"><label>Repuestos utilizados</label>
@@ -14920,15 +14940,15 @@ function openWO(actId,tipo){
      <div class="fld"><label for="woAct">Válvula <span class="opc" id="woActN"></span></label>
        <select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(eti(a))}</option>`).join('')}</select></div>
      <div class="fld"><label for="woNum">N.º de orden de compra del cliente
-         <span class="opc">el que viene en su documento</span></label>
-       <input class="inp mono" id="woNum" placeholder="OC-4500231889"></div>
+         <span class="opc">el de su documento · opcional</span></label>
+       <input class="inp mono" id="woNum" placeholder="OC-4500231889">
+       <span class="hint">El número de la orden lo pone Adolphus solo:
+         será <b class="mono">${esc(codigoOS(siguienteNumOS(),false))}</b> o el que toque al guardar.</span></div>
      <div class="fld"><label>Tipo</label><select class="inp" id="woTipo">${['Preventivo','Correctivo','Calibración','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option ${t===tipo?'selected':''}>${t}</option>`).join('')}</select></div>
      <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
    <div class="fld"><label for="woTec">Técnico responsable
        <span class="opc">despliega los del taller, o escribe otro</span></label>
-     <input class="inp" id="woTec" list="dlTecWO" value="Por asignar" autocomplete="off"
-       onfocus="if(this.value==='Por asignar')this.select()">
-     ${listaTecnicos('dlTecWO')}</div>
+     ${campoTecnico('woTec','')}</div>
    <div class="fld"><label>Alcance / hallazgos</label><textarea class="inp" id="woHall" rows="3" placeholder="Qué se va a hacer, qué se encontró…"></textarea></div>
    ${pasosHTML()}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveWO()">Crear orden</button>`;
@@ -14957,12 +14977,21 @@ function filtrarEmpresasWO(q){
 }
 function saveWO(){
   if(!$('#woAct').value){toast('Esta empresa no tiene válvulas cargadas');return}
-  ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,mat:$('#woNum').value,et:'oc',tipo:$('#woTipo').value,pasos:pasosMarcados(),
-    f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
+  /* El número de la casa, automático. El del cliente es OTRO dato y
+     va en su sitio: metido aquí envenenaba el correlativo —de 100 se
+     pasaba a 450006787— porque el siguiente sale del mayor que haya. */
+  const act=$('#woAct').value;
+  const num=siguienteNumOS(), mat=codigoOS(num,esPSV(act));
+  const oc=$('#woNum').value.trim();
+  ORDENES.unshift({id:'o'+Date.now(),act,n:mat,mat,num,oc,et:'oc',tipo:$('#woTipo').value,pasos:pasosMarcados(),
+    f:$('#woFec').value,tec:$('#woTec').value.trim()||'Por asignar',
+    hall:$('#woHall').value||'Sin observaciones.',
     /* Los repuestos no se adivinan al abrir la orden: salen del
        desarme, pieza por pieza y con su foto. */
     partes:[]});
-  closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
+  closeModal();renderAll();go('wo');
+  registrar('Orden',`${mat} creada${oc?` · OC del cliente ${oc}`:''}`);
+  toast(`Orden ${mat} creada en OC recibida`);
 }
 /* ── No perder lo escrito al cerrar sin querer ───────────────
    Un clic fuera de la ventana, o Escape, cerraban el formulario y se
