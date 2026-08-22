@@ -2562,6 +2562,9 @@ button.hs-h.ok .hs-pt{border-color:var(--sel);background:var(--sel);
 button.hs-h.ok:hover .hs-hl{text-decoration:underline}
 button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:var(--r-1)}
 .hs-veces{display:block;margin-top:8px;font-size:10.5px;color:var(--ink-3);text-align:center}
+/* El recordatorio de dónde vive el patrón de siempre. */
+.pat-fijo{display:block;margin-top:6px;font-size:11px;color:var(--ink-3)}
+.pat-fijo a{color:var(--sel);font-weight:600}
 /* La cabecera de la cola de pendientes, con su botón de insistir. */
 .sq-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:10px 12px;margin-top:10px;border:1px solid var(--line);border-bottom:0;
@@ -7981,7 +7984,10 @@ function bloquePatron(t){
     <div class="pat-caja ${igualQueLaCasa?'':'otro'}" id="patCaja">
       <div class="dt">${CAMPOS_PATRON.map(([k,l])=>
         `<div class="dt-i"><span>${l}</span><b>${t[k]?esc(t[k]):'<span class="muted">—</span>'}</b></div>`).join('')}</div>
-      ${puedeCambiar?`<button class="btn quiet xs" onclick="cambiarPatron()">Cambiar el patrón de este trabajo</button>`:''}
+      ${puedeCambiar?`<button class="btn quiet xs" onclick="cambiarPatron()"
+        title="Para este trabajo, o para todos si marcas la casilla">Cambiar el patrón</button>
+        ${S.rol==='admin'?`<span class="pat-fijo">El patrón de siempre se cambia en
+          <a href="#" onclick="closeModal();goSettings('org');return false">Ajustes · Organización</a></span>`:''}`:''}
     </div>`;
 }
 function cambiarPatron(){
@@ -8021,6 +8027,25 @@ function volverAlMantenimiento(){
      criterios o el patrón, lo escrito hasta aquí ya no depende de que
      acabe el ensayo. */
   if(psvVeredicto(PSV_TMP).estado==='incompleto')guardarPSV(false,true);
+}
+/* El patrón de la casa, desde Ajustes. Mismo candado que dentro del
+   ensayo: sin la contraseña no se toca, y lo que se cambia queda
+   apuntado con nombre y fecha en el registro. */
+function guardarPatronCasa(){
+  const p=$('#pcPass');
+  if(!p||p.value!==CLAVE_BAJA){
+    if(p){p.value='';p.classList.add('pend');p.focus()}
+    const e=$('#pcErr'); if(e)e.style.display='flex';
+    toast('Contraseña incorrecta — el patrón no se cambió'); return;
+  }
+  const antes=`${PATRON.patMarca||''} ${PATRON.patModelo||''} · serie ${PATRON.patSerie||'—'}`.trim();
+  CAMPOS_PATRON.forEach(([k])=>{const e=$('#pc-'+k); if(e)PATRON[k]=e.value.trim()});
+  const ahora=`${PATRON.patMarca||''} ${PATRON.patModelo||''} · serie ${PATRON.patSerie||'—'}`.trim();
+  guardarLocal();
+  registrar('Patrón',antes===ahora?`Patrón de la casa actualizado: ${ahora}`
+    :`Patrón de la casa: ${antes} → ${ahora}`);
+  toast('Patrón guardado · se usará en todos los trabajos nuevos');
+  renderSettings();
 }
 function guardarPatron(){
   const p=$('#ptPass');
@@ -19684,9 +19709,13 @@ function descartarEnCurso(){
 }
 /* La foto de los datos, tal como se guarda y se restaura. */
 function fotoDatos(){
+  /* Todo lo que viaja a la nube (NUBE_MAESTROS) tiene que estar
+     también aquí: lo que se sube pero no se guarda vuelve de fábrica
+     al recargar y se sube encima de lo bueno. */
   return {v:1,ts:Date.now(),ACTIVOS,ORDENES,SOLICITUDES,RECLAMOS,COTIZACIONES,
           CALIBS,SERVS,DOCS,CLIENTES,BOM,PRECIOS,PART_PHOTO,MODELOS,MODELO_DEF,
-          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS,ACCESO_IMG};
+          SYNCQ,PLAN_TARIFA,PLAN_OK,ESPEJO,NUBE_DESDE,PROYECTOS,ACCESO_IMG,
+          PATRON,PRECIOS_HOJA};
 }
 /* ── LA COPIA DE SEGURIDAD ───────────────────────────────────
    Un archivo con TODO lo registrado, guardado donde el usuario
@@ -19857,6 +19886,7 @@ function aplicarFoto(d){
   obj(BOM,d.BOM);obj(PRECIOS,d.PRECIOS);obj(PART_PHOTO,d.PART_PHOTO);
   obj(MODELOS,d.MODELOS);obj(MODELO_DEF,d.MODELO_DEF);
   obj(PLAN_TARIFA,d.PLAN_TARIFA);obj(PLAN_OK,d.PLAN_OK);obj(ACCESO_IMG,d.ACCESO_IMG);
+  obj(PATRON,d.PATRON);obj(PRECIOS_HOJA,d.PRECIOS_HOJA);
   arr(PROYECTOS,d.PROYECTOS);
   SYNCQ=Array.isArray(d.SYNCQ)?d.SYNCQ:[];
   ESPEJO=(d.ESPEJO&&typeof d.ESPEJO==='object')?d.ESPEJO:{};
@@ -21398,6 +21428,22 @@ function renderSettings(){
         <div class="fld"><label>Teléfono</label><input class="inp" id="orTel" value="${esc(ORG.tel)}"></div>
         <div class="fld"><label>Sitio web</label><input class="inp" id="orWeb" value="${esc(ORG.web)}"></div>
         <button class="btn" onclick="guardarOrg()">Guardar organización</button>`)}
+      ${panel('Equipo patrón de calibración',`
+        <div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+          <div>El instrumento contra el que se mide <b>todo</b> lo que certifica la casa. Sale solo en
+            cada mantenimiento y va impreso en el certificado. Al cambiarlo aquí queda para
+            <b>todos los trabajos nuevos</b>, en todos los equipos — los ya emitidos conservan el que
+            tenían, que es lo que dice su papel.</div></div>
+        <div class="two">${CAMPOS_PATRON.map(([k,l])=>
+          `<div class="fld"><label for="pc-${k}">${l}</label>
+            <input class="inp" id="pc-${k}" ${k==='patFecha'?'type="date"':''}
+              value="${esc(PATRON[k]||'')}"></div>`).join('')}</div>
+        <div class="fld" style="margin-top:6px"><label for="pcPass">Contraseña de gerencia <span class="req-dot">*</span></label>
+          <input class="inp" id="pcPass" type="password" placeholder="la contraseña del gerente"
+            autocomplete="off" style="max-width:230px"
+            onkeydown="if(event.key==='Enter')guardarPatronCasa()">
+          <span class="pend-msg" id="pcErr" style="display:none">▲ Contraseña incorrecta · el patrón no se cambió</span></div>
+        <button class="btn" onclick="guardarPatronCasa()">Guardar el patrón de la casa</button>`)}
       ${panel('Pantalla de inicio',`
         <div class="set-row"><div class="t"><b>Imágenes de los accesos</b>
           <span>Cada sección del inicio puede llevar la foto que quieras en vez de su icono.
