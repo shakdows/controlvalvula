@@ -2562,6 +2562,11 @@ button.hs-h.ok .hs-pt{border-color:var(--sel);background:var(--sel);
 button.hs-h.ok:hover .hs-hl{text-decoration:underline}
 button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:var(--r-1)}
 .hs-veces{display:block;margin-top:8px;font-size:10.5px;color:var(--ink-3);text-align:center}
+/* Cuál de los servicios es, y contra qué orden se hizo: sin esto dos
+   renglones de la misma válvula parecen el mismo repetido. */
+.hs-cual{display:block;margin-top:2px;font-size:10.5px;color:var(--ink-3);
+  font-family:'IBM Plex Mono';letter-spacing:-.01em}
+.hs-f.hs-sin{opacity:.72}
 /* El recordatorio de dónde vive el patrón de siempre. */
 .pat-fijo{display:block;margin-top:6px;font-size:11px;color:var(--ink-3)}
 .pat-fijo a{color:var(--sel);font-weight:600}
@@ -7016,6 +7021,24 @@ const planFoco=()=>S.cli||S.inCli||null;
    para saber cuántos trabajos llevaba un cliente había que abrir
    veinte fichas y sumar a mano. */
 const HIST_ORDEN=(x,y)=>String(histFecha(y)).localeCompare(String(histFecha(x)));
+/* La HORA sale del propio identificador: al abrir el papel se le pone
+   'pv' + la hora del reloj, así que el número lleva dentro cuándo se
+   empezó. Es lo único que distingue dos servicios del mismo día — y
+   dos servicios del mismo día pasan, con una válvula que vuelve. */
+function histInstante(c){
+  const m=/^pv(\d{10,})$/.exec(String((c&&c.id)||''));
+  if(!m)return null;
+  const d=new Date(+m[1]);
+  return isNaN(d)?null:d;
+}
+/* Del más nuevo al más viejo: manda el día del ensayo, y si dos caen
+   el mismo día, la hora en que se abrió cada uno. */
+function histOrdenFino(x,y){
+  const f=String(histFecha(y)).localeCompare(String(histFecha(x)));
+  if(f)return f;
+  const a=histInstante(x), b=histInstante(y);
+  return (b?+b:0)-(a?+a:0);
+}
 const histFecha=c=>c.tipo==='psv'?(c.fecha||''):((c.fin||c.ini||'').slice(0,10));
 /* Un certificado del cliente: los borradores son trabajo en curso y no
    se le enseñan —un papel a medio llenar no es un certificado—, pero
@@ -7231,30 +7254,44 @@ function renderHistorial(){
      Se ponen los cinco en la misma línea, en el orden en que se
      hicieron, y el que todavía no existe se ve apagado con el motivo
      puesto — así se sabe qué falta sin abrir nada. */
-  const papelesDe=a=>{
-    const cliente=S.rol==='cliente';
-    const suyos=CALIBS.filter(x=>x.act===a.id&&x.tipo==='psv').sort(HIST_ORDEN);
-    const c=suyos[0];
-    if(!c)return {c:null, chips:'<span class="hs-nada">sin servicios todavía</span>', est:null, veces:0};
-    const ord=(c.ord&&ORDENES.find(x=>x.id===c.ord))||ORDENES.find(x=>x.calib===c.id)||null;
-    return {c, chips:rielServicio(c,ord), est:histEstado(c), ord, veces:suyos.length};
-  };
-  const lineas=visto.map(({a,ev})=>{
-    const m=MODELOS[a.mod]||{}, P=papelesDe(a);
-    const ult=ev[0];
-    return `<div class="hs-f" onclick="histAbrir('${a.id}')" role="button" tabindex="0"
+  /* Un renglón por SERVICIO. La válvula que ha vuelto tres veces sale
+     tres veces, cada una con la línea de tiempo de ESE trabajo. Las
+     que todavía no han pasado por el taller salen al final, para que
+     el parque siga estando entero. */
+  const servicios=[];
+  visto.forEach(({a})=>{
+    const suyos=CALIBS.filter(x=>x.act===a.id&&x.tipo==='psv').sort(histOrdenFino);
+    if(!suyos.length){ servicios.push({a,c:null}); return }
+    suyos.forEach((c,i)=>servicios.push({a,c,cual:suyos.length-i,de:suyos.length}));
+  });
+  servicios.sort((p,q)=>{
+    if(!p.c&&!q.c)return String(p.a.tag||'').localeCompare(String(q.a.tag||''),'es');
+    if(!p.c)return 1;          // las que no tienen historia, al final
+    if(!q.c)return -1;
+    return histOrdenFino(p.c,q.c);
+  });
+  const lineas=servicios.map(({a,c,cual,de})=>{
+    const m=MODELOS[a.mod]||{};
+    const ord=c?((c.ord&&ORDENES.find(x=>x.id===c.ord))||ORDENES.find(x=>x.calib===c.id)||null):null;
+    const est=c?histEstado(c):null;
+    const t=c?histInstante(c):null;
+    const hora=t?instantePeru(t).slice(11):'';
+    return `<div class="hs-f${c?'':' hs-sin'}" onclick="histAbrir('${a.id}')" role="button" tabindex="0"
         onkeydown="if(event.key==='Enter')histAbrir('${a.id}')"
-        title="Entrar a la línea de tiempo de ${esc(a.tag||a.ser||'la válvula')}">
+        title="${c?`Servicio del ${esc(fPE(histFecha(c)))} · ${esc(a.tag||a.ser||'')}`
+                 :`Entrar a la ficha de ${esc(a.tag||a.ser||'la válvula')}`}">
       <div class="hs-id">
         <div class="hs-ph">${a.foto?`<img src="${a.foto}" alt="">`:photoFor(a.mod)}</div>
         <div class="hs-t"><b>${esc(a.tag||a.ser||'(sin tag)')}</b>
           <span>${esc([m.m,a.mod].filter(Boolean).join(' ')||'—')}${
-            a.ser?' · s/n '+esc(a.ser):''}</span></div>
+            a.ser?' · s/n '+esc(a.ser):''}</span>
+          ${de>1?`<span class="hs-cual">servicio ${cual} de ${de}${
+            c&&c.os?` · O.S. ${esc(c.os)}`:''}</span>`:(c&&c.os?`<span class="hs-cual">O.S. ${esc(c.os)}</span>`:'')}</div>
       </div>
-      <div class="hs-ps">${P.chips}
-        ${P.veces>1?`<span class="hs-veces">${P.veces} servicios · toca la fila para ver los anteriores</span>`:''}</div>
-      <div class="hs-e">${P.est?`<span class="tag ${P.est.c}"><span class="dot"></span>${esc(P.est.t)}</span>`:''}
-        ${ult?`<span class="hs-fe mono">${esc(fPE(ult.f))}</span>`:''}</div>
+      <div class="hs-ps">${c?rielServicio(c,ord):'<span class="hs-nada">sin servicios todavía</span>'}</div>
+      <div class="hs-e">${est?`<span class="tag ${est.c}"><span class="dot"></span>${esc(est.t)}</span>`:''}
+        ${c?`<span class="hs-fe mono">${esc(fPE(histFecha(c)))}${
+          hora?` · ${esc(hora)}`:''}</span>`:''}</div>
     </div>`;
   }).join('');
 
