@@ -3519,8 +3519,9 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div class="hd"><div><h1>Órdenes de trabajo</h1><p>Una tarjeta por válvula, con su código MAT. Avanza con su botón: llega la válvula y se recibe con su prueba de entrada, un ingeniero la toma poniendo su nombre, y se finaliza registrando el ensayo.</p></div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
-            <button class="btn sec" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM3 7l2-3h14l2 3M9 12h6"/></svg>Nueva OC</button>
-            <button class="btn" onclick="openWO()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden</button></div></div>
+            <!-- Un solo botón: el de la OC ya pregunta la empresa, filtra
+                 sus válvulas y admite varias de una vez. -->
+            <button class="btn" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden de trabajo</button></div></div>
         <div id="pryPanel"></div>
         <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
       </div></section>
@@ -7018,6 +7019,15 @@ let PATRON={
   patSerie:'', patEscala:'0.1 psi', patExact:'0,2 % FS',
   patFecha:'', patCert:''
 };
+/* El personal de taller que firma trabajos. Se despliega para que el
+   mismo hombre se llame siempre igual —a mano salían «J. Torres»,
+   «Junior T.» y «junior torres» para la misma persona, y después el
+   informe no cuadraba con el certificado—. Se puede escribir otro
+   nombre encima: el que entra mañana no espera a que yo lo añada. */
+const TECNICOS=['Junior Torres','Jose Rojas','Jose Manrique',
+                'Wilson Chapoñan','Larry Ramirez','Christian Soto'];
+const listaTecnicos=(id)=>`<datalist id="${id}">${
+  TECNICOS.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
 const CAMPOS_PATRON=[
   ['patDesc','Descripción'],['patModelo','Modelo'],['patMarca','Marca'],
   ['patSerie','N.º de serie'],['patEscala','Escala'],['patExact','Clase de exactitud'],
@@ -13245,7 +13255,7 @@ const codigoOS=(num,psv)=>`${psv?'PSV-':''}${num}`;
 function campoNumOS(ids){
   const psv=ids.length&&ids.every(esPSV);
   const sug=codigoOS(siguienteNumOS(),psv);
-  return `<div class="fld"><label for="ocNum">N.º de orden de servicio
+  return `<div class="fld"><label for="ocNum">N.º de orden de servicio de Adolphus
       <span class="opc">correlativo de la casa · se puede cambiar</span></label>
     <input class="inp mono" id="ocNum" value="${esc(sug)}" style="max-width:200px">
     <span class="hint">${psv?'Válvulas de seguridad: lleva <b>PSV-</b> delante. ':''
@@ -13287,8 +13297,13 @@ function openProyecto(){
      <div>Elige las válvulas que entran en esta OC. Se crea <b>una orden por válvula</b>, cada una con su
        código <b>MAT</b> correlativo, todas en <b>OC recibida</b>. El avance del proyecto se calcula solo.</div></div>
    <div class="two">
-     <div class="fld"><label for="pyCli">Cliente</label><select class="inp" id="pyCli" onchange="pintarPryValvulas()">${cOpts}</select></div>
-     <div class="fld"><label for="pyOC">N.º de OC / orden de servicio <span class="opc">el del cliente</span></label>
+     <div class="fld"><label for="pyCliQ">Empresa</label>
+       <input class="inp" id="pyCliQ" placeholder="Escribe el nombre para buscarla…"
+         autocomplete="off" oninput="filtrarEmpresasOC(this.value)" style="margin-bottom:6px">
+       <select class="inp" id="pyCli" onchange="pintarPryValvulas()">${cOpts}</select>
+       <span class="hint" id="pyCliN"></span></div>
+     <div class="fld"><label for="pyOC">N.º de orden de compra del cliente
+         <span class="opc">el que viene en su documento</span></label>
        <input class="inp mono" id="pyOC" placeholder="OC-4500231889"></div>
      <div class="fld"><label for="pyFec">Fecha de recepción</label><input class="inp" id="pyFec" type="date" value="${HOY.toISOString().slice(0,10)}"></div>
      <div class="fld"><label for="pyTipo">Tipo de trabajo</label><select class="inp" id="pyTipo">
@@ -13305,6 +13320,23 @@ function openProyecto(){
     <button class="btn" onclick="guardarProyecto()">Abrir la OC</button>`;
   pintarPryValvulas();
   $('#modal').classList.add('on');
+}
+/* Deja en la lista sólo las empresas cuyo nombre —o RUC— lleva lo
+   escrito. Si sólo queda una, se elige sola: escribir seis letras y
+   tener que desplegar igual es trabajo de más. */
+function filtrarEmpresasOC(q){
+  const sel=$('#pyCli'); if(!sel)return;
+  const t=String(q||'').toLowerCase().trim();
+  let quedan=[], antes=sel.value;
+  [...sel.options].forEach(o=>{
+    const c=CLIENTES.find(x=>x.id===o.value)||{};
+    const ok=!t||[c.n,c.ruc,c.fac].filter(Boolean).some(x=>String(x).toLowerCase().includes(t));
+    o.hidden=!ok; if(ok)quedan.push(o.value);
+  });
+  const n=$('#pyCliN');
+  if(n)n.textContent=!t?'' : quedan.length?`${quedan.length} empresa${quedan.length===1?'':'s'}`
+    :'Ninguna empresa con ese nombre';
+  if(quedan.length&&!quedan.includes(antes)){ sel.value=quedan[0]; pintarPryValvulas() }
 }
 function pintarPryValvulas(){
   const c=$('#pyCli').value, box=$('#pyLista'); if(!box)return;
@@ -14691,7 +14723,11 @@ function openCloseWO(id){
      Al guardar, la orden pasa sola a <b>Cerrada / certificada</b>${a.prox?' y se renueva la próxima calibración':''}.</div></div>
    <div class="two">
      <div class="fld"><label>Fecha de ejecución</label><input class="inp" id="cwFec" type="date" value="${hoyStr}"></div>
-     <div class="fld"><label>Técnico responsable</label><input class="inp" id="cwTec" value="${esc(o.tec&&o.tec!=='Por asignar'?o.tec:'K. Ortiz')}"></div>
+     <div class="fld"><label for="cwTec">Técnico responsable
+         <span class="opc">despliega los del taller, o escribe otro</span></label>
+       <input class="inp" id="cwTec" list="dlTecCW" autocomplete="off"
+         value="${esc(o.tec&&o.tec!=='Por asignar'?o.tec:'')}" placeholder="elige o escribe quién lo hizo">
+       ${listaTecnicos('dlTecCW')}</div>
    </div>
    <div class="fld"><label>Trabajo realizado / hallazgos</label><textarea class="inp" id="cwHall" rows="3">${esc(o.hall||'')}</textarea></div>
    <div class="fld"><label>Repuestos utilizados</label>
@@ -14858,24 +14894,64 @@ function openWO(actId,tipo){
      orden, que es justo lo que hay que hacer para ir a leerles la
      placa. Entran todas; se identifican con lo que tengan. */
   const eti=a=>[a.tag,a.ser].filter(Boolean).join(' · ')||'(sin identificar)';
-  const opts=visibles();
+  /* De qué empresa: la de la válvula con la que se entró; si no, la
+     del tablero. Y la lista enseña SÓLO las de esa empresa — mezclarlas
+     es abrirle una orden a la válvula de otro cliente. */
+  const deLaVal=actId?(ACTIVOS.find(x=>x.id===actId)||{}).cli:null;
+  const cliFoco=deLaVal||S.inCli||S.cli||S.woCli||(CLIENTES[0]||{}).id;
+  const cOpts=CLIENTES.map(c=>`<option value="${c.id}" ${c.id===cliFoco?'selected':''}>${esc(c.n)}</option>`).join('');
+  const opts=visibles().filter(a=>a.cli===cliFoco);
   $('#mTitle').textContent='Nueva orden de trabajo';
   $('#mBody').innerHTML=`<div class="two">
-     <div class="fld"><label>Activo</label><select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(eti(a))}</option>`).join('')}</select></div>
-     <div class="fld"><label>N.º de orden</label><input class="inp" id="woNum" value="AD-26-0${Math.floor(700+Math.random()*299)}"></div>
+     <div class="fld"><label for="woCliSel">Empresa</label>
+       <input class="inp" id="woCliQ" placeholder="Escribe el nombre para buscarla…"
+         autocomplete="off" oninput="filtrarEmpresasWO(this.value)" style="margin-bottom:6px">
+       <select class="inp" id="woCliSel" onchange="pintarWOValvulas()">${cOpts}</select></div>
+     <div class="fld"><label for="woAct">Válvula <span class="opc" id="woActN"></span></label>
+       <select class="inp" id="woAct">${opts.map(a=>`<option value="${a.id}" ${a.id===actId?'selected':''}>${esc(eti(a))}</option>`).join('')}</select></div>
+     <div class="fld"><label for="woNum">N.º de orden de compra del cliente
+         <span class="opc">el que viene en su documento</span></label>
+       <input class="inp mono" id="woNum" placeholder="OC-4500231889"></div>
      <div class="fld"><label>Tipo</label><select class="inp" id="woTipo">${['Preventivo','Correctivo','Calibración','Inspección','Overhaul','Puesta en marcha'].map(t=>`<option ${t===tipo?'selected':''}>${t}</option>`).join('')}</select></div>
      <div class="fld"><label>Fecha programada</label><input class="inp" id="woFec" type="date" value="2026-07-30"></div></div>
-   <div class="fld"><label>Técnico responsable</label><input class="inp" id="woTec" value="Por asignar"></div>
+   <div class="fld"><label for="woTec">Técnico responsable
+       <span class="opc">despliega los del taller, o escribe otro</span></label>
+     <input class="inp" id="woTec" list="dlTecWO" value="Por asignar" autocomplete="off"
+       onfocus="if(this.value==='Por asignar')this.select()">
+     ${listaTecnicos('dlTecWO')}</div>
    <div class="fld"><label>Alcance / hallazgos</label><textarea class="inp" id="woHall" rows="3" placeholder="Qué se va a hacer, qué se encontró…"></textarea></div>
-   <div class="fld"><label>Partes previstas (separadas por coma)</label><input class="inp" id="woPart" placeholder="AD-TRM-316-A, AD-EMP-PTFE-V"></div>
    ${pasosHTML()}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button><button class="btn" onclick="saveWO()">Crear orden</button>`;
   $('#modal').classList.add('on');
 }
+/* Rehace la lista de válvulas con las de la empresa elegida. */
+function pintarWOValvulas(){
+  const c=$('#woCliSel'), sel=$('#woAct'); if(!c||!sel)return;
+  const eti=a=>[a.tag,a.ser].filter(Boolean).join(' · ')||'(sin identificar)';
+  const de=visibles().filter(a=>a.cli===c.value);
+  sel.innerHTML=de.length?de.map(a=>`<option value="${a.id}">${esc(eti(a))}</option>`).join('')
+    :'<option value="">— esta empresa no tiene válvulas cargadas —</option>';
+  const n=$('#woActN');
+  if(n)n.textContent=de.length?`${de.length} de esta empresa`:'ninguna cargada';
+}
+function filtrarEmpresasWO(q){
+  const sel=$('#woCliSel'); if(!sel)return;
+  const t=String(q||'').toLowerCase().trim();
+  let quedan=[], antes=sel.value;
+  [...sel.options].forEach(o=>{
+    const c=CLIENTES.find(x=>x.id===o.value)||{};
+    const ok=!t||[c.n,c.ruc,c.fac].filter(Boolean).some(x=>String(x).toLowerCase().includes(t));
+    o.hidden=!ok; if(ok)quedan.push(o.value);
+  });
+  if(quedan.length&&!quedan.includes(antes)){ sel.value=quedan[0]; pintarWOValvulas() }
+}
 function saveWO(){
+  if(!$('#woAct').value){toast('Esta empresa no tiene válvulas cargadas');return}
   ORDENES.unshift({id:'o'+Date.now(),act:$('#woAct').value,n:$('#woNum').value,mat:$('#woNum').value,et:'oc',tipo:$('#woTipo').value,pasos:pasosMarcados(),
     f:$('#woFec').value,tec:$('#woTec').value,hall:$('#woHall').value||'Sin observaciones.',
-    partes:($('#woPart').value||'').split(',').map(s=>s.trim()).filter(Boolean)});
+    /* Los repuestos no se adivinan al abrir la orden: salen del
+       desarme, pieza por pieza y con su foto. */
+    partes:[]});
   closeModal();renderAll();go('wo');registrar('Orden',`${$('#woNum').value} creada`);toast('Orden creada en etapa Solicitada');
 }
 /* ── No perder lo escrito al cerrar sin querer ───────────────
