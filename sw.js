@@ -13,7 +13,7 @@
    Ahora la aplicación abre de la caché al instante, y si hay internet
    se actualiza sola por detrás para la próxima vez.
    ============================================================ */
-const CACHE = 'adolphus-v72';
+const CACHE = 'adolphus-v73';
 
 /* Ninguna petición a la red puede tardar más que esto. Sin este tope,
    una antena que no lleva a ninguna parte cuelga la promesa para
@@ -44,9 +44,11 @@ const AVISO = new URL('__version-nueva', self.registration.scope).toString();
 const APP = [
   './',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png',
-  './icons/icon-maskable-512.png',
+  // renombrados a -v2: el nombre nuevo no puede estar en ninguna caché
+  // vieja, así el celular no puede volver a fabricar el icono antiguo
+  './icons/icon-192-v2.png',
+  './icons/icon-512-v2.png',
+  './icons/icon-maskable-512-v2.png',
   // la hoja de fuentes y la librería de Excel: se guardan en la primera
   // carga con internet para que la letra y el importar/exportar sigan
   // funcionando en planta sin señal
@@ -76,7 +78,9 @@ self.addEventListener('install', e => {
     // la casa primero, y limpia: es lo único sin lo que no se abre nada
     await conTope(CASA, 20000).then(r => guardarLimpio(c, CASA, r)).catch(() => {});
     // el resto, uno a uno: que falte alguno no puede tumbar la instalación
-    await Promise.all(APP.map(u => c.add(u).catch(() => null)));
+    // cache:'reload' — directo del servidor, sin pasar por la caché del
+    // navegador: que instalar una versión traiga los archivos de esa versión
+    await Promise.all(APP.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => null)));
     await self.skipWaiting();
   })());
 });
