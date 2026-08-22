@@ -19046,6 +19046,8 @@ function enEdicion(col,clave){
   return false;
 }
 async function nubeBajar(reemplazar){
+  /* Si este equipo venía desfasado, la primera bajada trae todo. */
+  if(BAJAR_TODO){ NUBE_DESDE=null; BAJAR_TODO=false; }
   const desde=desdeConSolape();
   const q='/rest/v1/registros?select=coleccion,clave,empresa_id,datos,borrado,actualizado'+
           '&order=actualizado.asc'+(desde?'&actualizado=gt.'+encodeURIComponent(desde):'');
@@ -19123,10 +19125,16 @@ async function nubeBajar(reemplazar){
    un segundo y queda arreglado para siempre.
    ════════════════════════════════════════════════════════════ */
 const LS_EPOCA='adolphus.sync.epoca', SYNC_EPOCA='2026-08-22-marcador';
+/* Una bandera, no sólo borrar el marcador: entre que se repara y que
+   la sesión de la nube revive pueden cruzarse los tiempos y volver a
+   escribirse el marcador viejo desde los datos guardados. Con la
+   bandera, la PRIMERA bajada que ocurra pide desde el principio,
+   pase lo que pase antes. */
+let BAJAR_TODO=false;
 function repararMarcador(){
   let e=''; try{ e=localStorage.getItem(LS_EPOCA)||'' }catch(x){}
   if(e===SYNC_EPOCA)return false;
-  NUBE_DESDE=null;                       // que baje todo otra vez
+  NUBE_DESDE=null; BAJAR_TODO=true;      // que baje todo otra vez
   try{ localStorage.setItem(LS_EPOCA,SYNC_EPOCA) }catch(x){}
   return true;
 }
@@ -20965,7 +20973,7 @@ restaurarCaja().then(ok=>{
   purgarBorrados();
   /* Y si este equipo venía con el marcador adelantado, se le borra
      para que baje de nuevo todo lo que se había perdido. */
-  if(repararMarcador()){ ESPEJO={}; try{correrJob('marcador-reparado')}catch(e){} }
+  if(repararMarcador()){ ESPEJO={}; setTimeout(()=>{try{correrJob('marcador-reparado')}catch(e){}},1500) }
   if(ok){pintarNet();if(SES)renderAll()}
   /* Y si el aparato se apagó con un formulario a medias, se ofrece
      seguir: da igual que fuera el celular, la tablet o la
