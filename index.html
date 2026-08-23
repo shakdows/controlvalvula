@@ -14827,8 +14827,7 @@ function renderWO(){
                falta y pone la última firma. El taller lo ve, no lo
                toca. */''}
           ${G.et==='final'?(()=>{
-            const sinVb=ls.filter(x=>{const c=recepDe(x.act);
-              return !(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img))}).length;
+            const sinVb=ls.filter(x=>!tieneVistoBueno(x)).length;
             const jefe=S.rol==='admin';
             if(S.rol==='cliente')return '';
             if(sinVb&&!jefe)
@@ -14848,13 +14847,17 @@ function renderWO(){
                 :sinVb?'Revisar y firmar'
                 :'Revisar y rehacer la firma'}</button>`;
           })():''}
-          ${G.et==='final'&&S.rol!=='cliente'&&G.todas.every(x=>x.et==='final')
-            &&G.todas.every(x=>{const c=recepDe(x.act);
-                return c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img)})?`
-            <button class="btn sec xs" style="width:100%;margin-top:8px;justify-content:center"
+          ${G.et==='final'&&S.rol!=='cliente'&&G.todas.every(x=>x.et==='final')?(()=>{
+            /* Siempre visible en «Finalizado». Si falta una firma, el
+               botón lo dice al pulsarlo; esconderlo dejaba al jefe
+               buscando algo que no estaba en ninguna parte. */
+            const listo=G.todas.every(tieneVistoBueno);
+            return `<button class="btn ${listo?'sec':'quiet'} xs" style="width:100%;margin-top:8px;justify-content:center"
               onclick="event.stopPropagation();archivarGrupo('${G.g}')"
-              title="Sale del tablero y queda guardada en el historial de cada válvula">
-              <svg viewBox="0 0 24 24"><path d="M3 7h18v3H3zM5 10v10h14V10M9 14h6"/></svg>Mandar al historial</button>`:''}
+              title="${listo?'Sale del tablero y queda guardada en el historial de cada válvula'
+                            :'Primero hay que firmarla: pulsa y te digo cuál falta'}">
+              <svg viewBox="0 0 24 24"><path d="M3 7h18v3H3zM5 10v10h14V10M9 14h6"/></svg>Mandar al historial</button>`;
+          })():''}
           ${/* La etiqueta que se pega en la válvula: aparece en cuanto la
                orden se acepta y la válvula entra a la casa. Antes había
                que abrir el detalle para encontrarla. */''}
@@ -15192,12 +15195,34 @@ function avanzarGrupo(g,etapa){
    válvula—, con su informe y su certificado colgados. No borra nada:
    se puede devolver.
    ════════════════════════════════════════════════════════════ */
+/* El ensayo de ESA línea de la orden: el que quedó colgado de ella.
+   Preguntar por «el ensayo abierto de la válvula» sólo vale mientras
+   la orden está viva; cerrada, devuelve cualquier papel suelto. */
+function ensayoDeLinea(o){
+  if(!o)return null;
+  if(o.calib){ const c=CALIBS.find(x=>x.id===o.calib); if(c)return c }
+  return CALIBS.find(x=>x.ord===o.id)||recepDe(o.act);
+}
+const tieneVistoBueno=o=>{
+  const c=ensayoDeLinea(o);
+  return !!(c&&(c.firmas||[]).some(f=>f.rol==='vbAdo'&&f.img));
+};
 function archivarGrupo(g){
   const ls=ORDENES.filter(x=>grupoDe(x)===g);
   if(!ls.length)return;
   const abiertas=ls.filter(x=>x.et!=='final');
   if(abiertas.length){
     toast(`Falta${abiertas.length===1?'':'n'} ${abiertas.length} válvula${abiertas.length===1?'':'s'} por finalizar`);
+    return;
+  }
+  /* Al historial va el trabajo terminado, y terminado incluye la firma
+     del jefe. Se dice cuál falta en vez de esconder el botón. */
+  const sinFirma=ls.filter(x=>!tieneVistoBueno(x));
+  if(sinFirma.length){
+    const cual=sinFirma.map(x=>(ACTIVOS.find(y=>y.id===x.act)||{}).tag||'').filter(Boolean).join(', ');
+    toast(sinFirma.length===1
+      ? `Falta el visto bueno de gerencia${cual?' en '+cual:''} · «Revisar y firmar»`
+      : `Faltan ${sinFirma.length} vistos buenos de gerencia${cual?': '+cual:''} · «Revisar y firmar»`);
     return;
   }
   const h=hoyISO();
