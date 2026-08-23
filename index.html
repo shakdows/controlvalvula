@@ -11780,21 +11780,37 @@ ${/* Las tres firmas del informe: quién lo elaboró, quién lo revisó y
      el visto bueno de gerencia. La que no se ha firmado sale con su
      nombre y su cargo sobre la raya, para firmarla en el papel. */''}
 ${(()=>{
-  /* Una rúbrica sólo puede salir sobre el nombre de quien la dibujó.
-     Si el que hizo el trabajo no es ninguno de los tres de la casa, su
-     casilla sale con la raya y se firma en el papel — antes que
-     estampar la firma de un tercero. */
-  const rubricas=[];
-  conE.forEach(x=>(x.e.firmas||[]).forEach(f=>{ if(f&&f.img)rubricas.push(f) }));
+  /* Quién firmó de verdad, dentro del portal. La primera que aparezca
+     de cada clase: la del que hizo el trabajo y la del visto bueno. */
   const limpio=x=>String(x||'').trim().toLowerCase();
-  const suya=quien=>rubricas.find(f=>limpio(f.n)===limpio(quien))||null;
-  return `<div class="fir">${INFORME_FIRMAS.map(([rol,quien,cargo])=>{
-    const f=suya(quien);
-    return `<div class="b">
-      <div class="rol">${esc(rol)}</div>
-      <div class="sg">${f?`<img src="${f.img}" alt="Firma de ${esc(quien)}">`:''}</div>
-      <div class="l"><b>${esc(quien)}</b><span>${esc(cargo)}</span></div></div>`;
-  }).join('')}</div>`;
+  const firmaDe=rol=>{
+    for(const x of conE){
+      const f=(x.e.firmas||[]).find(y=>y&&y.rol===rol&&y.img&&String(y.n||'').trim());
+      if(f)return f;
+    }
+    return null;
+  };
+  const todas=[];
+  conE.forEach(x=>(x.e.firmas||[]).forEach(f=>{ if(f&&f.img&&String(f.n||'').trim())todas.push(f) }));
+  /* El que hizo el trabajo ocupa «Elaborado por» y el que dio el visto
+     bueno «Aprobado por», cada uno con SU nombre y SU cargo. El del
+     medio se queda con el nombre de la casa y sólo lleva rúbrica si
+     ese mismo firmó. Y nadie sale dos veces: una firma, una casilla. */
+  const puesto=[firmaDe('ejec'), null, firmaDe('vbAdo')];
+  const usados=new Set();
+  puesto.forEach(f=>{ if(f)usados.add(limpio(f.n)) });
+  /* Si el mismo firmó las dos, se queda en la primera. */
+  if(puesto[0]&&puesto[2]&&limpio(puesto[0].n)===limpio(puesto[2].n))puesto[2]=null;
+  const casillas=INFORME_FIRMAS.map(([rol,quien,cargo],i)=>{
+    let f=puesto[i];
+    if(!f&&!usados.has(limpio(quien)))f=todas.find(x=>limpio(x.n)===limpio(quien))||null;
+    if(f)usados.add(limpio(f.n));
+    return {rol, n:(f&&f.n)||quien, cargo:(f&&f.cargo)||cargo, img:f&&f.img};
+  });
+  return `<div class="fir">${casillas.map(x=>`<div class="b">
+      <div class="rol">${esc(x.rol)}</div>
+      <div class="sg">${x.img?`<img src="${x.img}" alt="Firma de ${esc(x.n)}">`:''}</div>
+      <div class="l"><b>${esc(x.n)}</b><span>${esc(x.cargo)}</span></div></div>`).join('')}</div>`;
 })()}
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
@@ -20404,9 +20420,13 @@ function guardarEnCurso(forzar){
   let j; try{ j=JSON.stringify(PSV_TMP) }catch(e){ return }
   if(!forzar&&j===ENCURSO_J)return;
   ENCURSO_J=j;
-  /* Y al archivo. Ésta es la línea que quita el miedo: a partir de
-     aquí, lo escrito está guardado se haga lo que se haga después. */
+  /* Al archivo. Ésta es la línea que quita el miedo: a partir de aquí,
+     lo escrito está guardado se haga lo que se haga después. */
   try{ grabarBorradorAuto() }catch(e){}
+  /* Y en cuanto está en el archivo, la copia aparte SOBRA: sería
+     guardar las mismas fotos dos veces, dos megas cada cuatro
+     segundos, y en la tablet el sitio es justo lo que falta. */
+  if(PSV_TMP.id&&CALIBS.some(c=>c.id===PSV_TMP.id)){ borrarEnCurso(); ENCURSO_J=j; return }
   const foto={ts:Date.now(), act:PSV_TMP.act, tmp:JSON.parse(j),
               seccion:(typeof PSV_ABIERTO_TODO!=='undefined'&&PSV_ABIERTO_TODO)||false};
   try{ bdPon('estado',foto,'enCurso') }catch(e){}
@@ -21116,16 +21136,43 @@ const online=()=>!OFF_SIM&&navigator.onLine;
    fallar. Va a IndexedDB —que aguanta las fotos— y de paso apunta el
    cambio en la tabla de pendientes. localStorage se sigue escribiendo
    como respaldo, y si no entra, no pasa nada: la caja buena es la otra. */
+/* ── EL AVISO DE QUE ESTE EQUIPO NO GUARDA ───────────────────
+   No es un toast que pasa: es una banda que se queda hasta que el
+   equipo vuelva a guardar. Perder media mañana de ensayo merece que
+   moleste. */
+let DISCO_MAL='';
+function avisarDisco(motivo){
+  if(DISCO_MAL===motivo)return;
+  DISCO_MAL=motivo;
+  const v=document.getElementById('bandaDisco'); if(v)v.remove();
+  if(!motivo)return;
+  const d=document.createElement('div');
+  d.id='bandaDisco'; d.className='banda-curso banda-disco';
+  d.innerHTML=`<svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v5M12 17h.01"/></svg>
+    <span><b>Este equipo no está guardando.</b> ${esc(motivo)}
+      Lo que escribas se pierde al recargar: termina desde otro equipo o libera espacio.</span>`;
+  document.body.appendChild(d);
+}
 function guardarLocal(){
   const foto=fotoDatos();
-  bdPon('estado',foto,'datos').catch(()=>{});
+  /* La caja grande es la que manda. Si no acepta el guardado, se dice:
+     antes se callaba y el portal seguía diciendo «Guardado». */
+  bdPon('estado',foto,'datos').then(ok=>{
+    avisarDisco(ok?'':(BD_ROTA||!('indexedDB' in window)
+      ? 'El navegador no deja usar su almacén de datos.'
+      : 'El almacén del navegador está lleno.'));
+  }).catch(()=>avisarDisco('No se pudo escribir en el almacén del navegador.'));
   apuntarPendientes().then(n=>{pintarNet(); if(n)subirPronto()}).catch(()=>{});
-  try{ localStorage.setItem(LS_KEY,JSON.stringify(foto)) }
-  catch(e){
-    /* respaldo lleno: sólo avisamos si tampoco tenemos IndexedDB,
-       porque entonces sí hay riesgo de perder algo */
-    if(BD_ROTA||!('indexedDB' in window))
-      toast('No se pudo guardar en el equipo: almacenamiento lleno');
+  /* El respaldo de texto es pequeño y con fotos dentro no cabe. Que no
+     quepa no es grave —la caja grande es la buena—, pero DEJARLO VIEJO
+     sí lo es: al arrancar se cargaría como si fuera lo último. Si no
+     puede estar al día, se borra. */
+  try{
+    const t=JSON.stringify(foto);
+    if(t.length<3000000)localStorage.setItem(LS_KEY,t);
+    else localStorage.removeItem(LS_KEY);
+  }catch(e){
+    try{ localStorage.removeItem(LS_KEY) }catch(x){}
   }
   return true;
 }
