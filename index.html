@@ -4394,7 +4394,15 @@ function cerrarEnsayoConAtras(){
   return true;                          // consumida: no se cierra todavía
 }
 function cerrarLoDeEncima(q){
-  if(q==='modal'){ if(cerrarEnsayoConAtras())return; closeModal(); }
+  if(q==='modal'){
+    /* Si detrás de este cuadro hay un ensayo esperando —se entró a la
+       ficha fija desde el formulario—, «atrás» vuelve A ÉL. Cerrarlo
+       todo era lo que le hacía perder la mañana: pulsaba atrás para
+       retroceder un paso y se quedaba sin ensayo y fuera del cuadro. */
+    if(typeof PSV_GUARDADO!=='undefined'&&PSV_GUARDADO&&!PSV_TMP){ volverDePlaca(); return }
+    if(cerrarEnsayoConAtras())return;
+    closeModal();
+  }
   else if(q==='drawer')closeDrawer();
   else if(q==='notif')closeNotif();
   else if(q==='menu')document.getElementById('app').classList.remove('rail-open');
@@ -10099,6 +10107,22 @@ const PSV_PLACA=[
  ['figura','Tipo / figura (TYPE)',         '19110LCF-2-CC-MS-31-10-10-LA']
 ];
 let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la placa
+/* Grabar sin mover nada. Mete el papel en el archivo y lo deja en el
+   disco, y ahí acaba: no cierra la orden, no renueva la vigencia, no
+   emite certificado. Es lo que hace falta cuando alguien se va de la
+   pantalla con algo escrito — que exista, no que se dé por terminado. */
+function grabarSinMover(t){
+  if(!t||!t.act)return '';
+  if(!t.id)t.id='pv'+Date.now();
+  if(!t.ord)t.ord=(ordenViva(t.act)||{}).id||'';
+  /* Borrador: es lo que hace que al volver a abrir la válvula se
+     retome esto y no se empiece un papel nuevo encima. */
+  if(!t.veredicto)t.veredicto='incompleto';
+  const i=CALIBS.findIndex(x=>x.id===t.id);
+  if(i>=0)CALIBS[i]=t; else CALIBS.unshift(t);
+  guardarLocal();
+  return t.id;
+}
 /* ── LA FICHA FIJA DE LA VÁLVULA ─────────────────────────────
    Todo lo que NO cambia de un servicio a otro —la placa y lo que se
    mira en el cuerpo— vive aquí, en un solo formulario. Lo escribe
@@ -10121,9 +10145,13 @@ function serieRepetida(txt,menosId){
 }
 function openPlacaPSV(actId){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return;
-  /* Si se entra desde un ensayo sin terminar, ese ensayo no se pierde:
-     queda guardado y se devuelve al volver. */
-  if(PSV_TMP&&PSV_TMP.act===actId)PSV_GUARDADO=PSV_TMP;
+  /* Si se entra desde un ensayo sin terminar, ese ensayo no se pierde.
+     Se graba como borrador ANTES de soltarlo —así existe en el archivo
+     pase lo que pase después: se cierre el cuadro, se pulse atrás o se
+     caiga la pestaña— y se aparta para devolverlo al volver.
+     Se aparta siempre, sea o no la misma válvula: quien entró a mirar
+     una placa quiere volver a lo suyo, no perderlo. */
+  if(PSV_TMP){ grabarSinMover(PSV_TMP); PSV_GUARDADO=PSV_TMP; }
   PSV_TMP=null;
   const m=MODELOS[a.mod]||{};
   /* Media placa es propia de una válvula de seguridad: el sello U/UV,
@@ -15292,6 +15320,16 @@ function closeModal(){
   try{
     if(!SALIR_SIN_GUARDAR&&typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act
        &&document.getElementById('psvDisparos'))guardarPSV(false,true);
+  }catch(e){}
+  /* Y el ensayo que quedó esperando detrás de la ficha fija tampoco se
+     tira por cerrar el cuadro: se graba como borrador y se suelta la
+     referencia, para que no reaparezca detrás de la siguiente ventana
+     que se abra. */
+  try{
+    if(typeof PSV_GUARDADO!=='undefined'&&PSV_GUARDADO){
+      if(!SALIR_SIN_GUARDAR)grabarSinMover(PSV_GUARDADO);
+      PSV_GUARDADO=null;
+    }
   }catch(e){}
   SALIR_SIN_GUARDAR=false;
   $('#modal').classList.remove('on');
