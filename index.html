@@ -11337,8 +11337,10 @@ function datosInforme(idOrden,solo){
   const c=cli((ACTIVOS.find(a=>a.id===o.act)||{}).cli)||{};
   const items=ls.map(l=>{
     const a=ACTIVOS.find(x=>x.id===l.act)||{};
-    /* El ensayo que cerró esa línea; si todavía no cerró, el que haya. */
-    const e=(l.calib&&CALIBS.find(x=>x.id===l.calib))||recepDe(l.act)||null;
+    /* El ensayo DE ESA LÍNEA. Nunca «el que haya de esa válvula»: eso
+       traía el del servicio anterior, con la firma de quien lo hizo
+       entonces. */
+    const e=ensayoDeLinea(l);
     return {l,a,e,m:MODELOS[a.mod]||{}};
   });
   const conE=items.filter(x=>x.e);
@@ -11778,6 +11780,10 @@ ${/* Las tres firmas del informe: quién lo elaboró, quién lo revisó y
      el visto bueno de gerencia. La que no se ha firmado sale con su
      nombre y su cargo sobre la raya, para firmarla en el papel. */''}
 ${(()=>{
+  /* Una rúbrica sólo puede salir sobre el nombre de quien la dibujó.
+     Si el que hizo el trabajo no es ninguno de los tres de la casa, su
+     casilla sale con la raya y se firma en el papel — antes que
+     estampar la firma de un tercero. */
   const rubricas=[];
   conE.forEach(x=>(x.e.firmas||[]).forEach(f=>{ if(f&&f.img)rubricas.push(f) }));
   const limpio=x=>String(x||'').trim().toLowerCase();
@@ -15201,7 +15207,17 @@ function avanzarGrupo(g,etapa){
 function ensayoDeLinea(o){
   if(!o)return null;
   if(o.calib){ const c=CALIBS.find(x=>x.id===o.calib); if(c)return c }
-  return CALIBS.find(x=>x.ord===o.id)||recepDe(o.act);
+  /* Los papeles de ESTA línea, el más avanzado primero: desde que el
+     ensayo se guarda solo puede haber un borrador al lado del bueno, y
+     el que manda es el que está firmado y cerrado. */
+  const suyos=CALIBS.filter(x=>x.tipo==='psv'&&x.ord&&x.ord===o.id);
+  if(suyos.length){
+    const peso=c=>((c.firmas||[]).some(f=>f&&f.img)?2:0)
+                 +(c.veredicto&&c.veredicto!=='incompleto'?1:0);
+    return suyos.slice().sort((a,b)=>peso(b)-peso(a)
+      ||String(b.horaFin||b.fecha||'').localeCompare(String(a.horaFin||a.fecha||'')))[0];
+  }
+  return recepDe(o.act);
 }
 const tieneVistoBueno=o=>{
   const c=ensayoDeLinea(o);
