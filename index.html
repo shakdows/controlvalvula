@@ -9368,7 +9368,14 @@ function fotosDisparo(t){
   if(!Array.isArray(t.fotos)) t.fotos = t.foto ? [t.foto] : [];
   return t.fotos;
 }
-const sincronizarFotoDisparo=t=>{ t.foto=fotosDisparo(t)[0]||''; };
+/* La copia de la primera foto sólo existe para los papeles viejos, los
+   de cuando cada disparo llevaba una sola. Mientras haya lista, la
+   copia sobra — y una foto de celular son doscientos kilos. */
+const sincronizarFotoDisparo=t=>{
+  if(!t)return;
+  if(fotosDisparo(t).length){ if(t.foto)delete t.foto }
+  else if(t.foto)delete t.foto;
+};
 
 function psvFotoDisparo(files,i){
   const l=[...(files||[])]; if(!l.length)return;
@@ -9854,7 +9861,12 @@ function fotosLlegada(t){
   return t.fotosLlego;
 }
 /* La primera foto sigue siendo «la» foto de la prueba inicial. */
-function sincronizarAsFound(t){ t.fotoAsFound=(fotosLlegada(t)[0]||{}).d||''; }
+/* Igual con la de la prueba de entrada: la lista manda y la copia
+   suelta sólo sirve para leer papeles viejos. */
+function sincronizarAsFound(t){
+  if(!t)return;
+  if(t.fotoAsFound)delete t.fotoAsFound;
+}
 
 function psvFotoAsFound(files){
   const l=[...(files||[])]; if(!l.length||!PSV_TMP)return;
@@ -10888,8 +10900,8 @@ function verPSV(id){
     ${c.coment?`<section class="pd-b"><h5>Conclusiones</h5>
       <p class="pd-txt">${esc(c.coment)}</p></section>`:''}
 
-    ${c.fotoAsFound?`<section class="pd-b"><h5>Cómo llegó</h5>
-    <img src="${c.fotoAsFound}" alt="Prueba inicial" style="max-width:320px;width:100%;border-radius:var(--r-1);border:1px solid var(--line-2)">
+    ${(fotosLlegada(c)[0]||{}).d?`<section class="pd-b"><h5>Cómo llegó</h5>
+    <img src="${(fotosLlegada(c)[0]||{}).d}" alt="Prueba inicial" style="max-width:320px;width:100%;border-radius:var(--r-1);border:1px solid var(--line-2)">
     ${c.recep?`<p class="pd-txt">${esc(c.recep)}</p>`:''}</section>`:''}
   ${psvFotosHTML(c)}
 
@@ -11780,9 +11792,11 @@ ${/* Las tres firmas del informe: quién lo elaboró, quién lo revisó y
      el visto bueno de gerencia. La que no se ha firmado sale con su
      nombre y su cargo sobre la raya, para firmarla en el papel. */''}
 ${(()=>{
-  /* Quién firmó de verdad, dentro del portal. La primera que aparezca
-     de cada clase: la del que hizo el trabajo y la del visto bueno. */
-  const limpio=x=>String(x||'').trim().toLowerCase();
+  /* Una sola firma: la del que hizo el mantenimiento, con SU nombre,
+     SU cargo y SU rúbrica. Las otras dos casillas de la cadena de
+     aprobación salían siempre con la raya vacía —esas firmas no se
+     ponen en el portal— y un papel firmado no lleva sitios en blanco.
+     Quién revisa y quién aprueba ya consta en la carátula. */
   const firmaDe=rol=>{
     for(const x of conE){
       const f=(x.e.firmas||[]).find(y=>y&&y.rol===rol&&y.img&&String(y.n||'').trim());
@@ -11790,27 +11804,15 @@ ${(()=>{
     }
     return null;
   };
-  const todas=[];
-  conE.forEach(x=>(x.e.firmas||[]).forEach(f=>{ if(f&&f.img&&String(f.n||'').trim())todas.push(f) }));
-  /* El que hizo el trabajo ocupa «Elaborado por» y el que dio el visto
-     bueno «Aprobado por», cada uno con SU nombre y SU cargo. El del
-     medio se queda con el nombre de la casa y sólo lleva rúbrica si
-     ese mismo firmó. Y nadie sale dos veces: una firma, una casilla. */
-  const puesto=[firmaDe('ejec'), null, firmaDe('vbAdo')];
-  const usados=new Set();
-  puesto.forEach(f=>{ if(f)usados.add(limpio(f.n)) });
-  /* Si el mismo firmó las dos, se queda en la primera. */
-  if(puesto[0]&&puesto[2]&&limpio(puesto[0].n)===limpio(puesto[2].n))puesto[2]=null;
-  const casillas=INFORME_FIRMAS.map(([rol,quien,cargo],i)=>{
-    let f=puesto[i];
-    if(!f&&!usados.has(limpio(quien)))f=todas.find(x=>limpio(x.n)===limpio(quien))||null;
-    if(f)usados.add(limpio(f.n));
-    return {rol, n:(f&&f.n)||quien, cargo:(f&&f.cargo)||cargo, img:f&&f.img};
-  });
-  return `<div class="fir">${casillas.map(x=>`<div class="b">
-      <div class="rol">${esc(x.rol)}</div>
-      <div class="sg">${x.img?`<img src="${x.img}" alt="Firma de ${esc(x.n)}">`:''}</div>
-      <div class="l"><b>${esc(x.n)}</b><span>${esc(x.cargo)}</span></div></div>`).join('')}</div>`;
+  const f=firmaDe('ejec');
+  /* Si todavía no ha firmado nadie, se pone el nombre del encargado
+     del trabajo sobre la raya, para firmarla en el papel. */
+  const quien=(f&&f.n)||(conE[0]&&conE[0].e.respNombre)||INFORME_FIRMAS[0][1];
+  const cargo=(f&&f.cargo)||(conE[0]&&conE[0].e.respArea)||INFORME_FIRMAS[0][2];
+  return `<div class="fir una"><div class="b">
+      <div class="rol">${esc(INFORME_FIRMAS[0][0])}</div>
+      <div class="sg">${f?`<img src="${f.img}" alt="Firma de ${esc(quien)}">`:''}</div>
+      <div class="l"><b>${esc(quien)}</b><span>${esc(cargo)}</span></div></div></div>`;
 })()}
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
@@ -13082,15 +13084,18 @@ function comprimirFoto(f){
       im.onerror=()=>falla(new Error('no se pudo abrir la imagen'));
       im.onload=()=>{
         try{
-          /* 1200 px y 0,75 de calidad: una foto de mantenimiento se
-             ve igual de bien y pesa la mitad. El servidor corta a los
-             ocho segundos y un ensayo son seis fotos. */
-          const k=Math.min(1,1200/Math.max(im.width,im.height));
+          /* 1000 px y 0,62 de calidad. En el papel cada foto ocupa
+             unos 85 mm: 1000 px son 300 puntos por pulgada, más de lo
+             que imprime una láser de oficina. Pesa la mitad que antes,
+             y esa mitad es la diferencia entre que la tablet guarde y
+             que no, y entre que la fila suba antes de los ocho
+             segundos del servidor o se quede en la cola. */
+          const k=Math.min(1,1000/Math.max(im.width,im.height));
           const c=document.createElement('canvas');
           c.width=Math.max(1,Math.round(im.width*k));
           c.height=Math.max(1,Math.round(im.height*k));
           c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-          listo(c.toDataURL('image/jpeg',0.75));
+          listo(c.toDataURL('image/jpeg',0.62));
         }catch(err){falla(err)}
       };
       im.src=e.target.result;
