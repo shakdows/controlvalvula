@@ -8308,16 +8308,29 @@ function psvVeredicto(c){
   const prom=t.reduce((a,b)=>a+b,0)/t.length;
   const limite=tol.tipo==='abs' ? 2/factorU(u) : set*tol.pct/100;
   const dif=prom-set, desv=set?dif/set*100:0;
-  const ok=Math.abs(dif)<=limite+1e-9;
-  /* El veredicto lo decide el promedio: así lo dice el procedimiento
-     del propio formato. Pero si algún disparo suelto se salió de la
-     banda y el promedio salvó la papeleta, eso hay que decirlo — la
-     válvula está disparando disparejo aunque el número final cierre.
-     Es un aviso, no un veto: la norma no lo prohíbe. */
-  const sueltos=t.filter(x=>Math.abs(x-set)>limite+1e-9).length;
+  /* CADA disparo tiene que caer dentro de la banda, no sólo el
+     promedio. Antes bastaba con que la media cerrara: con 102, 99 y
+     104.5 sobre un set de 100 al 3 %, el promedio da 101.83 y salía
+     APROBADO con el tercero a +4.5 %. Una válvula de seguridad que un
+     día abre a 104.5 abre a 104.5 el día que hay que aliviar, no al
+     promedio de tres intentos. Si uno se sale, se ajusta y se vuelve a
+     disparar. */
+  const fuera=t.map((x,i)=>({n:i+1, v:x, d:set?(x-set)/set*100:0}))
+               .filter(x=>Math.abs(x.v-set)>limite+1e-9);
+  const promDentro=Math.abs(dif)<=limite+1e-9;
+  const ok=promDentro&&!fuera.length;
+  /* Por qué se rechaza, con nombre: no es lo mismo que la válvula esté
+     entera desajustada que que dispare disparejo. */
+  const motivo=ok?'' : fuera.length
+    ? `${fuera.length===1?'el disparo':'los disparos'} ${fuera.map(x=>x.n).join(', ')} ${
+        fuera.length===1?'quedó':'quedaron'} fuera de la banda (${
+        fuera.map(x=>`${n2(x.v)} ${u} · ${x.d>0?'+':''}${n2(x.d)} %`).join(' · ')})`
+    : `el promedio quedó fuera de la banda`;
   return {estado:ok?'aprobado':'rechazado', prom, dif, desv, limite, tol,
           min:set-limite, max:set+limite, disparos:t, set, und:u,
-          dispersos:ok?sueltos:0};
+          fuera, promDentro, motivo,
+          /* Se conserva el nombre viejo para lo que ya lo leía. */
+          dispersos:fuera.length};
 }
 /* El blowdown: la válvula debe volver a cerrar un 8 % por debajo
    del seteo. Informativo — el formato lo muestra, no lo veta. */
@@ -9593,8 +9606,9 @@ function pintarPSVResultado(){
       ${b?`<span class="psv-regla">Blowdown: cierra a ${n2(b.prom)} ${esc(u)} · ${n2(b.pct)} % por debajo
         de ${n2(b.base)} ${esc(u)}, que es ${b.medido?'la presión a la que abrió':'la de ajuste requerida'} ·
         se espera ≤ ${n2(b.lim)} % → ${n2(b.esperado)} ${esc(u)} ${b.dentro?'✓':'· fuera de rango'}</span>`:''}
-      ${v.dispersos?`<span class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
-        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad antes de cerrar.</span>`:''}
+      ${v.fuera&&v.fuera.length?`<span class="psv-aviso">⚠ ${v.fuera.length} de ${v.disparos.length} disparo${
+        v.fuera.length===1?'':'s'} fuera de la banda${v.promDentro?' — el promedio cierra, pero no basta':''}.
+        La válvula se rechaza: hay que ajustarla y volver a disparar.</span>`:''}
     </div>
     <!-- El mismo dibujo que va al certificado, aquí mismo mientras se
          escribe: un número dentro de la banda y otro fuera se leen
@@ -10735,8 +10749,9 @@ function verPSV(id){
           <span class="crit-lock">${esc(v.tol.regla)}</span>
         </div>
       </div>
-      ${v.dispersos?`<p class="psv-aviso">⚠ ${v.dispersos} de ${v.disparos.length} disparos quedaron fuera de la banda;
-        pasa por el promedio, como manda el procedimiento. Vale la pena revisar la repetibilidad.</p>`:''}
+      ${v.fuera&&v.fuera.length?`<p class="psv-aviso">⚠ ${v.fuera.length} de ${v.disparos.length} disparo${
+        v.fuera.length===1?'':'s'} fuera de la banda${v.promDentro?' — el promedio cierra, pero no basta':''}.
+        Ensayo rechazado: ajustar y volver a disparar.</p>`:''}
     </section>`:''}
 
     ${bloque('Equipo patrón',[
@@ -12084,8 +12099,8 @@ function psvDocumento(id){
     <div><span>Blowdown según API</span><b>${b?n2(b.pct)+' % (se espera ≤ '+n2(b.lim)+' %)'
             :(cierreEsAutomatico(c)?'no se midió el recierre':'—')}</b></div>
   </div>
-  ${v.dispersos?`<table class="res" style="margin-top:4px">${fila('OBSERVACIÓN DE REPETIBILIDAD',
-      v.dispersos+' de '+v.disparos.length+' disparos fuera de la banda; el promedio cumple, según el procedimiento.')}</table>`:''}
+  ${v.fuera&&v.fuera.length?`<table class="res" style="margin-top:4px">${fila('MOTIVO DEL RECHAZO',
+      esc(v.motivo)+'.')}</table>`:''}
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}
     <small>${v.estado==='aprobado'?'QUEDA OPERATIVA LA VÁLVULA':'NO QUEDA OPERATIVA'}
       · ${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
