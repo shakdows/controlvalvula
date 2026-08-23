@@ -11125,6 +11125,9 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 .vd span{font-size:11.5px;color:#5b6470}
 .txt{border:1px solid #e4e7ea;border-radius:7px;padding:10px 12px;min-height:80px;font-size:12px;white-space:pre-wrap}
 .fir{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+/* Una sola firma: no se estira de lado a lado, se queda del ancho de
+   una firma y centrada, como en el papel de la casa. */
+.fir.una{grid-template-columns:76mm;justify-content:center}
 .fir .b{border:1px solid #e4e7ea;border-radius:7px;padding:10px 12px;min-height:170px;display:flex;flex-direction:column}
 .fir img{max-height:110px;max-width:100%;width:auto;object-fit:contain;align-self:center;margin:auto 0 6px}
 .fir .l{margin-top:auto;border-top:1px solid #cfd4d9;padding-top:6px;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c}
@@ -11175,13 +11178,12 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
     :vd==='rechaza'?esc(c.rcMotivo||'Disparó fuera de tolerancia.')
     :'Todavía no se ha decidido si se acepta o se devuelve.'}</span>
 </div>
-<h2>Comentarios</h2>
-<div class="txt">${esc(c.rcComent||'')||'&nbsp;'}</div>
-<div class="fir">
+${String(c.rcComent||'').trim()?`<h2>Comentarios</h2>
+<div class="txt">${esc(c.rcComent)}</div>`:''}
+<div class="fir una">
   <div class="b">${rec&&rec.img?`<img src="${rec.img}" alt="Firma de ${esc(rec.n)}">`:''}
     <div class="l">Firma ADSA · mecánico que hizo la prueba<b>${rec?esc(rec.n)+(rec.cargo?' · '+esc(rec.cargo):''):'—'}</b>
       ${rec?esc(fPE(rec.f)):''}</div></div>
-  <div class="b"><div class="l">Firma cliente<b>&nbsp;</b>&nbsp;</div></div>
 </div>
 <p class="nota">Se realizó pruebas de SETEO de acuerdo a los parámetros y procedimientos que establece
   la norma ASME acorde a estándares API 527 y 576.</p>
@@ -11566,6 +11568,9 @@ li{margin-bottom:2px}
    ancho de una rúbrica, que es como se firma un papel. */
 .fir.una{grid-template-columns:70mm;justify-content:center;margin-top:34px}
 .fir .b{text-align:center;display:flex;flex-direction:column;justify-content:flex-end}
+/* Quién firma en cada casilla: elaborado, revisado, aprobado. */
+.fir .rol{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:#102d69;margin-bottom:6px}
 .fir .sg{height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}
 .fir img{max-height:44px;max-width:100%;object-fit:contain;display:block;margin:0 auto}
 .fir .l{border-top:1px solid #1a1d21;padding-top:5px;font-size:11px}
@@ -11574,6 +11579,8 @@ li{margin-bottom:2px}
 .pie{margin-top:18px;padding-top:8px;border-top:1px solid #eef0f2;font-size:8.2px;color:#8a929c;text-align:center}
 /* Los renglones en blanco del formato: para escribir a mano lo que
    no estaba previsto. */
+/* Un rótulo DENTRO de un apartado: ni numera ni entra en el índice. */
+h3.sub{font-size:12.5px;font-weight:700;color:#1a1d21;margin:12px 0 4px}
 .renglones{margin:8px 0 4px;break-inside:avoid;page-break-inside:avoid}
 .renglones span{display:block;border-bottom:1px solid #9aa2ac;height:16px;margin-bottom:7px}
 /* Lo que escribió el taller, en el informe: se distingue de los
@@ -11737,19 +11744,24 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
     esc(conE.filter((x,i)=>veredictos[i].estado==='rechazado').map(x=>`${(x.a.tag||x.a.ser||'')}: ${x.e.coment||'ver certificado'}`).join(' · '))
   : 'No se encontraron problemas en los equipos. Se realizó la calibración en el banco de pruebas y se dejaron los equipos con el set de presión según placa.'}</p>
 
-<h2>Recomendaciones generales</h2>
-${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
-<ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
-
-
 <h2>Conclusiones</h2>
 <p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
   de seguridad, dejándola${conE.length===1?'':'s'} con el set requerido según placa.
   ${aprobadas?`${aprobadas} válvula${aprobadas===1?'':'s'} se encuentra${aprobadas===1?'':'n'} operativa${aprobadas===1?'':'s'}.`:''}
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
-${conE.filter(x=>String(x.e.coment||'').trim()).map(x=>
-  `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}
+${/* Lo que escribió gerencia sobre el trabajo entero va aquí, pegado
+     al resumen, que es de lo que habla. Antes caía al final, detrás
+     de las válvulas, y se leía como si fuera de la última. */''}
 ${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
+${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
+${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
+  return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
+    `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}`:''})()}
+
+
+<h2>Recomendaciones generales</h2>
+${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
+<ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
 
 
 ${/* PENDIENTES: lo que queda por hacer después de entregar —la
@@ -11759,18 +11771,24 @@ ${/* PENDIENTES: lo que queda por hacer después de entregar —la
 ${String(o.pend||'').trim()?`<h2>Pendientes</h2>
 <p class="escrito">${esc(o.pend).replace(/\n/g,'<br>')}</p>`:''}
 
-${/* Una sola firma: la del técnico que hizo el mantenimiento, con su
-     rúbrica y su nombre —el del ensayo—. Quién revisa y quién aprueba
-     ya consta en la carátula; repetirlo aquí con dos rayas sin firmar
-     hace parecer que el trabajo no se revisó. */''}
+${/* Las tres firmas del informe: quién lo elaboró, quién lo revisó y
+     quién lo aprueba. Los nombres son los de la casa —INFORME_FIRMAS,
+     los mismos de la carátula— y la rúbrica se pone en la casilla de
+     quien de verdad firmó dentro del portal: el técnico del ensayo,
+     el visto bueno de gerencia. La que no se ha firmado sale con su
+     nombre y su cargo sobre la raya, para firmarla en el papel. */''}
 ${(()=>{
-  const quien=(ejec&&ejec.n)||(conE[0]&&conE[0].e.respNombre)||'';
-  const cargo=(ejec&&ejec.cargo)||(conE[0]&&conE[0].e.respArea)||'Técnico';
-  return `<div class="fir una">
-    <div class="b"><div class="sg">${ejec&&ejec.img?`<img src="${ejec.img}" alt="Firma">`:''}</div>
-      <div class="l"><b>${esc(quien)||'&nbsp;'}</b>
-        <span>${esc(cargo)} · realizó el mantenimiento y la calibración</span></div></div>
-  </div>`;
+  const rubricas=[];
+  conE.forEach(x=>(x.e.firmas||[]).forEach(f=>{ if(f&&f.img)rubricas.push(f) }));
+  const limpio=x=>String(x||'').trim().toLowerCase();
+  const suya=quien=>rubricas.find(f=>limpio(f.n)===limpio(quien))||null;
+  return `<div class="fir">${INFORME_FIRMAS.map(([rol,quien,cargo])=>{
+    const f=suya(quien);
+    return `<div class="b">
+      <div class="rol">${esc(rol)}</div>
+      <div class="sg">${f?`<img src="${f.img}" alt="Firma de ${esc(quien)}">`:''}</div>
+      <div class="l"><b>${esc(quien)}</b><span>${esc(cargo)}</span></div></div>`;
+  }).join('')}</div>`;
 })()}
 
 <p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
