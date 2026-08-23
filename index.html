@@ -8785,6 +8785,7 @@ function firmarRecepcion(){
     toast('Escribe por qué se rechaza');$('#pv-rcMotivo')&&$('#pv-rcMotivo').focus();return}
   PSV_FIRMA_VUELTA=PSV_TMP.act;
   const id=guardarPSV(false,true);
+  guardarAntesDeFirmar();
   const yo=(typeof SES!=='undefined'&&SES)?SES:null;
   if(id)openFirma(id,'recep',PSV_TMP.rcRecibe||(yo?yo.n:''),(yo&&yo.cargo)||'Técnico');
 }
@@ -9472,6 +9473,7 @@ function firmarVistoBueno(){
   if(S.rol!=='admin'){toast('El visto bueno lo pone gerencia');return}
   PSV_FIRMA_VUELTA=PSV_TMP.act;          // para volver al formulario tras firmar
   const id=guardarPSV(false,true);
+  guardarAntesDeFirmar();
   if(id)openFirma(id,'vbAdo',(typeof SES!=='undefined'&&SES?SES.n:''),
                   (typeof SES!=='undefined'&&SES?SES.cargo||'Gerencia':'Gerencia'));
 }
@@ -9487,9 +9489,58 @@ function firmarEnsayo(){
   if(!PSV_TMP.respNombre){toast('Escribe primero el nombre del encargado');$('#pv-resp')&&$('#pv-resp').focus();return}
   PSV_FIRMA_VUELTA=PSV_TMP.act;
   const id=guardarPSV(false,true);          // guarda sin cerrar
+  guardarAntesDeFirmar();                   // por si algo lo pisa mientras firma
   if(id)openFirma(id,'ejec',PSV_TMP?PSV_TMP.respNombre:'',PSV_TMP?PSV_TMP.respArea:'');
 }
 let PSV_FIRMA_VUELTA=null;
+/* ── LO ESCRITO ANTES DE FIRMAR SIGUE ESCRITO DESPUÉS ────────
+   La copia de seguridad que se toma al abrir el lienzo. */
+let PSV_ANTES_FIRMA=null;
+function guardarAntesDeFirmar(){
+  try{ PSV_ANTES_FIRMA=PSV_TMP?{id:String(PSV_TMP.id||''), j:JSON.stringify(PSV_TMP)}:null }
+  catch(e){ PSV_ANTES_FIRMA=null }
+}
+/* Vacío es lo que el técnico ve como una casilla en blanco. */
+const casillaVacia=v=>v==null||v===''||(Array.isArray(v)&&!v.length);
+/* Devuelve cuántas casillas hubo que rescatar. Cero es lo normal. */
+function rellenarPerdido(antes,ahora){
+  if(!antes||!ahora)return 0;
+  let n=0;
+  Object.keys(antes).forEach(k=>{
+    /* La firma es justo lo que viene a cambiar: esa no se toca. */
+    if(k==='firmas')return;
+    /* Los disparos son una lista y se miran uno por uno: perder el
+       tercero y conservar los dos primeros es exactamente lo que
+       pasó. */
+    if(k==='tests'){
+      const a=antes.tests, b=ahora.tests;
+      if(!Array.isArray(a))return;
+      if(!Array.isArray(b)){ ahora.tests=JSON.parse(JSON.stringify(a)); n+=a.length; return }
+      a.forEach((t,i)=>{
+        if(!b[i]){ b[i]=JSON.parse(JSON.stringify(t)); n++; return }
+        Object.keys(t).forEach(c=>{ if(!casillaVacia(t[c])&&casillaVacia(b[i][c])){ b[i][c]=t[c]; n++ } });
+      });
+      return;
+    }
+    if(!casillaVacia(antes[k])&&casillaVacia(ahora[k])){ ahora[k]=antes[k]; n++ }
+  });
+  return n;
+}
+/* Se llama al volver del lienzo, sobre el papel del archivo y sobre el
+   que está abierto en pantalla. */
+function rescatarTrasFirmar(calibId,archivo,pantalla){
+  const g=PSV_ANTES_FIRMA; PSV_ANTES_FIRMA=null;
+  if(!g||g.id!==String(calibId))return 0;
+  let antes=null; try{ antes=JSON.parse(g.j) }catch(e){ return 0 }
+  if(!antes)return 0;
+  let n=rellenarPerdido(antes,archivo);
+  if(pantalla&&pantalla!==archivo)n+=rellenarPerdido(antes,pantalla);
+  if(n){
+    registrar('Ensayo PSV',`Al firmar se recuperaron ${n} dato${n===1?'':'s'} del ensayo`);
+    toast(`Se recuperó lo que estabas escribiendo · ${n} dato${n===1?'':'s'}`);
+  }
+  return n;
+}
 function quitarFirmaEnsayo(){
   if(!PSV_TMP)return;
   PSV_TMP.firmas=(PSV_TMP.firmas||[]).filter(x=>x.rol!=='ejec');
@@ -10614,7 +10665,7 @@ function openFirma(calibId,rol,nomPre,cargoPre){
    <div style="display:flex;gap:8px;margin-top:8px">
      <button class="btn quiet" onclick="limpiarFirma()">Borrar y volver a firmar</button>
    </div>`;
-  $('#mFoot').innerHTML=`<button class="btn sec" onclick="verPSV('${calibId}')">Volver</button>
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="PSV_ANTES_FIRMA=null;verPSV('${calibId}')">Volver</button>
     <button class="btn" onclick="guardarFirma('${calibId}','${rol}')">Firmar</button>`;
   $('#modal').classList.add('on');
   setTimeout(()=>montarFirma(),60);
@@ -10677,6 +10728,10 @@ function guardarFirma(calibId,rol){
      lo que hay. */
   const abierto = PSV_TMP && PSV_TMP.id && String(PSV_TMP.id)===String(calibId);
   if(abierto)poner(PSV_TMP);
+  /* Y lo que estaba escrito antes de ponerse a firmar sigue escrito:
+     se rellena cualquier casilla que haya quedado en blanco mientras
+     duró el lienzo. */
+  rescatarTrasFirmar(calibId,c,abierto?PSV_TMP:null);
   const a=ACTIVOS.find(x=>x.id===c.act)||{};
   registrar('Firma',`${n} firmó el ensayo de ${a.tag||''}`);
   toast('Firmado');
@@ -19770,6 +19825,15 @@ function enEdicion(col,clave){
   }catch(e){}
   return false;
 }
+/* El papel vivo, el que está en pantalla ahora mismo. */
+function datoEnEdicion(col,clave){
+  const k=String(clave);
+  try{
+    if(col==='CALIBS'&&typeof PSV_TMP!=='undefined'&&PSV_TMP&&String(PSV_TMP.id)===k)return PSV_TMP;
+    if(col==='CALIBS'&&typeof PSV_GUARDADO!=='undefined'&&PSV_GUARDADO&&String(PSV_GUARDADO.id)===k)return PSV_GUARDADO;
+  }catch(e){}
+  return null;
+}
 async function nubeBajar(reemplazar){
   /* Si este equipo venía desfasado, la primera bajada trae todo. */
   if(BAJAR_TODO){ NUBE_DESDE=null; BAJAR_TODO=false; }
@@ -19815,7 +19879,10 @@ async function nubeBajar(reemplazar){
        minuto; ponerla encima le borra al técnico lo que acaba de
        teclear. Se deja lo de aquí, que en la siguiente vuelta sube y
        gana — el que está delante de la válvula es el que sabe. */
-    if(enEdicion(f.coleccion,f.clave))return;
+    if(enEdicion(f.coleccion,f.clave)){
+      if(i<0){ const vivo=datoEnEdicion(f.coleccion,f.clave); if(vivo)a.push(vivo) }
+      return;
+    }
     if(i>=0)a[i]=f.datos; else a.push(f.datos);
   });
   /* Lo que baja de la nube puede venir de un equipo que todavía tiene
