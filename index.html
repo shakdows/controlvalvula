@@ -9301,11 +9301,36 @@ function pintarPSV(){
    la foto de ESE disparo y una nota. Se añaden y se quitan las que
    haga falta, siempre con un mínimo de tres —que es lo que exige el
    formato para promediar—. */
+/* Qué filas están cerradas ahora mismo, como una cadena: '011'. Sirve
+   para saber si hace falta repintar o no. */
+function cerrojoDisparos(l){
+  const listo=x=>num(x.v)>0&&fotosDisparo(x).length>0;
+  return l.map((t,i)=>(i>0&&!l.slice(0,i).every(listo))?'1':'0').join('');
+}
+/* Repintar el cuadro devolviendo el foco y el cursor donde estaban:
+   el técnico sigue escribiendo y en la tablet no se le cierra el
+   teclado. */
+function repintarDisparosSinPerderElFoco(){
+  const a=document.activeElement;
+  const id=a&&a.id?a.id:'';
+  let ini=null, fin=null;
+  try{ ini=a.selectionStart; fin=a.selectionEnd }catch(e){}
+  pintarDisparos();
+  if(!id)return;
+  const b=document.getElementById(id); if(!b)return;
+  try{ b.focus({preventScroll:true}) }catch(e){ b.focus() }
+  try{ if(ini!=null)b.setSelectionRange(ini,fin) }catch(e){}
+}
 function psvDisparo(i,k,v){
   const l=disparosDe(PSV_TMP); if(!l[i])return;
+  const antes=cerrojoDisparos(l);
   l[i][k]=v;
   if(k==='v'&&String(v||'').trim())quitarFalta('dsp-v'+i);
   if(k==='v'||k==='pc')pintarPSVResultado(); else pintarDisparos();
+  /* Si escribir este número abre —o cierra— alguna fila, hay que
+     enseñarlo YA. Sólo entonces se repinta: una vez por fila, no una
+     por tecla. */
+  if((k==='v'||k==='pc')&&cerrojoDisparos(l)!==antes)repintarDisparosSinPerderElFoco();
 }
 function psvAgregarDisparo(){
   /* el nuevo nace con el cierre ya puesto, como los demás */
