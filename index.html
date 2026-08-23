@@ -4386,7 +4386,9 @@ function cerrarEnsayoConAtras(){
     return true;
   }
   if(DESCARTE_ARMADO&&Date.now()-DESCARTE_ARMADO<3000){
-    DESCARTE_ARMADO=0; PSV_TMP=null; closeModal(); renderAll();
+    DESCARTE_ARMADO=0;
+    try{ deshacerLoEscrito(PSV_TMP) }catch(e){}
+    PSV_TMP=null; closeModal(); renderAll();
     return true;
   }
   DESCARTE_ARMADO=Date.now();
@@ -8563,6 +8565,7 @@ function openPSV(actId,edit,seccion){
   /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
      que firma el papel. */
   $('#mTitle').textContent=(c?'Mantenimiento · ':'Mantenimiento · ')+(a.tag||a.ser||'');
+  apuntarComoSeAbrio();
   pintarPSV();
   $('#modal').classList.add('on');
 }
@@ -9009,8 +9012,19 @@ function abrirPasosConClave(){
   mostrarTodosLosPasos();
   registrar('Mantenimiento','Se abrieron los pasos 1 y 2 con la contraseña del jefe');
 }
+/* Se numeran los pasos QUE SE VEN, seguidos. El número es una guía de
+   por dónde va el trabajo, no un código: enseñar «4» y «6» y esconder
+   el 5 hace buscar un paso que no está. */
+function renumerarPasos(){
+  let i=0;
+  document.querySelectorAll('#mBody details.psv-sec').forEach(d=>{
+    if(d.classList.contains('oculto'))return;
+    const e=d.querySelector('summary .pn'); if(e)e.textContent=String(++i);
+  });
+}
 function mostrarTodosLosPasos(){
   document.querySelectorAll('#mBody .psv-sec.oculto').forEach(d=>d.classList.remove('oculto'));
+  renumerarPasos();
   const av=$('#psvVerTodo');
   if(av)av.innerHTML=`<span>Estás viendo el formulario entero, incluidos los pasos 1 y 2.</span>
     <button class="btn quiet xs" onclick="ocultarLosPasos()">Ocultar los pasos 1 y 2</button>`;
@@ -9106,7 +9120,7 @@ function pintarPSV(){
      </div>`;
    })()}
    <div class="psv-secs">
-    <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary>1 · Orden de compra y equipo de medición${marca(cuenta(1))}
+    <details class="psv-sec${paso(1)}" ${cabeceraMia&&tocan.includes(1)?'open':''}><summary><span class="pn">1</span> · Orden de compra y equipo de medición${marca(cuenta(1))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">${cabeceraMia?'lo llenas tú':'sólo lectura'}</span></summary><div class="psv-b">
       ${cabeceraMia?`
       <div class="two">
@@ -9127,12 +9141,12 @@ function pintarPSV(){
        ${bloquePatron(t)}`}
     </div></details>
 
-    <details class="psv-sec${paso(2)}" ${tocan.includes(2)?'open':''}><summary>2 · Prueba de entrada${marca(cuenta(2))}
+    <details class="psv-sec${paso(2)}" ${tocan.includes(2)?'open':''}><summary><span class="pn">2</span> · Prueba de entrada${marca(cuenta(2))}
       <span class="psv-req">decide si entra al taller</span></summary><div class="psv-b">
       ${bloqueRecepcion(t,a,ayuda,F)}
     </div></details>
 
-    <details class="psv-sec${paso(3)}" ${tocan.includes(3)?'open':''}><summary>3 · Desarme${marca(cuenta(3))}
+    <details class="psv-sec${paso(3)}" ${tocan.includes(3)?'open':''}><summary><span class="pn">3</span> · Desarme${marca(cuenta(3))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">la foto del antes sólo existe ahora</span></summary><div class="psv-b">
       <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-2h6l2 2h3v12H4z"/><circle cx="12" cy="13" r="3.4"/></svg>
         <div>Abre la válvula y fotografía <b>cada pieza que venga mal</b>: una foto por pieza, diciendo cuál es
@@ -9149,7 +9163,7 @@ function pintarPSV(){
       <div id="pvFotos"></div>
     </div></details>
 
-    <details class="psv-sec${paso(4)}" ${tocan.includes(4)?'open':''}><summary>4 · Prueba de disparo${marca(cuenta(4))}
+    <details class="psv-sec${paso(4)}" ${tocan.includes(4)?'open':''}><summary><span class="pn">4</span> · Prueba de disparo${marca(cuenta(4))}
       <span class="psv-req">lo que decide el resultado</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-setEsp">Presión de ajuste requerida (set press) <span class="req-dot">*</span>${
@@ -9173,7 +9187,7 @@ function pintarPSV(){
       <div id="psvRes"></div>
     </div></details>
 
-    <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary>5 · Conclusiones${marca(cuenta(5))}
+    <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary><span class="pn">5</span> · Conclusiones${marca(cuenta(5))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
       <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
         ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
@@ -9208,7 +9222,7 @@ function pintarPSV(){
       })()}
     </div></details>
 
-    <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary>6 · Firmas${marca(cuenta(6))}
+    <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary><span class="pn">6</span> · Firmas${marca(cuenta(6))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
@@ -9290,6 +9304,7 @@ function pintarPSV(){
      tener que preguntar: el técnico abre el formulario y ve las
      casillas que le quedan. Se apagan solas al escribirlas. */
   psvPintarFaltas();
+  renumerarPasos();          // los pasos se numeran por lo que se ve
   /* El ensayo sabe guardarse a medias: si se cierra sin querer, se
      ofrece dejarlo como borrador en vez de perderlo. */
   MODAL_GUARDA={que:'el mantenimiento',guardar:()=>guardarPSV(false)};
@@ -10043,6 +10058,7 @@ function guardarPSV(emitir,seguir){
   }
   const nuevo=!t.id;
   if(nuevo)t.id='pv'+Date.now();
+  yaNoEsAuto(t);          // guardado a propósito: ya no es un apunte solo
   /* ¿Este trabajo lleva prueba de salida? Si no, no hay disparos que
      promediar y el cierre no puede esperar un veredicto que nadie
      encargó. */
@@ -10260,6 +10276,7 @@ function volverDePlaca(){
   const t=PSV_GUARDADO; PSV_GUARDADO=null;
   if(t){
     PSV_TMP=t;
+    apuntarComoSeAbrio();
     const a=ACTIVOS.find(x=>x.id===t.act)||{};
     /* «PSV» sólo si lo es: llamarle ensayo PSV a una PINCH confunde al
      que firma el papel. */
@@ -15357,6 +15374,7 @@ function closeModal(){
     }
   }catch(e){}
   SALIR_SIN_GUARDAR=false;
+  if(!PSV_TMP){ PSV_AL_ABRIR=null; PSV_HUELLA=null }
   $('#modal').classList.remove('on');
 }
 /* El cierre que sí pregunta. Lo usan la X, el clic en el fondo y
@@ -15374,7 +15392,7 @@ function cerrarModalPidiendo(){
     <div class="conf-b">
       <button class="btn sec" onclick="cerrarAviso()">Seguir escribiendo</button>
       ${g&&g.guardar?`<button class="btn sec" onclick="cerrarAviso();MODAL_GUARDA_EJEC()">Guardar y salir</button>`:''}
-      <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="cerrarAviso();SALIR_SIN_GUARDAR=true;PSV_TMP=null;borrarEnCurso();closeModal()">Cerrar y perderlo</button>
+      <button class="btn" style="background:var(--late);border-color:var(--late)" onclick="cerrarAviso();SALIR_SIN_GUARDAR=true;deshacerLoEscrito(PSV_TMP);PSV_TMP=null;PSV_AL_ABRIR=null;PSV_HUELLA=null;borrarEnCurso();closeModal()">Cerrar y perderlo</button>
     </div></div>`;
   document.body.appendChild(av);
   setTimeout(()=>{const b=av.querySelector('.btn.sec');if(b)b.focus()},40);
@@ -20252,11 +20270,84 @@ const bdCuenta=(c)    =>bdOp(c,'readonly', o=>o.count());
    Da lo mismo el aparato: computadora, tablet o celular.
    ════════════════════════════════════════════════════════════ */
 let ENCURSO_J='', ENCURSO_T=null;
+/* Cómo estaba el papel al abrirlo. Sirve para saber si se tocó algo:
+   sin esto, abrir un formulario y cerrarlo dejaría un ensayo vacío en
+   el archivo, y de ahí a la nube. */
+let PSV_AL_ABRIR=null;
+/* Lo que de verdad hay escrito en el papel: sin casillas vacías, sin
+   listas vacías y con las claves en orden. Dos papeles con la misma
+   huella tienen los mismos datos, se hayan pintado o no. */
+function huellaEnsayo(t){
+  const limpio=v=>{
+    if(Array.isArray(v)){
+      const l=v.map(limpio).filter(x=>x!==undefined);
+      return l.length?l:undefined;
+    }
+    if(v&&typeof v==='object'){
+      const o={};
+      Object.keys(v).sort().forEach(k=>{ const x=limpio(v[k]); if(x!==undefined)o[k]=x });
+      return Object.keys(o).length?o:undefined;
+    }
+    return (v===''||v==null)?undefined:v;
+  };
+  try{ return JSON.stringify(limpio(t)||{}) }catch(e){ return '' }
+}
+let PSV_HUELLA=null;
+function apuntarComoSeAbrio(){
+  try{
+    if(PSV_TMP)disparosDe(PSV_TMP);
+    PSV_AL_ABRIR=PSV_TMP?JSON.stringify(PSV_TMP):null;   // para poder deshacer
+    PSV_HUELLA=PSV_TMP?huellaEnsayo(PSV_TMP):null;       // para saber si se tocó
+  }catch(e){ PSV_AL_ABRIR=null; PSV_HUELLA=null }
+}
+/* El ensayo, en el archivo, sin que nadie pulse nada. Se marca como
+   automático mientras no se haya guardado a propósito: así «Cerrar y
+   perderlo» sabe cuál puede borrar. */
+function grabarBorradorAuto(){
+  const t=PSV_TMP; if(!t||!t.act)return;
+  if(PSV_HUELLA==null)return;                   // no sabemos de dónde salió
+  if(huellaEnsayo(t)===PSV_HUELLA)return;       // no se ha escrito nada nuevo
+  const nuevo=!t.id;
+  if(nuevo)t.auto=true;                         // nació aquí: se puede deshacer
+  grabarSinMover(t);
+}
+/* Se guardó a propósito: deja de ser un apunte automático. */
+function yaNoEsAuto(t){ if(t&&t.auto)delete t.auto }
+/* Deshacer TODO lo escrito en esta sesión: el papel que nació aquí se
+   borra, y al que ya existía se le devuelve lo que tenía al abrirlo.
+   Es lo que hay detrás de «Cerrar y perderlo» y del descarte con
+   «atrás»: ahora que se guarda solo, deshacer tiene que deshacer
+   también lo guardado, o el botón mentiría. */
+function deshacerLoEscrito(t){
+  t=t||PSV_TMP;
+  if(tirarBorradorAuto(t))return true;
+  if(!t||!t.id||PSV_AL_ABRIR==null)return false;
+  let antes=null; try{ antes=JSON.parse(PSV_AL_ABRIR) }catch(e){ return false }
+  if(!antes||!antes.id||String(antes.id)!==String(t.id))return false;
+  const i=CALIBS.findIndex(x=>x.id===t.id);
+  if(i<0)return false;
+  CALIBS[i]=antes;
+  guardarLocal();
+  return true;
+}
+/* Deshacer un ensayo que sólo existía porque se guardaba solo. El que
+   se guardó a mano NO se toca: eso sería borrar trabajo de alguien. */
+function tirarBorradorAuto(t){
+  if(!t||!t.auto||!t.id)return false;
+  const i=CALIBS.findIndex(x=>x.id===t.id);
+  if(i>=0)CALIBS.splice(i,1);
+  olvidar('CALIBS',t.id);                       // y que no vuelva de la nube
+  guardarLocal();
+  return true;
+}
 function guardarEnCurso(forzar){
   if(typeof PSV_TMP==='undefined'||!PSV_TMP)return;
   let j; try{ j=JSON.stringify(PSV_TMP) }catch(e){ return }
   if(!forzar&&j===ENCURSO_J)return;
   ENCURSO_J=j;
+  /* Y al archivo. Ésta es la línea que quita el miedo: a partir de
+     aquí, lo escrito está guardado se haga lo que se haga después. */
+  try{ grabarBorradorAuto() }catch(e){}
   const foto={ts:Date.now(), act:PSV_TMP.act, tmp:JSON.parse(j),
               seccion:(typeof PSV_ABIERTO_TODO!=='undefined'&&PSV_ABIERTO_TODO)||false};
   try{ bdPon('estado',foto,'enCurso') }catch(e){}
@@ -20266,6 +20357,19 @@ function borrarEnCurso(){
   ENCURSO_J='';
   try{ bdQuita('estado','enCurso') }catch(e){}
   try{ localStorage.removeItem('adolphus.enCurso') }catch(e){}
+}
+/* Lo que se está escribiendo se copia solo: cada 4 s mientras cambia,
+   y siempre al irse la pantalla o cerrar. Se arma SIEMPRE, al cargar:
+   no depende de la nube, ni de haber entrado con cuenta, ni de que el
+   servidor conteste. Que no se pierda lo escrito es asunto del equipo
+   que lo escribe. */
+let CURSO_ARMADO=false;
+function armarGuardadoSolo(){
+  if(CURSO_ARMADO)return; CURSO_ARMADO=true;
+  setInterval(()=>{ try{ guardarEnCurso() }catch(e){} }, 4000);
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden)guardarEnCurso(true) });
+  window.addEventListener('pagehide',()=>guardarEnCurso(true));
+  window.addEventListener('beforeunload',()=>guardarEnCurso(true));
 }
 /* Al abrir la aplicación: si quedó algo a medio escribir, se ofrece.
    No se abre solo —quizá ya lo terminó en otro equipo—: se pregunta. */
@@ -20301,10 +20405,12 @@ function seguirEnCurso(){
   const a=ACTIVOS.find(x=>x.id===d.tmp.act); if(!a){toast('Esa válvula ya no está');return}
   PSV_TMP=d.tmp;
   $('#mTitle').textContent='Mantenimiento · '+(a.tag||a.ser||'');
+  apuntarComoSeAbrio();
   pintarPSV(); $('#modal').classList.add('on');
   toast('Recuperado lo que estabas escribiendo');
 }
 function descartarEnCurso(){
+  if(EN_CURSO_PEND&&EN_CURSO_PEND.tmp)tirarBorradorAuto(EN_CURSO_PEND.tmp);
   EN_CURSO_PEND=null;
   const b=document.getElementById('bandaCurso'); if(b)b.remove();
   borrarEnCurso();
@@ -20932,12 +21038,6 @@ function arrancarJob(){
   /* Con el socket vivo, el latido sólo comprueba que no se haya
      quedado nada colgado; sin él, es lo único que hay. */
   setInterval(()=>correrJob(rtVivo()?'latido':'latido-sin-socket'), 45000);
-  /* Lo que se está escribiendo se copia solo: cada 4 s mientras
-     cambia, y siempre al irse la pantalla o cerrar. */
-  setInterval(()=>guardarEnCurso(), 4000);
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden)guardarEnCurso(true) });
-  window.addEventListener('pagehide',()=>guardarEnCurso(true));
-  window.addEventListener('beforeunload',()=>guardarEnCurso(true));
   rtConectar();
 }
 
@@ -22235,6 +22335,7 @@ restaurarCaja().then(ok=>{
     });
   }).catch(()=>{});
 })();
+armarGuardadoSolo();
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
