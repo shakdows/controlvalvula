@@ -20132,6 +20132,19 @@ const olvidarVarios=(col,ids)=>ids.forEach(x=>olvidar(col,x));
    está en la lista de bajas se quita de memoria, venga de donde
    venga. La lista vive en el equipo y ninguna actualización la toca.
    ════════════════════════════════════════════════════════════ */
+/* Las tres empresas de muestra que trae el programa dentro. */
+const EJEMPLOS_DE_FABRICA=['minera','refi','agro'];
+const LS_SIN_EJEMPLOS='adolphus.sin-ejemplos.v1';
+/* Se hace UNA vez por equipo y queda apuntado: a partir de ahí las
+   tres están en la lista de borrados y ya no hay que volver a
+   pensarlo. Si algún día hacen falta para una demostración, se crean
+   como cualquier cliente. */
+function jubilarEjemplos(){
+  try{ if(localStorage.getItem(LS_SIN_EJEMPLOS))return 0 }catch(e){}
+  EJEMPLOS_DE_FABRICA.forEach(id=>olvidar('CLIENTES',id));
+  try{ localStorage.setItem(LS_SIN_EJEMPLOS,'1') }catch(e){}
+  return 1;
+}
 function purgarBorrados(){
   if(!BORRADOS.size)return 0;
   let n=0;
@@ -22428,8 +22441,12 @@ migrarEtapas();
 migrarNumeros();
 /* Antes que nada: quitar lo que el usuario eliminó. Los ejemplos que
    trae el programa dentro no pueden resucitar con cada versión. */
+jubilarEjemplos();
 purgarBorrados();
 restaurarCaja().then(ok=>{
+  /* Y otra vez después de restaurar: lo guardado en el equipo puede
+     traerlas de una versión anterior. */
+  jubilarEjemplos();
   purgarBorrados();
   /* Y si ya había sesión abierta al arrancar, también. */
   setTimeout(()=>{try{ if(SES)volverDondeEstaba() }catch(e){}},1200);
