@@ -12088,9 +12088,14 @@ function psvDocumento(id){
      letra pequeña, que lo importante de la hoja son los resultados. */
   p.proc{font-size:8px;line-height:1.45;color:#5b6470;margin:2px 0 0}
   p.proc b{color:#3a424c}
-  .patron{display:flex;flex-wrap:wrap;gap:2px 16px;font-size:8.8px;margin:2px 0 0}
-  .patron span{white-space:nowrap}
-  .patron i{font-style:normal;font-size:8px;letter-spacing:.05em;text-transform:uppercase;color:#8a929c;margin-right:4px}
+  /* El cuadro del equipo patrón: casillas con reja, el rótulo pequeño
+     encima y el dato debajo, para leerlo de un vistazo. */
+  table.pat{border:1px solid #cfd4d9;border-collapse:collapse;margin:2px 0 0;table-layout:fixed}
+  table.pat td{border:1px solid #e4e7ea;padding:3px 7px 4px;vertical-align:top;width:25%}
+  table.pat .pk{display:block;font-size:7.6px;letter-spacing:.06em;text-transform:uppercase;
+    color:#8a929c;line-height:1.35}
+  table.pat b{display:block;font-size:9.5px;font-weight:600;color:#1a1d21;line-height:1.35;
+    word-break:break-word}
   .firmas.cli .fb{min-height:48px}
   .disp-c.ok{border-left-color:#1a7f52} .disp-c.no{border-left-color:#c0392b}
   .disp-h{display:flex;align-items:baseline;gap:6px;margin-bottom:3px}
@@ -12132,8 +12137,11 @@ function psvDocumento(id){
     justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
   /* la gráfica es una ilustración, no la página: se le pone techo o
      se estira hasta comerse un folio entero */
-  .grafc{border:1px solid #e4e7ea;border-radius:7px;padding:5px 9px 2px;margin-top:6px;
+  .grafc{border:1px solid #e4e7ea;border-radius:7px;padding:5px 9px 2px;margin:6px auto 0;
     page-break-inside:avoid;background:#fff}
+  /* Con una sola firma no se reparte la hoja entre tres: se queda del
+     ancho de una rúbrica y centrada. */
+  .firmas.una{grid-template-columns:70mm;justify-content:center}
   .grafc h4{margin:0;font-size:8.2px;letter-spacing:.09em;text-transform:uppercase;color:#8a929c;font-weight:600}
   .psv-graf{display:block;width:100%;max-width:100%;margin:2px auto 4px}
   /* Cada anexo empieza en hoja nueva. El certificado se firma en la
@@ -12203,12 +12211,20 @@ function psvDocumento(id){
   </div>
 
   <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
-  ${/* Ocho datos que se leen de corrido: en dos tablas ocupaban un
-       quinto de la hoja para decir lo mismo. */''}
-  <p class="patron">${[['Descripción',c.patDesc],['Marca',c.patMarca],['Modelo',c.patModelo],
-      ['N.º de serie',c.patSerie],['Escala',c.patEscala],['Clase de exactitud',c.patExact],
-      ['Calibrado el',c.patFecha?fPE(c.patFecha):''],['Certificado',c.patCert]]
-    .map(([k,val])=>`<span><i>${k}</i> ${val==null||String(val).trim()===''?'<span class="ln"></span>':esc(String(val))}</span>`).join('')}</p>
+  ${/* El instrumento contra el que se mide la válvula: es lo primero
+       que busca quien audita el certificado. Antes iba de corrido en
+       un renglón para ahorrar hoja, y no se leía ninguno de los ocho
+       datos. Cada uno en su casilla, con el rótulo encima. */''}
+  ${(()=>{
+    const cel=(k,val,ancho)=>`<td${ancho?` colspan="${ancho}"`:''}>
+      <span class="pk">${k}</span>
+      <b>${val==null||String(val).trim()===''?'<span class="ln"></span>':esc(String(val))}</b></td>`;
+    return `<table class="pat">
+      <tr>${cel('Descripción',c.patDesc,2)}${cel('Marca',c.patMarca)}${cel('Modelo',c.patModelo)}</tr>
+      <tr>${cel('N.º de serie',c.patSerie)}${cel('Escala',c.patEscala)}${cel('Clase de exactitud',c.patExact)}${cel('Calibrado el',c.patFecha?fPE(c.patFecha):'')}</tr>
+      <tr>${cel('Certificado del patrón',c.patCert,4)}</tr>
+    </table>`;
+  })()}
 
   <p class="proc">
     <b>Procedimiento ·</b> <b>1.</b> Presión de disparo (seteo) inicial —<i>as found</i>—, para verificar el punto de disparo actual.
@@ -12271,7 +12287,13 @@ function psvDocumento(id){
   <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}
     <small>${v.estado==='aprobado'?'QUEDA OPERATIVA LA VÁLVULA':'NO QUEDA OPERATIVA'}
       · ${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
-  <div class="grafc"><h4>Los disparos frente a la banda admisible</h4>${
+  ${/* El ancho lo pide el dibujo, no la hoja: tres disparos estirados
+       de margen a margen dejaban los puntos a un palmo unos de otros
+       y el gráfico parecía decir mucho más de lo que dice. Se le da
+       lo que necesita —unos 26 mm por disparo, entre 95 y 170 mm— y se
+       centra. Con más disparos crece; con tres, no. */''}
+  <div class="grafc" style="max-width:${Math.min(170,Math.max(95,26*v.disparos.length+62))}mm">
+    <h4>Los disparos frente a la banda admisible</h4>${
     /* Más ancha de lienzo = más baja de papel: con el mismo dibujo, un
        viewBox apaisado ocupa la mitad de alto y deja sitio para las
        conclusiones y las firmas en la misma hoja. */
@@ -12289,24 +12311,29 @@ function psvDocumento(id){
       (c.equipo||[]).filter(x=>String(x.n||'').trim())
         .map(x=>esc(x.n)+(x.area?` · ${esc(x.area)}`:'')).join('<br>')}</td></tr></table>`:''}`:''}
 
-  <div class="firmas">
-    ${FIRMA_ROLES.map(([rol,lbl])=>{const f=firmaDe(rol);
-      return `<div class="fb"><span class="rol">${esc(lbl)}</span>
-        ${f?`<img src="${f.img}" alt="">`:'<span style="flex:1"></span>'}
-        <div class="ln"><b>${f?esc(f.n):'&nbsp;'}</b>
-          <span class="cg">${f?esc(f.cargo||''):'Nombre y cargo'}</span><br>
-          <span class="cg">${f?fPE(f.f):'Fecha'}</span></div></div>`}).join('')}
-  </div>
-  ${/* El visto bueno del cliente: inspección y responsable, como en el
-       formato de la casa. Se firma en papel, por eso van en blanco. */''}
-  <div class="firmas cli">
-    <div class="fb"><span class="rol">V°B° Inspección ${esc(e.n||'cliente')}</span>
-      <div class="sg"></div><div class="ln"><b>&nbsp;</b>
-      <span class="cg">Nombre y cargo</span><br><span class="cg">Fecha</span></div></div>
-    <div class="fb"><span class="rol">V°B° Responsable ${esc(e.n||'cliente')}</span>
-      <div class="sg"></div><div class="ln"><b>&nbsp;</b>
-      <span class="cg">Nombre y cargo</span><br><span class="cg">Fecha</span></div></div>
-  </div>
+  ${/* Sólo las casillas FIRMADAS. Las demás salían con «Nombre y
+       cargo» y «Fecha» en blanco, para rellenar a mano: en un papel
+       que ya va firmado, un hueco vacío hace dudar de si falta algo.
+       Si todavía no firmó nadie queda una sola, la del que ejecutó,
+       con su nombre sobre la raya. */''}
+  ${(()=>{
+    const hay=FIRMA_ROLES.map(([rol,lbl])=>({rol,lbl,f:firmaDe(rol)})).filter(x=>x.f&&x.f.img);
+    if(!hay.length){
+      const q=c.respNombre||'', cg=c.respArea||'';
+      return `<div class="firmas una"><div class="fb"><span class="rol">${esc(FIRMA_ROLES[0][1])}</span>
+        <span style="flex:1"></span>
+        <div class="ln"><b>${esc(q)||'&nbsp;'}</b><span class="cg">${esc(cg)}</span></div></div></div>`;
+    }
+    return `<div class="firmas${hay.length===1?' una':''}">${hay.map(({lbl,f})=>
+      `<div class="fb"><span class="rol">${esc(lbl)}</span>
+        <img src="${f.img}" alt="Firma de ${esc(f.n)}">
+        <div class="ln"><b>${esc(f.n)}</b>
+          <span class="cg">${esc(f.cargo||'')}</span><br>
+          <span class="cg">${esc(fPE(f.f))}</span></div></div>`).join('')}</div>`;
+  })()}
+  ${/* Las dos casillas del visto bueno del cliente salían siempre en
+       blanco, con sus renglones para rellenar a mano. En estos papeles
+       sale lo que se escribió en el portal y nada más. */''}
   <div class="pliego-n">Certificado · hoja 1</div>
   </section>
 
@@ -12319,30 +12346,18 @@ function psvDocumento(id){
        Antes iban intercaladas en medio del documento y empujaban las
        firmas a la segunda página: el papel que se firma no puede
        depender de cuántas fotos se tomaron ese día. */
-    const fll=Array.isArray(c.fotosLlego)&&c.fotosLlego.length
-      ? c.fotosLlego : (c.fotoAsFound?[{d:c.fotoAsFound,n:'Prueba inicial'}]:[]);
-    const pares=paresFoto(c).filter(p=>p.a||p.d);
     const disp=disparosDe(c).map((t,i)=>({i,fs:(Array.isArray(t.fotos)&&t.fotos.length?t.fotos:(t.foto?[t.foto]:[])),nota:t.nota,v:t.v}))
                             .filter(x=>x.fs.length);
     const anexos=[];
     const cab=(n,tit,sub)=>`<div class="anexo-h"><span>Anexo ${n}</span><h2>${tit}</h2>
       <p>${sub} · ${esc(a.tag||a.ser||'')} · certificado ${esc(c.cert||'—')}</p></div>`;
 
-    if(fll.length)anexos.push(`${cab(anexos.length+1,'CÓMO LLEGÓ LA VÁLVULA','estado en que la mandó el cliente')}
-      ${c.recep?`<table><tr><th style="width:28%">OBSERVACIÓN</th><td>${esc(c.recep)}</td></tr></table>`:''}
-      <div class="anexo-g ${fll.length===1?'ancha':''}">${fll.map(f=>`<figure><img src="${f.d}" alt="${esc(f.n||'Cómo llegó')}">
-        <figcaption>${esc(f.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>`);
-
-    anexos.push(`${cab(anexos.length+1,'DESARME · ANTES Y DESPUÉS','pieza por pieza')}
-      ${pares.length
-        ? `<div class="anexo-g dos">${pares.map((pz,i)=>`<figure class="par">
-            <span class="pz">${pz.nota?esc(pz.nota):`Pieza ${i+1}`}${pz.accion?' — '+esc(pz.accion):''}</span>
-            <div class="par-i">
-              <div><span class="fc-l">Antes</span>${pz.a?`<img src="${pz.a}" alt="Antes">`:'<div class="fc-sin">sin foto</div>'}</div>
-              <div><span class="fc-l">Después</span>${pz.d?`<img src="${pz.d}" alt="Después">`:'<div class="fc-sin">sin foto</div>'}</div>
-            </div></figure>`).join('')}</div>`
-        : '<table><tr><td>No se registraron fotos del desarme para esta válvula.</td></tr></table>'}`);
-
+    /* Aquí sólo van las fotos de los disparos. El certificado dice a
+       qué presión abre la válvula, y su prueba son los disparos.
+       Cómo llegó ya va entero en el protocolo de entrada AXAD-084, con
+       su anexo; el desarme, en el informe DVAD-SER-002, con su
+       registro fotográfico. Repetirlos aquí engordaba el papel que se
+       firma y sacaba cada foto tres veces en la misma carpeta. */
     if(disp.length)anexos.push(`${cab(anexos.length+1,'PRUEBAS DE DISPARO','cada prueba con sus fotos')}
       ${disp.map(d=>`<div class="anexo-p"><h3>Prueba ${d.i+1}${d.v?` · disparó a ${esc(d.v)} ${esc(u)}`:''}${
         d.nota?` — ${esc(d.nota)}`:''}</h3>
