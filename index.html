@@ -4518,7 +4518,18 @@ function go(p){
     if(hay!==puesta){puesta=hay;$('#app').classList.toggle('scrolled',hay)}
   },{passive:true});
 })();
-$$('#nav > a').forEach(a=>a.onclick=()=>go(a.dataset.p));
+/* El menú de la izquierda es el de la casa, no el de la empresa. Si se
+   está dentro de un cliente y se pulsa algo que no es suyo —«Panel»,
+   «Clientes», «Catálogo»—, se sale de la empresa. Antes «Panel»
+   cambiaba de página pero dejaba la empresa abierta: el menú seguía
+   siendo el suyo y el que pulsaba el inicio no llegaba al inicio.
+   Lo que sí es suyo —Válvulas, Calibraciones, Historial…— se abre sin
+   salir, que para eso se entró. */
+$$('#nav > a').forEach(a=>a.onclick=()=>{
+  const p=a.dataset.p;
+  if(S.inCli&&!CLI_TABS.some(([x])=>x===p))salirDeLaEmpresa();
+  go(p);
+});
 
 /* ── Barra inferior del celular ──────────────────────────────
    No es un menú aparte: es un espejo del lateral. Toma los cuatro
@@ -5321,10 +5332,16 @@ function resetImport(){
    de la empresa que toque. Sacarlo a la lista de clientes al
    retroceder era mandarlo a una pantalla que no usa nunca. */
 const SALIDA_ROL={tec:'home'};
-function exitClient(){
+/* Soltar la empresa sin decidir a dónde se va: lo usa el menú de la
+   izquierda, que ya sabe a qué página lleva. */
+function salirDeLaEmpresa(){
   const sn=document.getElementById('subNav'); if(sn)sn.remove();
   S.inCli=null;S.fCli='';S.calCli='';S.woCli='';S.repCli='';S.homeCli='';S.fFam='';S.fTipo='';S.fMod='';S.picked.clear();
-  closeDrawer();renderAll();go(SALIDA_ROL[S.rol]||'clients');
+  closeDrawer();
+}
+function exitClient(){
+  salirDeLaEmpresa();
+  renderAll();go(SALIDA_ROL[S.rol]||'clients');
 }
 /* Abre la ficha encima de lo que se esté viendo, sin cambiar de página:
    al cerrarla se vuelve exactamente al mismo sitio. */
@@ -7284,9 +7301,11 @@ function rielServicio(c,ord){
                          :'Todavía sin prueba de entrada'):'',
     cliente?'':paso('Mantenimiento', !!ord, `abrirPapel('mant','${c.id}','${oid}')`,
       ord?'Informe técnico del servicio · DVAD-SER-002 · en PDF o Word':'Sin orden de servicio'),
-    si('cert')?paso('Prueba final', disparos>0, `abrirPapel('sal','${c.id}','${oid}')`,
-      disparos>0?`Los ${disparos} disparos de salida en su hoja · en PDF o Word`
-                :'Todavía sin disparos de salida'):'',
+    /* «Prueba final» se quitó de la línea: los disparos de salida ya
+       van dentro del certificado —con su tabla, su gráfico y sus fotos
+       en el anexo— y sacarlos otra vez en una hoja aparte era un papel
+       más que archivar y que cuadrar. Lo que se entrega es
+       mantenimiento, placa y certificado. */
     (cliente||!si('cert'))?'':paso('Placa', placaLista(c), `abrirPapel('placa','${c.id}','${oid}')`,
       placaLista(c)?'Los datos para grabar la placa · en papel o en Excel'
                    :'Se activa con los tres disparos y sus fotos'),
@@ -11306,6 +11325,10 @@ const MES_LARGO=['enero','febrero','marzo','abril','mayo','junio','julio','agost
    la casa: el logotipo con las letras, el título en un bloque y, a la
    derecha, código, versión con su fecha y la hoja. */
 const INFORME_VER='1';
+/* La prueba de salida es el registro «as left» del mismo ensayo que
+   cierra el certificado AXAD-088, y por eso lleva su código. Si la
+   casa le tiene uno propio, se cambia aquí y en ningún sitio más. */
+const SALIDA_COD='AXAD-088', SALIDA_VER='2';
 /* La cadena de aprobación del informe. No es quien hizo el ensayo —eso
    cambia con cada trabajo— sino quién responde por el documento, que
    en la casa son siempre los mismos. Se cambian aquí, una vez. */
@@ -11314,16 +11337,49 @@ const INFORME_FIRMAS=[
   ['Revisado por', 'Jose Rojas',   'Coordinador de servicios'],
   ['Aprobado por', 'Larry Ramirez','Key Account Manager']
 ];
-function membreteInforme(pagina,total,fecha){
+/* La hoja de estilo del membrete. Vive aquí y no dentro de cada
+   documento: dos copias de un cuadro con reja se separan a la tercera
+   vez que se toca una. */
+const MEMBRETE_CSS=`
+.mem{display:flex;align-items:stretch;border:1px solid #1a1d21;margin-bottom:16px}
+.mem .lg{flex:0 0 auto;display:flex;align-items:center;padding:8px 12px;border-right:1px solid #1a1d21}
+.mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px 13px;
+  border-right:1px solid #1a1d21;font-weight:700;font-size:13px;letter-spacing:.02em;line-height:1.35}
+/* La caja de la derecha. Cada casilla ocupa su fila ENTERA y el texto
+   se centra dentro: con el contenido centrado en la rejilla, la casilla
+   del valor se encogía a su propio alto —«Versión (Fecha)» ocupa dos
+   renglones y su valor uno— y el cuadro salía con un escalón. */
+.mem .dt{flex:0 0 240px;display:grid;grid-template-columns:auto 1fr;font-size:10.6px;
+  align-items:stretch}
+.mem .dt span,.mem .dt b{display:flex;align-items:center;justify-content:center;
+  padding:5px 8px;border-bottom:1px solid #1a1d21;text-align:center;line-height:1.25}
+.mem .dt span{color:#5b6470}
+.mem .dt b{border-left:1px solid #1a1d21;font-weight:700}
+/* El renglón de la página: ancho entero, sin borde debajo —es el
+   último— y del mismo cuerpo que el resto del cuadro. */
+.mem .dt i{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:.32em;
+  padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
+.mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
+.mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
+.mem .lg svg{display:block}`;
+/* El membrete de la casa. Lo llevan todos los papeles que se
+   entregan, cada uno con su título y su código: así quien los recibe
+   sabe de dónde vienen sin tener que leerlos. */
+function membreteCasa({titulo,cod,ver,fecha,pagina,total}){
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
-  <div class="ti">INFORME TÉCNICO MANTENIMIENTO Y CALIBRACION DE<br>VÁLVULAS DE SEGURIDAD</div>
+  <div class="ti">${titulo}</div>
   <div class="dt">
-    <span>Código</span><b>${INFORME_COD}</b>
-    <span>Versión<br>(Fecha)</span><b>${INFORME_VER} (${esc(fPE(fecha))})</b>
-    <i>Página <b>${pagina}</b> de ${total}</i>
+    <span>Código</span><b>${esc(cod||'')}</b>
+    <span>Versión<br>(Fecha)</span><b>${esc(String(ver||'1'))} (${esc(fPE(fecha))})</b>
+    <i>Página <b>${pagina||1}</b> de ${total||1}</i>
   </div>
 </div>`;
+}
+function membreteInforme(pagina,total,fecha){
+  return membreteCasa({
+    titulo:'INFORME TÉCNICO MANTENIMIENTO Y CALIBRACION DE<br>VÁLVULAS DE SEGURIDAD',
+    cod:INFORME_COD, ver:INFORME_VER, fecha, pagina, total});
 }
 /* El membrete se pone cuando el papel ya está armado: sólo entonces se
    sabe cuántas hojas tiene —las de fotos salen de cuántas parejas haya
@@ -11462,27 +11518,7 @@ body{font:14px/1.6 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;mar
 @media print{.barra{display:none}body{padding:12mm}}
 .ln{display:inline-block;min-width:120px;border-bottom:1px solid #9aa2ac;height:.9em;vertical-align:baseline}
 /* La cabecera del formato: título, código, versión y página */
-.mem{display:flex;align-items:stretch;border:1px solid #1a1d21;margin-bottom:16px}
-.mem .lg{flex:0 0 auto;display:flex;align-items:center;padding:8px 12px;border-right:1px solid #1a1d21}
-.mem .ti{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px 13px;
-  border-right:1px solid #1a1d21;font-weight:700;font-size:13px;letter-spacing:.02em;line-height:1.35}
-/* La caja de la derecha. Cada casilla ocupa su fila ENTERA y el texto
-   se centra dentro: con el contenido centrado en la rejilla, la casilla
-   del valor se encogía a su propio alto —«Versión (Fecha)» ocupa dos
-   renglones y su valor uno— y el cuadro salía con un escalón. */
-.mem .dt{flex:0 0 240px;display:grid;grid-template-columns:auto 1fr;font-size:10.6px;
-  align-items:stretch}
-.mem .dt span,.mem .dt b{display:flex;align-items:center;justify-content:center;
-  padding:5px 8px;border-bottom:1px solid #1a1d21;text-align:center;line-height:1.25}
-.mem .dt span{color:#5b6470}
-.mem .dt b{border-left:1px solid #1a1d21;font-weight:700}
-/* El renglón de la página: ancho entero, sin borde debajo —es el
-   último— y del mismo cuerpo que el resto del cuadro. */
-.mem .dt i{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:.32em;
-  padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
-.mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
-.mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
-.mem .lg svg{display:block}
+${MEMBRETE_CSS}
 /* El cuadro de firmas de la carátula: letra pequeña, como el formato
    de la casa — cabe en su renglón y no compite con el título. */
 table.roles th,table.roles td{font-size:8.6px;padding:4px 6px;text-align:center}
@@ -11595,6 +11631,10 @@ li{margin-bottom:2px}
    no estaba previsto. */
 /* Un rótulo DENTRO de un apartado: ni numera ni entra en el índice. */
 h3.sub{font-size:12.5px;font-weight:700;color:#1a1d21;margin:12px 0 4px}
+/* Lo que se escribió a mano para este trabajo, debajo de lo fijo y
+   separado con una raya fina: se ve de un vistazo qué es de siempre y
+   qué es de hoy. */
+p.escrito.propio{margin-top:9px;padding-top:8px;border-top:1px solid #e4e7ea}
 .renglones{margin:8px 0 4px;break-inside:avoid;page-break-inside:avoid}
 .renglones span{display:block;border-bottom:1px solid #9aa2ac;height:16px;margin-bottom:7px}
 /* Lo que escribió el taller, en el informe: se distingue de los
@@ -11774,8 +11814,12 @@ ${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
 
 
 <h2>Recomendaciones generales</h2>
-${o.recom?`<p class="escrito">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
+${/* Primero las de siempre —las que la casa recomienda en todos sus
+     trabajos— y debajo, en su propio renglón, lo que escribió
+     gerencia para ESTE trabajo. Al revés, lo suyo parecía el
+     encabezado de una lista que no había escrito. */''}
 <ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
+${o.recom?`<p class="escrito propio">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
 
 
 ${/* PENDIENTES: lo que queda por hacer después de entregar —la
@@ -12292,12 +12336,15 @@ function psvDocumento(id){
        y el gráfico parecía decir mucho más de lo que dice. Se le da
        lo que necesita —unos 26 mm por disparo, entre 95 y 170 mm— y se
        centra. Con más disparos crece; con tres, no. */''}
-  <div class="grafc" style="max-width:${Math.min(170,Math.max(95,26*v.disparos.length+62))}mm">
+  ${/* Ni una tira apaisada de lado a lado ni un cartel: un cuadro
+       centrado, más alto que ancho de lo que era, donde los tres
+       puntos se separan de verdad y la banda admisible se ve como una
+       franja y no como una raya. El dibujo ya tenía preparada la
+       versión alta —la que se usa cuando el lienzo pasa de 190 de
+       alto—, y es la que va aquí. */''}
+  <div class="grafc" style="max-width:${Math.min(142,Math.max(82,17*v.disparos.length+45))}mm">
     <h4>Los disparos frente a la banda admisible</h4>${
-    /* Más ancha de lienzo = más baja de papel: con el mismo dibujo, un
-       viewBox apaisado ocupa la mitad de alto y deja sitio para las
-       conclusiones y las firmas en la misma hoja. */
-    psvGrafica(v,1020,150)}</div>`:''}
+    psvGrafica(v,560,320)}</div>`:''}
 
   ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
@@ -12643,13 +12690,12 @@ function documentoSalida(id){
 <title>Prueba de salida ${esc(a.tag||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font:10px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;background:#fff}
-.cab{display:flex;align-items:center;gap:11px;padding:7px 11px;margin-bottom:9px;border-radius:8px;background:#102d69;color:#fff}
-.cab .mk{flex:0 0 auto;display:flex;align-items:center;background:#fff;border-radius:6px;padding:5px 6px}
-.cab .ti{flex:1;min-width:0}
-.cab h1{font-size:12px;font-weight:700;letter-spacing:.045em;margin:0;color:#fff}
-.cab .emp{font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;color:#a8bce0;margin-bottom:3px}
-.cab .cod{flex:0 0 auto;text-align:right;font-size:8px;color:#a8bce0;line-height:1.6}
-.cab .cod b{display:block;font-size:10.5px;color:#fff;letter-spacing:.05em}
+${MEMBRETE_CSS}
+/* En esta hoja el cuerpo es más pequeño que en el informe, así que el
+   membrete se ajusta para no comerse media página. */
+.mem{margin-bottom:10px}
+.mem .ti{font-size:11px}
+.mem .dt{flex:0 0 205px;font-size:9px}
 .ident{display:flex;flex-wrap:wrap;margin-bottom:10px;border:1px solid #e4e7ea;border-radius:7px;overflow:hidden}
 .ident span{flex:1;min-width:104px;padding:5px 9px;font-size:8px;letter-spacing:.07em;text-transform:uppercase;color:#8a929c;border-right:1px solid #edeff1}
 .ident span:last-child{border-right:0}
@@ -12699,9 +12745,8 @@ tbody tr td{height:20mm}
 @page{size:A4;margin:8mm}
 </style></head><body>
 <section class="pliego">
-<div class="cab"><div class="mk">${marca}</div>
-  <div class="ti"><div class="emp">Adolphus S.A.</div><h1>PRUEBA DE SALIDA · AS LEFT</h1></div>
-  <div class="cod">Válvula<b>${esc(a.tag||a.ser||'')}</b></div></div>
+${membreteCasa({titulo:'PRUEBA DE SALIDA — AS LEFT<br>VÁLVULAS DE SEGURIDAD',
+   cod:SALIDA_COD, ver:SALIDA_VER, fecha:c.fecha, pagina:1, total:1})}
 <div class="ident">
   ${id2('Cliente',e.n)}${id2('O.S.',c.os)}${id2('Fecha',fPE(c.fecha))}
   ${id2('Modelo',[m.m,a.mod].filter(Boolean).join(' '))}${id2('Serie',a.ser)}
