@@ -20024,9 +20024,23 @@ async function nubeBajar(reemplazar){
      quedaba sin nada y acto seguido subía esa nada. Ahora sólo se
      vacía la lista de la que de verdad han bajado filas, y sólo si
      esas filas traen contenido. */
+  /* Lo que se hizo sin señal y todavía no ha subido. Se aparta antes
+     de vaciar y se repone después: la nube no lo tiene, así que no
+     baja, y sin esto se perdía al vaciar la lista. */
+  const sinSubir=new Map();
   if(reemplazar&&filas.length){
     const traidas=new Set(filas.filter(f=>!f.borrado).map(f=>f.coleccion));
-    NUBE_COLS.forEach(({c,arr})=>{if(traidas.has(c)){const a=arr();a.length=0}});
+    NUBE_COLS.forEach(({c,arr})=>{
+      if(!traidas.has(c))return;
+      const a=arr();
+      const mios=a.filter(x=>{
+        if(!x||x.id==null)return false;
+        const e=ESPEJO[c+SEP+String(x.id)];
+        return !e||e.j!==jsonCanon(x);     // nunca subió, o cambió aquí desde entonces
+      }).map(x=>x);
+      if(mios.length)sinSubir.set(c,mios);
+      a.length=0;
+    });
     if(traidas.has('PLAN_OK'))Object.keys(PLAN_OK).forEach(k=>delete PLAN_OK[k]);
   }
   filas.forEach(f=>{
@@ -20065,6 +20079,19 @@ async function nubeBajar(reemplazar){
      la versión anterior: una orden con una etapa que aquí ya no
      existe se queda fuera de todas las columnas. La traducción se
      hacía sólo al arrancar; ahora también después de cada bajada. */
+  /* Y vuelve lo que se hizo sin señal. Va después de rellenar para que
+     mande sobre lo que haya bajado de la misma ficha: lo de aquí se
+     escribió más tarde y todavía tiene que subir. */
+  if(sinSubir.size)sinSubir.forEach((mios,c)=>{
+    const col=NUBE_COLS.find(x=>x.c===c); if(!col)return;
+    const a=col.arr();
+    mios.forEach(x=>{
+      const kk=c+SEP+String(x.id);
+      if(BORRADOS.has(kk))return;          // se dio de baja aquí a propósito
+      const i=a.findIndex(y=>y&&String(y.id)===String(x.id));
+      if(i>=0)a[i]=x; else a.push(x);
+    });
+  });
   migrarEtapas();
   migrarNumeros();
   return filas.length;
