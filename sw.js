@@ -13,7 +13,7 @@
    Ahora la aplicación abre de la caché al instante, y si hay internet
    se actualiza sola por detrás para la próxima vez.
    ============================================================ */
-const CACHE = 'adolphus-v103';
+const CACHE = 'adolphus-v104';
 
 /* Ninguna petición a la red puede tardar más que esto. Sin este tope,
    una antena que no lleva a ninguna parte cuelga la promesa para
@@ -72,16 +72,34 @@ async function guardarLimpio(c, clave, r) {
   await c.put(clave, r);
 }
 
+/* Lo de casa y lo de fuera. Sin lo de casa no se abre nada; lo de
+   fuera son adornos que se pueden esperar. */
+const ES_DE_FUERA = u => /^https?:\/\//.test(u);
+const APP_CASA   = APP.filter(u => !ES_DE_FUERA(u));
+const APP_FUERA  = APP.filter(ES_DE_FUERA);
+
 self.addEventListener('install', e => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
     // la casa primero, y limpia: es lo único sin lo que no se abre nada
     await conTope(CASA, 20000).then(r => guardarLimpio(c, CASA, r)).catch(() => {});
-    // el resto, uno a uno: que falte alguno no puede tumbar la instalación
-    // cache:'reload' — directo del servidor, sin pasar por la caché del
-    // navegador: que instalar una versión traiga los archivos de esa versión
-    await Promise.all(APP.map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => null)));
+    /* Y los archivos propios, con tope: en planta una petición puede
+       quedarse colgada con antena y sin datos, y mientras cuelga el
+       guardián no toma el mando — que es justo cuando hace falta.
+       cache:'reload' — directo del servidor, sin pasar por la caché
+       del navegador: que instalar una versión traiga los archivos de
+       esa versión. */
+    await Promise.all(APP_CASA.map(u =>
+      conTope(new Request(u, { cache: 'reload' }), 8000)
+        .then(r => r && r.ok ? c.put(u, r) : null).catch(() => null)));
+    /* MANDO YA. Lo imprescindible está guardado; a partir de este
+       momento, si se va la señal, la aplicación abre. */
     await self.skipWaiting();
+    /* Y lo de fuera —la hoja de letras y la librería de Excel— se baja
+       por detrás, sin que nadie espere por ello. Si no llega, la
+       aplicación abre igual: con la letra del sistema y sin el
+       importar/exportar hasta que vuelva a haber señal. */
+    APP_FUERA.forEach(u => c.add(new Request(u, { cache: 'reload' })).catch(() => null));
   })());
 });
 

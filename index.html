@@ -20483,6 +20483,31 @@ function armarGuardadoSolo(){
   window.addEventListener('pagehide',()=>guardarEnCurso(true));
   window.addEventListener('beforeunload',()=>guardarEnCurso(true));
 }
+/* ── QUE EL SISTEMA NO SE LLEVE LO GUARDADO ──────────────────
+   Un celular borra los datos de las páginas cuando necesita sitio,
+   sin preguntar. Aquí se le pide que no toque los nuestros. Con la
+   aplicación instalada en la pantalla de inicio, Chrome lo concede
+   casi siempre; en una pestaña suelta, a veces. No cuesta nada
+   pedirlo y es lo que evita que una mañana de trabajo se evapore. */
+let ALMACEN_FIJO=null;                 // null = todavía no se sabe
+async function pedirAlmacenFijo(){
+  try{
+    if(!navigator.storage||!navigator.storage.persist)return null;
+    ALMACEN_FIJO=await navigator.storage.persisted();
+    if(!ALMACEN_FIJO)ALMACEN_FIJO=await navigator.storage.persist();
+    return ALMACEN_FIJO;
+  }catch(e){ return null }
+}
+/* Cuánto sitio se está usando, para verlo antes de que estorbe. */
+async function espacioUsado(){
+  try{
+    if(!navigator.storage||!navigator.storage.estimate)return null;
+    const e=await navigator.storage.estimate();
+    if(!e||!e.quota)return null;
+    return {usado:e.usage||0, total:e.quota, pct:Math.round((e.usage||0)*100/e.quota)};
+  }catch(e){ return null }
+}
+const enMB=b=>b<1048576?Math.round(b/1024)+' KB':(b/1048576).toFixed(b>10485760?0:1)+' MB';
 /* Al abrir la aplicación: si quedó algo a medio escribir, se ofrece.
    No se abre solo —quizá ya lo terminó en otro equipo—: se pregunta. */
 async function ofrecerEnCurso(){
@@ -21424,8 +21449,38 @@ function toggleOffline(){
   toast(OFF_SIM?'Modo sin conexión activado — sigue trabajando normal':'Conexión restablecida');
   if(!OFF_SIM&&SYNCQ.length)setTimeout(()=>sincronizar(),500);
 }
+/* Se pinta aparte porque las dos preguntas al navegador son lentas. */
+async function pintarEspacio(){
+  const e=document.getElementById('sqEspacio'); if(!e)return;
+  const [sitio,fijo]=await Promise.all([espacioUsado(),
+    (async()=>{ try{ return navigator.storage&&navigator.storage.persisted
+      ? await navigator.storage.persisted() : null }catch(x){ return null } })()]);
+  const otro=document.getElementById('sqEspacio'); if(!otro)return;
+  const cuanto=sitio
+    ? `${enMB(sitio.usado)} usados de ${enMB(sitio.total)} (${sitio.pct} %).`
+    : 'El navegador no dice cuánto sitio queda.';
+  const guarda=fijo===true
+    ? ' <b style="color:var(--ok)">Protegido</b>: el sistema no borrará estos datos para hacer sitio.'
+    : fijo===false
+      ? ' <b style="color:var(--due)">Sin proteger</b>: el celular puede borrarlos cuando le falte sitio. Instala el portal en la pantalla de inicio y pulsa «Proteger».'
+      : '';
+  otro.innerHTML=esc(cuanto).replace(/&lt;/g,'<')+guarda;
+}
+/* Quien montó el portal. Es la cuenta con la que se creó la base y la
+   única que necesita tocar cómo está enchufado todo. */
+const CORREO_CREADOR='aramramirez1995@gmail.com';
+function esCreador(){
+  const igual=x=>String(x||'').trim().toLowerCase()===CORREO_CREADOR;
+  try{
+    if(typeof NUBE_YO!=='undefined'&&NUBE_YO&&igual(NUBE_YO.correo))return true;
+    if(typeof SES!=='undefined'&&SES&&igual(SES.m))return true;
+  }catch(e){}
+  return false;
+}
 function openSync(){
   const n=SYNCQ.length;
+  const mando=esCreador();
+  setTimeout(()=>{try{pintarEspacio()}catch(e){}},60);
   $('#mTitle').textContent='Conexión y sincronización';
   $('#mBody').innerHTML=`
    ${enNube()?'':`<div class="nube-no">
@@ -21459,14 +21514,22 @@ function openSync(){
      <div class="fx-tile"><span class="fx-k">Estado</span><span class="fx-v" style="color:var(--${online()?'ok':'due'})"><span class="dot"></span>${online()?'Conectado':'Sin conexión'}</span></div>
      <div class="fx-tile"><span class="fx-k">Cambios por subir</span><span class="fx-v">${n}</span><span class="fx-sub">guardados en este equipo</span></div>
    </div>
+   ${/* El sitio del equipo. En la tablet y en el celular es lo que
+        decide si el trabajo sobrevive a cerrar la aplicación, así que
+        se enseña con nombre y apellido en vez de dejarlo adivinar. */''}
+   <div class="set-row" style="margin-top:10px">
+     <div class="t"><b>Espacio de este equipo</b>
+       <span id="sqEspacio">Midiendo…</span></div>
+     <button class="btn sec" onclick="pedirAlmacenFijo().then(()=>pintarEspacio())">Proteger</button>
+   </div>
    ${/* La prueba del enlace: para contestar «¿se ve al momento en la
         tablet?» sin llamar a nadie. */''}
-   <div class="set-row" style="margin-top:10px">
+   ${mando?`<div class="set-row" style="margin-top:10px">
      <div class="t"><b>Probar el enlace</b>
        <span>Mide cuánto tarda el servidor y si el aviso en vivo está conectado. No escribe nada.</span></div>
      <button class="btn sec" onclick="probarEnlace()">Probar</button>
-   </div>
-   ${enNube()?`<div class="set-row">
+   </div>`:''}
+   ${mando&&enNube()?`<div class="set-row">
      <div class="t"><b>Traer todo de la nube otra vez</b>
        <span>Si este equipo no ve algo que se hizo en otro, esto lo vuelve a pedir todo desde el principio. No borra nada de aquí.</span></div>
      <button class="btn sec" onclick="bajarTodoDeNuevo()">Traer todo</button>
@@ -21474,7 +21537,7 @@ function openSync(){
    <div id="sqPrueba"></div>
    <div id="sqLista">${n?'<div class="ps-empty" style="padding:18px">Leyendo la tabla de pendientes…</div>'
      :`<div class="ps-empty" style="padding:22px">Todo sincronizado. No hay cambios pendientes.</div>`}</div>
-   ${enNube()?`<div class="set-row" style="margin-top:12px">
+   ${mando&&enNube()?`<div class="set-row" style="margin-top:12px">
      <div class="t"><b>Volver a subir todo lo de este equipo</b>
        <span>Cuando este equipo tiene datos que en el servidor no están —porque se perdieron
          arriba, o porque se trabajó mucho tiempo sin cuenta—. No borra nada de ningún lado:
@@ -21484,7 +21547,7 @@ function openSync(){
        <span>Si crees que te falta algo que hizo un compañero. Vuelve a pedir el archivo
          entero en vez de sólo lo último; no borra nada de este equipo.</span></div>
      <button class="btn sec xs" onclick="rebajarTodo()">Traerlo todo</button></div>`:''}
-   <div class="set-row" style="margin-top:12px">
+   ${mando?`<div class="set-row" style="margin-top:12px">
      <div class="t"><b>Guardar una copia en un archivo</b>
        <span>Todo lo registrado en un solo archivo, para el USB o el correo. Es la copia que
          no depende ni del navegador ni de la nube. Al restaurarla no se borra nada: lo que
@@ -21492,10 +21555,10 @@ function openSync(){
      <div style="display:flex;gap:8px;flex-wrap:wrap">
        <button class="btn sec xs" onclick="copiaSeguridad()">Guardar copia</button>
        <button class="btn quiet xs" onclick="pedirCopia()">Restaurar copia</button>
-     </div></div>
+     </div></div>`:''}
    ${/* Lo más destructivo que hace el portal va al final, apartado y
         en rojo: dejar el sistema como recién instalado. */''}
-   ${S.rol==='admin'?`<div class="set-row" style="margin-top:12px;
+   ${mando?`<div class="set-row" style="margin-top:12px;
        border-color:color-mix(in oklab,var(--late) 35%,var(--line))">
      <div class="t"><b style="color:var(--late)">Empezar de cero</b>
        <span>Borra todo —empresas, válvulas, órdenes y certificados— aquí, en la nube y en
@@ -21503,7 +21566,7 @@ function openSync(){
          borrar nada. Pide la contraseña de gerencia.</span></div>
      <button class="btn quiet xs" style="color:var(--late)" onclick="pedirEmpezarDeCero()">Empezar de cero</button>
    </div>`:''}
-   <div class="fld" style="margin-top:14px">
+   ${mando?`<div class="fld" style="margin-top:14px">
      <label for="nbUrl">Base de datos en la nube</label>
      <input class="inp mono" id="nbUrl" placeholder="https://xxxxxxxx.supabase.co" value="${esc(NUBE.url||'')}">
      <label for="nbKey" style="margin-top:8px">Llave pública (publishable / anon)</label>
@@ -21516,14 +21579,17 @@ function openSync(){
        <button class="btn sec" onclick="probarNube()">Probar conexión</button>
        <button class="btn sec" onclick="guardarCfgNube()">Guardar y recargar</button>
      </div>
-   </div>
+   </div>`:`<p class="pw-note" style="margin-top:14px">${enNube()
+       ? `Conectado como <b>${esc((NUBE_YO&&NUBE_YO.correo)||(SES&&SES.m)||'')}</b>. Lo que registres se guarda
+          en este equipo y sube al servidor solo.`
+       : `Sin sesión en la nube: todo se guarda sólo en este equipo.`}</p>`}
    <div class="callout ${SW_LISTA?'':'warn'}" style="margin-top:14px">
      <svg viewBox="0 0 24 24">${SW_LISTA?'<circle cx="12" cy="12" r="9"/><path d="M8 12.2l2.6 2.6L16 9.4"/>':'<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>'}</svg>
      <div>${SW_LISTA
        ? `<b>App guardada en este equipo.</b> Puedes cerrarla y volver a abrirla en planta <b>sin internet</b>: arranca desde la copia local. Para tenerla como app propia, usa el menú del navegador → <b>Instalar aplicación</b> / <b>Añadir a pantalla de inicio</b>.`
        : `<b>Recomendación:</b> abre el sistema <b>antes</b> de entrar a la zona sin señal. Instalado desde el servidor (https) queda guardado en el equipo y abre sin internet; abierto como archivo suelto, mantenlo en una pestaña abierta.`}</div></div>`;
   $('#mFoot').innerHTML=`
-    <button class="btn quiet" onclick="toggleOffline()">${OFF_SIM?'Simular con señal':'Simular sin señal'}</button>
+    ${mando?`<button class="btn quiet" onclick="toggleOffline()">${OFF_SIM?'Simular con señal':'Simular sin señal'}</button>`:''}
     <span style="flex:1"></span>
     <button class="btn sec" onclick="closeModal()">Cerrar</button>
     <button class="btn" onclick="sincronizar(true)" ${!online()||!n?'disabled style="opacity:.5;cursor:not-allowed"':''}>Sincronizar ahora</button>`;
@@ -22448,6 +22514,8 @@ restaurarCaja().then(ok=>{
      traerlas de una versión anterior. */
   jubilarEjemplos();
   purgarBorrados();
+  /* Y que el sistema no se lleve lo guardado cuando necesite sitio. */
+  setTimeout(()=>{try{pedirAlmacenFijo()}catch(e){}},800);
   /* Y si ya había sesión abierta al arrancar, también. */
   setTimeout(()=>{try{ if(SES)volverDondeEstaba() }catch(e){}},1200);
   /* Y si este equipo venía con el marcador adelantado, se le borra
