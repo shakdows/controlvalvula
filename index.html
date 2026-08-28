@@ -19786,11 +19786,31 @@ function sellarIds(){
 }
 
 /* ── Llamadas a la base ──────────────────────────────────────*/
-async function nubeFetch(ruta,{metodo='GET',cuerpo,cab={},sinAuth}={}){
+/* Tope por defecto, generoso: una tanda de fotos por 3G tarda, y
+   cortarla sería peor que esperarla. Lo que no puede pasar es esperar
+   sin fin. Quien necesite menos —un botón con alguien delante— lo
+   pide en su llamada. */
+const NUBE_TOPE=60000;
+async function nubeFetch(ruta,{metodo='GET',cuerpo,cab={},sinAuth,tope}={}){
   const h={apikey:NUBE.key,'Content-Type':'application/json',...cab};
   if(!sinAuth&&enNube())h.Authorization='Bearer '+NUBE_SES.access_token;
-  const r=await fetch(NUBE.url+ruta,{method:metodo,headers:h,
-    body:cuerpo===undefined?undefined:JSON.stringify(cuerpo)});
+  /* El tope de verdad: se corta la petición, no se deja colgada por
+     detrás gastando la batería del celular. */
+  const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+  const t=setTimeout(()=>{try{ac&&ac.abort()}catch(e){}}, tope||NUBE_TOPE);
+  let r;
+  try{
+    r=await fetch(NUBE.url+ruta,{method:metodo,headers:h,signal:ac?ac.signal:undefined,
+      body:cuerpo===undefined?undefined:JSON.stringify(cuerpo)});
+  }catch(e){
+    clearTimeout(t);
+    if(e&&(e.name==='AbortError'||e.code===20)){
+      const x=new Error('el servidor no contestó a tiempo');
+      x.tiempo=true; throw x;
+    }
+    throw e;
+  }
+  clearTimeout(t);
   const txt=await r.text();
   let j=null; try{j=txt?JSON.parse(txt):null}catch(e){}
   if(!r.ok){
@@ -19876,7 +19896,8 @@ async function recuperarPwNube(c){
     <b>${esc(c.n)}</b> un correo a <b class="mono">${esc(c.m)}</b> con un enlace
     para poner una contraseña nueva.</p>
     <p class="hint" style="margin-top:12px">El enlace lo firma el servidor y caduca solo.
-    Ni tú ni nadie llega a ver la contraseña: por eso no aparece en esta pantalla.</p>`;
+    Ni tú ni nadie llega a ver la contraseña: por eso no aparece en esta pantalla.</p>
+    <div id="rcAviso" class="hint" style="margin-top:14px;line-height:1.6"></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
     <button class="btn" id="rcBtn" onclick="enviarRecuperacion('${c.id}')">Enviar el correo</button>`;
   $('#modal').classList.add('on');
@@ -19884,17 +19905,35 @@ async function recuperarPwNube(c){
 async function enviarRecuperacion(id){
   const c=CUENTAS.find(x=>x.id===id);if(!c)return;
   const b=$('#rcBtn'); if(b){b.disabled=true;b.textContent='Enviando…'}
+  const decir=txt=>{ const d=document.getElementById('rcAviso'); if(d)d.innerHTML=txt; };
   try{
-    await nubeFetch('/auth/v1/recover',{metodo:'POST',sinAuth:true,cuerpo:{email:c.m}});
+    /* Veinte segundos: hay alguien mirando la pantalla. Si en veinte
+       segundos el servidor no contestó, no va a contestar. */
+    await nubeFetch('/auth/v1/recover',{metodo:'POST',sinAuth:true,tope:20000,cuerpo:{email:c.m}});
     closeModal();toast('Correo enviado a '+c.m);
     registrar('Cuenta',`Restablecimiento enviado a ${c.n}`);
   }catch(e){
-    if(b){b.disabled=false;b.textContent='Enviar el correo'}
-    // el proyecto limita cuántos correos salen por hora; conviene
-    // decirlo tal cual y no dejar al administrador probando a ciegas
-    toast(e.status===429
-      ? 'Supabase limita los correos por hora. Inténtalo más tarde.'
-      : 'No se pudo enviar: '+e.message);
+    if(b){b.disabled=false;b.textContent='Reintentar'}
+    /* Se dice QUÉ pasó y QUÉ hacer, en la propia ventana y no en un
+       aviso que se va solo: quien está restableciendo una contraseña
+       necesita leerlo dos veces. */
+    const salida=`<b>La otra manera:</b> entra a Supabase → <i>Authentication</i> → <i>Users</i>,
+      busca <b class="mono">${esc(c.m)}</b> y usa <i>Send recovery email</i> o
+      <i>Reset password</i>. Eso no pasa por este portal.`;
+    if(e&&e.tiempo)
+      decir(`<b style="color:var(--late)">El servidor no contestó en veinte segundos.</b>
+        Casi siempre es que el proyecto de Supabase no tiene configurado el correo saliente
+        (SMTP), así que la petición se queda esperando. ${salida}`);
+    else if(e&&e.status===429)
+      decir(`<b style="color:var(--due)">Demasiados correos por ahora.</b> Supabase limita
+        cuántos salen por hora en los proyectos sin SMTP propio. Espera un rato y reintenta. ${salida}`);
+    else if(!online())
+      decir(`<b style="color:var(--due)">Sin conexión.</b> Esto necesita internet: el correo
+        lo manda el servidor, no este equipo.`);
+    else
+      decir(`<b style="color:var(--late)">No se pudo enviar.</b> ${esc((e&&e.message)||'sin respuesta')}. ${salida}`);
+    toast(e&&e.tiempo?'El servidor no contestó · mira el detalle en la ventana'
+                     :'No se pudo enviar · mira el detalle en la ventana');
   }
 }
 
