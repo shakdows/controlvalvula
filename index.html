@@ -19803,7 +19803,15 @@ const NUBE_COLS=[
  {c:'COTIZACIONES',arr:()=>COTIZACIONES,emp:x=>x.cli},
  {c:'CALIBS',      arr:()=>CALIBS,      emp:x=>cliDeAct(x.act)},
  {c:'SERVS',       arr:()=>SERVS,       emp:x=>cliDeAct(x.act)},
- {c:'DOCS',        arr:()=>DOCS,        emp:x=>cliDeAct(x.a)}
+ {c:'DOCS',        arr:()=>DOCS,        emp:x=>cliDeAct(x.a)},
+ /* Las OC del cliente. Faltaban en esta lista, y eso quiere decir que
+    NUNCA subían: la que abría un técnico en su celular vivía sólo en
+    ese celular. Nadie más la veía, no salía en ningún otro equipo, y
+    el día que a ese teléfono le pasaba algo se iba con él —sin haber
+    tenido jamás una copia en ninguna parte—. Se guardan en el equipo
+    (fotoDatos ya las guardaba) pero no se compartían: las dos cosas
+    tienen que decir lo mismo, que es la regla de esta casa. */
+ {c:'PROYECTOS',   arr:()=>PROYECTOS,   emp:x=>x.cli}
 ];
 /* Los maestros son diccionarios, no listas: viajan como un documento
    entero cada uno. Cambian poco y los toca sólo Adolphus. */
@@ -21166,11 +21174,21 @@ async function correrJob(motivo){
   JOB_CORRIENDO=true;
   try{
     if(!await nubeVigente())return;
-    /* Bajar antes que subir: un equipo que estuvo desconectado no
+    /* PRIMERO se mira si a este equipo le falta algo. apuntarPendientes
+       no sube nada —sólo hace la cuenta de lo que hay que subir y, de
+       paso, comprueba el espejo: si el espejo dice que la nube tiene
+       fichas que aquí ya no están, borra el marcador de «ya me lo
+       traje todo» para que la bajada las pida de nuevo—. Estaba
+       DESPUÉS de bajar, así que la primera vuelta bajaba con el
+       marcador viejo (cero filas) y la reparación no servía hasta la
+       vuelta siguiente, 45 segundos más tarde. Un equipo al que el
+       sistema le vació los datos se quedaba en blanco mirando una
+       nube llena. */
+    await apuntarPendientes();
+    /* Y bajar antes que subir: un equipo que estuvo desconectado no
        sabe lo que se dio de baja mientras tanto, y subiendo primero
        escribe encima sus copias viejas. */
     const bajadas=await nubeBajar(false);
-    await apuntarPendientes();
     const subidas=await drenarPendientes();
     NUBE_FALLO=null;                     // la vuelta salió entera
     JOB_ESPERA=0; if(JOB_T){clearTimeout(JOB_T);JOB_T=null}
@@ -21658,15 +21676,22 @@ function openSync(){
        <span>Si crees que te falta algo que hizo un compañero. Vuelve a pedir el archivo
          entero en vez de sólo lo último; no borra nada de este equipo.</span></div>
      <button class="btn sec xs" onclick="rebajarTodo()">Traerlo todo</button></div>`:''}
-   ${mando?`<div class="set-row" style="margin-top:12px">
+   ${/* GUARDAR una copia lo puede hacer cualquiera y tiene que poder
+        hacerlo: es la única manera de sacar de un celular el trabajo
+        que todavía no ha subido. Esconderlo al técnico fue un error —
+        el día que a su equipo le pasa algo, esa copia es lo único que
+        queda. RESTAURAR sí es del creador: mete fichas de vuelta y
+        eso no lo decide quien está en planta. */''}
+   <div class="set-row" style="margin-top:12px">
      <div class="t"><b>Guardar una copia en un archivo</b>
-       <span>Todo lo registrado en un solo archivo, para el USB o el correo. Es la copia que
-         no depende ni del navegador ni de la nube. Al restaurarla no se borra nada: lo que
-         falte se añade.</span></div>
+       <span>Todo lo de este equipo en un solo archivo, para el USB o el correo. Es la copia
+         que no depende ni del navegador ni de la nube.${mando?` Al restaurarla no se borra
+         nada: lo que falte se añade.`:` Si a este equipo le pasa algo, es lo único que
+         queda de lo que todavía no ha subido: guárdala y mándasela a gerencia.`}</span></div>
      <div style="display:flex;gap:8px;flex-wrap:wrap">
        <button class="btn sec xs" onclick="copiaSeguridad()">Guardar copia</button>
-       <button class="btn quiet xs" onclick="pedirCopia()">Restaurar copia</button>
-     </div></div>`:''}
+       ${mando?`<button class="btn quiet xs" onclick="pedirCopia()">Restaurar copia</button>`:''}
+     </div></div>
    ${/* Lo más destructivo que hace el portal va al final, apartado y
         en rojo: dejar el sistema como recién instalado. */''}
    ${mando?`<div class="set-row" style="margin-top:12px;
