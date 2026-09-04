@@ -3136,6 +3136,19 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .py-sub{color:var(--ink-3);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* la tarjeta del tablero */
 .wo-oc{font-size:11px;color:var(--ink-3);margin-top:6px}
+/* La barra de filtros de las horas: en una fila, y en el celular
+   cada uno en el suyo. */
+.ho-filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.ho-filtros .chip-sel{height:34px}
+.ho-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.ho-t th{text-align:left;font-weight:600;color:var(--ink-3);font-size:11px;letter-spacing:.04em;
+  text-transform:uppercase;padding:9px 12px;border-bottom:1px solid var(--line)}
+.ho-t td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:middle}
+.ho-t tr:last-child td{border-bottom:0}
+.ho-t .num{text-align:right;font-family:'IBM Plex Mono'}
+.ho-t .mod{font-size:11.5px;color:var(--ink-3)}
+.ho-t tbody tr:hover{background:var(--surface-2)}
+.ho-t .abierto{color:var(--due);font-style:italic}
 /* Arenado y pintura en la tarjeta: en su renglón, no pegados al
    tipo de trabajo, para que se lean como lo que son — algo más. */
 .wo-extras{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
@@ -3408,6 +3421,7 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
       <a data-p="snc"><svg viewBox="0 0 24 24"><path d="M12 3.5 2.7 19.5h18.6z"/><path d="M12 10v4M12 17h.01"/></svg><span class="lbl">Reclamos</span><span class="ct" id="ctSnc"></span></a>
       <div class="rail-sec">Análisis</div>
       <a data-p="rep"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 14l3-3.5 3 2 4.5-6.5"/></svg><span class="lbl">Confiabilidad</span></a>
+      <a data-p="horas"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg><span class="lbl">Horas de trabajo</span></a>
       <div class="rail-sec">Maestros</div>
       <a data-p="cat"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16M9 9v11"/></svg><span class="lbl">Catálogo y despieces</span></a>
       <a data-p="stk"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg><span class="lbl">Stock de almacén</span><span class="ct" id="ctStk"></span></a>
@@ -3567,6 +3581,26 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
             <button class="btn" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden de trabajo</button></div></div>
         <div id="pryPanel"></div>
         <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
+      </div></section>
+
+      <!-- ═══ HORAS DE TRABAJO ═══ -->
+      <!-- Sólo gerencia. Lo que se cobra son horas hombre, y esto es
+           de dónde salen: cada válvula, cada módulo, desde que el
+           trabajo entra hasta que se firma. -->
+      <section class="page" id="p-horas"><div class="view-pad">
+        <div class="hd"><div><h1>Horas de trabajo</h1><p>Lo que se estuvo con cada válvula, módulo por módulo: empieza cuando el trabajo entra en esa etapa y termina cuando se firma. No se teclea ninguna hora — se apunta sola. Esta pantalla es de gerencia: en los papeles que se entregan no sale.</p></div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn sec" onclick="horasExcel()"><svg viewBox="0 0 24 24"><path d="M12 3v11M8 10l4 4 4-4M4 17v3h16v-3"/></svg>Exportar a Excel</button></div></div>
+        <div class="ho-filtros">
+          <select class="inp chip-sel" id="hoCli"></select>
+          <select class="inp chip-sel" id="hoAnio"></select>
+          <select class="inp chip-sel" id="hoMes"></select>
+          <input class="inp" id="hoDia" type="date" style="height:34px;max-width:170px">
+          <button class="btn quiet xs" onclick="horasLimpiar()">Quitar los filtros</button>
+        </div>
+        <div class="stats" id="hoStats"></div>
+        <div class="panel"><div class="panel-h"><h3>Detalle</h3><span class="count" id="hoCount"></span></div>
+          <div id="hoLista"></div></div>
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
@@ -4214,7 +4248,8 @@ function refrescarHoy(){
 }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden)refrescarHoy() });
 setInterval(refrescarHoy,10*60000);
-const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',sort:{k:'tag',dir:1},
+const S={page:'assets',rol:'admin',cli:null,inCli:null,view:'todos',fCli:'',fMarca:'',fFam:'',fTipo:'',fMod:'',calCli:'',woCli:'',
+  hoCli:'',hoAnio:'',hoMes:'',hoDia:'',sort:{k:'tag',dir:1},
          focus:0,picked:new Set(),cur:null,tab:'ficha',setTab:'org',cola:'',colaTodo:false,qCli:'',cliPend:false,wide:false,cart:[]};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -4692,6 +4727,8 @@ function applyRole(v){
      carpeta de una empresa. La lista de empresas es la puerta, y tiene
      que estar siempre. */
   const POR_ROL={tec:['cot','rep','users'], com:['rep','users','hist']};
+  /* Las horas hombre son de gerencia. Al técnico no se le enseña el
+     cronómetro de su propio trabajo, y al cliente menos. */
   const ocultas=c
     ? ['clients','cat','imp','users','snc','stk']
     : FUERA_DE_CLIENTE.concat(POR_ROL[S.rol]||[]);
@@ -4702,6 +4739,7 @@ function applyRole(v){
      selector de empresa dentro— para que el tablero esté siempre a un
      clic, haya o no algo en el panel. */
   if(S.rol==='tec'||S.rol==='admin'){const i=ocultas.indexOf('wo');if(i>=0)ocultas.splice(i,1)}
+  if(S.rol!=='admin'&&!ocultas.includes('horas'))ocultas.push('horas');
   $$('#nav > a').forEach(a=>a.style.display=ocultas.includes(a.dataset.p)?'none':'');
   /* El cliente no tiene por qué aprenderse la estructura interna de
      Adolphus: ve sus equipos y sus servicios, con ese nombre. */
@@ -5696,7 +5734,16 @@ function horasDeModulo(c,etapa,rol,o){
   const or=o||ordenDelEnsayo(c);
   const ini=horaDeEtapa(or,etapa);
   const fi=(c.firmas||[]).find(x=>x.rol===rol);
-  const fin=String((fi&&fi.h)||'').trim();
+  let fin=String((fi&&fi.h)||'').trim();
+  /* Si el trabajo ya había pasado a la etapa siguiente antes de esa
+     firma, el módulo terminó al pasar. La misma firma cierra el
+     mantenimiento y la prueba de salida —firma el que ejecuta las
+     dos—, y sin esto los dos módulos contarían el mismo rato: las
+     horas hombre saldrían infladas y no hay peor número que ése. */
+  const orden=ETAPAS.map(([k])=>k);
+  const sig=orden[orden.indexOf(etapa)+1];
+  const hs=sig?horaDeEtapa(or,sig):'';
+  if(hs&&(!fin||enMinutos(hs)<enMinutos(fin)))fin=hs;
   if(!ini&&!fin)return null;
   return {ini,fin,dur:duracionTxt(ini,fin),
           f:(fi&&fi.f)||c.fecha||c.rcFecha||''};
@@ -10353,6 +10400,187 @@ function grabarSinMover(t){
   guardarLocal();
   return t.id;
 }
+/* ════════════════════════════════════════════════════════════
+   HORAS DE TRABAJO · LA PESTAÑA DE GERENCIA
+   ------------------------------------------------------------
+   Una fila por válvula Y por módulo. El módulo empieza cuando el
+   trabajo entra en su etapa y termina cuando se firma; si le falta
+   una punta se enseña igual, marcada como abierta, porque un trabajo
+   sin cerrar también hay que verlo.
+   ════════════════════════════════════════════════════════════ */
+const MODULOS_HORA=[
+ ['ent', 'Prueba de entrada', 'recep'],
+ ['mant','Mantenimiento',     'ejec'],
+ ['cert','Prueba de salida',  'ejec']
+];
+function minutosEntre(ini,fin){
+  const a=enMinutos(ini), b=enMinutos(fin);
+  if(a==null||b==null)return null;
+  let d=b-a; if(d<0)d+=1440;
+  return d;
+}
+/* El ensayo de esta orden, que es de donde salen las firmas. */
+function ensayoDeOrden(o){
+  if(!o)return null;
+  return (o.calib&&CALIBS.find(x=>x.id===o.calib))
+      || CALIBS.find(x=>x.ord===o.id)
+      || CALIBS.find(x=>x.act===o.act) || null;
+}
+function filasHoras(){
+  const out=[];
+  ORDENES.forEach(o=>{
+    const a=ACTIVOS.find(x=>x.id===o.act)||{};
+    const c=cli(a.cli)||{};
+    const en=ensayoDeOrden(o);
+    MODULOS_HORA.forEach(([et,lbl,rol])=>{
+      if(!haceEsePaso(o,et))return;          // lo que no se encargó no se cuenta
+      const h=en?horasDeModulo(en,et,rol,o):null;
+      const ini=(h&&h.ini)||horaDeEtapa(o,et)||'';
+      const fin=(h&&h.fin)||'';
+      if(!ini&&!fin)return;                  // sin ninguna hora no hay nada que decir
+      const f=(o.hist&&o.hist[et])||o.f||'';
+      out.push({f, cliId:a.cli||'', cli:c.n||'', oc:o.oc||'',
+        mat:codigoLinea(o)||o.mat||o.n||'', tag:a.tag||a.ser||'',
+        et, mod:lbl, ini, fin, dur:duracionTxt(ini,fin), min:minutosEntre(ini,fin),
+        tec:(et==='ent'?(o.recibe||o.ing):o.ing)||o.tec||''});
+    });
+  });
+  return out.sort((x,y)=>String(y.f).localeCompare(String(x.f))
+                 ||String(y.ini).localeCompare(String(x.ini)));
+}
+const MESES_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio',
+                'Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function horasFiltradas(){
+  const cl=S.hoCli||'', an=S.hoAnio||'', me=S.hoMes||'', di=S.hoDia||'';
+  return filasHoras().filter(f=>{
+    if(cl&&f.cliId!==cl)return false;
+    if(di)return f.f===di;                   // un día concreto manda sobre el resto
+    if(an&&String(f.f).slice(0,4)!==an)return false;
+    if(me&&String(f.f).slice(5,7)!==me)return false;
+    return true;
+  });
+}
+function totalHoras(fs){
+  const m=fs.reduce((t,f)=>t+(f.min||0),0);
+  if(!m)return '—';
+  return `${Math.floor(m/60)} h${m%60?' '+(m%60)+' min':''}`;
+}
+function horasLimpiar(){
+  S.hoCli='';S.hoAnio='';S.hoMes='';S.hoDia='';
+  const d=$('#hoDia'); if(d)d.value='';
+  renderHoras();
+}
+function renderHoras(){
+  const box=$('#hoLista'); if(!box)return;
+  /* Los desplegables se rehacen con la lista, como los demás: en el
+     celular la página se pinta antes de que baje la nube. */
+  llenarSelectClientes($('#hoCli'),S.hoCli,e=>{S.hoCli=e.target.value;renderHoras()});
+  const todas=filasHoras();
+  const anios=[...new Set(todas.map(f=>String(f.f).slice(0,4)).filter(x=>/^\d{4}$/.test(x)))].sort().reverse();
+  const sa=$('#hoAnio');
+  if(sa){
+    const firma='a|'+anios.join(',');
+    if(sa.dataset.built!==firma){
+      sa.innerHTML='<option value="">Todos los años</option>'+
+        anios.map(y=>`<option value="${y}">${y}</option>`).join('');
+      sa.dataset.built=firma;
+    }
+    if(!sa.dataset.atado){sa.dataset.atado='1';sa.onchange=e=>{S.hoAnio=e.target.value;renderHoras()}}
+    sa.value=S.hoAnio||'';
+  }
+  const sm=$('#hoMes');
+  if(sm){
+    if(!sm.dataset.built){
+      sm.innerHTML='<option value="">Todos los meses</option>'+
+        MESES_ES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
+      sm.dataset.built='1';
+      sm.onchange=e=>{S.hoMes=e.target.value;renderHoras()};
+    }
+    sm.value=S.hoMes||'';
+  }
+  const sd=$('#hoDia');
+  if(sd&&!sd.dataset.atado){sd.dataset.atado='1';sd.onchange=e=>{S.hoDia=e.target.value;renderHoras()}}
+
+  const fs=horasFiltradas();
+  const cerradas=fs.filter(f=>f.min!=null);
+  const porCli={}; cerradas.forEach(f=>{porCli[f.cli]=(porCli[f.cli]||0)+f.min});
+  const cuantos=Object.keys(porCli).length;
+  const val=$('#hoCount'); if(val)val.textContent=fs.length||'';
+  const st=$('#hoStats');
+  if(st)st.innerHTML=[
+    ['Horas contadas',totalHoras(fs),'de '+cerradas.length+' trabajo'+(cerradas.length===1?'':'s')+' cerrado'+(cerradas.length===1?'':'s')],
+    ['Válvulas',String(new Set(fs.map(f=>f.mat)).size),'con horas en este filtro'],
+    ['Empresas',String(cuantos),cuantos===1?Object.keys(porCli)[0]||'':'con trabajo contado'],
+    ['Sin cerrar',String(fs.length-cerradas.length),'les falta la firma o la entrada']
+  ].map(([k,v,d])=>`<div class="stat" style="cursor:default" title="${esc(d)}">
+      <span class="v">${esc(v)}</span><span class="k">${esc(k)}</span></div>`).join('');
+
+  if(!fs.length){
+    box.innerHTML=`<div class="empty" style="padding:30px"><b>Nada que contar todavía</b>
+      Las horas se apuntan solas cuando el trabajo pasa de etapa y cuando se firma.</div>`;
+    return;
+  }
+  box.innerHTML=`<div style="overflow-x:auto"><table class="ho-t"><thead><tr>
+    <th>Fecha</th><th>Empresa</th><th>OC</th><th>MAT</th><th>Válvula</th><th>Módulo</th>
+    <th>Quién</th><th class="num">Inicio</th><th class="num">Término</th><th class="num">Duración</th>
+  </tr></thead><tbody>${fs.map(f=>`<tr>
+    <td class="mono">${esc(f.f?fPE(f.f):'—')}</td>
+    <td>${esc(f.cli||'—')}</td>
+    <td class="mono">${esc(f.oc||'—')}</td>
+    <td class="mono"><b>${esc(f.mat)}</b></td>
+    <td>${esc(f.tag||'—')}</td>
+    <td class="mod">${esc(f.mod)}</td>
+    <td>${esc(f.tec||'—')}</td>
+    <td class="num">${esc(f.ini||'—')}</td>
+    <td class="num">${f.fin?esc(f.fin):'<span class="abierto">sin firmar</span>'}</td>
+    <td class="num">${f.dur?`<b>${esc(f.dur)}</b>`:'<span class="abierto">abierto</span>'}</td>
+  </tr>`).join('')}</tbody></table></div>`;
+}
+/* A Excel. Una hoja con el detalle y otra con el resumen por empresa,
+   que es lo que se mira para facturar. */
+function horasExcel(){
+  const fs=horasFiltradas();
+  if(!fs.length){toast('No hay horas que exportar con este filtro');return}
+  const cab=['Fecha','Empresa','OC del cliente','MAT','Válvula','Módulo','Quién',
+             'Inicio','Término','Duración','Minutos'];
+  const cuerpo=fs.map(f=>[f.f,f.cli,f.oc,f.mat,f.tag,f.mod,f.tec,f.ini,f.fin,f.dur,f.min==null?'':f.min]);
+  const porCli={};
+  fs.forEach(f=>{ if(f.min==null)return;
+    porCli[f.cli||'—']=porCli[f.cli||'—']||{min:0,n:0};
+    porCli[f.cli||'—'].min+=f.min; porCli[f.cli||'—'].n++; });
+  const filtro=[S.hoCli?(cli(S.hoCli)||{}).n:'Todas las empresas',
+                S.hoDia?fPE(S.hoDia):[S.hoMes?MESES_ES[+S.hoMes-1]:'',S.hoAnio||''].filter(Boolean).join(' ')||'Todo el histórico'];
+  const resumen=[
+    ['Horas de trabajo · Adolphus S.A.'],
+    ['Empresa',filtro[0]],['Periodo',filtro[1]],
+    ['Emitido el',HOY.toISOString().slice(0,10)],
+    [],
+    ['Empresa','Trabajos','Minutos','Horas'],
+    ...Object.entries(porCli).map(([k,v])=>[k,v.n,v.min,(v.min/60).toFixed(2)]),
+    [],
+    ['TOTAL',fs.filter(f=>f.min!=null).length,
+      fs.reduce((t,f)=>t+(f.min||0),0),(fs.reduce((t,f)=>t+(f.min||0),0)/60).toFixed(2)]
+  ];
+  const nombre=`Horas de trabajo · ${filtro[0]} · ${filtro[1]}`.replace(/[\\/:*?"<>|]/g,'-');
+  if(typeof XLSX==='undefined'){
+    bajarCSV(nombre+'.csv',[...resumen,[],cab,...cuerpo]);
+    toast('Descargado en CSV · se abre en Excel igual');
+    return;
+  }
+  try{
+    const wb=XLSX.utils.book_new();
+    const ws1=XLSX.utils.aoa_to_sheet(resumen); ws1['!cols']=[{wch:34},{wch:12},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws1,'Resumen');
+    const ws2=XLSX.utils.aoa_to_sheet([cab,...cuerpo]);
+    ws2['!cols']=[{wch:12},{wch:30},{wch:18},{wch:16},{wch:14},{wch:20},{wch:20},{wch:9},{wch:9},{wch:12},{wch:9}];
+    XLSX.utils.book_append_sheet(wb,ws2,'Detalle');
+    XLSX.writeFile(wb,nombre+'.xlsx');
+    toast(`${fs.length} línea${fs.length===1?'':'s'} exportada${fs.length===1?'':'s'}`);
+  }catch(e){
+    bajarCSV(nombre+'.csv',[...resumen,[],cab,...cuerpo]);
+    toast('Descargado en CSV');
+  }
+}
 /* ── LA FICHA FIJA DE LA VÁLVULA ─────────────────────────────
    Todo lo que NO cambia de un servicio a otro —la placa y lo que se
    mira en el cuerpo— vive aquí, en un solo formulario. Lo escribe
@@ -11371,8 +11599,7 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 </style></head><body>
 <section class="pliego">
 ${membreteCasa({titulo:'PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE<br>VÁLVULAS DE SEGURIDAD',
-   cod:RECEP_COD, verTxt:RECEP_VER_TXT, psv:psvDeLaHoja(c),
-   horas:horasDeModulo(c,'ent','recep')})}
+   cod:RECEP_COD, verTxt:RECEP_VER_TXT, psv:psvDeLaHoja(c)})}
 <h2>Identificación</h2>
 <div class="rej">
   ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Orden de compra',ocDeLaHoja(c))}
@@ -11551,14 +11778,11 @@ const MEMBRETE_CSS=`
   padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
 .mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
 .mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
-/* Con dos renglones anchos —el PSV y el horario—, el de arriba lleva
-   su raya: sólo el último se queda sin ella. */
-.mem .dt i:not(:last-child){border-bottom:1px solid #1a1d21}
 .mem .lg svg{display:block}`;
 /* El membrete de la casa. Lo llevan todos los papeles que se
    entregan, cada uno con su título y su código: así quien los recibe
    sabe de dónde vienen sin tener que leerlos. */
-function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv,horas}){
+function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
   /* A un papel sin código de la casa no se le inventa uno: en su sitio
      va la fecha.
      `verTxt` es para los formatos que llevan su versión y su fecha
@@ -11570,22 +11794,18 @@ function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv,horas}){
     ? `<span>Código</span><b>${esc(cod)}</b>
        <span>Versión<br>(Fecha)</span><b>${esc(verTxt||(String(ver||'1')+' ('+fPE(fecha)+')'))}</b>`
     : `<span>Emitido</span><b>${esc(fPE(fecha))}</b>`;
+  /* El número de la válvula va solo, sin rótulo: en esa casilla no
+     puede ir otra cosa, y quien lee el papel lo reconoce de un
+     vistazo. */
   const tercera=psv
-    ? `<i>PSV N° <b>${esc(psv)}</b></i>`
+    ? `<i><b>${esc(psv)}</b></i>`
     : `<i>Página <b>${pagina||1}</b> de ${total||1}</i>`;
-  /* Y debajo, el horario: a qué hora se empezó con esta válvula y a
-     qué hora se terminó. Si no se sabe ninguna de las dos, el renglón
-     no se imprime. */
-  const cuarta=(horas&&(horas.ini||horas.fin))
-    ? `<i>Inicio <b>${esc(horas.ini||'—')}</b> · Término <b>${esc(horas.fin||'—')}</b></i>`
-    : '';
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
   <div class="ti">${titulo}</div>
   <div class="dt">
     ${caja}
     ${tercera}
-    ${cuarta}
   </div>
 </div>`;
 }
@@ -11973,29 +12193,6 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${(gente.length?gente:[{n:'',cargo:''}]).map(g=>`<tr><td>${raya(g.n)}</td><td>${raya(g.cargo)}</td></tr>`).join('')}
 </table>
 
-${(()=>{
-  /* Horas hombre. Una fila por válvula: cuándo se trabajó, desde qué
-     hora, hasta cuál y cuánto se estuvo con ella. Las que todavía no
-     tienen horas no se inventan: se quedan fuera. */
-  const fs=conE.map(x=>({a:x.a,h:horasTrabajo(x.e,o)})).filter(x=>x.h);
-  if(!fs.length)return '';
-  const suma=fs.reduce((t,x)=>{
-    const i=enMinutos(x.h.ini), f=enMinutos(x.h.fin);
-    if(i==null||f==null)return t;
-    let d=f-i; if(d<0)d+=1440; return t+d;
-  },0);
-  const total=suma?`${Math.floor(suma/60)?Math.floor(suma/60)+' h':''}${
-    Math.floor(suma/60)&&suma%60?' ':''}${suma%60?suma%60+' min':''}`:'';
-  return `<h2>Horas de trabajo</h2>
-<table>
-  <tr><th>Válvula</th><th>Fecha</th><th class="c">Inicio</th><th class="c">Término</th><th class="c">Duración</th></tr>
-  ${fs.map(x=>`<tr><td>${raya(x.a.tag||x.a.ser||'')}</td><td>${raya(x.h.f?fPE(x.h.f):'')}</td>
-    <td class="c">${raya(x.h.ini)}</td><td class="c">${raya(x.h.fin)}</td>
-    <td class="c">${raya(x.h.dur)}</td></tr>`).join('')}
-  ${total&&fs.length>1?`<tr><td colspan="4"><b>Total</b></td><td class="c"><b>${esc(total)}</b></td></tr>`:''}
-</table>
-`;
-})()}
 <h2>Seguridad, salud y medio ambiente</h2>
 <ul>${INFORME_SSMA.map(x=>li(esc(x))).join('')}</ul>
 
@@ -12622,7 +12819,6 @@ function psvDocumento(id){
   ${/* Las dos casillas del visto bueno del cliente salían siempre en
        blanco, con sus renglones para rellenar a mano. En estos papeles
        sale lo que se escribió en el portal y nada más. */''}
-  ${lineaHorasModulo(c,'mant','ejec')}
   <div class="pliego-n">Certificado · hoja 1</div>
   </section>
 
@@ -13022,7 +13218,6 @@ ${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
     <span>${esc((ej&&ej.cargo)||c.respArea||'')}${ej?' · '+esc(fPE(ej.f))+conHora(ej):''}</span></div>
   <div><span>Recibe conforme</span></div>
 </div>
-${lineaHorasModulo(c,'cert','ejec')}
 <div class="pie"><span>Adolphus S.A. · prueba de salida</span><span>${esc(fPE(hoyISO()))}</span></div>
 </section>
 ${/* El anexo, en hoja aparte: en la tabla la foto es una marca, aquí
@@ -20026,7 +20221,7 @@ function pintarRescate(){
 /* La portada va al FINAL: sus tarjetas copian los números del menú
    lateral, y esos números los ponen al día las listas. Pintarla
    primero era enseñar los de la pasada anterior. */
-function renderAll(){try{bandaLocal();pintarNet();pintarPerfiles()}catch(e){}pintarRescate();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderHome();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
+function renderAll(){try{bandaLocal();pintarNet();pintarPerfiles()}catch(e){}pintarRescate();renderClients();renderAssets();renderCal();renderPlan();renderHistorial();planContador();renderWO();renderHoras();renderReq();renderRep();renderCat();renderStock();renderParts();renderUsers();renderNotif();renderSNC();renderCot();renderHome();renderCliBar();pintarTabbar();if(S.page==='settings'&&window.renderSettings)renderSettings();enfocables()}
 document.body.insertAdjacentHTML('afterbegin',VDEFS);
 /* la palabra se usa como máscara: el color lo pone quien la pinte */
 document.documentElement.style.setProperty('--palabra','url("'+PALABRA+'")');
