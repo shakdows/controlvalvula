@@ -1067,6 +1067,9 @@ tr.bad:hover{background:var(--due-bg);filter:brightness(.98)}
 .acct-pop button.mi:hover{background:var(--surface-2);color:var(--ink)}
 .acct-pop button.mi svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;flex:0 0 auto}
 .acct-pop button.mi .kbd{margin-left:auto}
+/* La versión de este equipo, al final de su renglón: se lee cuando
+   hace falta y no estorba cuando no. */
+.acct-pop button.mi small{margin-left:auto;font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-3)}
 .acct-meta{margin:2px 10px 6px;display:flex;justify-content:space-between;gap:10px;font-size:11.5px;color:var(--ink-3)}
 .acct-meta b{color:var(--ink-2);font-weight:600}
 
@@ -3456,6 +3459,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           </div>
           <hr>
           <button class="mi" data-instalar style="display:none" onclick="closeAcct();instalarApp()"><svg viewBox="0 0 24 24"><path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Descargar la app</button>
+          <button class="mi" id="miActualizar" onclick="closeAcct();buscarActualizacion()"
+            title="Traer la versión nueva del portal, si la hay"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>Buscar actualización<small id="miVer"></small></button>
           <button class="mi" onclick="closeAcct();logout()"><svg viewBox="0 0 24 24"><path d="M15 12H4M4 12l4-4M4 12l4 4"/><path d="M12 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>Cerrar sesión</button>
         </div>
       </div>
@@ -22127,7 +22132,7 @@ function bandaLocal(){
 }
 const ARRANQUE=Date.now();
 function bandaVersion(){
-  if(HAY_VERSION||document.getElementById('bandaVer'))return;
+  if(HAY_VERSION||document.getElementById('bandaVer')){ pintarActualizar(); return }
   HAY_VERSION=true;
   /* Y nada de recargar por su cuenta: recargar te deja en la portada,
      y estar trabajando en las órdenes de una empresa y aparecer en el
@@ -22160,6 +22165,61 @@ function pintarActualizar(){
   b.onclick=()=>aplicarVersion();
   b.innerHTML=`<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg><span>Actualizar</span>`;
   sitio.parentNode.insertBefore(b,sitio);
+}
+/* Qué versión tiene ESTE equipo. No se pregunta a un número escrito
+   en la página —que miente en cuanto el guardián sirve una copia
+   vieja—, se mira el nombre de la caja que el guardián tiene abierta:
+   ésa es la que se está usando. */
+async function versionInstalada(){
+  try{
+    if(!('caches' in window))return '';
+    const ks=await caches.keys();
+    const k=ks.filter(x=>/^adolphus-v\d+$/.test(x)).sort((a,b)=>
+      (+b.slice(10))-(+a.slice(10)))[0];
+    return k?k.slice(9):'';
+  }catch(e){ return '' }
+}
+function pintarVersion(){
+  versionInstalada().then(v=>{
+    const e=document.getElementById('miVer');
+    if(e)e.textContent=v?('· '+v):'';
+  }).catch(()=>{});
+}
+/* Buscar la versión nueva a mano. Es el botón del que tirar cuando el
+   aviso no salió: pregunta al guardián, espera a que termine de
+   bajarla y la aplica. Si no hay ninguna, lo dice y dice también en
+   qué versión está este equipo. */
+let BUSCANDO_VER=false;
+async function buscarActualizacion(){
+  if(BUSCANDO_VER)return; BUSCANDO_VER=true;
+  try{
+    if(!('serviceWorker' in navigator)||!SW_REG){
+      toast('Recargando el portal…');
+      setTimeout(()=>location.reload(),400);
+      return;
+    }
+    toast('Buscando una versión nueva…');
+    try{ await SW_REG.update() }catch(e){}
+    /* Bajarla lleva unos segundos: son tres megas de portal. Se espera
+       a que el guardián nuevo quede listo, no se contesta antes. */
+    const hasta=Date.now()+12000;
+    while(Date.now()<hasta){
+      const r=await navigator.serviceWorker.getRegistration().catch(()=>null);
+      if(r)SW_REG=r;
+      if(SW_REG&&SW_REG.waiting)break;
+      if(!SW_REG||!SW_REG.installing)break;
+      await new Promise(x=>setTimeout(x,400));
+    }
+    if(SW_REG&&SW_REG.waiting){
+      HAY_VERSION=true; pintarActualizar();
+      toast('Versión nueva lista · aplicando');
+      setTimeout(()=>aplicarVersion(),300);
+      return;
+    }
+    const v=await versionInstalada();
+    pintarVersion();
+    toast(v?`Ya tienes la última versión · ${v}`:'Ya tienes la última versión');
+  } finally { BUSCANDO_VER=false }
 }
 const NOTA_VERSION=new URL('__version-nueva',location.href).toString();
 async function mirarNotaVersion(){
@@ -22237,6 +22297,10 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
     document.addEventListener('visibilitychange',()=>{ if(!document.hidden)mirar() });
     window.addEventListener('online',mirar);
     setInterval(mirar,15*60*1000);
+    /* Y en cuanto se abre. Un celular que estuvo días con la
+       aplicación de fondo no pasa por ninguno de los de arriba. */
+    setTimeout(mirar,2500);
+    pintarVersion();
   });
 }
 
