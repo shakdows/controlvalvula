@@ -3121,6 +3121,12 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .paso-ch:hover{border-color:var(--line-1)}
 .paso-ch input{margin:0;width:14px;height:14px;flex:0 0 auto}
 .paso-ch:has(input:checked){border-color:var(--sel);background:var(--sel-bg);color:var(--sel);font-weight:600}
+/* Un dato que ya está decidido: se enseña con la misma caja que los
+   demás para que la ficha no se descuadre, pero no se toca. */
+.inp.fijo{display:flex;align-items:center;gap:8px;background:var(--surface-2);
+  color:var(--ink-2);cursor:default}
+.inp.fijo svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;flex:0 0 auto;color:var(--ink-3)}
+.inp.fijo b{font-weight:600;color:var(--ink)}
 /* El segundo renglón: arenado y pintura. No son etapas de la
    calibración, así que se distinguen a la vista —otro color— y
    llevan su rótulo delante para que nadie los confunda con los tres
@@ -8315,7 +8321,13 @@ function cuadroYaToca(cuadro,etapa){
   const ahora=o.indexOf(etapa);
   return ahora<0||cuando<=ahora;
 }
-const faltaDelTaller=c=>psvFaltantes(c).filter(x=>(x.paso||9)===3);
+/* El trabajo del taller no es sólo el desarme: son el desarme, las
+   conclusiones y la firma de quien lo hizo. Mirando sólo el desarme,
+   una válvula pasaba a prueba de salida con el informe a medias — y
+   el informe es lo que se entrega. El cuadro 4 no cuenta: ésos son
+   los disparos del as-left, que se hacen YA en la prueba de salida. */
+const PASOS_TALLER=[3,5,6];
+const faltaDelTaller=c=>psvFaltantes(c).filter(x=>PASOS_TALLER.includes(x.paso||9));
 const tallerListo=c=>faltaDelTaller(c).length===0;
 /* El veredicto lo dan las presiones —y con eso se dibuja el gráfico en
    cuanto hay disparos, que es cuando sirve—. Emitir el certificado es
@@ -8780,6 +8792,14 @@ function openPSV(actId,edit,seccion){
   if(PSV_TMP){
     const ord=ordenViva(PSV_TMP.act);
     if(ord&&ord.recibe){ PSV_TMP.rcRecibe=ord.recibe; PSV_TMP.rcFecha=ord.recibida||PSV_TMP.rcFecha; }
+    /* Y el encargado del mantenimiento es el que tomó la orden. Se
+       ponía a mano en un desplegable y así el mismo hombre acababa
+       escrito de dos maneras en el mismo trabajo. La válvula ya está
+       asignada: no se vuelve a preguntar. */
+    if(ord&&ord.ing&&ord.ing!=='Por asignar'&&!String(PSV_TMP.respNombre||'').trim()){
+      PSV_TMP.respNombre=ord.ing;
+      if(!String(PSV_TMP.respArea||'').trim())PSV_TMP.respArea='Técnico';
+    }
   }
   if(retomado)setTimeout(()=>toast('Seguimos con el borrador que quedó a medias'),300);
   if(!PSV_TMP)return;
@@ -9446,11 +9466,20 @@ function pintarPSV(){
     <details class="psv-sec${paso(6)}" ${tocan.includes(6)?'open':''}><summary><span class="pn">6</span> · Firmas${marca(cuenta(6))}
       <span class="psv-req" style="color:var(--ink-3);font-weight:500">quién responde por este trabajo</span></summary><div class="psv-b">
       <div class="two">
+        ${/* La válvula ya se tomó con un nombre: ese nombre es el que
+             responde por el trabajo y no se vuelve a preguntar. Dos
+             desplegables para la misma persona era la manera de que
+             acabara escrita de dos formas distintas en el mismo
+             papel. Sólo cuando nadie la ha tomado hay que elegir. */''}
         <div class="fld"><label for="pv-resp">Encargado del mantenimiento${
-          ayuda('Nombre y apellido de quien hizo el trabajo. Viene puesto de quien tomó la orden.')}</label>
-          ${campoTecnico('pv-resp',t.respNombre||'',
-            `oninput="psvCampo('respNombre',this.value)"`)}
-          <span class="hint">${t.respNombre?'Es quien tomó la orden. Se puede corregir.':'Nadie ha tomado la orden todavía.'}</span></div>
+          ayuda('Quien tomó la orden. Sale bajo su firma en el certificado y en el informe.')}</label>
+          ${t.respNombre
+            ? `<div class="inp fijo" id="pv-resp" title="Lo tomó ${esc(t.respNombre)}">
+                 <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                 <b>${esc(t.respNombre)}</b></div>
+               <span class="hint">Es quien tomó la orden en el tablero.</span>`
+            : campoTecnico('pv-resp','',`oninput="psvCampo('respNombre',this.value)"`)+
+              `<span class="hint">Nadie ha tomado la orden todavía.</span>`}</div>
         <div class="fld"><label for="pv-area">Cargo${
           ayuda('El cargo de quien hizo el trabajo. Sale bajo su firma en el certificado y en el informe.')}</label>
           <input class="inp" id="pv-area" list="areasAdolphus" value="${esc(t.respArea||'')}"
@@ -15514,6 +15543,21 @@ function renderWO(){
                Con una sola válvula no hay lista que abrir y el botón
                sigue donde estaba. */
             if(varias)return aviso;
+            /* De mantenimiento no se sale a medias. Antes el botón
+               tiraba, saltaba un aviso y la válvula acababa igual en
+               prueba de salida con su informe incompleto. Ahora el
+               botón no se puede pulsar y dice qué falta: el que está
+               delante de la válvula sabe qué le queda sin abrir nada. */
+            if(G.et==='mant'&&nx[0]==='cert'&&haceEsePaso(o,'mant')){
+              const c=recepDe(o.act), f=c?faltaDelTaller(c):[];
+              if(!c||f.length){
+                const q=!c?'registrar el mantenimiento':f[0].que;
+                const mas=f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:'';
+                return `<button class="btn xs" disabled style="width:100%;margin-top:8px;justify-content:center"
+                    title="Falta ${esc(q+mas)}">${nx[1]}</button>
+                  <div class="wo-parte">Falta ${esc(q)}${esc(mas)} para pasar a prueba de salida</div>${aviso}`;
+              }
+            }
             return `<button class="btn ${G.et==='mant'?'':'sec'} xs" style="width:100%;margin-top:8px;justify-content:center" onclick="event.stopPropagation();avanzarGrupo('${G.g}','${G.et}')">${nx[1]}</button>${aviso}`;
           })():''}
           ${/* El desarme del cuadro 3 es lo que llena el informe técnico:
