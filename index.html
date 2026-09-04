@@ -11809,22 +11809,29 @@ function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
   </div>
 </div>`;
 }
-function membreteInforme(pagina,total,fecha){
+function membreteInforme(pagina,total,fecha,psv){
   return membreteCasa({
     titulo:'INFORME TÉCNICO MANTENIMIENTO Y CALIBRACION DE<br>VÁLVULAS DE SEGURIDAD',
-    cod:INFORME_COD, ver:INFORME_VER, fecha, pagina, total});
+    cod:INFORME_COD, ver:INFORME_VER, fecha, psv});
 }
 /* El membrete se pone cuando el papel ya está armado: sólo entonces se
    sabe cuántas hojas tiene —las de fotos salen de cuántas parejas haya
    fotografiado el taller— y «Página 2 de 7» puede decir la verdad. */
-function ponerMembretes(html,fecha){
+function ponerMembretes(html,fecha,psv){
   const trozos=html.split(/(<section class="hoja[^"]*")/);
   let total=0;
   for(let i=1;i<trozos.length;i+=2)total++;
   let hoja=0;
   for(let i=1;i<trozos.length;i+=2){
     hoja++;
-    trozos[i+1]=trozos[i+1].replace('>','>\n'+membreteInforme(hoja,total,fecha));
+    trozos[i+1]=trozos[i+1].replace('>','>\n'+membreteInforme(hoja,total,fecha,psv));
+    /* La numeración baja al pie de la hoja: arriba manda el número de
+       la válvula, pero un papel de varias hojas sin numerar no se
+       audita. Va al final de ESTA hoja, antes de que empiece la
+       siguiente. */
+    const k=trozos[i+1].indexOf('</section>');
+    if(k>=0)trozos[i+1]=trozos[i+1].slice(0,k)+
+      `<div class="hoja-n">Página ${hoja} de ${total}</div>`+trozos[i+1].slice(k);
   }
   return trozos.join('');
 }
@@ -12080,6 +12087,10 @@ p.escrito.propio{margin-top:9px;padding-top:8px;border-top:1px solid #e4e7ea}
    de firmas, que es justo lo que no puede pasar en un informe que se
    entrega firmado. */
 .hoja{break-after:page;page-break-after:always}
+/* La numeración de las hojas, al pie: arriba manda el número de la
+   válvula, pero un papel de varias hojas sin numerar no se audita. */
+.hoja-n{margin-top:14px;text-align:right;font-size:10px;color:#7b8390;
+  border-top:1px solid #e4e7ea;padding-top:5px}
 .hoja:last-of-type{break-after:auto;page-break-after:auto}
 @media screen{.hoja{border:0;margin:0 auto 18px;padding:13mm 12mm}}
 /* La carátula respira como la del Word: el membrete arriba, el bloque
@@ -12297,7 +12308,7 @@ ${(()=>{
 </section>
 
 ${BARRA_IMPRIMIR}
-</body></html>`,fecha)};
+</body></html>`,fecha,String(o.mat||o.n||'').trim()||os)};
 }
 function imprimirInforme(idOrden,solo){
   const d=documentoInforme(idOrden,solo);
@@ -12669,7 +12680,7 @@ function psvDocumento(id){
   </style></head><body>
   <section class="pliego">
   ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN DE<br>VÁLVULA DE SEGURIDAD Y ALIVIO',
-     cod:'AXAD-088', ver:'2', fecha:c.fecha, pagina:1, total:1})}
+     cod:'AXAD-088', ver:'2', fecha:c.fecha, psv:psvDeLaHoja(c)})}
   <div class="ident">
     <span>Cliente<b>${esc(e.n||'')}</b></span>
     <span>TAG<b>${esc(a.tag||'')}</b></span>
@@ -13184,7 +13195,7 @@ tbody tr td{height:20mm}
 </style></head><body>
 <section class="pliego">
 ${membreteCasa({titulo:'PRUEBA DE SALIDA — AS LEFT<br>VÁLVULAS DE SEGURIDAD',
-   cod:SALIDA_COD, ver:SALIDA_VER, fecha:c.fecha, pagina:1, total:1})}
+   cod:SALIDA_COD, ver:SALIDA_VER, fecha:c.fecha, psv:psvDeLaHoja(c)})}
 <div class="ident">
   ${id2('Cliente',e.n)}${id2('O.S.',c.os)}${id2('Fecha',fPE(c.fecha))}
   ${id2('Modelo',[m.m,a.mod].filter(Boolean).join(' '))}${id2('Serie',a.ser)}
