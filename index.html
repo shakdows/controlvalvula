@@ -5664,13 +5664,41 @@ function ordenDelEnsayo(c){
       || ORDENES.find(x=>x.act===c.act&&x.et!=='final')
       || ORDENES.find(x=>x.act===c.act) || null;
 }
-/* Empieza cuando el ingeniero la toma —o cuando se abrió el papel del
-   banco, lo que se sepa— y termina cuando el ensayo se cerró. */
+/* A qué hora entró el trabajo en una etapa. La orden lo apunta al
+   moverse; las dos primeras se apuntaban ya desde antes con otro
+   nombre y se siguen leyendo, que hay trabajos de la semana pasada. */
+function horaDeEtapa(or,etapa){
+  if(!or)return '';
+  const h=(or.horas||{})[etapa];
+  if(h)return String(h).trim();
+  if(etapa==='ent')return String(or.recibidaH||'').trim();
+  if(etapa==='mant')return String(or.tomadaH||'').trim();
+  return '';
+}
+/* El horario de UN módulo: desde que el trabajo se le pasa hasta que
+   se firma. Es lo que se cuenta como horas hombre de ese módulo. */
+function horasDeModulo(c,etapa,rol,o){
+  if(!c)return null;
+  const or=o||ordenDelEnsayo(c);
+  const ini=horaDeEtapa(or,etapa);
+  const fi=(c.firmas||[]).find(x=>x.rol===rol);
+  const fin=String((fi&&fi.h)||'').trim();
+  if(!ini&&!fin)return null;
+  return {ini,fin,dur:duracionTxt(ini,fin),
+          f:(fi&&fi.f)||c.fecha||c.rcFecha||''};
+}
+/* El horario del trabajo entero de esta válvula: desde que entró en
+   la primera etapa hasta la última firma. Es el que va al cuadro de
+   horas hombre del informe. */
 function horasTrabajo(c,o){
   if(!c)return null;
   const or=o||ordenDelEnsayo(c);
-  const ini=String(c.horaIni||(or&&(or.tomadaH||or.recibidaH))||'').trim();
-  const fin=String(c.horaFin||'').trim();
+  const entradas=ETAPAS.map(([k])=>horaDeEtapa(or,k)).filter(Boolean);
+  const firmas=(c.firmas||[]).map(f=>f.h).filter(Boolean);
+  const menor=l=>l.slice().sort((a,b)=>enMinutos(a)-enMinutos(b))[0]||'';
+  const mayor=l=>l.slice().sort((a,b)=>enMinutos(b)-enMinutos(a))[0]||'';
+  const ini=menor(entradas)||String(c.horaIni||'').trim();
+  const fin=mayor(firmas)||String(c.horaFin||'').trim();
   if(!ini&&!fin)return null;
   return {ini,fin,dur:duracionTxt(ini,fin),
           f:c.fecha||c.rcFecha||(or&&(or.tomada||or.recibida))||''};
@@ -5688,6 +5716,16 @@ function textoHoras(c,o){
 function lineaHoras(c,o){
   const t=textoHoras(c,o);
   return t?`<p class="nota">Horas de trabajo · ${esc(t)}</p>`:'';
+}
+/* La de un módulo: el certificado cuenta el mantenimiento, la prueba
+   de salida cuenta la salida. */
+function lineaHorasModulo(c,etapa,rol,o){
+  const h=horasDeModulo(c,etapa,rol,o); if(!h)return '';
+  const p=[];
+  if(h.ini)p.push('inicio '+h.ini);
+  if(h.fin)p.push('término '+h.fin);
+  if(h.dur)p.push(h.dur);
+  return p.length?`<p class="nota">Horas de trabajo · ${esc(p.join(' · '))}</p>`:'';
 }
 /* Nombre · fecha · hora, que es como se escriben aquí las personas. */
 function conHora(f){ return f&&f.h?' · '+esc(f.h):'' }
@@ -11220,10 +11258,15 @@ function ocDeLaHoja(c){
 /* El número de la válvula tal como lo lleva la orden: PSV-106-001. Si
    el ensayo todavía no lo copió, se busca en su orden. */
 function psvDeLaHoja(c,o){
+  /* El de la orden —PSV-106—, no el de la línea —PSV-106-001—: en la
+     casilla del membrete va el número de la válvula y ya. */
+  const or=o||ORDENES.find(x=>x.act===(c||{}).act&&!x.arch)
+             ||ORDENES.find(x=>x.act===(c||{}).act);
+  const base=or?String(or.mat||or.n||'').trim():'';
+  if(base)return base;
   const dice=String((c&&c.os)||'').trim();
-  if(dice)return dice;
-  const or=o||ORDENES.find(x=>x.act===(c||{}).act&&!x.arch);
-  return or?String(codigoLinea(or)||or.mat||or.n||'').trim():'';
+  const m=/^(PSV-\d+)(?:-\d+)?$/i.exec(dice);
+  return m?m[1]:dice;
 }
 /* ── El protocolo de recepción, en una hoja ──────────────────
    AXAD-SER-007 v.02. Es lo primero que se imprime y lo que piden los
@@ -11314,7 +11357,8 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 </style></head><body>
 <section class="pliego">
 ${membreteCasa({titulo:'PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE<br>VÁLVULAS DE SEGURIDAD',
-   cod:RECEP_COD, verTxt:RECEP_VER_TXT, psv:psvDeLaHoja(c)})}
+   cod:RECEP_COD, verTxt:RECEP_VER_TXT, psv:psvDeLaHoja(c),
+   horas:horasDeModulo(c,'ent','recep')})}
 <h2>Identificación</h2>
 <div class="rej">
   ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Orden de compra',ocDeLaHoja(c))}
@@ -11345,7 +11389,9 @@ ${String(c.rcComent||'').trim()?`<h2>Comentarios</h2>
     <div class="l">Firma ADSA · mecánico que hizo la prueba<b>${rec?esc(rec.n)+(rec.cargo?' · '+esc(rec.cargo):''):'—'}</b>
       ${rec?esc(fPE(rec.f))+conHora(rec):''}</div></div>
 </div>
-${lineaHoras(c)}
+${/* Las horas ya van arriba, en su casilla del membrete: repetirlas
+     aquí es decir lo mismo dos veces y esta hoja tiene que caber en
+     un A4. */''}
 <p class="nota">Se realizó pruebas de SETEO de acuerdo a los parámetros y procedimientos que establece
   la norma ASME acorde a estándares API 527 y 576.</p>
 <div class="pie"><span>AXAD-SER-007 v.02</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
@@ -11491,11 +11537,14 @@ const MEMBRETE_CSS=`
   padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
 .mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
 .mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
+/* Con dos renglones anchos —el PSV y el horario—, el de arriba lleva
+   su raya: sólo el último se queda sin ella. */
+.mem .dt i:not(:last-child){border-bottom:1px solid #1a1d21}
 .mem .lg svg{display:block}`;
 /* El membrete de la casa. Lo llevan todos los papeles que se
    entregan, cada uno con su título y su código: así quien los recibe
    sabe de dónde vienen sin tener que leerlos. */
-function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
+function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv,horas}){
   /* A un papel sin código de la casa no se le inventa uno: en su sitio
      va la fecha.
      `verTxt` es para los formatos que llevan su versión y su fecha
@@ -11510,12 +11559,19 @@ function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
   const tercera=psv
     ? `<i>PSV N° <b>${esc(psv)}</b></i>`
     : `<i>Página <b>${pagina||1}</b> de ${total||1}</i>`;
+  /* Y debajo, el horario: a qué hora se empezó con esta válvula y a
+     qué hora se terminó. Si no se sabe ninguna de las dos, el renglón
+     no se imprime. */
+  const cuarta=(horas&&(horas.ini||horas.fin))
+    ? `<i>Inicio <b>${esc(horas.ini||'—')}</b> · Término <b>${esc(horas.fin||'—')}</b></i>`
+    : '';
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
   <div class="ti">${titulo}</div>
   <div class="dt">
     ${caja}
     ${tercera}
+    ${cuarta}
   </div>
 </div>`;
 }
@@ -12552,7 +12608,7 @@ function psvDocumento(id){
   ${/* Las dos casillas del visto bueno del cliente salían siempre en
        blanco, con sus renglones para rellenar a mano. En estos papeles
        sale lo que se escribió en el portal y nada más. */''}
-  ${lineaHoras(c)}
+  ${lineaHorasModulo(c,'mant','ejec')}
   <div class="pliego-n">Certificado · hoja 1</div>
   </section>
 
@@ -12952,7 +13008,7 @@ ${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
     <span>${esc((ej&&ej.cargo)||c.respArea||'')}${ej?' · '+esc(fPE(ej.f))+conHora(ej):''}</span></div>
   <div><span>Recibe conforme</span></div>
 </div>
-${lineaHoras(c)}
+${lineaHorasModulo(c,'cert','ejec')}
 <div class="pie"><span>Adolphus S.A. · prueba de salida</span><span>${esc(fPE(hoyISO()))}</span></div>
 </section>
 ${/* El anexo, en hoja aparte: en la tabla la foto es una marca, aquí
