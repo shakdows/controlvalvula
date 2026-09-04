@@ -4791,15 +4791,34 @@ function renderFilters(){
   const foco=S.fFam?['Familia',famNombre(S.fFam)]:S.fTipo?['Tipo',S.fTipo]:S.fMod?['Modelo',S.fMod]:null;
   const chip=foco?`<button class="on" title="Quitar este filtro" onclick="limpiarFoco()">${esc(foco[0])}: ${esc(foco[1])} ✕</button>`:'';
   $('#savedViews').innerHTML=VISTAS.map(v=>`<button class="${S.view===v.id?'on':''}" onclick="setView('${v.id}')">${v.n}</button>`).join('')+chip;
-  if(!$('#fCli').dataset.built){
-    $('#fCli').innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${c.n}</option>`).join('');
-    $('#fMarca').innerHTML='<option value="">Todas las marcas</option>'+Object.keys(MARCAS).map(m=>`<option>${m}</option>`).join('');
-    $('#fCli').dataset.built='1';
-    $('#fCli').onchange=e=>{S.fCli=e.target.value;renderAssets()};
-    $('#fMarca').onchange=e=>{S.fMarca=e.target.value;renderAssets()};
+  llenarSelectClientes($('#fCli'),S.fCli,e=>{S.fCli=e.target.value;renderAssets()});
+  /* Las marcas vienen del maestro y también bajan de la nube: mismo
+     cuento, misma cura. */
+  const fm=$('#fMarca'), firmaM=Object.keys(MARCAS).join('|');
+  if(fm){
+    if(fm.dataset.built!==firmaM){
+      fm.innerHTML='<option value="">Todas las marcas</option>'+
+        Object.keys(MARCAS).map(m=>`<option>${esc(m)}</option>`).join('');
+      fm.dataset.built=firmaM;
+    }
+    if(!fm.dataset.atado){ fm.dataset.atado='1'; fm.onchange=e=>{S.fMarca=e.target.value;renderAssets()} }
+    fm.value=S.fMarca||'';
   }
   $('#fCli').style.display=(S.cli||S.inCli)?'none':'';
-  $('#fCli').value=S.fCli;$('#fMarca').value=S.fMarca;
+}
+/* La firma de la lista de clientes. Mientras no cambie, el
+   desplegable no se toca; en cuanto cambia, se rehace. */
+function firmaClientes(){ return CLIENTES.map(c=>c.id+'\u00b7'+(c.n||'')).join('|') }
+function llenarSelectClientes(sel,valor,alCambiar){
+  if(!sel)return;
+  const f=firmaClientes();
+  if(sel.dataset.built!==f){
+    sel.innerHTML='<option value="">Todos los clientes</option>'+
+      CLIENTES.map(c=>`<option value="${esc(c.id)}">${esc(c.n||'')}</option>`).join('');
+    sel.dataset.built=f;
+  }
+  if(!sel.dataset.atado){ sel.dataset.atado='1'; sel.onchange=alCambiar }
+  sel.value=valor||'';
 }
 const COLS=[['tag','Tag'],['ser','N.º de serie'],['mod','Marca / modelo'],['cli','Ubicación'],['cr','Criticidad'],['sal','Salud'],['est','Estado'],['ult','Últ. servicio'],['prox','Próx. mantenimiento']];
 function renderGrid(){
@@ -13499,11 +13518,8 @@ function rechazarSol(id){
    ============================================================ */
 function renderCal(){
   const sel=$('#calCli');
-  if(sel&&!sel.dataset.built){
-    sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
-    sel.dataset.built='1';sel.onchange=e=>{S.calCli=e.target.value;renderCal()};
-  }
-  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.calCli||''}
+  llenarSelectClientes(sel,S.calCli,e=>{S.calCli=e.target.value;renderCal()});
+  if(sel)sel.style.display=(S.cli||S.inCli)?'none':'';
   const vs=visibles().filter(a=>a.prox&&(!S.calCli||a.cli===S.calCli));
   const venc=vs.filter(a=>dias(a.prox)<0),p90=vs.filter(a=>dias(a.prox)>=0&&dias(a.prox)<=90),ok=vs.filter(a=>dias(a.prox)>90);
   $('#ctCal').textContent=venc.length+p90.length||'';
@@ -14874,11 +14890,8 @@ function porQueTarde(ls){
 function renderWO(){
   renderProyectos();
   const sel=$('#woCli');
-  if(sel&&!sel.dataset.built){
-    sel.innerHTML='<option value="">Todos los clientes</option>'+CLIENTES.map(c=>`<option value="${c.id}">${esc(c.n)}</option>`).join('');
-    sel.dataset.built='1';sel.onchange=e=>{S.woCli=e.target.value;renderWO()};
-  }
-  if(sel){sel.style.display=(S.cli||S.inCli)?'none':'';sel.value=S.woCli||''}
+  llenarSelectClientes(sel,S.woCli,e=>{S.woCli=e.target.value;renderWO()});
+  if(sel)sel.style.display=(S.cli||S.inCli)?'none':'';
   /* Lo archivado ya no pinta en el tablero: vive en el Historial. Es
      lo que evita que la columna «Finalizado» crezca sin fin. */
   const mias=ORDENES.filter(o=>{const a=ACTIVOS.find(x=>x.id===o.act);
@@ -20255,6 +20268,22 @@ function datoEnEdicion(col,clave){
   }catch(e){}
   return null;
 }
+/* ¿Hay arriba alguna ficha que aquí no esté? Sólo las claves, que es
+   una lista de texto corta, no el archivo. Lo dado de baja aquí no
+   cuenta: eso ya va camino de la nube como baja. */
+async function faltaAlgoDeArriba(){
+  try{
+    const filas=await nubeFetch('/rest/v1/registros?select=coleccion,clave&borrado=is.false&limit=20000',
+                                {tope:20000});
+    if(!filas||!filas.length)return false;
+    return filas.some(f=>{
+      if(BORRADOS.has(f.coleccion+SEP+f.clave))return false;
+      const col=NUBE_COLS.find(x=>x.c===f.coleccion);
+      if(!col)return false;                 // MAESTRO y PLAN_OK van por su cuenta
+      return !col.arr().some(x=>x&&String(x.id)===String(f.clave));
+    });
+  }catch(e){ return false }
+}
 async function nubeBajar(reemplazar){
   /* Si este equipo venía desfasado, la primera bajada trae todo. */
   if(BAJAR_TODO){ NUBE_DESDE=null; BAJAR_TODO=false; }
@@ -20573,6 +20602,10 @@ async function nubeVuelta(primera){
        equipo se queda vacío para siempre por muchas veces que se
        entre. Sin datos, se pide el archivo entero. */
     if(!CLIENTES.length&&!ACTIVOS.length){ NUBE_DESDE=null; ESPEJO={}; }
+    else if(NUBE_DESDE&&await faltaAlgoDeArriba()){
+      NUBE_DESDE=null;   // el espejo NO se toca: hay que bajar, no volver a subir
+      console.warn('[nube] faltaba archivo en este equipo: se baja entero');
+    }
     bajadas=await nubeBajar(true);
     /* Si arriba no hay nada de lo importante y aquí sí, el espejo está
        mintiendo: se vacía para que suba todo en vez de quedarse callado
