@@ -2600,6 +2600,14 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 /* El aviso de versión nueva: arriba, sobre todo lo demás, y se puede
    dejar para después — nadie quiere que le recarguen la pantalla a
    medio ensayo. */
+/* El botón de actualizar, al lado del estado de conexión. Se ve, pero
+   no grita: quien está a media válvula lo deja para luego. */
+.act-chip{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;
+  border-radius:999px;border:1px solid var(--sel);background:var(--sel-bg);color:var(--sel);
+  font:600 12px/1 inherit;cursor:pointer;white-space:nowrap}
+.act-chip:hover{background:var(--sel);color:#fff}
+.act-chip svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2}
+@media(max-width:760px){.act-chip span{display:none}.act-chip{padding:0 9px}}
 .banda-ver{position:fixed;left:50%;transform:translateX(-50%);top:10px;z-index:120;
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
   max-width:calc(100vw - 24px);padding:9px 12px;border-radius:var(--r-2);
@@ -4315,6 +4323,19 @@ document.addEventListener('click',e=>{
   ocultarTip();
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')ocultarTip()});
+/* ── Las casillas de contraseña se seleccionan solas ─────────
+   Escribir mal una contraseña de seis dígitos y tener que sombrearla
+   para corregirla es pelear con el ratón dentro de un cuadro de
+   confirmación. Al entrar en la casilla queda TODO seleccionado: se
+   escribe encima y ya. Es lo que hace cualquier campo de clave corta,
+   y aquí hacía falta más que en ningún sitio — son las casillas que
+   aparecen cuando alguien va a borrar algo. */
+document.addEventListener('focusin',e=>{
+  const el=e.target;
+  if(!el||el.tagName!=='INPUT'||el.type!=='password')return;
+  if(!el.classList.contains('pend'))return;
+  setTimeout(()=>{try{el.select()}catch(x){}},0);
+});
 /* Al desplazar no se esconde: se vuelve a colocar. Antes, el simple
    hecho de que el navegador desplazara el campo para mostrarlo hacía
    desaparecer la ayuda que se acababa de abrir. */
@@ -21944,8 +21965,29 @@ function bandaVersion(){
   d.id='bandaVer'; d.className='banda-ver';
   d.innerHTML=`<span>Hay una versión nueva del portal, ya descargada.</span>
     <button class="btn xs" onclick="aplicarVersion()">Actualizar ahora</button>
-    <button class="btn quiet xs" onclick="this.parentNode.remove()">Después</button>`;
+    <button class="btn quiet xs" onclick="dejarloParaDespues()">Después</button>`;
   document.body.appendChild(d);
+  pintarActualizar();
+}
+/* «Después» aparta la banda, no la versión: el botón se queda arriba
+   hasta que alguien la aplique, hoy o el jueves. */
+function dejarloParaDespues(){
+  const d=document.getElementById('bandaVer'); if(d)d.remove();
+  pintarActualizar();
+}
+/* El botón de la barra. Sale cuando hay versión esperando y se va
+   cuando se aplica; no hay otra manera de que aparezca o desaparezca. */
+function pintarActualizar(){
+  const sitio=document.getElementById('netChip'); if(!sitio)return;
+  let b=document.getElementById('btnActualizar');
+  if(!HAY_VERSION){ if(b)b.remove(); return }
+  if(b)return;
+  b=document.createElement('button');
+  b.id='btnActualizar'; b.className='act-chip';
+  b.title='Hay una versión nueva ya descargada · se aplica cuando tú quieras';
+  b.onclick=()=>aplicarVersion();
+  b.innerHTML=`<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg><span>Actualizar</span>`;
+  sitio.parentNode.insertBefore(b,sitio);
 }
 const NOTA_VERSION=new URL('__version-nueva',location.href).toString();
 async function mirarNotaVersion(){
@@ -21953,6 +21995,15 @@ async function mirarNotaVersion(){
     if(!('caches' in window))return;
     const r=await caches.match(NOTA_VERSION);
     if(r)bandaVersion();
+  }catch(e){}
+}
+/* Y si el guardián tiene una versión esperando —aunque la nota ya no
+   esté—, el botón sale igual: es la señal de que hay algo que aplicar. */
+async function mirarSiHayVersion(){
+  try{
+    if(!navigator.serviceWorker)return;
+    const r=await navigator.serviceWorker.getRegistration();
+    if(r&&(r.waiting||r.installing)){ HAY_VERSION=true; pintarActualizar(); }
   }catch(e){}
 }
 async function olvidarNotaVersion(){
@@ -22815,6 +22866,7 @@ restaurarCaja().then(ok=>{
   }).catch(()=>{});
 })();
 armarGuardadoSolo();
+setTimeout(()=>{try{mirarSiHayVersion()}catch(e){}},1500);
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
