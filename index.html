@@ -3121,10 +3121,24 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .paso-ch:hover{border-color:var(--line-1)}
 .paso-ch input{margin:0;width:14px;height:14px;flex:0 0 auto}
 .paso-ch:has(input:checked){border-color:var(--sel);background:var(--sel-bg);color:var(--sel);font-weight:600}
+/* El segundo renglón: arenado y pintura. No son etapas de la
+   calibración, así que se distinguen a la vista —otro color— y
+   llevan su rótulo delante para que nadie los confunda con los tres
+   pasos de arriba. */
+.pasos-f.extras{margin-top:3px;align-items:center}
+.extras-t{font-style:normal;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);margin-right:2px}
+.paso-ch.extra:has(input:checked){border-color:var(--due);background:var(--due-bg);color:var(--due)}
+/* Y en la tarjeta y en los papeles, la marca de que esta válvula
+   además se arena o se pinta. */
+.tag.extra{border-color:var(--due);color:var(--due);background:transparent}
 .py-tag{font-weight:700;flex:0 0 auto}
 .py-sub{color:var(--ink-3);font-size:11.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* la tarjeta del tablero */
 .wo-oc{font-size:11px;color:var(--ink-3);margin-top:6px}
+/* Arenado y pintura en la tarjeta: en su renglón, no pegados al
+   tipo de trabajo, para que se lean como lo que son — algo más. */
+.wo-extras{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .wo-ing{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:11.5px;
   color:var(--ink-2);font-weight:600}
 .wo-ing svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}
@@ -5033,7 +5047,7 @@ function confirmarOrdenesLote(){
     const a=ACTIVOS.find(x=>x.id===id); if(!a)return;
     if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
     const pasos=pasosDeFila(id);
-    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,num,grupo,pasos,
+    ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,num,grupo,pasos,extras:extrasDeFila(id),
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
     hechas.push(a.tag||a.ser||'');
   });
@@ -13745,6 +13759,17 @@ const PASOS_ELEGIBLES=[
  ['cert','Prueba de salida',   'Los tres disparos del as-left y el visto bueno de gerencia']
 ];
 const TODOS_LOS_PASOS=PASOS_ELEGIBLES.map(x=>x[0]);
+/* Los trabajos que no son de la calibración. No mueven el tablero ni
+   piden papel: se encargan, se hacen y se dicen. */
+const EXTRAS_ELEGIBLES=[
+ ['arenado','Arenado','Se arena el cuerpo antes de pintarlo'],
+ ['pintura','Pintura','Se pinta según lo que pida el cliente']
+];
+const TODOS_LOS_EXTRAS=EXTRAS_ELEGIBLES.map(x=>x[0]);
+const extrasDe=o=>Array.isArray(o&&o.extras)
+  ? TODOS_LOS_EXTRAS.filter(k=>o.extras.includes(k)) : [];
+const nombreExtra=k=>(EXTRAS_ELEGIBLES.find(x=>x[0]===k)||[,k])[1];
+const extrasTexto=o=>extrasDe(o).map(nombreExtra).join(' · ');
 /* Los pasos de una orden. Las órdenes de antes no traen el campo: se
    les respetan los cinco de siempre. */
 const pasosDe=o=>Array.isArray(o&&o.pasos)
@@ -13785,13 +13810,25 @@ const pasosMarcados=()=>{
 /* Y los pasos VÁLVULA POR VÁLVULA: en la misma orden puede venir una
    que sólo hay que probar y devolver, y otra que entra al taller
    entera. Cada fila lleva sus tres casillas, marcadas de salida. */
-function pasosFila(actId,marcados){
-  const m=marcados||TODOS_LOS_PASOS;
+function pasosFila(actId,marcados,extras){
+  const m=marcados||TODOS_LOS_PASOS, e=extras||[];
   return `<span class="pasos-f" onclick="event.stopPropagation()">${PASOS_ELEGIBLES.map(([k,l,d])=>`
     <label class="paso-ch" title="${esc(d)}">
       <input type="checkbox" class="ck-paso" data-act="${esc(actId)}" value="${k}" ${m.includes(k)?'checked':''}>
+      <span>${esc(l)}</span></label>`).join('')}</span>
+  <span class="pasos-f extras" onclick="event.stopPropagation()">
+    <i class="extras-t">Además</i>${EXTRAS_ELEGIBLES.map(([k,l,d])=>`
+    <label class="paso-ch extra" title="${esc(d)}">
+      <input type="checkbox" class="ck-extra" data-act="${esc(actId)}" value="${k}" ${e.includes(k)?'checked':''}>
       <span>${esc(l)}</span></label>`).join('')}</span>`;
 }
+/* Lo que se marcó en la fila de esta válvula. Apagados de salida: un
+   trabajo que nadie pidió no se hace por descuido. */
+const extrasDeFila=actId=>{
+  const c=[...document.querySelectorAll('.ck-extra[data-act="'+actId+'"]')];
+  const m=c.filter(x=>x.checked).map(x=>x.value);
+  return TODOS_LOS_EXTRAS.filter(k=>m.includes(k));
+};
 const pasosDeFila=actId=>{
   const c=[...document.querySelectorAll('.ck-paso[data-act="'+actId+'"]')];
   if(!c.length)return pasosMarcados();
@@ -14188,7 +14225,7 @@ function guardarProyecto(){
   const grupo='g'+Date.now();
   sel.forEach(actId=>{
     ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
-      act:actId, pry:id, oc, mat, num, grupo, pasos:pasosDeFila(actId),
+      act:actId, pry:id, oc, mat, num, grupo, pasos:pasosDeFila(actId), extras:extrasDeFila(actId),
       n:mat, et:'oc', tipo, f:fec, tec:'Por asignar',
       hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
   });
@@ -14510,6 +14547,11 @@ function filasInforme(id){
       area:area(a)||'', etapa:(ETAPAS.find(e=>e[0]===o.et)||['','—'])[1],
       ing:o.ing||o.tec||'', fecha:o.f||'',
       resultado:res||'—', dice:bruto||'—',
+      /* Qué se le encargó a ESTA válvula, además de la calibración.
+         Son trabajos distintos y se cobran aparte: tienen que
+         distinguirse de un vistazo. */
+      extras:extrasDe(o),
+      trabajo:['Calibración'].concat(extrasDe(o).map(nombreExtra)).join(' + '),
       cert:c?(c.cert||'AXAD-088'):'—',
       obs:c&&c.coment?c.coment:(o.hall||'')};
   });
@@ -14535,10 +14577,12 @@ function informeProyecto(id){
    </div>
    ${p.desc?`<p class="dt-nota">${esc(p.desc)}</p>`:''}
    <div class="grid-scroll" style="max-height:320px;margin-top:12px;border:1px solid var(--line-2);border-radius:var(--r-2)">
-    <table class="grid"><thead><tr><th>MAT</th><th>Válvula</th><th>Etapa</th><th>Ingeniero</th><th>Resultado</th></tr></thead>
+    <table class="grid"><thead><tr><th>MAT</th><th>Válvula</th><th>Trabajo</th><th>Etapa</th><th>Ingeniero</th><th>Resultado</th></tr></thead>
     <tbody>${filas.map(f=>`<tr style="cursor:default">
       <td class="mono"><b>${esc(f.mat)}</b></td>
       <td><div class="cell-2"><span>${esc(f.tag)}</span><small>${esc(f.modelo)}</small></div></td>
+      <td>${f.extras.length?f.extras.map(k=>`<span class="tag extra">${esc(nombreExtra(k))}</span>`).join(' ')
+            :'<span class="muted">calibración</span>'}</td>
       <td><span class="tag ${f.etapa==='Finalizado'?'ok':'due'}"><span class="dot"></span>${esc(f.etapa)}</span></td>
       <td>${esc(f.ing)||'<span class="muted">sin asignar</span>'}</td>
       <td>${f.resultado==='APROBADO'?`<span class="tag ok"><span class="dot"></span>${esc(f.dice)}</span>`
@@ -14576,10 +14620,11 @@ function informeHTML(id){
    <h2>Detalle por válvula</h2>
    <table class="det"><thead><tr>
      <th>MAT</th><th>Tag</th><th>N.º de serie</th><th>Marca y modelo</th><th>Área</th>
-     <th>Ingeniero</th><th>Fecha</th><th>Etapa</th><th>Resultado</th><th>Certificado</th></tr></thead><tbody>
+     <th>Trabajo</th><th>Ingeniero</th><th>Fecha</th><th>Etapa</th><th>Resultado</th><th>Certificado</th></tr></thead><tbody>
    ${filas.map(f=>`<tr>
      <td class="mono"><b>${esc(f.mat)}</b></td><td class="mono">${esc(f.tag)}</td>
      <td class="mono">${esc(f.ser)||'—'}</td><td>${esc(f.modelo)}</td><td>${esc(f.area)}</td>
+     <td>${esc(f.trabajo)}</td>
      <td>${esc(f.ing)||'—'}</td><td class="mono">${f.fecha?fPE(f.fecha):'—'}</td>
      <td>${esc(f.etapa)}</td>
      <td class="${f.resultado==='APROBADO'?'ok':f.resultado==='RECHAZADO'?'no':''}">${esc(f.dice)}</td>
@@ -15129,6 +15174,12 @@ function renderWO(){
             ? `${ls.length} válvulas <span class="wo-tags">${esc(tags.slice(0,3).join(' · '))}${tags.length>3?` +${tags.length-3}`:''}</span>`
             : esc(a?.tag||a?.ser||'—')}</div>
           <div class="wo-m"><span>${esc(cli(a?.cli).n||'')}</span><span class="mono" title="Cuándo entró a esta etapa">${esc(entroEn(o))}</span></div>
+          ${/* Arenado y pintura no son de la calibración: si esta orden
+               los lleva, se dice en la tarjeta, que es donde el taller
+               mira antes de tocar la válvula. */''}
+          ${(()=>{const ex=[...new Set([].concat(...ls.map(x=>extrasDe(x))))];
+            return ex.length?`<div class="wo-extras">${ex.map(k=>
+              `<span class="tag extra">${esc(nombreExtra(k))}</span>`).join('')}</div>`:''})()}
           ${(()=>{const pc=avanceEtapa(G.et);
             return `<div class="wo-pc" title="${esc(ETAPAS.find(e=>e[0]===G.et)[1])} · ${pc}% del recorrido (${
                 ETAPAS.findIndex(e=>e[0]===G.et)+1} de ${ETAPAS.length} etapas)">
@@ -18985,7 +19036,7 @@ function confirmarMandar(id){
      enseña una tarjeta, pero cada válvula conserva su ensayo y su
      certificado, que es lo que no se puede compartir. */
   ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, num, grupo,
-    pasos:pasosDeFila(x), et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
+    pasos:pasosDeFila(x), extras:extrasDeFila(x), et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
   MM_PRINCIPAL=null;
   closeModal(); renderAll(); go('wo');
   const nom=ids.map(x=>{const v=ACTIVOS.find(y=>y.id===x);return v?(v.tag||v.ser||''):''}).filter(Boolean);
