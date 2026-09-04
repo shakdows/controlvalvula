@@ -20582,8 +20582,16 @@ async function nubeEntrar(correo,clave){
   guardarSesionNube(d);
   return await nubeCargarPerfil();
 }
+/* A dónde vuelve el que pulsa el enlace del correo. Es esta misma
+   página, sin nada detrás: el portal se encarga del resto leyendo lo
+   que Supabase le deja en la dirección. */
+function volverAqui(){
+  try{ return location.origin+location.pathname }catch(e){ return '' }
+}
 async function nubeRegistrar({correo,clave,nombre,cargo,telefono,codigo,ruc}){
-  const d=await nubeFetch('/auth/v1/signup',{metodo:'POST',sinAuth:true,
+  const vuelta=volverAqui();
+  const d=await nubeFetch('/auth/v1/signup'+(vuelta?'?redirect_to='+encodeURIComponent(vuelta):''),
+    {metodo:'POST',sinAuth:true,
     cuerpo:{email:correo,password:clave,data:{nombre,cargo,telefono,codigo,ruc}}});
 
   /* Si el correo YA tenía cuenta, Supabase no lo dice: responde como si
@@ -20629,7 +20637,9 @@ async function enviarRecuperacion(id){
   try{
     /* Veinte segundos: hay alguien mirando la pantalla. Si en veinte
        segundos el servidor no contestó, no va a contestar. */
-    await nubeFetch('/auth/v1/recover',{metodo:'POST',sinAuth:true,tope:20000,cuerpo:{email:c.m}});
+    const vuelta=volverAqui();
+    await nubeFetch('/auth/v1/recover'+(vuelta?'?redirect_to='+encodeURIComponent(vuelta):''),
+      {metodo:'POST',sinAuth:true,tope:20000,cuerpo:{email:c.m}});
     closeModal();toast('Correo enviado a '+c.m);
     registrar('Cuenta',`Restablecimiento enviado a ${c.n}`);
   }catch(e){
@@ -23126,6 +23136,94 @@ function abrirSesion(c,recordar,aviso){
    a lado: primero se ve la presentación entera —marca, video y lo
    que hace el portal— y el botón «Entrar» abre el acceso. En
    computadora nunca se llama a esto: las dos mitades ya se ven.  */
+/* ── LA VUELTA DEL CORREO ────────────────────────────────────
+   Supabase verifica el enlace y devuelve a esta página con la sesión
+   —o con el error— colgando de la dirección, detrás de la almohadilla.
+   Se lee, se limpia la barra de direcciones (esos datos no se dejan
+   ahí para que se copien en un WhatsApp) y se dice lo que pasó.
+   ════════════════════════════════════════════════════════════ */
+function trozosDeLaDireccion(){
+  const h=String(location.hash||'').replace(/^#/,'');
+  if(!h||h.indexOf('=')<0)return null;
+  const q={};
+  h.split('&').forEach(p=>{
+    const i=p.indexOf('='); if(i<=0)return;
+    try{ q[decodeURIComponent(p.slice(0,i))]=decodeURIComponent(p.slice(i+1).replace(/\+/g,' ')) }catch(e){}
+  });
+  return (q.type||q.access_token||q.error||q.error_description)?q:null;
+}
+/* El correo va dentro del permiso que manda Supabase. Se lee sólo para
+   escribirlo en la casilla: nadie tiene que teclearlo otra vez. */
+function correoDelToken(t){
+  try{
+    const p=String(t||'').split('.')[1]; if(!p)return '';
+    const j=JSON.parse(decodeURIComponent(escape(atob(p.replace(/-/g,'+').replace(/_/g,'/')))));
+    return j&&j.email||'';
+  }catch(e){ return '' }
+}
+/* El permiso del enlace de recuperación, mientras dura la pantalla.
+   No se guarda en ningún sitio: se usa y se olvida. */
+let PW_RESCATE='';
+async function guardarPwNueva(){
+  const el=document.getElementById('pwNueva'); if(!el)return;
+  const v=String(el.value||'');
+  if(v.length<8){ toast('La contraseña necesita al menos 8 caracteres'); el.focus(); return }
+  if(!PW_RESCATE){ authMsg('<b>Ese enlace ya se usó.</b> Pide otro a gerencia.','bad'); return }
+  const b=el.parentNode.querySelector('button');
+  if(b){b.disabled=true;b.textContent='Guardando…'}
+  try{
+    await nubeFetch('/auth/v1/user',{metodo:'PUT',sinAuth:true,tope:20000,
+      cab:{Authorization:'Bearer '+PW_RESCATE},cuerpo:{password:v}});
+    PW_RESCATE='';
+    authMsg('<b>Listo · tu contraseña quedó cambiada.</b> Entra con ella.','good');
+    setTimeout(()=>{const f=$('#inPw'); if(f)f.focus()},220);
+  }catch(e){
+    if(b){b.disabled=false;b.textContent='Guardarla'}
+    authMsg(`<b>No se pudo cambiar la contraseña.</b>
+      ${esc((e&&e.message)||'')} El enlace del correo caduca: si ya pasó un rato, pide otro.`,'bad');
+  }
+}
+function atenderVueltaDelCorreo(){
+  const q=trozosDeLaDireccion(); if(!q)return false;
+  try{ history.replaceState(null,'',location.pathname+location.search) }catch(e){}
+  const abrir=()=>{ try{ abrirAcceso() }catch(e){} };
+  if(q.error||q.error_description){
+    abrir(); authTab('in');
+    const t=String(q.error_description||q.error);
+    authMsg(/expired|invalid/i.test(t)
+      ? `<b>Ese enlace ya no vale.</b> Los enlaces del correo caducan solos.
+         Escribe a gerencia para que te manden uno nuevo.`
+      : esc(t),'bad');
+    return true;
+  }
+  const correo=correoDelToken(q.access_token);
+  if(q.type==='recovery'&&q.access_token){
+    /* El enlace de recuperación trae un permiso que sirve para UNA
+       cosa: poner una contraseña nueva. Así que se pone aquí mismo —
+       mandar a la persona a otra pantalla a hacerlo era perder el
+       permiso por el camino. */
+    abrir(); authTab('in');
+    if(correo)$('#inMail').value=correo;
+    PW_RESCATE=q.access_token;
+    authMsg(`<b>Enlace confirmado${correo?' · <span class="mono">'+esc(correo)+'</span>':''}.</b>
+      Escribe aquí tu contraseña nueva.
+      <div style="display:flex;gap:8px;margin-top:9px;align-items:center;flex-wrap:wrap">
+        <input class="inp" id="pwNueva" type="password" autocomplete="new-password"
+               placeholder="Contraseña nueva · mínimo 8" style="flex:1;min-width:190px">
+        <button class="btn xs" onclick="guardarPwNueva()">Guardarla</button>
+      </div>`,'good');
+    setTimeout(()=>{const f=document.getElementById('pwNueva'); if(f)f.focus()},420);
+    return true;
+  }
+  /* Alta confirmada: lo que hay que decirle es que ya está. */
+  abrir(); authTab('in');
+  if(correo)$('#inMail').value=correo;
+  authMsg(`<b>¡Felicitaciones! Tu cuenta ya está activa.</b>
+    ${correo?`Entra con <b class="mono">${esc(correo)}</b> y la contraseña que elegiste al registrarte.`
+            :'Entra con tu correo y la contraseña que elegiste al registrarte.'}`,'good');
+  setTimeout(()=>{ const f=$(correo?'#inPw':'#inMail'); if(f)f.focus() },420);
+  return true;
+}
 function abrirAcceso(){
   const c=$('#cover'); if(!c)return;
   c.classList.add('paso2');
@@ -23460,6 +23558,9 @@ restaurarCaja().then(ok=>{
 })();
 armarGuardadoSolo();
 setTimeout(()=>{try{mirarSiHayVersion()}catch(e){}},1500);
+/* Y si se llega desde el enlace de un correo, se atiende antes que
+   nada: es lo primero que esa persona tiene que leer. */
+setTimeout(()=>{try{atenderVueltaDelCorreo()}catch(e){}},300);
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
