@@ -2716,6 +2716,10 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .tl-acc{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .tl-doc{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.03em;color:var(--ink-3);
   border:1px solid var(--line);border-radius:var(--r-pill);padding:1px 8px}
+/* Cuánto se estuvo con la válvula. Va al lado de la hora, en gris:
+   es un dato de control, no un titular. */
+.tl-dur{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--ink-3);
+  background:var(--bg-2);border-radius:var(--r-pill);padding:1px 8px}
 /* Los datos del hito: rótulo arriba en pequeño y el valor debajo. Se
    leen en columna, como una ficha, y no como una frase larga. */
 .tl-d{display:flex;flex-wrap:wrap;gap:4px 22px;margin:6px 0 0}
@@ -5460,8 +5464,8 @@ function verOrden(idOrAct,esActivo){
                    pregunta desde cuándo la tenemos. */''}
               ${(()=>{
                 const h=[];
-                if(x.recibida)h.push(`Recibida ${fPE(x.recibida)}${x.recibidaH?` · ${x.recibidaH} h`:''}`);
-                if(x.tomada)h.push(`A mantenimiento ${fPE(x.tomada)}${x.tomadaH?` · ${x.tomadaH} h`:''}`);
+                if(x.recibida)h.push(`Recibida ${fPE(x.recibida)}${x.recibidaH?` · ${x.recibidaH}`:''}`);
+                if(x.tomada)h.push(`A mantenimiento ${fPE(x.tomada)}${x.tomadaH?` · ${x.tomadaH}`:''}`);
                 const orden=['oc','ent','mant','cert','final'], aqui=orden.indexOf(x.et);
                 if(aqui>=orden.indexOf('cert')&&(x.salidaF||(x.hist&&x.hist.cert)))
                   h.push(`A prueba de salida ${fPE(x.salidaF||x.hist.cert)}${x.salidaH?` · ${x.salidaH} h`:''}${
@@ -5633,6 +5637,55 @@ function fechaPeru(d){
       day:'2-digit',month:'2-digit',year:'numeric'}).format(d||new Date());
   }catch(e){ return fPE((d||new Date()).toISOString().slice(0,10)) }
 }
+/* ── Las horas del trabajo ───────────────────────────────────
+   Todo en hora de Lima y en HH:MM. Si falta una punta no se inventa:
+   se dice lo que se sabe y ya. */
+const RX_HHMM=/^(\d{1,2}):(\d{2})$/;
+const enMinutos=h=>{const m=RX_HHMM.exec(String(h||'').trim());return m?(+m[1]*60+ +m[2]):null};
+function duracionTxt(ini,fin){
+  const a=enMinutos(ini), b=enMinutos(fin);
+  if(a==null||b==null)return '';
+  let d=b-a; if(d<0)d+=1440;            // el turno que pasó de medianoche
+  if(!d)return '';
+  const hh=Math.floor(d/60), mm=d%60;
+  return (hh?hh+' h':'')+(hh&&mm?' ':'')+(mm?mm+' min':'');
+}
+/* La orden de la que salió este ensayo: de ella vienen la hora en que
+   se recibió la válvula y la hora en que la tomó el ingeniero. */
+function ordenDelEnsayo(c){
+  if(!c)return null;
+  return (c.ord&&ORDENES.find(x=>x.id===c.ord))
+      || ORDENES.find(x=>x.calib===c.id)
+      || ORDENES.find(x=>x.act===c.act&&x.et!=='final')
+      || ORDENES.find(x=>x.act===c.act) || null;
+}
+/* Empieza cuando el ingeniero la toma —o cuando se abrió el papel del
+   banco, lo que se sepa— y termina cuando el ensayo se cerró. */
+function horasTrabajo(c,o){
+  if(!c)return null;
+  const or=o||ordenDelEnsayo(c);
+  const ini=String(c.horaIni||(or&&(or.tomadaH||or.recibidaH))||'').trim();
+  const fin=String(c.horaFin||'').trim();
+  if(!ini&&!fin)return null;
+  return {ini,fin,dur:duracionTxt(ini,fin),
+          f:c.fecha||c.rcFecha||(or&&(or.tomada||or.recibida))||''};
+}
+function textoHoras(c,o){
+  const h=horasTrabajo(c,o); if(!h)return '';
+  const p=[];
+  if(h.ini)p.push('inicio '+h.ini);
+  if(h.fin)p.push('término '+h.fin);
+  if(h.dur)p.push(h.dur);
+  return p.join(' · ');
+}
+/* La línea que va en los papeles. Sin horas no se imprime nada: un
+   apartado vacío no se imprime. */
+function lineaHoras(c,o){
+  const t=textoHoras(c,o);
+  return t?`<p class="nota">Horas de trabajo · ${esc(t)}</p>`:'';
+}
+/* Nombre · fecha · hora, que es como se escriben aquí las personas. */
+function conHora(f){ return f&&f.h?' · '+esc(f.h):'' }
 function datosEtiqueta(actId,grupo){
   const a=ACTIVOS.find(x=>x.id===actId); if(!a)return null;
   const m=MODELOS[a.mod]||{}, e=cli(a.cli)||{};
@@ -7337,7 +7390,7 @@ function rielServicio(c,ord){
   const si=k=>hace.includes(k);
   return `<div class="hs-tl">${[
     si('ent')?paso('Inicial', recepcionCerrada(c), `abrirPapel('ent','${c.id}','${oid}')`,
-      recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-084 · en PDF o Word'
+      recepcionCerrada(c)?'Protocolo de prueba de entrada · AXAD-SER-007 · en PDF o Word'
                          :'Todavía sin prueba de entrada'):'',
     cliente?'':paso('Mantenimiento', !!ord, `abrirPapel('mant','${c.id}','${oid}')`,
       ord?'Informe técnico del servicio · DVAD-SER-002 · en PDF o Word':'Sin orden de servicio'),
@@ -7383,9 +7436,12 @@ function histLinea(a){
       ||ORDENES.find(x=>x.calib===c.id)
       ||ORDENES.find(x=>x.act===a.id&&x.et!=='final');
     if(ord)conPapel.add(grupoDe(ord)+'|'+ord.id);
-    const hora=c.horaFin||(ord&&(ord.tomadaH||ord.recibidaH))||'';
+    /* A qué hora se trabajó y cuánto duró: es lo que se mira para las
+       horas hombre, y en el historial es donde se busca. */
+    const ht=horasTrabajo(c,ord);
+    const hora=ht?((ht.ini&&ht.fin)?`${ht.ini} a ${ht.fin}`:(ht.fin||ht.ini)):'';
     ev.push({
-      f:c.fecha||c.rcFecha||hoyISO(), h:hora,
+      f:c.fecha||c.rcFecha||hoyISO(), h:hora, dur:(ht&&ht.dur)||'',
       k:est.listo?'cert':'mant', tieneEnt:entrada,
       t:est.listo?'Servicio con certificado':'Servicio sin terminar',
       doc:(ord?codigoLinea(ord):'')||c.os||'',
@@ -7590,7 +7646,8 @@ function histDetalle(a,c){
   const hilo=anios.map(y=>`<div class="ht-y">${esc(y)}</div>
     <div class="tl">${ev.filter(x=>String(x.f).slice(0,4)===y).map(x=>`
       <div class="tl-i ${x.k==='ent'?'ent':x.k==='cert'?'cert':'ord'}">
-        <div class="tl-m"><span>${esc(fPE(x.f))}${x.h?` · ${esc(x.h)} h`:''}</span>
+        <div class="tl-m"><span>${esc(fPE(x.f))}${x.h?` · ${esc(x.h)}`:''}</span>
+          ${x.dur?`<span class="tl-dur" title="Lo que se estuvo con la válvula">${esc(x.dur)}</span>`:''}
           <span class="tag ${x.e.c}"><span class="dot"></span>${esc(x.e.t)}</span>
           ${x.doc?`<span class="tl-doc">${esc(x.doc)}</span>`:''}</div>
         <div class="tl-t">${esc(x.t)}</div>
@@ -8653,7 +8710,7 @@ const psvCampo=(k,v)=>{
 };
 
 /* ════════════════════════════════════════════════════════════
-   PASO 2 · PRUEBA INICIAL — PROTOCOLO DE RECEPCIÓN (AXAD-084 v.2)
+   PASO 2 · PRUEBA INICIAL — PROTOCOLO DE RECEPCIÓN (AXAD-SER-007 v.02)
    ------------------------------------------------------------
    Es la primera hoja del trabajo y va sola: la válvula llega, se
    apunta lo que es, se le da UN disparo tal como vino —el as-found
@@ -8823,7 +8880,7 @@ function bloqueRecepcion(t,a,ayuda,F){
       la norma ASME acorde a estándares API 527 y 576.</p>
     <button class="btn sec" onclick="imprimirRecepcion()" style="margin-top:10px">
       <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
-      Imprimir el protocolo de recepción · AXAD-084</button>`;
+      Imprimir el protocolo de recepción · AXAD-SER-007</button>`;
 }
 function psvRecepVeredicto(k){
   if(!PSV_TMP)return;
@@ -8953,7 +9010,7 @@ function entradaDeLaOrden(g){
   $('#mTitle').textContent=`Prueba de entrada · ${o.mat||o.n}`;
   $('#mBody').innerHTML=`
     <div class="callout"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
-      <div>Cada válvula lleva su propio protocolo <b>AXAD-084</b>. Elige la que tienes delante;
+      <div>Cada válvula lleva su propio protocolo <b>AXAD-SER-007</b>. Elige la que tienes delante;
         las demás se quedan esperando su turno.${falta?'':' Ya están todas hechas — puedes volver a abrir cualquiera.'}</div></div>
     <div class="py-lista">${ls.map(x=>{
       const v=ACTIVOS.find(y=>y.id===x.act)||{}, m=MODELOS[v.mod]||{};
@@ -8979,7 +9036,7 @@ function seguirEntradas(actId){
   $('#mTitle').textContent=`Falta${falta.length===1?'':'n'} ${falta.length} prueba${falta.length===1?'':'s'} de entrada`;
   $('#mBody').innerHTML=`<div class="callout"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>
     <div>La orden <b class="mono">${esc(o.mat||o.n)}</b> lleva más de una válvula y cada una necesita
-      su propio protocolo <b>AXAD-084</b>. Sigue <b>${esc(a.tag||a.ser||'la siguiente')}</b>.</div></div>`;
+      su propio protocolo <b>AXAD-SER-007</b>. Sigue <b>${esc(a.tag||a.ser||'la siguiente')}</b>.</div></div>`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Después</button>
     <button class="btn" onclick="closeModal();pruebaDeEntrada('${falta[0].act}')">Hacer la de ${esc(a.tag||a.ser||'la siguiente')}</button>`;
   $('#modal').classList.add('on');
@@ -9304,7 +9361,7 @@ function pintarPSV(){
         de esta etapa, igual que el protocolo lo es de la anterior.
         Se abre para revisarlo; se imprime desde su propio botón. */''}
    ${/* En la prueba de entrada no pinta nada el informe de la orden:
-        ahí el papel es el protocolo AXAD-084 y sólo ése. El informe
+        ahí el papel es el protocolo AXAD-SER-007 y sólo ése. El informe
         lleva el desarme y los disparos, que todavía no existen. */''}
    ${etapa==='ent'?'':`<div class="psv-docs">
      <div class="t"><b>Informe técnico de la orden</b>
@@ -10227,6 +10284,9 @@ let PSV_GUARDADO=null;      // el ensayo a medio llenar, mientras se corrige la 
 function grabarSinMover(t){
   if(!t||!t.act)return '';
   if(!t.id)t.id='pv'+Date.now();
+  /* La hora en que este papel dejó de estar en blanco: es el principio
+     del trabajo en el banco. Se pone una vez y no se vuelve a tocar. */
+  if(!t.horaIni)t.horaIni=horaPeru();
   if(!t.ord)t.ord=(ordenViva(t.act)||{}).id||'';
   /* Borrador: es lo que hace que al volver a abrir la válvula se
      retome esto y no se empiece un papel nuevo encima. */
@@ -10854,7 +10914,7 @@ function guardarFirma(calibId,rol){
   if(!n){toast('Escribe el nombre de quien firma');$('#fmNom').focus();return}
   if(!FIRMA_HAY){toast('Falta la firma: dibujala en el recuadro');return}
   const img=$('#fmCanvas').toDataURL('image/png');
-  const firma={rol,n,cargo,f:HOY.toISOString().slice(0,10),img};
+  const firma={rol,n,cargo,f:HOY.toISOString().slice(0,10),h:horaPeru(),img};
   const poner=o=>{ o.firmas=(o.firmas||[]).filter(f=>f.rol!==rol); o.firmas.push(firma) };
   poner(c);
   /* ── Lo que está en pantalla manda ───────────────────────────
@@ -10971,7 +11031,7 @@ function verPSV(id){
         return `<div class="firma-box ${f?'ok':''}">
           <span class="fb-rol">${esc(lbl)}</span>
           ${f?`<img class="fb-img" src="${f.img}" alt="Firma de ${esc(f.n)}">
-               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}</span>
+               <b>${esc(f.n)}</b><span>${esc(f.cargo||'')}</span><span class="fb-f">${fPE(f.f)}${conHora(f)}</span>
                ${cliente?'':`<div class="fb-acc">
                  <button class="btn quiet xs" onclick="openFirma('${c.id}','${rol}')">Rehacer</button>
                  <button class="btn quiet xs" onclick="quitarFirma('${c.id}','${rol}')">Quitar</button></div>`}`
@@ -11137,8 +11197,31 @@ const BARRA_IMPRIMIR=ESPERAR_FOTOS+VISOR_FOTOS+`<style>${HOJA_CSS}</style><div c
     <svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2M8 14h8v7H8z"/></svg>
     Imprimir o guardar PDF</button>
 </div>`;
+/* El formato es el mismo para todos los trabajos: código, versión y
+   fecha son de fábrica y no se calculan con el reloj del equipo. */
+const RECEP_COD='AXAD-SER-007', RECEP_VER_TXT='02 (15.01.2025)';
+/* La orden de compra del cliente. Es dato suyo: no se calcula ni se
+   inventa, y si no la mandó, la casilla se queda vacía. */
+function ocDeLaHoja(c){
+  const dice=String((c&&c.oc)||'').trim();
+  if(dice)return dice;
+  const or=ORDENES.find(x=>x.act===(c||{}).act&&!x.arch)||
+           ORDENES.find(x=>x.act===(c||{}).act);
+  if(!or)return '';
+  if(String(or.oc||'').trim())return String(or.oc).trim();
+  const py=PROYECTOS.find(x=>x.id===or.pry);
+  return py?String(py.oc||'').trim():'';
+}
+/* El número de la válvula tal como lo lleva la orden: PSV-106-001. Si
+   el ensayo todavía no lo copió, se busca en su orden. */
+function psvDeLaHoja(c,o){
+  const dice=String((c&&c.os)||'').trim();
+  if(dice)return dice;
+  const or=o||ORDENES.find(x=>x.act===(c||{}).act&&!x.arch);
+  return or?String(codigoLinea(or)||or.mat||or.n||'').trim():'';
+}
 /* ── El protocolo de recepción, en una hoja ──────────────────
-   AXAD-084 v.2. Es lo primero que se imprime y lo que piden los
+   AXAD-SER-007 v.02. Es lo primero que se imprime y lo que piden los
    superiores: qué llegó, en qué estado, a qué presión disparó tal
    como vino, y quién la recibió. Cabe en un A4 a propósito. */
 function documentoRecepcion(c){
@@ -11160,7 +11243,7 @@ function documentoRecepcion(c){
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   const cel=(k,v)=>`<div class="c"><span>${esc(k)}</span><b>${v==null||String(v).trim()===''?'—':esc(String(v))}</b></div>`;
   return {titulo:`Protocolo de recepcion ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
-<title>AXAD-084 ${esc(a.tag||'')}</title><style>
+<title>AXAD-SER-007 ${esc(a.tag||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font:12px/1.5 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:11mm 10mm;background:#fff}
 ${MEMBRETE_CSS}
@@ -11226,10 +11309,10 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 </style></head><body>
 <section class="pliego">
 ${membreteCasa({titulo:'PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE<br>VÁLVULAS DE SEGURIDAD',
-   cod:'AXAD-084', ver:'2', fecha:c.rcFecha||c.fecha, pagina:1, total:1})}
+   cod:RECEP_COD, verTxt:RECEP_VER_TXT, psv:psvDeLaHoja(c)})}
 <h2>Identificación</h2>
 <div class="rej">
-  ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
+  ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Orden de compra',ocDeLaHoja(c))}
   ${todo.map(([k,v])=>cel(k,v)).join('')}
 </div>
 <h2>Perno de regulación</h2>
@@ -11255,11 +11338,12 @@ ${String(c.rcComent||'').trim()?`<h2>Comentarios</h2>
 <div class="fir una">
   <div class="b">${rec&&rec.img?`<img src="${rec.img}" alt="Firma de ${esc(rec.n)}">`:''}
     <div class="l">Firma ADSA · mecánico que hizo la prueba<b>${rec?esc(rec.n)+(rec.cargo?' · '+esc(rec.cargo):''):'—'}</b>
-      ${rec?esc(fPE(rec.f)):''}</div></div>
+      ${rec?esc(fPE(rec.f))+conHora(rec):''}</div></div>
 </div>
+${lineaHoras(c)}
 <p class="nota">Se realizó pruebas de SETEO de acuerdo a los parámetros y procedimientos que establece
   la norma ASME acorde a estándares API 527 y 576.</p>
-<div class="pie"><span>AXAD-084 v.2</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+<div class="pie"><span>AXAD-SER-007 v.02</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
 <div class="pliego-n">Hoja 1${fotos.length?' de 2':''}</div>
 </section>
 
@@ -11270,7 +11354,7 @@ ${fotos.length?`<section class="anx pliego">
   <div class="anx-g">${fotos.map((x,i)=>`<figure>
     <img src="${x.d}" alt="${esc(x.n||('Foto '+(i+1)))}">
     <figcaption><b>${i+1}.</b> ${esc(x.n||'Sin descripción')}</figcaption></figure>`).join('')}</div>
-  <div class="pie"><span>AXAD-084 v.2 · anexo fotográfico</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
+  <div class="pie"><span>AXAD-SER-007 v.02 · anexo fotográfico</span><span>${esc(a.tag||a.ser||'')} · ${esc(e.n||'')}</span></div>
   <div class="pliego-n">Hoja 2 de 2</div>
 </section>`:''}
 ${BARRA_IMPRIMIR}
@@ -11406,19 +11490,27 @@ const MEMBRETE_CSS=`
 /* El membrete de la casa. Lo llevan todos los papeles que se
    entregan, cada uno con su título y su código: así quien los recibe
    sabe de dónde vienen sin tener que leerlos. */
-function membreteCasa({titulo,cod,ver,fecha,pagina,total}){
+function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
   /* A un papel sin código de la casa no se le inventa uno: en su sitio
-     va la fecha. */
+     va la fecha.
+     `verTxt` es para los formatos que llevan su versión y su fecha
+     escritas de fábrica —no la del día que se imprime—, que es lo
+     normal en un formato controlado.
+     `psv` cambia la tercera casilla: en un papel de una sola hoja,
+     «Página 1 de 1» no dice nada y el número de la válvula sí. */
   const caja=cod
     ? `<span>Código</span><b>${esc(cod)}</b>
-       <span>Versión<br>(Fecha)</span><b>${esc(String(ver||'1'))} (${esc(fPE(fecha))})</b>`
+       <span>Versión<br>(Fecha)</span><b>${esc(verTxt||(String(ver||'1')+' ('+fPE(fecha)+')'))}</b>`
     : `<span>Emitido</span><b>${esc(fPE(fecha))}</b>`;
+  const tercera=psv
+    ? `<i>PSV N° <b>${esc(psv)}</b></i>`
+    : `<i>Página <b>${pagina||1}</b> de ${total||1}</i>`;
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
   <div class="ti">${titulo}</div>
   <div class="dt">
     ${caja}
-    <i>Página <b>${pagina||1}</b> de ${total||1}</i>
+    ${tercera}
   </div>
 </div>`;
 }
@@ -11520,7 +11612,7 @@ function documentoInforme(idOrden,solo){
       </table>`;
     };
     /* La prueba inicial NO va aquí: es del protocolo de entrada
-       AXAD-084, que es otro papel y ya la lleva en su anexo. Por eso
+       AXAD-SER-007, que es otro papel y ya la lleva en su anexo. Por eso
        son tres formatos y no uno: entrada, certificado e informe.
        Repetirla aquí era mezclar el estado en que llegó con el
        trabajo que se hizo. */
@@ -11806,6 +11898,29 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${(gente.length?gente:[{n:'',cargo:''}]).map(g=>`<tr><td>${raya(g.n)}</td><td>${raya(g.cargo)}</td></tr>`).join('')}
 </table>
 
+${(()=>{
+  /* Horas hombre. Una fila por válvula: cuándo se trabajó, desde qué
+     hora, hasta cuál y cuánto se estuvo con ella. Las que todavía no
+     tienen horas no se inventan: se quedan fuera. */
+  const fs=conE.map(x=>({a:x.a,h:horasTrabajo(x.e,o)})).filter(x=>x.h);
+  if(!fs.length)return '';
+  const suma=fs.reduce((t,x)=>{
+    const i=enMinutos(x.h.ini), f=enMinutos(x.h.fin);
+    if(i==null||f==null)return t;
+    let d=f-i; if(d<0)d+=1440; return t+d;
+  },0);
+  const total=suma?`${Math.floor(suma/60)?Math.floor(suma/60)+' h':''}${
+    Math.floor(suma/60)&&suma%60?' ':''}${suma%60?suma%60+' min':''}`:'';
+  return `<h2>Horas de trabajo</h2>
+<table>
+  <tr><th>Válvula</th><th>Fecha</th><th class="c">Inicio</th><th class="c">Término</th><th class="c">Duración</th></tr>
+  ${fs.map(x=>`<tr><td>${raya(x.a.tag||x.a.ser||'')}</td><td>${raya(x.h.f?fPE(x.h.f):'')}</td>
+    <td class="c">${raya(x.h.ini)}</td><td class="c">${raya(x.h.fin)}</td>
+    <td class="c">${raya(x.h.dur)}</td></tr>`).join('')}
+  ${total&&fs.length>1?`<tr><td colspan="4"><b>Total</b></td><td class="c"><b>${esc(total)}</b></td></tr>`:''}
+</table>
+`;
+})()}
 <h2>Seguridad, salud y medio ambiente</h2>
 <ul>${INFORME_SSMA.map(x=>li(esc(x))).join('')}</ul>
 
@@ -12427,11 +12542,12 @@ function psvDocumento(id){
         <img src="${f.img}" alt="Firma de ${esc(f.n)}">
         <div class="ln"><b>${esc(f.n)}</b>
           <span class="cg">${esc(f.cargo||'')}</span><br>
-          <span class="cg">${esc(fPE(f.f))}</span></div></div>`).join('')}</div>`;
+          <span class="cg">${esc(fPE(f.f))}${conHora(f)}</span></div></div>`).join('')}</div>`;
   })()}
   ${/* Las dos casillas del visto bueno del cliente salían siempre en
        blanco, con sus renglones para rellenar a mano. En estos papeles
        sale lo que se escribió en el portal y nada más. */''}
+  ${lineaHoras(c)}
   <div class="pliego-n">Certificado · hoja 1</div>
   </section>
 
@@ -12452,7 +12568,7 @@ function psvDocumento(id){
 
     /* Aquí sólo van las fotos de los disparos. El certificado dice a
        qué presión abre la válvula, y su prueba son los disparos.
-       Cómo llegó ya va entero en el protocolo de entrada AXAD-084, con
+       Cómo llegó ya va entero en el protocolo de entrada AXAD-SER-007, con
        su anexo; el desarme, en el informe DVAD-SER-002, con su
        registro fotográfico. Repetirlos aquí engordaba el papel que se
        firma y sacaba cada foto tres veces en la misma carpeta. */
@@ -12828,9 +12944,10 @@ ${v.estado!=='incompleto'?`<div class="vd ${v.estado}">
   <div><span>Ejecutó la prueba</span>
     ${ej&&ej.img?`<img src="${ej.img}" alt="Firma">`:''}
     <b>${esc((ej&&ej.n)||c.respNombre||'')}</b>
-    <span>${esc((ej&&ej.cargo)||c.respArea||'')}${ej?' · '+esc(fPE(ej.f)):''}</span></div>
+    <span>${esc((ej&&ej.cargo)||c.respArea||'')}${ej?' · '+esc(fPE(ej.f))+conHora(ej):''}</span></div>
   <div><span>Recibe conforme</span></div>
 </div>
+${lineaHoras(c)}
 <div class="pie"><span>Adolphus S.A. · prueba de salida</span><span>${esc(fPE(hoyISO()))}</span></div>
 </section>
 ${/* El anexo, en hoja aparte: en la tabla la foto es una marca, aquí
@@ -12859,7 +12976,7 @@ ${BARRA_IMPRIMIR}</body></html>`};
    había que buscar las otras por otro sitio.
    ════════════════════════════════════════════════════════════ */
 const PAPELES={
-  ent:  {n:'Prueba de entrada', cod:'AXAD-084',
+  ent:  {n:'Prueba de entrada', cod:'AXAD-SER-007',
          doc:(c,o)=>documentoRecepcion(c)},
   mant: {n:'Informe técnico',   cod:'DVAD-SER-002',
          doc:(c,o)=>o?documentoInforme(o.id,[o.id]):null},
@@ -13562,7 +13679,7 @@ const WO_NEXT={oc:  ['ent',  'Recibir la válvula'],
    los pasos que no se marquen se saltan solos en el tablero.
    ════════════════════════════════════════════════════════════ */
 const PASOS_ELEGIBLES=[
- ['ent', 'Prueba de entrada',  'Se dispara tal como llegó y se firma el protocolo AXAD-084'],
+ ['ent', 'Prueba de entrada',  'Se dispara tal como llegó y se firma el protocolo AXAD-SER-007'],
  ['mant','En mantenimiento',   'Se desarma, se fotografía pieza por pieza y se cambia lo que esté mal'],
  ['cert','Prueba de salida',   'Los tres disparos del as-left y el visto bueno de gerencia']
 ];
@@ -13683,6 +13800,10 @@ function moverLinea(o,et){
   o.et=et;
   o.hist=o.hist||{};
   o.hist[et]=hoyISO();
+  /* Y la hora, que es lo que hace falta para las horas hombre: la
+     fecha sola no dice cuánto se estuvo con la válvula. */
+  o.horas=o.horas||{};
+  o.horas[et]=horaPeru();
 }
 const entroEn=o=>(o.hist&&o.hist[o.et])||o.f||'';
 
@@ -14042,7 +14163,7 @@ function recibirOrden(id,grupo){
        ? `<b>${ls.length} válvulas</b> de <b>${esc(cli(a.cli).n||'')}</b>`
        : `<b>${esc(a.tag||a.ser||'')}</b> — ${esc((MODELOS[a.mod]||{}).m||'')} ${esc(a.mod||'')}
           de <b>${esc(cli(a.cli).n||'')}</b>`}. Tu nombre y esta fecha van al
-       <b>protocolo de entrada AXAD-084</b>: son quién hizo la prueba y cuándo.</div></div>
+       <b>protocolo de entrada AXAD-SER-007</b>: son quién hizo la prueba y cuándo.</div></div>
    <div class="two">
      <div class="fld"><label for="rcIng">Mecánico que hace la prueba <span class="req-dot">*</span>
          <span class="opc">elige de la lista; para otro nombre, «Otro»</span></label>
