@@ -7792,6 +7792,9 @@ function valvulario(cliId){
    <title>Valvulario ${esc(c.n)}</title><style>
    *{box-sizing:border-box}
    body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:22px}
+   ${MEMBRETE_CSS}
+   .mem{margin-bottom:14px}
+   .mem .ti{font-size:12.5px}
    .cab{display:flex;align-items:flex-start;gap:12px;border-bottom:3px solid #16306b;padding-bottom:9px}
    h1{font-size:18px;margin:0 0 2px;letter-spacing:-.2px}
    .sub{color:#5b6470;font-size:11px}
@@ -7810,10 +7813,8 @@ function valvulario(cliId){
    .firma div{flex:1;border-top:1px solid #101418;padding-top:5px;font-size:10px;color:#5b6470}
    @media print{body{margin:12mm}h2{break-after:avoid}tr{break-inside:avoid}}
    </style></head><body>
-   <div class="cab">${LOGO.replace('<svg ','<svg width="26" height="32" ')}
-     <div><h1>Valvulario</h1><div class="sub">${esc(c.n)}${c.ruc?' · RUC '+esc(c.ruc):''} · ${esc(c.fac||'')}</div></div>
-     <div class="cod">Adolphus S.A. · Control de fluidos<br>Emitido el ${fPE(hoyS)}</div>
-   </div>
+   ${membreteCasa({titulo:'VALVULARIO — PARQUE DE VÁLVULAS<br>'+esc(c.n||''),
+      fecha:hoyS, pagina:1, total:1})}
    <div class="res">
      <div><b>${eq.length}</b>válvulas</div>
      <div><b>${Object.keys(porFam).length}</b>familias</div>
@@ -11122,6 +11123,10 @@ function documentoRecepcion(c){
 <title>AXAD-084 ${esc(a.tag||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font:12px/1.5 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:11mm 10mm;background:#fff}
+${MEMBRETE_CSS}
+.mem{margin-bottom:12px}
+.mem .ti{font-size:12px}
+.mem .dt{flex:0 0 215px;font-size:9.6px}
 .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;background:rgba(255,255,255,.94);
   padding:8px;border-radius:10px;box-shadow:0 6px 22px rgba(16,45,105,.18);border:1px solid #e4e7ea}
 .barra button{font:600 13px/1 'Helvetica Neue',Segoe UI,Roboto,sans-serif;cursor:pointer;border-radius:7px;
@@ -11180,12 +11185,8 @@ h2{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
 @media print{.anx{padding-top:0}}
 </style></head><body>
 <section class="pliego">
-<div class="cab">
-  <span class="mk">${marca}</span>
-  <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
-    <h1>PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE VÁLVULAS DE SEGURIDAD</h1></div>
-  <div class="cod"><b>AXAD-084 v.2</b>OS ${esc(c.os||'—')}<br>Probada ${esc(fPE(c.rcFecha||c.fecha||''))}</div>
-</div>
+${membreteCasa({titulo:'PROTOCOLO DE RECEPCIÓN — MANTENIMIENTO DE<br>VÁLVULAS DE SEGURIDAD',
+   cod:'AXAD-084', ver:'2', fecha:c.rcFecha||c.fecha, pagina:1, total:1})}
 <h2>Identificación</h2>
 <div class="rej">
   ${cel('Cliente',e.n)}${cel('Mecánico que hizo la prueba',c.rcRecibe)}${cel('Fecha de la prueba',c.rcFecha?fPE(c.rcFecha):'')}${cel('Cert. n.º','AXAD-084'+(c.os?' · '+c.os:''))}
@@ -11366,12 +11367,17 @@ const MEMBRETE_CSS=`
    entregan, cada uno con su título y su código: así quien los recibe
    sabe de dónde vienen sin tener que leerlos. */
 function membreteCasa({titulo,cod,ver,fecha,pagina,total}){
+  /* A un papel sin código de la casa no se le inventa uno: en su sitio
+     va la fecha. */
+  const caja=cod
+    ? `<span>Código</span><b>${esc(cod)}</b>
+       <span>Versión<br>(Fecha)</span><b>${esc(String(ver||'1'))} (${esc(fPE(fecha))})</b>`
+    : `<span>Emitido</span><b>${esc(fPE(fecha))}</b>`;
   return `<div class="mem">
   <span class="lg">${LOGO_MEMBRETE(38)}</span>
   <div class="ti">${titulo}</div>
   <div class="dt">
-    <span>Código</span><b>${esc(cod||'')}</b>
-    <span>Versión<br>(Fecha)</span><b>${esc(String(ver||'1'))} (${esc(fPE(fecha))})</b>
+    ${caja}
     <i>Página <b>${pagina||1}</b> de ${total||1}</i>
   </div>
 </div>`;
@@ -12048,6 +12054,15 @@ function psvDocumento(id){
      sin control, viven en los anexos del final. */
   body{font:9.5px/1.42 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;
     padding:7mm;background:#fff}
+  ${MEMBRETE_CSS}
+  /* El membrete es un pelo más alto que la banda que había antes, y el
+     certificado va justo de hoja: se le quitan los milímetros de la
+     separación en vez de encoger la letra. */
+  .mem{margin-bottom:7px}
+  .mem .ti{font-size:10.5px}
+  .mem .dt{flex:0 0 190px;font-size:8.4px}
+  .mem .lg{padding:5px 10px}
+  .mem .dt span,.mem .dt b,.mem .dt i{padding:3.5px 8px}
   /* En una tablet no hay Ctrl+P. La barra va fija, encima del papel, y
      desaparece al imprimir para no salir en la hoja. */
   .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;
@@ -12226,12 +12241,8 @@ function psvDocumento(id){
   @page{size:A4;margin:7mm}
   </style></head><body>
   <section class="pliego">
-  <div class="cab">
-    <span class="mk">${marca}</span>
-    <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
-      <h1>CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO</h1></div>
-    <div class="cod"><b>AXAD-088</b>Versión 2<br>${fPE(HOY.toISOString().slice(0,10))}</div>
-  </div>
+  ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN DE<br>VÁLVULA DE SEGURIDAD Y ALIVIO',
+     cod:'AXAD-088', ver:'2', fecha:c.fecha, pagina:1, total:1})}
   <div class="ident">
     <span>Cliente<b>${esc(e.n||'')}</b></span>
     <span>TAG<b>${esc(a.tag||'')}</b></span>
@@ -12459,6 +12470,10 @@ function fichaClienteDoc(actId){
 <title>Ficha ${esc(a.tag||a.ser||'')}</title><style>
 *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font:10.5px/1.45 'Helvetica Neue',Segoe UI,Roboto,sans-serif;color:#1a1d21;margin:0;padding:14mm 13mm}
+${MEMBRETE_CSS}
+.mem{margin-bottom:11px}
+.mem .ti{font-size:11px}
+.mem .dt{flex:0 0 200px;font-size:9px}
 .barra{position:fixed;right:14px;bottom:14px;display:flex;gap:8px;z-index:9;
   background:rgba(255,255,255,.94);padding:8px;border-radius:10px;
   box-shadow:0 6px 22px rgba(16,45,105,.18);border:1px solid #e4e7ea}
@@ -12495,12 +12510,8 @@ th{font-weight:600;width:38%;color:#5b6470}
   justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
 @page{size:A4;margin:11mm}
 </style></head><body>
-<div class="cab">
-  <span class="mk">${marca}</span>
-  <div class="ti"><div class="emp">Adolphus S.A. · Control de fluidos</div>
-    <h1>FICHA TÉCNICA E HISTORIAL DE LA VÁLVULA</h1></div>
-  <div class="cod"><b>${esc(a.tag||a.ser||'')}</b>${esc(m.m||'')} ${esc(a.mod||'')}<br>${fPE(HOY.toISOString().slice(0,10))}</div>
-</div>
+${membreteCasa({titulo:'FICHA TÉCNICA E HISTORIAL DE LA VÁLVULA<br>'+esc(a.tag||a.ser||''),
+   fecha:HOY.toISOString().slice(0,10), pagina:1, total:1})}
 <div class="ident">
   <span>Cliente <b>${esc(e.n||'')}</b></span>
   <span>Planta <b>${esc(e.fac||'')}</b></span>
@@ -13811,35 +13822,60 @@ function borrarProyecto(id){
   if(S.rol!=='admin'){toast('Las OC las cierra gerencia');return}
   const p=PROYECTOS.find(x=>x.id===id); if(!p)return;
   const os=ordenesDe(id);
-  if(os.length){
-    toast(`Esta OC tiene ${os.length} orden${os.length===1?'':'es'} de trabajo dentro. `+
-          `Elimínalas o pásalas a otra OC antes de cerrarla.`);
-    return;
-  }
   const c=cli(p.cli)||{};
+  const tags=os.map(o=>{const v=ACTIVOS.find(y=>y.id===o.act);return v?(v.tag||v.ser||'—'):'—'});
+  const cert=os.filter(o=>o.calib).length;
   $('#mTitle').textContent='Eliminar la OC';
-  $('#mBody').innerHTML=`<div class="callout warn">
-    <svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v5M12 17h.01"/></svg>
-    <div>Vas a eliminar la OC <b class="mono">${esc(p.oc||p.id)}</b>${c.n?` de <b>${esc(c.n)}</b>`:''}.
-      No tiene ninguna orden de trabajo dentro, así que no se pierde ningún ensayo ni ningún papel.
-      Desaparece de este equipo y de los demás en cuanto se conecten.</div></div>`;
+  $('#mBody').innerHTML=`
+   <div class="callout ${os.length?'bad':'warn'}">
+     <svg viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+     <div>Vas a eliminar la OC <b class="mono">${esc(p.oc||p.id)}</b>${c.n?` de <b>${esc(c.n)}</b>`:''}.
+       ${os.length
+         ? `Se lleva por delante sus <b>${os.length} orden${os.length===1?'':'es'} de trabajo</b>${
+             tags.length?` — ${esc(tags.slice(0,4).join(', '))}${tags.length>4?'…':''}`:''}.
+            Esas órdenes desaparecen del tablero. No se puede deshacer.`
+         : `No tiene ninguna orden de trabajo dentro, así que no se pierde ningún ensayo ni ningún papel.`}
+       Desaparece de este equipo y de los demás en cuanto se conecten.</div></div>
+   ${cert?`<div class="callout"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+     <div><b>Los ${cert} certificado${cert===1?'':'s'} ya emitido${cert===1?'':'s'} NO se borran.</b>
+       Se quedan en el historial de su válvula, que es donde tienen que estar: son documentos
+       firmados, y son de la válvula, no de la OC.</div></div>`:''}
+   ${os.length?`<div class="fld"><label>Contraseña de autorización <span class="req-dot">*</span></label>
+     <input class="inp pend" id="pyPass" type="password" placeholder="escribe la contraseña para confirmar" autocomplete="off">
+     <span class="pend-msg" id="pyErr" style="display:none">▲ Contraseña incorrecta</span></div>`:''}`;
   $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
     <button class="btn" style="background:var(--late);border-color:var(--late)"
-      onclick="confirmarBorrarProyecto('${id}')">Eliminar la OC</button>`;
+      onclick="confirmarBorrarProyecto('${id}')">${os.length
+        ? `Eliminar la OC y sus ${os.length} orden${os.length===1?'':'es'}` : 'Eliminar la OC'}</button>`;
   $('#modal').classList.add('on');
+  const pw=$('#pyPass');
+  if(pw){ pw.focus(); pw.onkeydown=e=>{ if(e.key==='Enter')confirmarBorrarProyecto(id) }; }
 }
 function confirmarBorrarProyecto(id){
   const i=PROYECTOS.findIndex(x=>x.id===id); if(i<0){closeModal();return}
   const p=PROYECTOS[i];
-  if(ordenesDe(id).length){closeModal();toast('Ya tiene órdenes dentro: no se elimina');return}
+  const os=ordenesDe(id);
+  /* Con trabajo dentro, la contraseña. Sin trabajo dentro no hay nada
+     que proteger: no se pide por pedir. */
+  if(os.length){
+    const pw=$('#pyPass');
+    if(!pw||pw.value!==CLAVE_BAJA){
+      if(pw){pw.classList.add('pend');pw.value='';pw.focus()}
+      const e=$('#pyErr'); if(e)e.style.display='flex';
+      toast('Contraseña incorrecta — no se eliminó nada');return;
+    }
+    const ids=os.map(o=>o.id);
+    ids.forEach(oid=>{ const k=ORDENES.findIndex(y=>y.id===oid); if(k>=0)ORDENES.splice(k,1) });
+    olvidarVarios('ORDENES',ids);
+  }
   PROYECTOS.splice(i,1);
   /* Apuntada como baja: así no vuelve a bajar de la nube ni reaparece
      en los demás equipos. */
   olvidar('PROYECTOS',id);
   guardarLocal();
-  registrar('OC',`${p.oc||id} eliminada`);
+  registrar('OC',`${p.oc||id} eliminada${os.length?` · con ${os.length} orden${os.length===1?'':'es'}`:''}`);
   closeModal();renderAll();
-  toast(`OC ${p.oc||''} eliminada`.replace('  ',' '));
+  toast(`OC ${p.oc||''} eliminada${os.length?` · ${os.length} orden${os.length===1?'':'es'}`:''}`.replace('  ',' '));
 }
 /* ── Abrir la OC ── */
 function openProyecto(){
@@ -14207,7 +14243,7 @@ function renderProyectos(){
             <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Corregir</button>`:''}
         ${S.rol==='admin'?`<span style="flex:1"></span>
           <button class="btn quiet xs py-x" onclick="event.stopPropagation();borrarProyecto('${p.id}')"
-            title="${v.total?`Tiene ${v.total} orden${v.total===1?'':'es'} dentro`:'Eliminar esta OC'}">
+            title="${v.total?`Elimina la OC y sus ${v.total} orden${v.total===1?'':'es'} · pide la clave de gerencia`:'Eliminar esta OC'}">
             <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>`:''}
       </div></article>`;
   }).join('')}</div>`;
@@ -14288,11 +14324,8 @@ function informeHTML(id){
   const aprob=filas.filter(f=>f.resultado==='APROBADO').length;
   const rech=filas.filter(f=>f.resultado==='RECHAZADO').length;
   return `
-   <div class="cab">${LOGO.replace('<svg ','<svg width="26" height="32" ')}
-     <div><h1>Informe de servicio</h1>
-       <div class="sub">${esc(c.n||'')}${c.ruc?' · RUC '+esc(c.ruc):''} — OC ${esc(p.oc)}</div></div>
-     <div class="cod">Adolphus S.A. · Control de fluidos<br>DVAD-SER-002<br>Emitido el ${fPE(hoyS)}</div>
-   </div>
+   ${membreteCasa({titulo:'INFORME DE SERVICIO<br>'+esc(c.n||'')+(p.oc?' — OC '+esc(p.oc):''),
+      cod:'DVAD-SER-002', ver:'1', fecha:hoyS, pagina:1, total:1})}
    ${v.pct<100?`<div class="parcial">INFORME PARCIAL — ${v.fin} de ${v.total} válvulas finalizadas (${v.pct}%)</div>`:''}
    <table class="meta"><tr>
      <td><span>Tipo de trabajo</span><b>${esc(p.tipo||'')}</b></td>
@@ -14324,6 +14357,9 @@ function informeHTML(id){
 const INFORME_CSS=`
    *{box-sizing:border-box}
    body{font:12px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:#101418;margin:22px}
+   ${MEMBRETE_CSS}
+   .mem{margin-bottom:14px}
+   .mem .ti{font-size:12.5px}
    .cab{display:flex;align-items:flex-start;gap:12px;border-bottom:3px solid #16306b;padding-bottom:9px}
    h1{font-size:18px;margin:0 0 2px;letter-spacing:-.2px}
    .sub{color:#5b6470;font-size:11px}
