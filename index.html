@@ -13752,6 +13752,42 @@ function avanceProyecto(id){
   return {total,fin,pct:total?Math.round(fin*100/total):0,cuenta,
     conCert:os.filter(o=>o.calib).length, ordenes:os};
 }
+/* Borrar una OC. Con órdenes dentro no se borra: primero hay que
+   ocuparse de ellas, que son el trabajo de la casa. */
+function borrarProyecto(id){
+  if(S.rol!=='admin'){toast('Las OC las cierra gerencia');return}
+  const p=PROYECTOS.find(x=>x.id===id); if(!p)return;
+  const os=ordenesDe(id);
+  if(os.length){
+    toast(`Esta OC tiene ${os.length} orden${os.length===1?'':'es'} de trabajo dentro. `+
+          `Elimínalas o pásalas a otra OC antes de cerrarla.`);
+    return;
+  }
+  const c=cli(p.cli)||{};
+  $('#mTitle').textContent='Eliminar la OC';
+  $('#mBody').innerHTML=`<div class="callout warn">
+    <svg viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v5M12 17h.01"/></svg>
+    <div>Vas a eliminar la OC <b class="mono">${esc(p.oc||p.id)}</b>${c.n?` de <b>${esc(c.n)}</b>`:''}.
+      No tiene ninguna orden de trabajo dentro, así que no se pierde ningún ensayo ni ningún papel.
+      Desaparece de este equipo y de los demás en cuanto se conecten.</div></div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cancelar</button>
+    <button class="btn" style="background:var(--late);border-color:var(--late)"
+      onclick="confirmarBorrarProyecto('${id}')">Eliminar la OC</button>`;
+  $('#modal').classList.add('on');
+}
+function confirmarBorrarProyecto(id){
+  const i=PROYECTOS.findIndex(x=>x.id===id); if(i<0){closeModal();return}
+  const p=PROYECTOS[i];
+  if(ordenesDe(id).length){closeModal();toast('Ya tiene órdenes dentro: no se elimina');return}
+  PROYECTOS.splice(i,1);
+  /* Apuntada como baja: así no vuelve a bajar de la nube ni reaparece
+     en los demás equipos. */
+  olvidar('PROYECTOS',id);
+  guardarLocal();
+  registrar('OC',`${p.oc||id} eliminada`);
+  closeModal();renderAll();
+  toast(`OC ${p.oc||''} eliminada`.replace('  ',' '));
+}
 /* ── Abrir la OC ── */
 function openProyecto(){
   if(S.rol==='cliente'){toast('Las órdenes de servicio las abre Adolphus');return}
@@ -14113,6 +14149,10 @@ function renderProyectos(){
       <div class="py-acc">
         <button class="btn quiet xs" onclick="informeProyecto('${p.id}')">Ver el informe</button>
         ${v.pct===100?'<span class="tag ok"><span class="dot"></span>Lista para entregar</span>':''}
+        ${S.rol==='admin'?`<span style="flex:1"></span>
+          <button class="btn quiet xs py-x" onclick="event.stopPropagation();borrarProyecto('${p.id}')"
+            title="${v.total?`Tiene ${v.total} orden${v.total===1?'':'es'} dentro`:'Eliminar esta OC'}">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>Eliminar</button>`:''}
       </div></article>`;
   }).join('')}</div>`;
 }
