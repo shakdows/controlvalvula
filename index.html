@@ -3539,6 +3539,8 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
             <select class="inp chip-sel" id="woCli" style="height:34px"></select>
             <!-- Un solo botón: el de la OC ya pregunta la empresa, filtra
                  sus válvulas y admite varias de una vez. -->
+            <button class="btn quiet" id="btnOCs" style="display:none" onclick="abrirOCs()"
+              title="El informe de cada OC, y corregirla o eliminarla"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>Informes por OC</button>
             <button class="btn" onclick="openProyecto()"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nueva orden de trabajo</button></div></div>
         <div id="pryPanel"></div>
         <div class="kb-wrap"><div class="kb" id="kanban"></div></div>
@@ -5609,13 +5611,11 @@ function verOrden(idOrAct,esActivo){
    válvulas y se saca una hoja, no ocho impresiones.
    ════════════════════════════════════════════════════════════ */
 const ETIQ_TAM=[
- ['a4','Hoja A4 completa','una por hoja, se lee desde el otro lado del taller'],
- ['a5','Media hoja A4',   'dos por hoja, para válvulas grandes'],
- ['g', '90 × 50 mm',      'una etiqueta grande, se lee de lejos'],
- ['m', '70 × 40 mm',      'la de siempre, 8 por hoja'],
- ['p', '50 × 25 mm',      'pequeña, para válvulas de línea']
+ ['a5','Media hoja A4','dos por hoja, se lee desde el otro lado del taller']
 ];
-/* Cuántas entran en una hoja A4 de cada tamaño. */
+/* Cuántas entran en una hoja A4 de cada tamaño. Los tamaños chicos se
+   quedan aquí porque el dibujo de la etiqueta los conoce, pero ya no
+   se ofrecen: en el taller se pega media hoja y punto. */
 const ETIQ_XHOJA={a4:1, a5:2, g:6, m:8, p:24};
 /* Lo que va impreso, sacado de lo que hay guardado. */
 /* La hora de Lima. El portal puede abrirse desde un equipo con otro
@@ -5697,14 +5697,14 @@ function etiquetaHTML(actId,tam,grupo){
     ${grande&&etapa?`<div class="et-nota">${esc(etapa)}</div>`:''}
   </div>`;
 }
-let ETIQ={act:null, tam:'m', copias:1, extra:[], luego:null};
+let ETIQ={act:null, tam:'a5', copias:2, extra:[], luego:null};
 /* `luego` es la válvula a la que se sigue cuando la etiqueta se abre
    sola al recibir la orden: primero se rotula lo que acaba de llegar y
    después se hace la prueba de entrada. */
 function imprimirEtiqueta(actId,luego,grupo){
   const D=datosEtiqueta(actId,grupo);
   if(!D){toast('No encuentro la válvula');return}
-  ETIQ={act:actId, tam:ETIQ.tam||'m', copias:1, extra:[], luego:luego||null, grupo:grupo||D.grupo||''};
+  ETIQ={act:actId, tam:'a5', copias:2, extra:[], luego:luego||null, grupo:grupo||D.grupo||''};
   /* Las demás válvulas del mismo cliente que ya tienen ensayo: si el
      taller cerró ocho, las ocho salen en la misma hoja. */
   /* Las que entraron con la misma orden: se imprimen juntas, que es
@@ -14254,12 +14254,30 @@ function confirmarTomar(id){
 /* ── El panel de avance ──
    Lo que el gerente y el taller miran para saber por dónde va cada
    OC sin abrir nada. */
+/* El tablero se queda limpio: aquí sólo se enciende el botón. */
 function renderProyectos(){
-  const box=$('#pryPanel'); if(!box)return;
+  const box=$('#pryPanel'); if(box)box.innerHTML='';
+  const b=$('#btnOCs'); if(!b)return;
+  const n=proyectosALaVista().length;
+  b.style.display=n?'':'none';
+  b.lastChild.textContent=n===1?'Informe de la OC':`Informes por OC (${n})`;
+}
+function proyectosALaVista(){
   const foco=S.cli||S.inCli||S.woCli||'';
-  const list=PROYECTOS.filter(p=>!foco||p.cli===foco);
-  if(!list.length){box.innerHTML='';return}
-  box.innerHTML=`<div class="py-wrap">${list.map(p=>{
+  return PROYECTOS.filter(p=>!foco||p.cli===foco);
+}
+/* Y en su ventana está todo lo que estaba en el cuadro: el informe,
+   corregir y eliminar. */
+function abrirOCs(){
+  const list=proyectosALaVista();
+  $('#mTitle').textContent=list.length===1?'La orden de compra':'Las órdenes de compra';
+  $('#mBody').innerHTML=list.length?fichasProyectos(list)
+    :`<div class="empty" style="padding:24px"><b>Ninguna OC abierta</b>Se abre una al crear la primera orden de trabajo.</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
+function fichasProyectos(list){
+  return `<div class="py-wrap">${list.map(p=>{
     const v=avanceProyecto(p.id), c=cli(p.cli)||{};
     const tono=v.pct===100?'ok':v.pct?'sel':'ink-3';
     return `<article class="py-card ${v.pct===100?'listo':''}">
@@ -18133,7 +18151,7 @@ function renderHome(){
     ...SOLICITUDES.filter(s=>!S.cli||s.cli===S.cli).map(s=>({f:s.f,type:'sol',s}))].sort((a,b)=>b.f.localeCompare(a.f)).slice(0,7);
   const feedHtml=acts.length?`<div class="feed">${acts.map(x=>{
     if(x.type==='wo'){const a=ACTIVOS.find(z=>z.id===x.o.act);return `<div class="feed-i" onclick="verOrden('${x.o.id}')">
-      <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc(ETAPAS.find(e=>e[0]===x.o.et)[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
+      <span class="feed-ic">${ICON[x.o.tipo]||'•'}</span><div class="feed-m"><b>${esc(x.o.n)} · ${esc(x.o.tipo)}</b><p>${esc(a?.tag||'')} — ${esc((ETAPAS.find(e=>e[0]===x.o.et)||[,x.o.et||''])[1])}</p></div><span class="feed-t">${x.f}</span></div>`}
     return `<div class="feed-i" onclick="verSol('${x.s.id}')"><span class="feed-ic">▤</span><div class="feed-m"><b>${esc(x.s.n)}</b><p>${x.s.items.length} posiciones · ${esc(cli(x.s.cli).n)}</p></div><span class="feed-t">${x.f}</span></div>`}).join('')}</div>`
    :`<div class="empty" style="padding:30px"><b>Sin actividad</b>Aún no hay movimientos.</div>`;
   /* Lo primero del día: cuánto hay pendiente y qué encabeza la cola. */
