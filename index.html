@@ -11946,6 +11946,15 @@ const INFORME_ACTIVIDADES=[
 ];
 const INFORME_HERRAM='Llaves mixtas, llaves francesas, llaves stilsón, llaves hexagonales, destornilladores, alicates, flexómetro, vernier, cuchillas, llaves de dado, ratchet, martillo de goma, amoladora y torquímetros.';
 const INFORME_EQUIPOS='Banco de pruebas BARBEE MOD TP-RVAS, equipo de arenado.';
+/* Las conclusiones que la casa pone en TODOS sus trabajos. Son del
+   formato: salen siempre, escriba gerencia lo que escriba, y lo suyo
+   se añade debajo en su propio renglón. Si el formato cambia, se
+   cambia aquí y cambia en todos los informes a la vez. */
+const INFORME_CONCLU=[
+ 'Se realizó el mantenimiento, la calibración y las pruebas de las válvulas de seguridad de acuerdo con los parámetros y procedimientos que establece la norma ASME, acorde a los estándares API 527 y 576.',
+ 'Las pruebas se ejecutaron en banco con equipo patrón calibrado y trazable, y las válvulas quedaron con el set de presión indicado en su placa.',
+ 'El resultado de cada válvula consta en su certificado individual, que acompaña a este informe.'
+];
 const INFORME_RECOM=[
  'Seguir siempre las instrucciones del manual de mantenimiento.',
  'Utilizar siempre repuestos originales y hacer la rutina de mantenimiento e inspección de acuerdo con los procedimientos del fabricante.',
@@ -12470,14 +12479,18 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
   : 'No se encontraron problemas en los equipos. Se realizó la calibración en el banco de pruebas y se dejaron los equipos con el set de presión según placa.'}</p>
 
 <h2>Conclusiones</h2>
+${/* Primero el resumen de ESTE trabajo, con sus cuentas. */''}
 <p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
   de seguridad, dejándola${conE.length===1?'':'s'} con el set requerido según placa.
   ${aprobadas?`${aprobadas} válvula${aprobadas===1?'':'s'} se encuentra${aprobadas===1?'':'n'} operativa${aprobadas===1?'':'s'}.`:''}
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
-${/* Lo que escribió gerencia sobre el trabajo entero va aquí, pegado
-     al resumen, que es de lo que habla. Antes caía al final, detrás
-     de las válvulas, y se leía como si fuera de la última. */''}
-${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
+${/* Después las del formato, las de siempre. Salen escriba gerencia
+     lo que escriba: son parte del papel, no de lo que se teclea. */''}
+<ul>${INFORME_CONCLU.map(x=>li(esc(x))).join('')}</ul>
+${/* Y por último lo que escribió gerencia para ESTE trabajo, en su
+     propio renglón y debajo de las fijas. Al revés, lo suyo parecía
+     el encabezado de una lista que no había escrito. */''}
+${o.conclu?`<p class="escrito propio">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
 ${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
 ${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
   return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
