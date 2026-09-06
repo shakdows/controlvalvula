@@ -21912,12 +21912,33 @@ async function aligerar(v,lado,cal){
   return v;
 }
 /* Y que la versión ligera se quede también en el equipo: si no, la
-   próxima vez vuelve a pesar lo mismo y volvemos al atasco. */
-function guardarAligerada(f,datos){
+   próxima vez vuelve a pesar lo mismo y volvemos al atasco.
+   ── PERO SÓLO SI NADIE HA ESCRITO DESDE ENTONCES ────────────
+   Aquí se perdían fotos, y era de las peores maneras. Lo que sube es
+   una FOTOCOPIA del ensayo del momento en que se puso en la cola.
+   Con fotos de por medio, subirla tarda minutos —y en esos minutos
+   el técnico sigue trabajando: saca la foto del después, marca que
+   la pieza volvió de arenado—. Cuando la subida terminaba, esta
+   función metía la fotocopia vieja encima de lo que había en
+   memoria y se llevaba por delante todo lo hecho mientras tanto: la
+   segunda foto desaparecía sola, sin que nadie tocara nada.
+   Ahora se compara antes de escribir. Si la ficha cambió desde que
+   se encoló —o está abierta ahora mismo en el formulario—, no se
+   toca: la versión ligera se descarta y en la siguiente vuelta se
+   sube la buena, que es lo que importa. Encoger una foto es un
+   ahorro; perder una es un trabajo que hay que repetir. */
+function guardarAligerada(f,datos,original){
   try{
+    /* Lo que está en pantalla manda, como en toda la casa. */
+    if(typeof enEdicion==='function'&&enEdicion(f.coleccion,f.clave))return;
     const col=NUBE_COLS.find(x=>x.c===f.coleccion); if(!col)return;
     const a=col.arr(), i=a.findIndex(x=>String(x.id)===String(f.clave));
-    if(i>=0)a[i]=datos;
+    if(i<0)return;
+    if(original&&jsonCanon(a[i])!==jsonCanon(original)){
+      console.warn('[nube] la ficha cambió mientras subía · no se pisa con la ligera:',f.k);
+      return;
+    }
+    a[i]=datos;
     guardarLocal();
   }catch(e){}
 }
@@ -21959,12 +21980,15 @@ async function subirTanda(lote,confirmar,fallos){
          demás. */
       if(!f._aligerada&&f.datos&&JSON.stringify(f.datos).length>200000){
         try{
+          /* La fotocopia tal como se encoló: es contra ésta contra la
+             que se comprueba si alguien escribió mientras subía. */
+          const original=f.datos;
           const ligera=await aligerar(f.datos,900,.6);
           const antes=JSON.stringify(f.datos).length, ahora=JSON.stringify(ligera).length;
           if(ahora<antes*0.9){
             console.warn('[nube] fila pesada · '+Math.round(antes/1024)+' KB → '+Math.round(ahora/1024)+' KB');
             f.datos=ligera; f._aligerada=true;
-            guardarAligerada(f,ligera);
+            guardarAligerada(f,ligera,original);
             await bdPon('pendientes',{...f},f.k).catch(()=>{});
             return await subirTanda([f],confirmar,fallos);
           }
