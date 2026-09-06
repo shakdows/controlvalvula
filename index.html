@@ -2950,6 +2950,12 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .af-img{position:relative}
 .pie-falta{font-size:11.5px;color:var(--due);margin-right:6px}
 .pv-par-n{margin-top:9px;font-size:12.5px}
+/* Las marcas de cada foto: a dónde salió la pieza, de dónde volvió.
+   Debajo de su comentario, pequeñas, y en el naranja de lo que no lo
+   hace la casa — el mismo de arenado y pintura en la OC. */
+.pv-hueco-x{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.pv-hueco-x .paso-ch{font-size:10.5px;padding:3px 8px 3px 6px;gap:5px}
+.pv-hueco-x .paso-ch input{width:12px;height:12px}
 .pv-par-vacio,.pv-par-pie{margin-top:11px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
 /* El mismo par, ya en el certificado en pantalla */
 .pf-pares{display:flex;flex-direction:column;gap:14px}
@@ -10240,6 +10246,17 @@ function verFotosTaller(){
   const c=document.getElementById('pvFotos');
   if(c)c.scrollIntoView({block:'center'});
 }
+/* Qué se puede marcar en cada foto del desarme. La de antes dice a
+   dónde SALIÓ la pieza; la de después, de dónde VOLVIÓ. */
+const MARCAS_PIEZA={
+  a:[['envAr','Enviar a arenado'],['envPi','Enviar a pintura']],
+  d:[['regAr','Regreso de arenado'],['regPi','Regreso de pintura']]
+};
+const MARCA_TXT={envAr:'se mandó a arenado', envPi:'se mandó a pintura',
+                 regAr:'volvió de arenado',  regPi:'volvió de pintura'};
+/* Lo que se marcó en una pieza, dicho para el papel. */
+const marcasDePieza=(p,l)=>(MARCAS_PIEZA[l]||[])
+  .filter(([k])=>p&&p[k]).map(([k])=>MARCA_TXT[k]);
 function pintarPSVFotos(){
   const c=$('#pvFotos'); if(!c||!PSV_TMP)return;
   pintarPSVPie();          // el pie cuenta las piezas fotografiadas
@@ -10282,6 +10299,14 @@ function pintarPSVFotos(){
         placeholder="${l==='a'?'Cómo venía — p. ej. picado, con óxido':'Qué se le hizo — p. ej. lapeado, se cambió'}"
         oninput="psvParCampo(${i},'${k}',this.value)"
         aria-label="Comentario de la foto de ${LADO[l]} de la pieza ${i+1}">
+      ${/* Lo que le pasó a ESTA pieza fuera de casa. Dos casillas
+           sueltas: una pieza puede ir a arenar y a pintar, y la
+           mayoría no va a ninguna de las dos. */''}
+      <span class="pv-hueco-x">${MARCAS_PIEZA[l].map(([kk,lbl])=>`
+        <label class="paso-ch extra" title="${esc(lbl)}">
+          <input type="checkbox" ${p[kk]?'checked':''}
+                 onchange="psvParCampo(${i},'${kk}',this.checked)">
+          <span>${esc(lbl)}</span></label>`).join('')}</span>
       <input id="${id}" type="file" accept="image/*" capture="environment" style="display:none"
              onchange="psvParSubir(this.files,${i},'${l}');this.value=''">
     </div>`;
@@ -11958,8 +11983,11 @@ function documentoInforme(idOrden,solo){
       cab('Desarme · antes y después',[e.recep,e.rcComent].filter(Boolean).join(' ')||'Piezas desarmadas.')}
       <tr><td colspan="3" class="fot">${pares.map(x=>{
         const n=x.n||x.nota||'Pieza';
-        const pieA=['Antes',x.notaA].filter(Boolean).join(' · ');
-        const pieD=['Después',x.notaD].filter(Boolean).join(' · ');
+        /* Y lo que salió de casa se dice en el pie de su foto: en el
+           informe, una pieza arenada por un tercero no puede parecer
+           trabajo del taller. */
+        const pieA=['Antes',x.notaA].concat(marcasDePieza(x,'a')).filter(Boolean).join(' · ');
+        const pieD=['Después',x.notaD].concat(marcasDePieza(x,'d')).filter(Boolean).join(' · ');
         return `<div class="par"><div class="par-t">${esc(n)}${
             x.accion?` <span class="par-ac">${esc(x.accion)}</span>`:''}</div><div class="par-g">
           ${x.a?fig(x.a,pieA):'<div class="par-no">sin foto del antes</div>'}
