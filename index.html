@@ -11946,15 +11946,10 @@ const INFORME_ACTIVIDADES=[
 ];
 const INFORME_HERRAM='Llaves mixtas, llaves francesas, llaves stilsón, llaves hexagonales, destornilladores, alicates, flexómetro, vernier, cuchillas, llaves de dado, ratchet, martillo de goma, amoladora y torquímetros.';
 const INFORME_EQUIPOS='Banco de pruebas BARBEE MOD TP-RVAS, equipo de arenado.';
-/* Las conclusiones que la casa pone en TODOS sus trabajos. Son del
-   formato: salen siempre, escriba gerencia lo que escriba, y lo suyo
-   se añade debajo en su propio renglón. Si el formato cambia, se
-   cambia aquí y cambia en todos los informes a la vez. */
-const INFORME_CONCLU=[
- 'Se realizó el mantenimiento, la calibración y las pruebas de las válvulas de seguridad de acuerdo con los parámetros y procedimientos que establece la norma ASME, acorde a los estándares API 527 y 576.',
- 'Las pruebas se ejecutaron en banco con equipo patrón calibrado y trazable, y las válvulas quedaron con el set de presión indicado en su placa.',
- 'El resultado de cada válvula consta en su certificado individual, que acompaña a este informe.'
-];
+/* El DVAD-SER-002 no lleva lista de conclusiones: su apartado 12 es
+   una sola frase con las cuentas del trabajo, y ésa la arma el portal
+   con lo que se ensayó. Lo fijo del formato son las recomendaciones,
+   que sí van en lista y son las mismas en todos los trabajos. */
 const INFORME_RECOM=[
  'Seguir siempre las instrucciones del manual de mantenimiento.',
  'Utilizar siempre repuestos originales y hacer la rutina de mantenimiento e inspección de acuerdo con los procedimientos del fabricante.',
@@ -11975,6 +11970,13 @@ const MES_LARGO=['enero','febrero','marzo','abril','mayo','junio','julio','agost
    la casa: el logotipo con las letras, el título en un bloque y, a la
    derecha, código, versión con su fecha y la hoja. */
 const INFORME_VER='1';
+/* La versión del formato, tal como está impresa en el DVAD-SER-002 de
+   la casa. No es la fecha de hoy: es la fecha en que se aprobó el
+   formato, y no cambia porque el papel se imprima otro día. */
+const INFORME_VER_TXT='1 (15.07.2024)';
+/* La nota del SIG va al pie de TODAS las hojas, como en el Word. */
+const NOTA_SIG='El usuario del documento debe asegurarse de que este sea vigente antes de usarlo. '+
+  'Puede consultarlo con el responsable del SIG';
 /* La prueba de salida es el registro «as left» del mismo ensayo que
    cierra el certificado AXAD-088, y por eso lleva su código. Si la
    casa le tiene uno propio, se cambia aquí y en ningún sitio más. */
@@ -12045,7 +12047,7 @@ function membreteCasa({titulo,cod,ver,fecha,pagina,total,verTxt,psv}){
 function membreteInforme(pagina,total,fecha,psv){
   return membreteCasa({
     titulo:'INFORME TÉCNICO MANTENIMIENTO Y CALIBRACION DE<br>VÁLVULAS DE SEGURIDAD',
-    cod:INFORME_COD, ver:INFORME_VER, fecha, psv});
+    cod:INFORME_COD, verTxt:INFORME_VER_TXT, psv});
 }
 /* El membrete se pone cuando el papel ya está armado: sólo entonces se
    sabe cuántas hojas tiene —las de fotos salen de cuántas parejas haya
@@ -12064,7 +12066,8 @@ function ponerMembretes(html,fecha,psv){
        siguiente. */
     const k=trozos[i+1].indexOf('</section>');
     if(k>=0)trozos[i+1]=trozos[i+1].slice(0,k)+
-      `<div class="hoja-n">Página ${hoja} de ${total}</div>`+trozos[i+1].slice(k);
+      `<div class="hoja-n"><span class="sig">${NOTA_SIG}</span>
+         <span>Página ${hoja} de ${total}</span></div>`+trozos[i+1].slice(k);
   }
   return trozos.join('');
 }
@@ -12132,18 +12135,22 @@ function documentoInforme(idOrden,solo){
      pieza acababa debajo del «antes» de la siguiente. */
   const registro=items.map(({a,e})=>{
     if(!e)return '';
-    const cab=(titulo,desc)=>{
+    /* La cabecera del bloque y su primera fila. El número ocupa las
+       dos filas de abajo —la del texto y la de las fotos— porque en
+       el papel de la casa la casilla del número va alta, al lado de
+       las fotos, y no perdida en un renglón. */
+    const cab=(titulo,desc,dia)=>{
       nFoto++;
       return `<tr><th class="n">N.º</th><th class="fe">Fecha</th><th>${esc(titulo)}</th></tr>
-        <tr><td class="n">${nFoto}</td><td class="fe">${esc(fPE(e.fecha||fecha))}</td>
-          <td>${esc(a.tag||a.ser||'')} — ${desc?esc(desc):'<span class="ln"></span>'}</td></tr>`;
+        <tr><td class="n" rowspan="2">${nFoto}</td><td class="fe">${esc(fPE(dia||e.fecha||fecha))}</td>
+          <td>${desc?esc(desc):'<span class="ln"></span>'}</td></tr>`;
     };
     const fig=(src,pie)=>`<figure><img src="${src}" alt="${esc(pie||'')}"><figcaption>${esc(pie||'')}</figcaption></figure>`;
     const sueltas=(titulo,desc,fotos)=>{
       const fs=fotos.filter(x=>x&&x.src);
       if(!fs.length)return '';
       return `<table class="reg">${cab(titulo,desc)}
-        <tr><td colspan="3" class="fot"><div class="fot-g">${fs.map(x=>fig(x.src,x.pie)).join('')}</div></td></tr>
+        <tr><td colspan="2" class="fot"><div class="fot-g">${fs.map(x=>fig(x.src,x.pie)).join('')}</div></td></tr>
       </table>`;
     };
     /* La prueba inicial NO va aquí: es del protocolo de entrada
@@ -12151,22 +12158,33 @@ function documentoInforme(idOrden,solo){
        son tres formatos y no uno: entrada, certificado e informe.
        Repetirla aquí era mezclar el estado en que llegó con el
        trabajo que se hizo. */
-    /* 1 · el desarme, pieza por pieza, cada pareja en su propia fila */
+    /* 1 · el desarme: cada pieza es su propio bloque numerado, con su
+       día y lo que se le hizo, igual que en el papel de la casa. El
+       antes y el después van juntos, uno al lado del otro: separarlos
+       es perder la comparación, que es de lo que trata la foto. */
     const pares=paresFoto(e).filter(x=>x.a||x.d);
-    const desarme=pares.length?`<table class="reg">${
-      cab('Desarme · antes y después',[e.recep,e.rcComent].filter(Boolean).join(' ')||'Piezas desarmadas.')}
-      <tr><td colspan="3" class="fot">${pares.map(x=>{
-        const n=x.n||x.nota||'Pieza';
-        /* Y lo que salió de casa se dice en el pie de su foto: en el
-           informe, una pieza arenada por un tercero no puede parecer
-           trabajo del taller. */
-        const pieA=['Antes',x.notaA].concat(marcasDePieza(x,'a')).filter(Boolean).join(' · ');
-        const pieD=['Después',x.notaD].concat(marcasDePieza(x,'d')).filter(Boolean).join(' · ');
-        return `<div class="par"><div class="par-t">${esc(n)}${
-            x.accion?` <span class="par-ac">${esc(x.accion)}</span>`:''}</div><div class="par-g">
+    /* El día del bloque: si la pieza salió a arenado o a pintura, esa
+       marca lleva su fecha y es la que manda; si no, la del ensayo. */
+    const diaDePieza=x=>{
+      const t=['envAr','envPi','regAr','regPi'].map(k=>x[k+'Ts']).filter(Boolean).sort()[0];
+      return t?String(t).slice(0,10):'';
+    };
+    const desarme=pares.map(x=>{
+      const titulo=x.n||x.nota||`${a.tag||a.ser||'Válvula'} · pieza`;
+      /* Lo que se le hizo a la pieza. Y lo que salió de casa se dice
+         aquí: en el informe, una pieza arenada por un tercero no puede
+         parecer trabajo del taller. */
+      const hecho=[x.accion,x.notaA,x.notaD]
+        .concat(marcasDePieza(x,'a'),marcasDePieza(x,'d'))
+        .filter(Boolean).join(' · ');
+      const pieA=['Antes',x.notaA].concat(marcasDePieza(x,'a')).filter(Boolean).join(' · ');
+      const pieD=['Después',x.notaD].concat(marcasDePieza(x,'d')).filter(Boolean).join(' · ');
+      return `<table class="reg">${cab(titulo,hecho||'Desarme, inspección y mantenimiento.',diaDePieza(x))}
+        <tr><td colspan="2" class="fot"><div class="par-g">
           ${x.a?fig(x.a,pieA):'<div class="par-no">sin foto del antes</div>'}
           ${x.d?fig(x.d,pieD):'<div class="par-no">sin foto del después</div>'}
-        </div></div>`}).join('')}</td></tr></table>`:'';
+        </div></td></tr></table>`;
+    }).join('');
     /* 3 · los disparos */
     const disp=disparosDe(e).flatMap((t,i)=>fotosDisparo(t).map(d=>({src:d,pie:`Prueba ${i+1}${t.v?' · '+t.v+' '+(e.und||'psi'):''}`})));
     return desarme
@@ -12258,13 +12276,17 @@ li{margin-bottom:2px}
 .dat i{font-style:normal;color:#1a1d21}
 .dat b{font-weight:400}
 /* El registro fotográfico */
-/* Cada bloque con su título y sus fotos en su propia hoja: así el
-   que lo lee ve el desarme de una válvula entero de un vistazo, sin
-   pasar página a media pareja. */
-.reg{margin-bottom:10px;break-before:page;page-break-before:always}
-.reg:first-of-type{break-before:auto;page-break-before:auto}
+/* Los bloques van seguidos y caben dos por hoja, como en el papel de
+   la casa. Lo que no se parte nunca es un bloque: su cabecera en una
+   página y sus fotos en la siguiente no se puede leer. */
+.reg{margin-bottom:12px;break-inside:avoid;page-break-inside:avoid}
 .reg th.n,.reg td.n{width:34px;text-align:center}
+.reg td.n{font-size:15px;vertical-align:middle}
 .reg th.fe,.reg td.fe{width:78px;text-align:center;white-space:nowrap}
+/* El rótulo de la pieza, como en el formato: gris, en versales y
+   centrado sobre sus fotos. */
+.reg th:last-child{text-transform:uppercase;letter-spacing:.03em;text-align:center}
+.reg tr:nth-child(2) td:last-child{text-align:center}
 .fot{padding:8px}
 .fot-g{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .fot-g figure{margin:0;display:block;border:1px solid #e4e7ea;border-radius:5px;overflow:hidden;background:#fafbfc}
@@ -12325,8 +12347,10 @@ p.escrito.propio{margin-top:9px;padding-top:8px;border-top:1px solid #e4e7ea}
 .hoja{break-after:page;page-break-after:always}
 /* La numeración de las hojas, al pie: arriba manda el número de la
    válvula, pero un papel de varias hojas sin numerar no se audita. */
-.hoja-n{margin-top:14px;text-align:right;font-size:10px;color:#7b8390;
+.hoja-n{margin-top:14px;display:flex;align-items:flex-end;gap:14px;font-size:10px;color:#7b8390;
   border-top:1px solid #e4e7ea;padding-top:5px}
+.hoja-n .sig{flex:1;text-align:left;font-size:8.2px;line-height:1.35;color:#8a929c}
+.hoja-n span:last-child{flex:0 0 auto}
 .hoja:last-of-type{break-after:auto;page-break-after:auto}
 @media screen{.hoja{border:0;margin:0 auto 18px;padding:13mm 12mm}}
 /* La carátula respira como la del Word: el membrete arriba, el bloque
@@ -12377,7 +12401,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
 
 <div class="port">
   <div class="s">Servicio</div>
-  <h1>Calibración de válvulas de seguridad</h1>
+  <h1>Mantenimiento y calibración de válvulas de seguridad</h1>
   <div class="cl">${esc(c.n||'')}</div>
   <div class="me">${esc(MES_LARGO[f.getMonth()])} — ${f.getFullYear()}</div>
   ${/* La referencia es la de la casa y sólo la de la casa: la orden de
@@ -12394,7 +12418,7 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   <tr>${INFORME_FIRMAS.map(([,quien])=>`<td>${esc(quien)}</td>`).join('')}</tr>
   <tr>${INFORME_FIRMAS.map(([,,cargo])=>`<td class="rol">${esc(cargo)}</td>`).join('')}</tr>
 </table>
-<div class="cara-pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')}</div>
+<div class="cara-pie">${NOTA_SIG}</div>
 </section>
 
 <section class="hoja pliego">
@@ -12478,25 +12502,6 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
     esc(conE.filter((x,i)=>veredictos[i].estado==='rechazado').map(x=>`${(x.a.tag||x.a.ser||'')}: ${x.e.coment||'ver certificado'}`).join(' · '))
   : 'No se encontraron problemas en los equipos. Se realizó la calibración en el banco de pruebas y se dejaron los equipos con el set de presión según placa.'}</p>
 
-<h2>Conclusiones</h2>
-${/* Primero el resumen de ESTE trabajo, con sus cuentas. */''}
-<p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
-  de seguridad, dejándola${conE.length===1?'':'s'} con el set requerido según placa.
-  ${aprobadas?`${aprobadas} válvula${aprobadas===1?'':'s'} se encuentra${aprobadas===1?'':'n'} operativa${aprobadas===1?'':'s'}.`:''}
-  ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
-${/* Después las del formato, las de siempre. Salen escriba gerencia
-     lo que escriba: son parte del papel, no de lo que se teclea. */''}
-<ul>${INFORME_CONCLU.map(x=>li(esc(x))).join('')}</ul>
-${/* Y por último lo que escribió gerencia para ESTE trabajo, en su
-     propio renglón y debajo de las fijas. Al revés, lo suyo parecía
-     el encabezado de una lista que no había escrito. */''}
-${o.conclu?`<p class="escrito propio">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
-${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
-${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
-  return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
-    `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}`:''})()}
-
-
 <h2>Recomendaciones generales</h2>
 ${/* Primero las de siempre —las que la casa recomienda en todos sus
      trabajos— y debajo, en su propio renglón, lo que escribió
@@ -12504,6 +12509,26 @@ ${/* Primero las de siempre —las que la casa recomienda en todos sus
      encabezado de una lista que no había escrito. */''}
 <ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
 ${o.recom?`<p class="escrito propio">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
+
+${/* Las conclusiones van AL FINAL, detrás de las recomendaciones: es
+     el orden del formato de la casa —11 recomendaciones, 12
+     conclusiones—, y el papel se cierra con el veredicto. */''}
+<h2>Conclusiones</h2>
+${/* La conclusión del formato es ésta: una frase con las cuentas del
+     trabajo. No hay lista fija debajo —el DVAD-SER-002 no la tiene—,
+     así que no se inventa ninguna. Esto sale siempre, escriba
+     gerencia lo que escriba, y no se puede borrar desde el portal. */''}
+<p>Se realizó el mantenimiento y la calibración de <b>${conE.length}</b> válvula${conE.length===1?'':'s'}
+  de seguridad, dejándola${conE.length===1?'':'s'} con el set requerido según placa.
+  ${aprobadas?`${aprobadas} válvula${aprobadas===1?'':'s'} se encuentra${aprobadas===1?'':'n'} operativa${aprobadas===1?'':'s'}.`:''}
+  ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
+${/* Y debajo, en su propio renglón, lo que escribió gerencia para
+     ESTE trabajo. Va detrás de lo fijo, nunca encima. */''}
+${o.conclu?`<p class="escrito propio">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
+${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
+${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
+  return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
+    `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}`:''})()}
 
 
 ${/* PENDIENTES: lo que queda por hacer después de entregar —la
@@ -12543,8 +12568,8 @@ ${(()=>{
       <div class="l"><b>${esc(quien)}</b><span>${esc(cargo)}</span></div></div></div>`;
 })()}
 
-<p class="pie">${INFORME_COD} · ${esc(os)} · ${esc(c.n||'')} — El usuario del documento debe asegurarse
-  de que este sea vigente antes de usarlo. Puede consultarlo con el responsable del SIG.</p>
+${/* La nota del SIG ya va al pie de TODAS las hojas, ésta incluida:
+     repetirla aquí la dejaba dos veces en la misma página. */''}
 </section>
 
 ${BARRA_IMPRIMIR}
