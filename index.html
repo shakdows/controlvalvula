@@ -8648,6 +8648,14 @@ const FIRMA_ROLES=[
     acepta o se devuelve. */
  ['recep', 'Firma del mecánico que hizo la prueba', 'Adolphus']
 ];
+/* La persona del CLIENTE a quien se le entrega el papel. Son sus
+   firmantes, no los de la casa: el gestor de contrato primero —es
+   quien recibe el informe— y, si no lo hay, el inspector. */
+function contactoCliente(c){
+  const f=(c&&c.firmantes||[]).filter(x=>x&&String(x.n||'').trim());
+  const q=f.find(x=>x.rol==='vbResp')||f.find(x=>x.rol==='vbInsp');
+  return q?q.n:'';
+}
 const firmantesDe=cliId=>{
   const c=cli(cliId);
   return Array.isArray(c.firmantes)?c.firmantes:[];
@@ -12012,7 +12020,7 @@ const MEMBRETE_CSS=`
 .mem .dt i{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:.32em;
   padding:5px 8px;font-style:normal;font-size:inherit;color:#5b6470;border-bottom:0}
 .mem .dt i b{display:inline;padding:0;border:0;font-weight:700;color:#1a1d21}
-.mem .dt span:nth-last-of-type(1),.mem .dt b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
+.mem .dt>span:nth-last-of-type(1),.mem .dt>b:nth-last-of-type(1){border-bottom:1px solid #1a1d21}
 .mem .lg svg{display:block}`;
 /* El membrete de la casa. Lo llevan todos los papeles que se
    entregan, cada uno con su título y su código: así quien los recibe
@@ -12121,7 +12129,7 @@ function documentoInforme(idOrden,solo){
   const f=new Date(fecha+'T00:00:00');
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   const li=a=>`<li>${a}</li>`;
-  const raya=v=>v==null||String(v).trim()===''?'<span class="ln"></span>':esc(String(v));
+  const raya=v=>v==null||String(v).trim()===''?'':esc(String(v));
 
   /* El registro fotográfico: por cada válvula, cómo llegó, el desarme
      emparejado antes/después y los disparos. Cada bloque con su fecha
@@ -12143,7 +12151,7 @@ function documentoInforme(idOrden,solo){
       nFoto++;
       return `<tr><th class="n">N.º</th><th class="fe">Fecha</th><th>${esc(titulo)}</th></tr>
         <tr><td class="n" rowspan="2">${nFoto}</td><td class="fe">${esc(fPE(dia||e.fecha||fecha))}</td>
-          <td>${desc?esc(desc):'<span class="ln"></span>'}</td></tr>`;
+          <td>${desc?esc(desc):''}</td></tr>`;
     };
     const fig=(src,pie)=>`<figure><img src="${src}" alt="${esc(pie||'')}"><figcaption>${esc(pie||'')}</figcaption></figure>`;
     const sueltas=(titulo,desc,fotos)=>{
@@ -12418,14 +12426,20 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   <tr>${INFORME_FIRMAS.map(([,quien])=>`<td>${esc(quien)}</td>`).join('')}</tr>
   <tr>${INFORME_FIRMAS.map(([,,cargo])=>`<td class="rol">${esc(cargo)}</td>`).join('')}</tr>
 </table>
-<div class="cara-pie">${NOTA_SIG}</div>
+${/* La nota del SIG la pone el pie de la hoja, como en todas las
+     demás: aquí saldría dos veces seguidas. */''}
 </section>
 
 <section class="hoja pliego">
 <div class="dat">
   <span>Dirigido</span><i>:</i><b>${raya(c.n)}</b>
   <span>Ubicación</span><i>:</i><b>${raya(c.dir||c.fac)}</b>
-  <span>Atención</span><i>:</i><b>${raya(ejec?ejec.n:(conE[0]&&conE[0].e.respNombre))}</b>
+  ${/* «Atención» es la persona del CLIENTE a quien se dirige el papel
+       —su inspector, su gestor de contrato—, no el técnico de la casa
+       que hizo el trabajo: ése ya firma abajo. Sale de los firmantes
+       de la empresa (Ajustes · Cliente); si no se ha puesto ninguno,
+       queda la raya para escribirlo a mano. */''}
+  <span>Atención</span><i>:</i><b>${raya(contactoCliente(c))}</b>
   <span>Asunto</span><i>:</i><b>Calibración de válvulas de seguridad</b>
   <span>Fecha</span><i>:</i><b>${f.getDate()} de ${esc(MES_LARGO[f.getMonth()])} del ${f.getFullYear()}</b>
   <span>Avance</span><i>:</i><b>${Math.round(conE.length*100/Math.max(1,items.length))}%</b>
@@ -12442,9 +12456,9 @@ ul,p{break-inside:avoid;page-break-inside:avoid}
   ${/* La primera casilla es el número de la orden y cada fila es una
        LÍNEA suya —PSV-393-01, PSV-393-02—, como en el formato de la
        casa: el TAG de planta va en su propia columna. */''}
-  <tr><th>${esc(o.mat||o.n||os)}</th><th>Descripción</th><th>Tamaño</th><th>Set de placa</th><th>Marca</th><th>N.º de serie</th></tr>
+  <tr><th>${esc(o.mat||o.n||os)}</th><th>TAG</th><th>Tamaño</th><th>Set de placa</th><th>Marca</th><th>N.º de serie</th></tr>
   ${items.map(({l,a,m,e})=>`<tr>
-    <td><b>${esc(codigoLinea(l))}</b></td><td>Calibración de válvulas</td><td>${raya(a.medida||a.sz)}</td>
+    <td><b>${esc(codigoLinea(l))}</b></td><td>${raya(a.tag)}</td><td>${raya(a.medida||a.sz)}</td>
     <td>${raya(a.setPress?a.setPress+' '+(a.setUnd||'psi'):(e&&e.setEsp?e.setEsp+' '+(e.und||'psi'):''))}</td>
     <td>${raya(m.m)}</td><td>${raya(a.ser)}</td></tr>`).join('')}
 </table>
@@ -12486,8 +12500,13 @@ ${registro||'<p>Sin fotografías registradas en este servicio.</p>'}
 <p>${INFORME_HERRAM}</p>
 
 <h2>Equipos utilizados</h2>
-<p>${INFORME_EQUIPOS}${conE[0]&&conE[0].e.patDesc?` Patrón: ${esc(conE[0].e.patDesc)} ${esc(conE[0].e.patMarca||'')} ${esc(conE[0].e.patModelo||'')}${
-  conE[0].e.patSerie?', serie '+esc(conE[0].e.patSerie):''}${conE[0].e.patCert?', certificado '+esc(conE[0].e.patCert):''}.`:''}</p>
+${/* El patrón se nombra, no se detalla: la serie y el número de
+     certificado son del CERTIFICADO —ahí van, en el cuadro de equipos
+     patrones, que es donde los busca quien audita—. Repetidos aquí
+     alargaban el renglón sin decir nada nuevo. */''}
+<p>${INFORME_EQUIPOS}${conE[0]&&conE[0].e.patDesc
+  ? ` Patrón: ${esc([conE[0].e.patDesc,conE[0].e.patMarca,conE[0].e.patModelo].filter(Boolean).join(' '))}.`
+  : ''}</p>
 
 <h2>Cuadro resumen de pruebas de calibración de las válvulas</h2>
 <table>
@@ -12976,7 +12995,7 @@ function psvDocumento(id){
   ${(()=>{
     const cel=(k,val,ancho)=>`<td${ancho?` colspan="${ancho}"`:''}>
       <span class="pk">${k}</span>
-      <b>${val==null||String(val).trim()===''?'<span class="ln"></span>':esc(String(val))}</b></td>`;
+      <b>${val==null||String(val).trim()===''?'':esc(String(val))}</b></td>`;
     return `<table class="pat">
       <tr>${cel('Descripción',c.patDesc,2)}${cel('Marca',c.patMarca)}${cel('Modelo',c.patModelo)}</tr>
       <tr>${cel('N.º de serie',c.patSerie)}${cel('Escala',c.patEscala)}${cel('Clase de exactitud',c.patExact)}${cel('Calibrado el',c.patFecha?fPE(c.patFecha):'')}</tr>
