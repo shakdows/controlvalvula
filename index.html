@@ -8287,9 +8287,10 @@ function psvFaltantes(c){
         out.push({id:'dspF'+i, que:`la foto del disparo ${i+1}`,paso:4});
     });
   }
-  /* 5 · conclusiones */
-  if(!String(c.coment||'').trim())
-    out.push({id:'pv-coment', que:'las conclusiones del mantenimiento',paso:5});
+  /* 5 · conclusiones. Se piden donde ahora se escriben: en la casilla
+       del trabajo, que vale para todas las válvulas de la orden. */
+  if(!String(conclusionDe(c)).trim())
+    out.push({id:'pv-oConclu', que:'las conclusiones del trabajo',paso:5});
   /* 6 · la firma de quien lo hizo */
   if(!String(c.respNombre||'').trim())
     out.push({id:'pv-resp', que:'el nombre de quien hizo el trabajo',paso:6});
@@ -8310,7 +8311,7 @@ const CUADRO_DE_CASILLA={
   'pv-asFound':2, 'pv-rcVeredicto':2, 'pv-rcMotivo':2, 'pvFirmaRec':2,
   'pvFotos':3,
   'pv-setEsp':4,
-  'pv-coment':5,
+  'pv-oConclu':5, 'pv-oRecom':5, 'pv-oPendOn':5,
   'pv-resp':6, 'pvFirma':6
 };
 const pasoDeCasilla=x=>CUADRO_DE_CASILLA[x&&x.id]
@@ -8932,6 +8933,25 @@ function recepAuto(t,a){
    ficha de la válvula, que es de donde saldrá la próxima vez. */
 /* Un texto que es de la orden, no de una válvula: se escribe en todas
    sus líneas para que dé igual desde cuál se abra. */
+/* El interruptor de los pendientes. Al apagarlo se borra lo escrito:
+   un apartado que se apaga no puede seguir imprimiéndose, y dejarlo
+   guardado a la espera era la manera de que reapareciera solo. */
+function psvPendientes(si){
+  const caja=$('#pv-oPendCaja'), ta=$('#pv-oPend');
+  if(caja)caja.hidden=!si;
+  if(si){ if(ta)ta.focus(); return }
+  if(ta&&ta.value){ ta.value=''; ta.dispatchEvent(new Event('input')) }
+}
+/* Lo que se concluye de UNA válvula, para su certificado. Se
+   escribe una vez, en la orden, y vale para todas sus válvulas; los
+   trabajos de antes llevaban la suya escrita a mano en el ensayo y
+   ésa manda, que ya está impresa y firmada. */
+function conclusionDe(c){
+  if(!c)return '';
+  if(String(c.coment||'').trim())return c.coment;
+  const o=ordenDelEnsayo(c);
+  return o&&String(o.conclu||'').trim()?o.conclu:'';
+}
 function ordenTexto(id,k,v){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
   lineasDe(o).forEach(x=>{x[k]=v});
@@ -9475,37 +9495,45 @@ function pintarPSV(){
     </div></details>
 
     <details class="psv-sec${paso(5)}" ${tocan.includes(5)?'open':''}><summary><span class="pn">5</span> · Conclusiones${marca(cuenta(5))}
-      <span class="psv-req" style="color:var(--ink-3);font-weight:500">va tal cual al certificado</span></summary><div class="psv-b">
-      <div class="fld"><label for="pv-coment">Conclusiones del mantenimiento${
-        ayuda('Qué se encontró, qué se cambió y en qué estado queda la válvula. Se imprime tal cual en el certificado.')}</label>
-        <textarea class="inp" id="pv-coment" rows="4" oninput="psvCampo('coment',this.value)">${esc(t.coment||'')}</textarea>
-        <span class="hint">Se imprime completo en el certificado de <b>esta</b> válvula, bajo el título <b>Conclusiones</b>.</span></div>
-      ${/* Y lo general del trabajo: lo que va en el informe DVAD-SER-002,
-           en los renglones que antes había que llenar a mano. Es de la
-           ORDEN, así que se escribe una vez y vale para todas sus
-           válvulas. */''}
+      <span class="psv-req" style="color:var(--ink-3);font-weight:500">se escribe una vez y vale para todo el trabajo</span></summary><div class="psv-b">
+      ${/* Tres casillas y en el orden del papel: recomendaciones,
+           conclusiones y —sólo si hace falta— pendientes. Antes había
+           cuatro, con DOS de conclusiones: una para el certificado de
+           esta válvula y otra para el informe de la orden. Nadie sabía
+           en cuál escribir, y lo escrito acababa en un papel o en el
+           otro según el día. Ahora se escribe una vez: el certificado
+           usa la de la orden si esta válvula no tiene la suya. */''}
       ${(()=>{
         const ord=ordenViva(t.act)||ordenDeValvula(t.act);
         if(!ord)return '';
         const ls=lineasDe(ord);
-        return `<h4 class="snc-sec">Del informe de la orden
-            <span class="opc">${esc(codigoOS(numOS(ord),/^PSV/i.test(String(ord.mat||'')))||ord.mat||ord.n)}${
-              ls.length>1?` · vale para las ${ls.length} válvulas`:''}</span></h4>
-          <div class="fld"><label for="pv-oConclu">Conclusiones generales del trabajo</label>
-            <textarea class="inp" id="pv-oConclu" rows="3"
-              placeholder="Lo que se concluye del servicio completo, con sus palabras."
-              oninput="ordenTexto('${ord.id}','conclu',this.value)">${esc(ord.conclu||'')}</textarea>
-            <span class="hint">Sale impreso en el informe, bajo <b>Conclusiones</b>.</span></div>
-          <div class="fld"><label for="pv-oRecom">Recomendaciones generales</label>
+        const conPend=!!String(ord.pend||'').trim();
+        return `<div class="snc-nota">Vale para el trabajo entero${
+              ls.length>1?` · sus ${ls.length} válvulas`:''} · ${esc(codigoOS(numOS(ord),/^PSV/i.test(String(ord.mat||'')))||ord.mat||ord.n)}</div>
+          <div class="fld"><label for="pv-oRecom">Recomendaciones${
+              ayuda('Una por renglón. Cada renglón sale como un punto más de la lista de recomendaciones del informe.')}</label>
             <textarea class="inp" id="pv-oRecom" rows="3"
-              placeholder="Qué recomienda el taller: frecuencia, repuestos a tener, cuidados."
+              placeholder="Una por renglón: frecuencia, repuestos a tener, cuidados."
               oninput="ordenTexto('${ord.id}','recom',this.value)">${esc(ord.recom||'')}</textarea>
-            <span class="hint">Sale impreso en el informe, bajo <b>Recomendaciones generales</b>.</span></div>
-          <div class="fld"><label for="pv-oPend">Pendientes <span class="opc">si queda algo por hacer</span></label>
-            <textarea class="inp" id="pv-oPend" rows="2"
-              placeholder="Lo que queda para después: calibración en sitio, un reporte que llega luego…"
-              oninput="ordenTexto('${ord.id}','pend',this.value)">${esc(ord.pend||'')}</textarea>
-            <span class="hint">Si lo dejas en blanco, ese apartado no sale en el informe.</span></div>`;
+            <span class="hint">Cada renglón sale como un punto más, debajo de las del formato.</span></div>
+          <div class="fld"><label for="pv-oConclu">Conclusiones${
+              ayuda('Lo que se concluye del trabajo. Sale en el informe y en el certificado de las válvulas que no tengan la suya.')}</label>
+            <textarea class="inp" id="pv-oConclu" rows="3"
+              placeholder="Lo que se concluye del servicio, con sus palabras."
+              oninput="ordenTexto('${ord.id}','conclu',this.value)">${esc(ord.conclu||'')}</textarea>
+            <span class="hint">Sale debajo de la conclusión del formato, sin rayas de por medio.</span></div>
+          ${/* Los pendientes casi nunca hay. Con su casilla siempre
+               abierta, el que rellena el papel cree que le falta algo:
+               se pide sólo cuando se dice que sí hay. */''}
+          <div class="fld"><label class="paso-ch extra" style="margin-bottom:var(--sp-2)">
+              <input type="checkbox" id="pv-oPendOn" ${conPend?'checked':''}
+                onchange="psvPendientes(this.checked)">
+              <span>Queda algo pendiente</span></label>
+            <div id="pv-oPendCaja" ${conPend?'':'hidden'}>
+              <textarea class="inp" id="pv-oPend" rows="2"
+                placeholder="Lo que queda para después: calibración en sitio, un reporte que llega luego…"
+                oninput="ordenTexto('${ord.id}','pend',this.value)">${esc(ord.pend||'')}</textarea>
+              <span class="hint">Sale al final del informe, detrás de las conclusiones.</span></div></div>`;
       })()}
     </div></details>
 
@@ -11534,8 +11562,9 @@ function verPSV(id){
       dato('Exactitud', c.patExact), dato('Certificado', c.patCert),
       dato('Calibrado el', c.patFecha?fPE(c.patFecha):'')])}
 
-    ${c.coment?`<section class="pd-b"><h5>Conclusiones</h5>
-      <p class="pd-txt">${esc(c.coment)}</p></section>`:''}
+    ${(()=>{const cl=conclusionDe(c); return cl
+      ? `<section class="pd-b"><h5>Conclusiones</h5>
+      <p class="pd-txt">${esc(cl)}</p></section>`:''})()}
 
     ${(fotosLlegada(c)[0]||{}).d?`<section class="pd-b"><h5>Cómo llegó</h5>
     <img src="${(fotosLlegada(c)[0]||{}).d}" alt="Prueba inicial" style="max-width:320px;width:100%;border-radius:var(--r-1);border:1px solid var(--line-2)">
@@ -12129,6 +12158,10 @@ function documentoInforme(idOrden,solo){
   const f=new Date(fecha+'T00:00:00');
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
   const li=a=>`<li>${a}</li>`;
+  /* Cada renglón de lo que se escribe es un punto de la lista: así se
+     escribe una recomendación por línea y salen una debajo de otra,
+     como las del formato. */
+  const renglones=v=>String(v||'').split(/\n+/).map(x=>x.trim()).filter(Boolean);
   const raya=v=>v==null||String(v).trim()===''?'':esc(String(v));
 
   /* El registro fotográfico: por cada válvula, cómo llegó, el desarme
@@ -12340,7 +12373,7 @@ h3.sub{font-size:12.5px;font-weight:700;color:#1a1d21;margin:12px 0 4px}
 /* Lo que se escribió a mano para este trabajo, debajo de lo fijo y
    separado con una raya fina: se ve de un vistazo qué es de siempre y
    qué es de hoy. */
-p.escrito.propio{margin-top:9px;padding-top:8px;border-top:1px solid #e4e7ea}
+p.escrito.propio{margin-top:7px}
 .renglones{margin:8px 0 4px;break-inside:avoid;page-break-inside:avoid}
 .renglones span{display:block;border-bottom:1px solid #9aa2ac;height:16px;margin-bottom:7px}
 /* Lo que escribió el taller, en el informe: se distingue de los
@@ -12526,8 +12559,11 @@ ${/* Primero las de siempre —las que la casa recomienda en todos sus
      trabajos— y debajo, en su propio renglón, lo que escribió
      gerencia para ESTE trabajo. Al revés, lo suyo parecía el
      encabezado de una lista que no había escrito. */''}
-<ul>${INFORME_RECOM.map(x=>li(esc(x))).join('')}</ul>
-${o.recom?`<p class="escrito propio">${esc(o.recom).replace(/\n/g,'<br>')}</p>`:''}
+${/* Las de siempre y las de este trabajo, en la MISMA lista: cada
+     renglón que escriba gerencia es un punto más, como en el papel.
+     Antes lo suyo caía debajo, detrás de una raya, y se leía como una
+     nota pegada al final en vez de como una recomendación. */''}
+<ul>${INFORME_RECOM.concat(renglones(o.recom)).map(x=>li(esc(x))).join('')}</ul>
 
 ${/* Las conclusiones van AL FINAL, detrás de las recomendaciones: es
      el orden del formato de la casa —11 recomendaciones, 12
@@ -12543,7 +12579,7 @@ ${/* La conclusión del formato es ésta: una frase con las cuentas del
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
 ${/* Y debajo, en su propio renglón, lo que escribió gerencia para
      ESTE trabajo. Va detrás de lo fijo, nunca encima. */''}
-${o.conclu?`<p class="escrito propio">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
+${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
 ${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
 ${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
   return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
@@ -13079,7 +13115,8 @@ function psvDocumento(id){
     <h4>Los disparos frente a la banda admisible</h4>${
     psvGrafica(v,560,320)}</div>`:''}
 
-  ${c.coment?`<h2>CONCLUSIONES</h2><table><tr><td>${esc(c.coment)}</td></tr></table>`:''}
+  ${(()=>{const cl=conclusionDe(c); return cl
+    ? `<h2>CONCLUSIONES</h2><table><tr><td>${esc(cl)}</td></tr></table>`:''})()}
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
   <div class="quien">
     <div><span>Encargado del mantenimiento</span><b>${esc(c.respNombre||'—')}</b></div>
