@@ -22765,7 +22765,10 @@ function pintarActualizar(){
   b=document.createElement('button');
   b.id='btnActualizar'; b.className='act-chip';
   b.title='Hay una versión nueva ya descargada · se aplica cuando tú quieras';
-  b.onclick=()=>aplicarVersion();
+  /* El botón de arriba también se pulsa a propósito: quien lo busca
+     quiere actualizar ahora y entrar limpio, no que le devuelvan a
+     media faena. */
+  b.onclick=()=>aplicarVersion(true);
   b.innerHTML=`<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg><span>Actualizar</span>`;
   sitio.parentNode.insertBefore(b,sitio);
 }
@@ -22816,7 +22819,7 @@ async function buscarActualizacion(){
     if(SW_REG&&SW_REG.waiting){
       HAY_VERSION=true; pintarActualizar();
       toast('Versión nueva lista · aplicando');
-      setTimeout(()=>aplicarVersion(),300);
+      setTimeout(()=>aplicarVersion(true),300);
       return;
     }
     const v=await versionInstalada();
@@ -22861,8 +22864,17 @@ function volverDondeEstaba(){
     else go(d.page);
   }catch(e){}
 }
-function aplicarVersion(){
-  apuntarDondeEstoy();
+/* Se pide a mano desde el menú, o la aplica el aviso automático. No
+   es lo mismo: una la eliges tú, la otra te interrumpe. */
+const LS_TRAS_VER='adolphus.tras-actualizar';
+function aplicarVersion(aMano){
+  if(aMano){
+    /* Nada de volver donde estabas: se entra otra vez, desde el
+       principio, que es lo que pide quien actualiza a propósito. */
+    try{ sessionStorage.removeItem('adolphus.donde') }catch(e){}
+    versionInstalada().then(v=>{ try{ sessionStorage.setItem(LS_TRAS_VER,v||'1') }catch(e){} })
+      .catch(()=>{ try{ sessionStorage.setItem(LS_TRAS_VER,'1') }catch(e){} });
+  } else apuntarDondeEstoy();
   /* Si hay algo a medio escribir se guarda antes de recargar: la
      actualización no puede costarle a nadie su trabajo. */
   try{ if(typeof PSV_TMP!=='undefined'&&PSV_TMP&&PSV_TMP.act)guardarPSV(false,true) }catch(e){}
@@ -23797,6 +23809,20 @@ setTimeout(()=>{try{mirarSiHayVersion()}catch(e){}},1500);
 /* Y si se llega desde el enlace de un correo, se atiende antes que
    nada: es lo primero que esa persona tiene que leer. */
 setTimeout(()=>{try{atenderVueltaDelCorreo()}catch(e){}},300);
+/* Si se viene de actualizar a mano: el acceso abierto, la sesión
+   lista para continuar de un toque, y dicho en qué versión quedó. */
+setTimeout(()=>{
+  let v=null; try{ v=sessionStorage.getItem(LS_TRAS_VER) }catch(e){}
+  if(!v)return;
+  try{ sessionStorage.removeItem(LS_TRAS_VER) }catch(e){}
+  try{
+    abrirAcceso(); authTab('in'); pintarSesionGuardada();
+    versionInstalada().then(ahora=>{
+      authMsg(`<b>Portal actualizado${ahora?' · '+esc(ahora):''}.</b>
+        Entra otra vez para seguir con la versión nueva.`,'good');
+    }).catch(()=>authMsg('<b>Portal actualizado.</b> Entra otra vez para seguir.','good'));
+  }catch(e){}
+},450);
 paintThemeBtn();renderAll();go('home');pintarNet();
 pintarSesionGuardada();pintarCuenta();upTipo('staff');enfocables();
 $('#verApp').textContent=VERSION;
