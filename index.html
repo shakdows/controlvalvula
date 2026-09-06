@@ -2948,6 +2948,12 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .af-t span{font-size:11.5px;color:var(--ink-3);line-height:1.45}
 .af-cam{width:150px;height:56px;border-radius:var(--r-1)}
 .af-img{position:relative}
+.tol-sel{display:inline-flex;align-items:center;gap:4px;font-weight:700}
+.tol-b{font:inherit;font-weight:700;cursor:pointer;border:1px solid var(--line);
+  background:var(--surface);color:var(--ink-3);border-radius:var(--r-1);
+  padding:2px 8px;min-height:26px;line-height:1}
+.tol-b.on{background:var(--sel);border-color:var(--sel);color:#fff}
+.pie-atras{display:block;margin-top:6px;color:var(--ink-3)}
 .pie-falta{font-size:11.5px;color:var(--due);margin-right:6px}
 .pv-par-n{margin-top:9px;font-size:12.5px}
 /* Las marcas de cada foto: a dónde salió la pieza, de dónde volvió.
@@ -8111,10 +8117,18 @@ try{const g=JSON.parse(localStorage.getItem('adolphus.criterios')||'null');
     if(g&&typeof g==='object')CRITERIOS={...CRIT_DEF,...g}}catch(e){}
 const critPorDefecto=()=>['pct','abs','corte','bd'].every(k=>CRITERIOS[k]===CRIT_DEF[k]);
 
-function tolPSV(setEsp,und){
+const TOL_OPCIONES=[3,1];
+/* La tolerancia con la que se juzga ESTE ensayo. La de la casa si no
+   se eligió otra; y si se eligió, la elegida — también al reimprimir
+   un papel de hace meses, que se juzgó con la que tenía entonces. */
+const tolDelEnsayo=c=>{
+  const v=c&&Number(c.tolPct);
+  return isFinite(v)&&v>0?v:CRITERIOS.pct;
+};
+function tolPSV(setEsp,und,pct){
   const p=aPsi(setEsp,und);
   if(!isFinite(p)||p<=0)return null;
-  const C=CRITERIOS;
+  const C=isFinite(Number(pct))&&Number(pct)>0?{...CRITERIOS,pct:Number(pct)}:CRITERIOS;
   return p<=C.corte
     ? {tipo:'abs', psi:C.abs, txt:`± ${n2(C.abs)} psig`,
        regla:`ASME Secc. VIII · presión de ajuste ≤ ${C.corte} psig`}
@@ -8347,6 +8361,15 @@ function cuadroYaToca(cuadro,etapa){
 const PASOS_TALLER=[3,5,6];
 const faltaDelTaller=c=>psvFaltantes(c).filter(x=>PASOS_TALLER.includes(x.paso||9));
 const tallerListo=c=>faltaDelTaller(c).length===0;
+/* Y en la prueba de salida, lo del jefe: los disparos del as-left y su
+   firma. Lo de atrás ya pasó por el taller y tiene su propia columna;
+   si algo quedó cojo se dice con palabras, no arrastrándolo a un
+   cuadro que en esta pantalla no le toca. */
+const PASOS_SALIDA=[4,6];
+const faltaDeLaSalida=c=>psvFaltantes(c).filter(x=>PASOS_SALIDA.includes(x.paso||9));
+/* Lo que falta de ANTES de esta columna, para poder decirlo sin
+   mandar a nadie a buscarlo. */
+const faltaDeAntes=c=>psvFaltantes(c).filter(x=>!PASOS_SALIDA.includes(x.paso||9));
 /* El veredicto lo dan las presiones —y con eso se dibuja el gráfico en
    cuanto hay disparos, que es cuando sirve—. Emitir el certificado es
    otra cosa: para eso tienen que estar los seis pasos. */
@@ -8414,10 +8437,12 @@ function psvPintarFaltas(){
 function psvSenalarFaltas(soloTaller){
   const t=PSV_TMP; if(!t)return null;
   document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
-  /* En mantenimiento no se señala lo que se hace en la prueba de
-     salida: mandar al técnico a una casilla que no le toca todavía es
-     mandarlo a ninguna parte. */
-  const f=soloTaller?faltaDelTaller(t):psvFaltantes(t);
+  /* Cada columna señala lo suyo. En mantenimiento no se manda al
+     técnico a una casilla de la prueba de salida, que no le toca
+     todavía; y en la prueba de salida no se manda al jefe a
+     fotografiar un desarme que ya pasó. */
+  const f=soloTaller?faltaDelTaller(t)
+    :(etapaDeValvula(t.act)==='cert'?faltaDeLaSalida(t):psvFaltantes(t));
   const eles=[];
   f.forEach(x=>{const e=x.id&&document.getElementById(x.id); if(e){e.classList.add('falta');eles.push(e)}});
   /* Un paso plegado esconde lo que falta: se abren TODOS los que
@@ -8559,7 +8584,7 @@ function guardarPatron(){
 function psvVeredicto(c){
   const set=num(c.setEsp), u=c.und||'psi';
   const t=valoresDisparo(c);
-  const tol=tolPSV(set,u);
+  const tol=tolPSV(set,u,tolDelEnsayo(c));
   /* Los TRES disparos, no uno. El formato AXAD-088 tiene TEST 1, 2 y
      3 y el veredicto sale del promedio: con un solo dato no hay
      promedio que valga, y dar "APROBADO" sobre una sola lectura es
@@ -8804,6 +8829,12 @@ function openPSV(actId,edit,seccion){
       const z=o||ORDENES.find(x=>x.act===actId&&x.calib);
       if(z&&z.calib)c=CALIBS.find(x=>x.id===z.calib);
     }
+    /* Y si aun así no aparece —una orden vieja que se quedó sin el
+       hilo puesto—, el último ensayo de esta válvula antes que un
+       formulario en blanco. Empezar de cero encima de un trabajo
+       hecho es la única equivocación que no tiene arreglo. */
+    if(!c)c=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv')
+      .sort((p,q)=>String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
@@ -8833,10 +8864,23 @@ function openPSV(actId,edit,seccion){
        tiene.
        Lo único que no se toca es un ensayo ya firmado: ahí el nombre
        es el del que firmó, y eso no se reescribe por detrás. */
-    const yaFirmado=(PSV_TMP.firmas||[]).some(f=>f.rol==='ejec'&&f.img);
-    if(ord&&ord.ing&&ord.ing!=='Por asignar'&&!yaFirmado){
-      PSV_TMP.respNombre=ord.ing;
-      if(!String(PSV_TMP.respArea||'').trim())PSV_TMP.respArea='Técnico';
+    if(ord&&ord.ing&&ord.ing!=='Por asignar'){
+      const firma=(PSV_TMP.firmas||[]).find(f=>f.rol==='ejec'&&f.img);
+      const otro=firma&&String(firma.n||'').trim()
+        &&firma.n.trim().toLowerCase()!==ord.ing.trim().toLowerCase();
+      /* La orden se reasignó a otro: la firma del anterior se retira
+         —no es suya la responsabilidad— y firma el que la tiene
+         ahora. Se dice, para que nadie descubra el hueco al ir a
+         imprimir. */
+      if(otro){
+        PSV_TMP.firmas=(PSV_TMP.firmas||[]).filter(f=>f.rol!=='ejec');
+        const antes=firma.n;
+        setTimeout(()=>toast(`La orden pasó a ${ord.ing} · la firma de ${antes} se retiró, tiene que firmar ${ord.ing}`),700);
+      }
+      if(otro||!firma){
+        PSV_TMP.respNombre=ord.ing;
+        if(!String(PSV_TMP.respArea||'').trim())PSV_TMP.respArea='Técnico';
+      }
     }
   }
   if(retomado)setTimeout(()=>toast('Seguimos con el borrador que quedó a medias'),300);
@@ -9350,7 +9394,13 @@ function pintarPSV(){
      que evita el peor enredo posible: que el portal pida una casilla
      y la esconda en un cuadro que esta columna no muestra. Si hace
      falta, se ve. */
-  const conFalta=new Set(psvFaltantes(t).map(pasoDeCasilla));
+  /* Lo que falta saca su cuadro a la luz —una casilla pedida dentro de
+     un cuadro escondido no se puede llenar—, pero sólo lo de ESTA
+     columna. En prueba de salida, la entrada y el desarme se quedan
+     donde están: ya pasaron. */
+  const propias=etapa==='cert'?faltaDeLaSalida(t)
+              : etapa==='mant'?faltaDelTaller(t) : psvFaltantes(t);
+  const conFalta=new Set(propias.map(pasoDeCasilla));
   const tocan=[1,2,3,4,5,6].filter(n=>!noVa(n)&&
     (tocan0.includes(n)||(conFalta.has(n)&&cuadroYaToca(n,etapa))));
   const paso=n=>(PSV_ABIERTO_TODO||tocan.includes(n))?'':' oculto';
@@ -9723,7 +9773,7 @@ function colorearDisparos(){
   if(!PSV_TMP)return;
   const filas=$$('.dsp-f'); if(!filas.length)return;
   const l=disparosDe(PSV_TMP), u=PSV_TMP.und||'psi';
-  const set=num(PSV_TMP.setEsp), tol=tolPSV(set,u);
+  const set=num(PSV_TMP.setEsp), tol=tolPSV(set,u,tolDelEnsayo(PSV_TMP));
   const lim=tol?(tol.tipo==='abs'?tol.psi/factorU(u):set*tol.pct/100):null;
   filas.forEach((f,i)=>{
     const t=l[i]; if(!t)return;
@@ -9736,7 +9786,7 @@ function colorearDisparos(){
 function pintarDisparos(){
   const caja=$('#psvDisparos'); if(!caja||!PSV_TMP)return;
   const l=disparosDe(PSV_TMP), u=PSV_TMP.und||'psi';
-  const set=num(PSV_TMP.setEsp), tol=tolPSV(set,u);
+  const set=num(PSV_TMP.setEsp), tol=tolPSV(set,u,tolDelEnsayo(PSV_TMP));
   const lim=tol?(tol.tipo==='abs'?tol.psi/factorU(u):set*tol.pct/100):null;
   const conFoto=l.filter(t=>fotosDisparo(t).length).length;
   const totalFotos=l.reduce((n,t)=>n+fotosDisparo(t).length,0);
@@ -9796,14 +9846,37 @@ function pintarDisparos(){
    los disparos, mientras se escriben, y de pie junto al gráfico, que es
    donde se mira si un disparo se salió y hay que saber de qué banda. */
 function critHtml(modo){
+  const hoy=tolDelEnsayo(PSV_TMP);
+  /* La tolerancia se elige aquí mismo, donde se está mirando si un
+     disparo se salió: bajar a Ajustes a cambiarla y volver es perder
+     el hilo de lo que se estaba juzgando. */
+  const tolBtn=`<span class="tol-sel" role="group" aria-label="Tolerancia del ensayo">
+      <span>Tolerancia ±</span>${TOL_OPCIONES.map(v=>
+        `<button type="button" class="tol-b${v===hoy?' on':''}"
+           aria-pressed="${v===hoy}" onclick="psvTolerancia(${v})">${v} %</button>`).join('')}
+    </span>`;
   return `<div class="crit ${modo==='lado'?'crit-lado':''}">
       <span>Criterios del ensayo</span>
-      <b>Tolerancia ± ${n2(CRITERIOS.pct)} %</b><b>Blowdown ${n2(CRITERIOS.bd)} %</b>
+      ${tolBtn}<b>Blowdown ${n2(CRITERIOS.bd)} %</b>
       <b>± ${n2(CRITERIOS.abs)} psig hasta ${CRITERIOS.corte} psig</b>
       ${S.rol==='admin'
         ? `<button class="btn quiet xs" onclick="editarCriterios()">Cambiar</button>`
         : `<span class="crit-lock">fijos · los cambia gerencia</span>`}
     </div>`;
+}
+
+/* Cambiar la tolerancia de ESTE ensayo. No toca la de la casa ni la
+   de ningún otro trabajo: sólo la de la válvula que se tiene delante,
+   y con ella se rehace el veredicto en el momento. */
+function psvTolerancia(v){
+  const t=PSV_TMP; if(!t)return;
+  const n=Number(v);
+  if(!TOL_OPCIONES.includes(n))return;
+  if(tolDelEnsayo(t)===n)return;
+  t.tolPct=n;
+  pintarDisparos();
+  try{ pintarPSVPie() }catch(e){}
+  toast(`Tolerancia ± ${n} % en este ensayo · los demás siguen como estaban`);
 }
 
 /* Los cargos de la casa: es lo que va bajo la firma en el certificado
@@ -9947,7 +10020,8 @@ function pintarPSVPie(){
      después sueltos o en un solo documento, desde la ficha de la
      orden. Se pregunta antes: es el único botón de la aplicación que
      no tiene vuelta atrás. */
-  const orden=ORDEN_ACTIVA?ORDENES.find(x=>x.id===ORDEN_ACTIVA):ordenAbiertaDe(PSV_TMP.act);
+  const orden=ORDEN_ACTIVA?ORDENES.find(x=>x.id===ORDEN_ACTIVA)
+    :ordenDeEsteEnsayo(PSV_TMP.act,PSV_TMP.id);
   const hermanas=orden?lineasDe(orden).length:1;
   /* «Cancelar» pasa por el aviso: quien lo pulsa por costumbre no
      pierde una hora de trabajo, y quien quiere irse tiene «Guardar y
@@ -9986,15 +10060,28 @@ function salidaDesdeElEnsayo(){
    vigencia y la orden se da por terminada. Se pregunta una vez. */
 /* Enseña en naranja lo que falta y lo dice con nombre y apellido. */
 function avisarFaltaPSV(){
-  const soloTaller=pieDeTaller(PSV_TMP);
+  const t=PSV_TMP; if(!t)return;
+  const soloTaller=pieDeTaller(t);
+  const enSalida=etapaDeValvula(t.act)==='cert';
   const f=psvSenalarFaltas(soloTaller);
   if(!f)return;
-  if(!f.length){pintarPSVPie();return}
+  /* Lo que quedó cojo en el taller no se señala aquí, pero tampoco se
+     calla: si no, el jefe termina sus disparos, va a emitir y se
+     encuentra con que no puede, sin saber por qué. */
+  const atras=enSalida?faltaDeAntes(t):[];
+  if(!f.length&&!atras.length){pintarPSVPie();return}
   const pie=$('#mFoot'); if(!pie)return;
+  const deAtras=atras.length
+    ? `<span class="pie-atras">Y del taller queda${atras.length===1?'':'n'} ${
+        esc(atras.map(x=>x.que).join(' · '))} — se llena${atras.length===1?'':'n'} en mantenimiento;
+        aquí se ve con «Ver todo el formulario».</span>`
+    : '';
   pie.innerHTML=`<div class="pie-confirma">
-      <b>Falta${f.length===1?'':'n'} ${f.length===1?'una casilla':f.length+' casillas'} ${
-        soloTaller?'para terminar el mantenimiento':'para poder emitir'}</b>
-      <span>${f.map(x=>esc(x.que)).join(' · ')} — ${f.length===1?'está':'están'} en naranja en el formulario.</span>
+      ${f.length?`<b>Falta${f.length===1?'':'n'} ${f.length===1?'una casilla':f.length+' casillas'} ${
+        soloTaller?'para terminar el mantenimiento':enSalida?'de la prueba de salida':'para poder emitir'}</b>
+      <span>${f.map(x=>esc(x.que)).join(' · ')} — ${f.length===1?'está':'están'} en naranja en el formulario.</span>`
+      :`<b>La prueba de salida está completa</b>`}
+      ${deAtras}
     </div>
     <button class="btn sec" onclick="pintarPSVPie()">Entendido</button>`;
 }
@@ -15954,13 +16041,23 @@ function ordenAbiertaDe(actId){
   return ORDENES.find(o=>o.act===actId&&o.et!=='final'
     &&/calibra/i.test(o.tipo||'')) || null;
 }
+/* La orden a la que pertenece un ensayo, sea del tipo que sea. Un
+   preventivo y un correctivo pasan por el taller igual que una
+   calibración, y mirar sólo el tipo «calibración» dejaba su trabajo
+   sin atar a ninguna orden. */
+function ordenDeEsteEnsayo(actId,calibId){
+  return (calibId&&ORDENES.find(o=>o.calib===calibId))
+      || ordenViva(actId)
+      || ORDENES.find(o=>o.act===actId&&o.et!=='final')
+      || null;
+}
 /* Cierra la orden con el ensayo colgado. Devuelve la orden o null. */
 function cerrarOrdenConEnsayo(actId,calibId,fecha,tec,resumen){
   /* La orden apuntada sólo vale si es de ESTA válvula: si el técnico
      abrió una orden, la dejó, y después ensayó otra válvula, cerrar la
      primera sería falsear dos cosas de un golpe. */
   const apuntada=ORDENES.find(x=>x.id===ORDEN_ACTIVA&&x.act===actId);
-  const o=apuntada||ordenAbiertaDe(actId);
+  const o=apuntada||ordenDeEsteEnsayo(actId,calibId);
   ORDEN_ACTIVA=null;
   if(!o)return null;
   o.calib=calibId;

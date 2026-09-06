@@ -47,17 +47,35 @@ const PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA
  chk(firma.nom==='Jose Rojas','al firmar sale su nombre puesto · '+firma.nom);
  chk(firma.cargo==='Técnico','y su cargo · '+firma.cargo);
 
- /* un ensayo YA firmado no se reescribe por detrás */
- const firmado=await p.evaluate(px=>{
+ /* Un ensayo firmado por el MISMO que tiene la orden no se toca. */
+ const mismo=await p.evaluate(px=>{
+   closeModal();
+   const c=CALIBS.find(x=>x.id==='cT');
+   const o=ORDENES.find(x=>x.id==='oT');
+   c.respNombre=o.ing;
+   c.firmas=[{rol:'ejec',n:o.ing,cargo:'Técnico',
+              f:HOY.toISOString().slice(0,10),h:'11:40',img:px}];
+   PSV_TMP=null; openPSV('aT');
+   return {nom:(PSV_TMP||{}).respNombre,
+           firmo:((PSV_TMP||{}).firmas||[]).some(f=>f.rol==='ejec'&&f.img)};
+ },PX);
+ chk(mismo.nom==='Jose Rojas'&&mismo.firmo,
+     'firmado por el que tiene la orden: no se toca nada · '+mismo.nom);
+
+ /* Pero si la orden se REASIGNA, la firma del anterior no puede seguir
+    en el papel haciendo de la del nuevo: se retira y firma él. */
+ const otro=await p.evaluate(px=>{
    closeModal();
    const c=CALIBS.find(x=>x.id==='cT');
    c.respNombre='Christian Soto';
    c.firmas=[{rol:'ejec',n:'Christian Soto',cargo:'Técnico',
               f:HOY.toISOString().slice(0,10),h:'11:40',img:px}];
-   PSV_TMP=null; openPSV('aT');
-   return (PSV_TMP||{}).respNombre;
+   PSV_TMP=null; openPSV('aT');            // la orden es de Jose Rojas
+   return {nom:(PSV_TMP||{}).respNombre,
+           firmo:((PSV_TMP||{}).firmas||[]).some(f=>f.rol==='ejec'&&f.img)};
  },PX);
- chk(firmado==='Christian Soto','lo ya firmado conserva el nombre del que firmó · '+firmado);
+ chk(otro.nom==='Jose Rojas','reasignada, el encargado es el nuevo · '+otro.nom);
+ chk(!otro.firmo,'y la firma del anterior se retira: una firma es de una persona');
 
  /* si nadie la ha tomado, se puede elegir */
  const libre=await p.evaluate(()=>{
