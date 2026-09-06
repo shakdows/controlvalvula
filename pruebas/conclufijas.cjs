@@ -74,10 +74,10 @@ const tramo=(h,a,b)=>{const i=h.indexOf(a); if(i<0)return '';
    const d=documentoInforme('oT',['oT']); const html=String((d&&(d.html||d))||'');
    const i=html.indexOf('<h2>Conclusiones</h2>');
    const t=html.slice(i,html.indexOf('<h3',i)+1||undefined);
-   return {parrafo:/class="escrito"[^>]*>[^<]*quedó operativa/.test(t),
+   return {punto:/<ul class="escrito">[\s\S]*?<li>[^<]*quedó operativa/.test(t),
            sinRaya:!/escrito propio/.test(t)};
  });
- chk(marcado.parrafo,'y lo suyo en su propio párrafo, con el mismo aire que el del formato');
+ chk(marcado.punto,'y lo suyo en su punto, como las recomendaciones');
  chk(marcado.sinRaya,'sin una raya que lo separe: entra en el papel, no encima');
 
  /* 5 · lo fijo no se puede borrar desde el portal */

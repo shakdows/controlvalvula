@@ -62,8 +62,8 @@ const limpio=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
  await p.evaluate(()=>{
    const o=ORDENES.find(x=>x.id==='oT');
    o.recom='Cambiar el resorte principal.\nRevisar la brida de descarga.';
-   o.conclu='La válvula PSV-108 quedó operativa y se entrega precintada.';
-   o.pend='Calibración en línea con equipo profiler.';
+   o.conclu='La válvula PSV-108 quedó operativa y se entrega precintada.\nSe entrega con su certificado.';
+   o.pend='Calibración en línea con equipo profiler.\nEnviar el acta firmada.';
  });
  const h=await p.evaluate(()=>{const d=documentoInforme('oT',['oT']);
    return String((d&&(d.html||d))||'')});
@@ -86,6 +86,12 @@ const limpio=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
  chk(secC.indexOf('set requerido según placa')<secC.indexOf('quedó operativa'),
      'debajo de la del formato');
  chk(!/escrito propio/.test(secC),'y sin raya que la separe');
+ chk(/<li>La válvula PSV-108 quedó operativa y se entrega precintada\.<\/li>/.test(secC),
+     'y en puntos, como las recomendaciones');
+ chk(/<li>Se entrega con su certificado\.<\/li>/.test(secC),'cada renglón, su punto');
+ const secP=h.slice(iP,iP+1200);
+ chk(/<li>Calibración en línea con equipo profiler\.<\/li>/.test(secP),
+     'los pendientes también van en puntos');
 
  /* la raya de separación ya no existe en la hoja de estilo */
  chk(!/p\.escrito\.propio\{[^}]*border-top/.test(h),'la raya ya no está ni en el estilo');

@@ -22,8 +22,9 @@ const FOTO='https://placehold.co/600x450/8a8f96/ffffff.png?text=foto';
      setPress:150,setUnd:'psi',mod:Object.keys(MODELOS)[0]});
    ORDENES.push({id:'oT',act:'aT',mat:'PSV-108',n:'PSV-108',num:108,et:'mant',f:hoy,oc:'450006785',
      ing:'Jose Rojas',pasos:['ent','mant','cert'],hist:{ent:hoy,mant:hoy},calib:'cT',
-     recom:'Programar la próxima parada para setiembre.',
-     conclu:'La válvula PSV-108 quedó operativa y se entrega precintada.'});
+     recom:'Cambiar el resorte principal.\nRevisar la brida de descarga.',
+     conclu:'La válvula PSV-108 quedó operativa y se entrega precintada.\nSe entrega con su certificado individual.',
+     pend:'Calibración en línea con equipo profiler.\nEnviar el acta firmada al cliente.'});
    CALIBS.push({id:'cT',act:'aT',ord:'oT',tipo:'psv',os:'PSV-108-001',und:'psi',set:150,setEsp:150,
      asFound:'152',fecha:hoy,rcFecha:hoy,rcVeredicto:'acepta',rcRecibe:'Jose Rojas',
      respNombre:'Jose Rojas',respArea:'Técnico de válvulas',

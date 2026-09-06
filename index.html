@@ -12385,6 +12385,7 @@ p.escrito.propio{margin-top:7px}
 /* Lo que escribió el taller, en el informe: se distingue de los
    párrafos que el sistema arma solo. */
 .escrito{white-space:pre-wrap}
+ul.escrito{white-space:normal}
 /* ── Que se respeten las hojas, como en el Word ──────────────
    La carátula es UNA hoja: membrete, servicio, cliente y el cuadro de
    firmas, y nada más. Lo que sigue empieza en la siguiente. Antes
@@ -12585,7 +12586,8 @@ ${/* La conclusión del formato es ésta: una frase con las cuentas del
   ${rechazadas?`${rechazadas} quedó${rechazadas===1?'':'aron'} fuera de tolerancia y requiere${rechazadas===1?'':'n'} atención.`:''}</p>
 ${/* Y debajo, en su propio renglón, lo que escribió gerencia para
      ESTE trabajo. Va detrás de lo fijo, nunca encima. */''}
-${o.conclu?`<p class="escrito">${esc(o.conclu).replace(/\n/g,'<br>')}</p>`:''}
+${renglones(o.conclu).length
+  ?`<ul class="escrito">${renglones(o.conclu).map(x=>li(esc(x))).join('')}</ul>`:''}
 ${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
 ${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
   return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
@@ -12596,8 +12598,8 @@ ${/* PENDIENTES: lo que queda por hacer después de entregar —la
      calibración en sitio, un reporte que llega luego—. Si no se apuntó
      nada, el apartado no sale: un título con la hoja en blanco debajo,
      en un papel firmado, parece un trabajo a medias. */''}
-${String(o.pend||'').trim()?`<h2>Pendientes</h2>
-<p class="escrito">${esc(o.pend).replace(/\n/g,'<br>')}</p>`:''}
+${renglones(o.pend).length?`<h2>Pendientes</h2>
+<ul class="escrito">${renglones(o.pend).map(x=>li(esc(x))).join('')}</ul>`:''}
 
 ${/* Las tres firmas del informe: quién lo elaboró, quién lo revisó y
      quién lo aprueba. Los nombres son los de la casa —INFORME_FIRMAS,
