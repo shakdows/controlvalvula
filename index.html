@@ -2956,6 +2956,10 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
 .pv-hueco-x{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .pv-hueco-x .paso-ch{font-size:10.5px;padding:3px 8px 3px 6px;gap:5px}
 .pv-hueco-x .paso-ch input{width:12px;height:12px}
+/* El sello de la marca: cuándo se pulsó. Lo ve gerencia y nadie más,
+   así que va discreto, debajo de sus casillas. */
+.pv-hueco-ts{display:block;margin-top:5px;font-family:'IBM Plex Mono';
+  font-size:10px;color:var(--ink-3);line-height:1.5}
 .pv-par-vacio,.pv-par-pie{margin-top:11px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
 /* El mismo par, ya en el certificado en pantalla */
 .pf-pares{display:flex;flex-direction:column;gap:14px}
@@ -3613,6 +3617,13 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
         <div class="stats" id="hoStats"></div>
         <div class="panel"><div class="panel-h"><h3>Detalle</h3><span class="count" id="hoCount"></span></div>
           <div id="hoLista"></div></div>
+        <!-- Lo que salió de casa: arenado y pintura, pieza por pieza,
+             con la fecha y la hora en que se marcó cada cosa. Sólo
+             aparece si hay algo que enseñar. -->
+        <div class="panel" id="hoFueraCaja" style="display:none">
+          <div class="panel-h"><h3>Piezas fuera de casa · arenado y pintura</h3>
+            <span class="count" id="hoFueraN"></span></div>
+          <div id="hoFuera"></div></div>
       </div></section>
 
       <!-- ═══ SOLICITUDES ═══ -->
@@ -10078,6 +10089,14 @@ function psvParCampo(i,k,v){
   if(!PSV_TMP)return;
   const p=paresFoto(PSV_TMP)[i]; if(!p)return;
   p[k]=v;
+  /* Las marcas de arenado y pintura se sellan con la fecha y la hora
+     del momento en que se pulsan. Lo pone el portal: una hora escrita
+     a mano es una hora que nadie puede defender. Al desmarcar se
+     borra el sello, que si no quedaría una fecha de algo que no pasó. */
+  if(MARCA_TXT[k]){
+    if(v)p[k+'Ts']=sello();
+    else delete p[k+'Ts'];
+  }
 }
 function psvParNota(i,v){
   if(!PSV_TMP)return;
@@ -10254,6 +10273,18 @@ const MARCAS_PIEZA={
 };
 const MARCA_TXT={envAr:'se mandó a arenado', envPi:'se mandó a pintura',
                  regAr:'volvió de arenado',  regPi:'volvió de pintura'};
+/* Cómo se nombra cada marca en un cuadro, sin el verbo. */
+const MARCA_CORTA={envAr:'Arenado · salida', envPi:'Pintura · salida',
+                   regAr:'Arenado · retorno', regPi:'Pintura · retorno'};
+/* El sello: fecha y hora de Lima, en un solo texto que se ordena solo. */
+const sello=()=>hoyISO()+' '+horaPeru();
+const selloFecha=t=>String(t||'').slice(0,10);
+const selloHora =t=>String(t||'').slice(11,16);
+const selloTxt  =t=>t?`${fPE(selloFecha(t))} · ${selloHora(t)}`:'';
+/* Los sellos de una pieza, para que gerencia los lea de un vistazo. */
+const sellosDePieza=(p,l)=>(MARCAS_PIEZA[l]||[])
+  .filter(([k])=>p&&p[k]&&p[k+'Ts'])
+  .map(([k])=>`${MARCA_CORTA[k]} · ${selloTxt(p[k+'Ts'])}`);
 /* Lo que se marcó en una pieza, dicho para el papel. */
 const marcasDePieza=(p,l)=>(MARCAS_PIEZA[l]||[])
   .filter(([k])=>p&&p[k]).map(([k])=>MARCA_TXT[k]);
@@ -10307,6 +10338,11 @@ function pintarPSVFotos(){
           <input type="checkbox" ${p[kk]?'checked':''}
                  onchange="psvParCampo(${i},'${kk}',this.checked)">
           <span>${esc(lbl)}</span></label>`).join('')}</span>
+      ${/* La fecha y la hora del sello son de gerencia: al técnico no
+           se le enseña el cronómetro de lo que él mismo marca, y al
+           cliente no le importa. */''}
+      ${S.rol==='admin'&&sellosDePieza(p,l).length
+        ? `<span class="pv-hueco-ts">${sellosDePieza(p,l).map(esc).join(' · ')}</span>`:''}
       <input id="${id}" type="file" accept="image/*" capture="environment" style="display:none"
              onchange="psvParSubir(this.files,${i},'${l}');this.value=''">
     </div>`;
@@ -10524,12 +10560,80 @@ function totalHoras(fs){
   if(!m)return '—';
   return `${Math.floor(m/60)} h${m%60?' '+(m%60)+' min':''}`;
 }
+/* ── LAS PIEZAS QUE SALEN DE CASA ────────────────────────────
+   Una fila por pieza y por trabajo: cuándo salió, cuándo volvió y
+   cuánto estuvo fuera. Es lo que contesta «¿cuánto me tarda este
+   taller?», y por eso vive aquí, en la pantalla de gerencia, y no en
+   el papel del cliente. */
+function filasFuera(){
+  const out=[];
+  CALIBS.forEach(c=>{
+    const a=ACTIVOS.find(x=>x.id===c.act)||{};
+    const cl=cli(a.cli)||{};
+    const o=ordenDelEnsayo(c)||{};
+    paresFoto(c).forEach((p,i)=>{
+      [['Ar','Arenado'],['Pi','Pintura']].forEach(([suf,nom])=>{
+        const sal=p['env'+suf]?p['env'+suf+'Ts']:'';
+        const vol=p['reg'+suf]?p['reg'+suf+'Ts']:'';
+        if(!sal&&!vol)return;
+        const d1=Date.parse(String(sal).replace(' ','T')+':00-05:00');
+        const d2=Date.parse(String(vol).replace(' ','T')+':00-05:00');
+        const dias=(isFinite(d1)&&isFinite(d2)&&d2>=d1)
+          ? Math.round((d2-d1)/86400000) : null;
+        out.push({f:selloFecha(sal)||selloFecha(vol),
+          cliId:a.cli||'', cli:cl.n||'', oc:o.oc||'',
+          mat:(o.id?codigoLinea(o):'')||o.mat||o.n||'', tag:a.tag||a.ser||'',
+          pieza:p.nota||p.n||('Pieza '+(i+1)), trabajo:nom,
+          sal, vol, dias,
+          estado:vol?'volvió':(sal?'fuera':'—')});
+      });
+    });
+  });
+  return out.sort((x,y)=>String(y.f).localeCompare(String(x.f)));
+}
+function fueraFiltradas(){
+  const cl=S.hoCli||'', an=S.hoAnio||'', me=S.hoMes||'', di=S.hoDia||'';
+  return filasFuera().filter(f=>{
+    if(cl&&f.cliId!==cl)return false;
+    if(di)return f.f===di;
+    if(an&&String(f.f).slice(0,4)!==an)return false;
+    if(me&&String(f.f).slice(5,7)!==me)return false;
+    return true;
+  });
+}
+function pintarFuera(){
+  const box=$('#hoFuera'); if(!box)return;
+  const caja=$('#hoFueraCaja');
+  const fs=fueraFiltradas();
+  const ct=$('#hoFueraN'); if(ct)ct.textContent=fs.length||'';
+  if(caja)caja.style.display=fs.length?'':'none';
+  if(!fs.length){ box.innerHTML=''; return }
+  const abiertas=fs.filter(x=>x.estado==='fuera').length;
+  box.innerHTML=`<div style="overflow-x:auto"><table class="ho-t"><thead><tr>
+    <th>Empresa</th><th>MAT</th><th>Válvula</th><th>Pieza</th><th>Trabajo</th>
+    <th class="num">Salió</th><th class="num">Volvió</th><th class="num">Fuera</th>
+  </tr></thead><tbody>${fs.map(f=>`<tr>
+    <td>${esc(f.cli||'—')}</td>
+    <td class="mono"><b>${esc(f.mat||'—')}</b></td>
+    <td>${esc(f.tag||'—')}</td>
+    <td>${esc(f.pieza)}</td>
+    <td class="mod">${esc(f.trabajo)}</td>
+    <td class="num">${f.sal?esc(selloTxt(f.sal)):'—'}</td>
+    <td class="num">${f.vol?esc(selloTxt(f.vol)):'<span class="abierto">sin volver</span>'}</td>
+    <td class="num">${f.dias==null
+        ? '<span class="abierto">—</span>'
+        : `<b>${f.dias} día${f.dias===1?'':'s'}</b>`}</td>
+  </tr>`).join('')}</tbody></table></div>
+  ${abiertas?`<p class="hint" style="margin:10px 0 0">${abiertas} pieza${abiertas===1?'':'s'} sigue${
+    abiertas===1?'':'n'} fuera de casa · se marcan al registrar su retorno.</p>`:''}`;
+}
 function horasLimpiar(){
   S.hoCli='';S.hoAnio='';S.hoMes='';S.hoDia='';
   const d=$('#hoDia'); if(d)d.value='';
   renderHoras();
 }
 function renderHoras(){
+  pintarFuera();
   const box=$('#hoLista'); if(!box)return;
   /* Los desplegables se rehacen con la lista, como los demás: en el
      celular la página se pinta antes de que baje la nube. */
@@ -10599,7 +10703,10 @@ function renderHoras(){
    que es lo que se mira para facturar. */
 function horasExcel(){
   const fs=horasFiltradas();
-  if(!fs.length){toast('No hay horas que exportar con este filtro');return}
+  const fuera=fueraFiltradas();
+  if(!fs.length&&!fuera.length){toast('No hay nada que exportar con este filtro');return}
+  const cabF=['Empresa','MAT','Válvula','Pieza','Trabajo','Salió','Volvió','Días fuera'];
+  const cuerpoF=fuera.map(f=>[f.cli,f.mat,f.tag,f.pieza,f.trabajo,f.sal,f.vol,f.dias==null?'':f.dias]);
   const cab=['Fecha','Empresa','OC del cliente','MAT','Válvula','Módulo','Quién',
              'Inicio','Término','Duración','Minutos'];
   const cuerpo=fs.map(f=>[f.f,f.cli,f.oc,f.mat,f.tag,f.mod,f.tec,f.ini,f.fin,f.dur,f.min==null?'':f.min]);
@@ -10622,7 +10729,8 @@ function horasExcel(){
   ];
   const nombre=`Horas de trabajo · ${filtro[0]} · ${filtro[1]}`.replace(/[\\/:*?"<>|]/g,'-');
   if(typeof XLSX==='undefined'){
-    bajarCSV(nombre+'.csv',[...resumen,[],cab,...cuerpo]);
+    bajarCSV(nombre+'.csv',[...resumen,[],cab,...cuerpo]
+      .concat(fuera.length?[[],['PIEZAS FUERA DE CASA'],cabF,...cuerpoF]:[]));
     toast('Descargado en CSV · se abre en Excel igual');
     return;
   }
@@ -10633,6 +10741,14 @@ function horasExcel(){
     const ws2=XLSX.utils.aoa_to_sheet([cab,...cuerpo]);
     ws2['!cols']=[{wch:12},{wch:30},{wch:18},{wch:16},{wch:14},{wch:20},{wch:20},{wch:9},{wch:9},{wch:12},{wch:9}];
     XLSX.utils.book_append_sheet(wb,ws2,'Detalle');
+    /* Y las piezas que salieron de casa, en su propia hoja: es otro
+       control —el de los talleres de fuera— y no se mezcla con las
+       horas de la casa. */
+    if(fuera.length){
+      const ws3=XLSX.utils.aoa_to_sheet([cabF,...cuerpoF]);
+      ws3['!cols']=[{wch:30},{wch:16},{wch:14},{wch:22},{wch:12},{wch:18},{wch:18},{wch:8}];
+      XLSX.utils.book_append_sheet(wb,ws3,'Fuera de casa');
+    }
     XLSX.writeFile(wb,nombre+'.xlsx');
     toast(`${fs.length} línea${fs.length===1?'':'s'} exportada${fs.length===1?'':'s'}`);
   }catch(e){
