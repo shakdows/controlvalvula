@@ -12018,6 +12018,12 @@ const NOTA_SIG='El usuario del documento debe asegurarse de que este sea vigente
    cierra el certificado AXAD-088, y por eso lleva su código. Si la
    casa le tiene uno propio, se cambia aquí y en ningún sitio más. */
 const SALIDA_COD='AXAD-088', SALIDA_VER='2';
+/* La versión del AXAD-088 tal como se imprime en su casilla. Cuando
+   gerencia diga en qué fecha se aprobó el formato, se pone aquí
+   —`'2 (dd.mm.aaaa)'`— y cambia en el certificado y en la prueba de
+   salida a la vez. Mientras tanto sale la versión sola: una fecha
+   inventada en un certificado es peor que ninguna. */
+const SALIDA_VER_TXT='2';
 /* La cadena de aprobación del informe. No es quien hizo el ensayo —eso
    cambia con cada trabajo— sino quién responde por el documento, que
    en la casa son siempre los mismos. Se cambian aquí, una vez. */
@@ -13000,7 +13006,7 @@ function psvDocumento(id){
   </style></head><body>
   <section class="pliego">
   ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN DE<br>VÁLVULA DE SEGURIDAD Y ALIVIO',
-     cod:'AXAD-088', ver:'2', fecha:c.fecha, psv:psvDeLaHoja(c)})}
+     cod:SALIDA_COD, verTxt:SALIDA_VER_TXT, psv:psvDeLaHoja(c)})}
   <div class="ident">
     <span>Cliente<b>${esc(e.n||'')}</b></span>
     <span>TAG<b>${esc(a.tag||'')}</b></span>
@@ -13516,7 +13522,7 @@ tbody tr td{height:20mm}
 </style></head><body>
 <section class="pliego">
 ${membreteCasa({titulo:'PRUEBA DE SALIDA — AS LEFT<br>VÁLVULAS DE SEGURIDAD',
-   cod:SALIDA_COD, ver:SALIDA_VER, fecha:c.fecha, psv:psvDeLaHoja(c)})}
+   cod:SALIDA_COD, verTxt:SALIDA_VER_TXT, psv:psvDeLaHoja(c)})}
 <div class="ident">
   ${id2('Cliente',e.n)}${id2('O.S.',c.os)}${id2('Fecha',fPE(c.fecha))}
   ${id2('Modelo',[m.m,a.mod].filter(Boolean).join(' '))}${id2('Serie',a.ser)}
