@@ -8792,11 +8792,16 @@ function openPSV(actId,edit,seccion){
   if(PSV_TMP){
     const ord=ordenViva(PSV_TMP.act);
     if(ord&&ord.recibe){ PSV_TMP.rcRecibe=ord.recibe; PSV_TMP.rcFecha=ord.recibida||PSV_TMP.rcFecha; }
-    /* Y el encargado del mantenimiento es el que tomó la orden. Se
-       ponía a mano en un desplegable y así el mismo hombre acababa
-       escrito de dos maneras en el mismo trabajo. La válvula ya está
-       asignada: no se vuelve a preguntar. */
-    if(ord&&ord.ing&&ord.ing!=='Por asignar'&&!String(PSV_TMP.respNombre||'').trim()){
+    /* Y el encargado del mantenimiento es EL QUE TOMÓ LA ORDEN, no el
+       nombre que trajera el papel. Un ensayo pasa por varias manos —lo
+       recibió uno, lo trabaja otro— y el nombre viejo se quedaba
+       pegado: la tarjeta decía Jose Rojas y el formulario ofrecía
+       firmar a otro. Manda la orden, que es donde consta quién la
+       tiene.
+       Lo único que no se toca es un ensayo ya firmado: ahí el nombre
+       es el del que firmó, y eso no se reescribe por detrás. */
+    const yaFirmado=(PSV_TMP.firmas||[]).some(f=>f.rol==='ejec'&&f.img);
+    if(ord&&ord.ing&&ord.ing!=='Por asignar'&&!yaFirmado){
       PSV_TMP.respNombre=ord.ing;
       if(!String(PSV_TMP.respArea||'').trim())PSV_TMP.respArea='Técnico';
     }
