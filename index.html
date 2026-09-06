@@ -12588,10 +12588,13 @@ ${/* Y debajo, en su propio renglón, lo que escribió gerencia para
      ESTE trabajo. Va detrás de lo fijo, nunca encima. */''}
 ${renglones(o.conclu).length
   ?`<ul class="escrito">${renglones(o.conclu).map(x=>li(esc(x))).join('')}</ul>`:''}
-${/* Y lo de cada válvula, bajo su propio rótulo: es otra cosa. */''}
-${(()=>{const l=conE.filter(x=>String(x.e.coment||'').trim());
-  return l.length?`<h3 class="sub">Por válvula</h3>${l.map(x=>
-    `<p><b>${esc(x.a.tag||x.a.ser||'')}:</b> ${esc(x.e.coment)}</p>`).join('')}`:''})()}
+${/* Aquí iba un «Por válvula» con la conclusión que cada ensayo
+     llevaba escrita a mano. Esa casilla ya no existe —las conclusiones
+     se escriben una vez para todo el trabajo—, así que el apartado
+     sólo servía para sacar a la última hoja del informe apuntes
+     sueltos de trabajos viejos. Lo escrito no se pierde: sigue en su
+     ensayo y sigue saliendo en el certificado de esa válvula, que es
+     su sitio. */''}
 
 
 ${/* PENDIENTES: lo que queda por hacer después de entregar —la

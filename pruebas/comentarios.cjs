@@ -89,6 +89,9 @@ const limpio=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
  chk(/<li>La válvula PSV-108 quedó operativa y se entrega precintada\.<\/li>/.test(secC),
      'y en puntos, como las recomendaciones');
  chk(/<li>Se entrega con su certificado\.<\/li>/.test(secC),'cada renglón, su punto');
+ /* La conclusión de una válvula suelta no vuelve a la última hoja del
+    informe: su sitio es el certificado de esa válvula. */
+ chk(!/Por válvula/.test(h),'ya no hay un «Por válvula» al final del informe');
  const secP=h.slice(iP,iP+1200);
  chk(/<li>Calibración en línea con equipo profiler\.<\/li>/.test(secP),
      'los pendientes también van en puntos');
@@ -102,6 +105,14 @@ const limpio=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
    return String(conclusionDe(c)||'');
  });
  chk(/quedó operativa/.test(cert),'el certificado toma la conclusión del trabajo · '+cert.slice(0,40));
+
+ const viejo=await p.evaluate(()=>{
+   const c=CALIBS.find(x=>x.id==='cT'); c.coment='Chubby y oreo';
+   const d=documentoInforme('oT',['oT']); const html=String((d&&(d.html||d))||'');
+   return {enInforme:/Chubby y oreo/.test(html), enCert:conclusionDe(c)==='Chubby y oreo'};
+ });
+ chk(!viejo.enInforme,'un apunte viejo de una válvula no se cuela en el informe');
+ chk(viejo.enCert,'pero no se pierde: sigue en el certificado de esa válvula');
 
  console.log(ok.map(t=>'  ✓ '+t).join('\n'));
  if(mal.length)console.log(mal.map(t=>'  ✗ '+t).join('\n'));
