@@ -8425,9 +8425,13 @@ function psvSenalarFaltas(soloTaller){
   /* Y si lo que falta está en un paso que esta columna no enseña, se
      enseña: «llevarte» a algo escondido es no llevarte a ninguna
      parte. */
+  let salieron=false;
   eles.forEach(e=>{const d=e.closest('details');
-    if(d){d.open=true; if(d.classList.contains('oculto')){d.classList.remove('oculto');
+    if(d){d.open=true; if(d.classList.contains('oculto')){d.classList.remove('oculto');salieron=true;
       const av=document.getElementById('psvVerTodo'); if(av)av.remove()}}});
+  /* Si al abrirlos salió a la luz un cuadro que estaba escondido, los
+     números se rehacen: si no, aparece un «5» entre el 2 y el 3. */
+  if(salieron)renumerarPasos();
   const primera=eles[0];
   if(primera){
     /* Y se sube a ella de verdad: el que hace scroll es el cuerpo del
@@ -9205,13 +9209,18 @@ function seguirEntradas(actId){
    DISPARA —cuadro 4, el as-left—. Las conclusiones y las firmas
    quedan para el cierre, con todo delante. Cada técnico ve sólo lo
    que le toca; el resto se abre con la clave del jefe. */
+/* Cómo se llama cada cuadro cuando hay que hablar de él sin enseñarlo. */
+const NOMBRE_PASO={1:'la orden de compra y el equipo de medición',
+  2:'la prueba de entrada', 3:'el desarme', 4:'la prueba de disparo',
+  5:'las conclusiones', 6:'las firmas'};
 const PASOS_ETAPA={
   oc:  [1,2],
   ent: [1,2],
-  /* En mantenimiento va el desarme Y las firmas: el que hizo el
-     trabajo firma ahí mismo, al terminar, sin esperar a otra
-     pantalla. */
-  mant:[3,6],
+  /* En mantenimiento van las tres cosas que hace el taller, y en el
+     orden en que se hacen: se desarma, se concluye y se firma. Las
+     conclusiones estaban escondidas y sólo salían al preguntar qué
+     faltaba — para entonces el técnico ya creía haber terminado. */
+  mant:[3,5,6],
   /* En prueba de salida van los disparos Y las firmas: ahí es donde
      el jefe lee lo que hizo el taller —con la firma del mecánico que
      la recibió y la del que la trabajó delante— y pone su visto
@@ -9373,10 +9382,14 @@ function pintarPSV(){
      const hechos=escondidos.filter(x=>cuadroYaToca(x,etapa));
      const luego =escondidos.filter(x=>!cuadroYaToca(x,etapa));
      const y=a=>a.length>1?a.slice(0,-1).join(', ')+' y '+a[a.length-1]:a[0];
+     /* Por su nombre, no por su número: los cuadros que se ven se
+        numeran seguidos —1, 2, 3—, así que hablar del «paso 5» es
+        mandar a buscar algo que en esta pantalla no existe. */
+     const nom=k=>NOMBRE_PASO[k]||('el paso '+k);
      const partes=[];
-     if(hechos.length)partes.push(`${hechos.length>1?'Los pasos':'El paso'} ${y(hechos)} ${
+     if(hechos.length)partes.push(`${y(hechos.map(nom))} ${
        hechos.length>1?'ya están hechos':'ya está hecho'}`);
-     if(luego.length)partes.push(`${luego.length>1?'los':'el'} ${y(luego)} ${
+     if(luego.length)partes.push(`${y(luego.map(nom))} ${
        luego.length>1?'vienen':'viene'} después`);
      return `<div class="psv-hay" id="psvVerTodo">
        <span>${partes.join('; ')} — ${
