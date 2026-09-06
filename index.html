@@ -8410,10 +8410,13 @@ function psvPintarFaltas(){
     if(e&&!e.closest('.oculto'))e.classList.add('falta');
   });
 }
-function psvSenalarFaltas(){
+function psvSenalarFaltas(soloTaller){
   const t=PSV_TMP; if(!t)return null;
   document.querySelectorAll('#mBody .falta').forEach(e=>e.classList.remove('falta'));
-  const f=psvFaltantes(t);
+  /* En mantenimiento no se señala lo que se hace en la prueba de
+     salida: mandar al técnico a una casilla que no le toca todavía es
+     mandarlo a ninguna parte. */
+  const f=soloTaller?faltaDelTaller(t):psvFaltantes(t);
   const eles=[];
   f.forEach(x=>{const e=x.id&&document.getElementById(x.id); if(e){e.classList.add('falta');eles.push(e)}});
   /* Un paso plegado esconde lo que falta: se abren TODOS los que
@@ -9874,10 +9877,21 @@ function quitarFirmaEnsayo(){
   pintarFirmaPSV(); pintarPSVPie();
 }
 
+/* ¿Este formulario está haciendo el mantenimiento de una válvula que
+   después pasa por prueba de salida? Entonces lo que se le pide es lo
+   del taller y nada más. */
+function pieDeTaller(t){
+  try{ return t && etapaDeValvula(t.act)==='mant' && ensayoHace(t,'cert') }
+  catch(e){ return false }
+}
 function pintarPSVPie(){
   const p=$('#mFoot'); if(!p||!PSV_TMP)return;
-  const v=psvVeredicto(PSV_TMP), listo=psvListoParaEmitir(PSV_TMP);
-  const queFalta=faltaParaEmitir(PSV_TMP);
+  const soloTaller=pieDeTaller(PSV_TMP);
+  const v=psvVeredicto(PSV_TMP);
+  const listo=soloTaller?tallerListo(PSV_TMP):psvListoParaEmitir(PSV_TMP);
+  const queFalta=soloTaller?(()=>{const f=faltaDelTaller(PSV_TMP);
+      return f.length?f[0].que+(f.length>1?` y ${f.length-1} cosa${f.length>2?'s':''} más`:''):''})()
+    :faltaParaEmitir(PSV_TMP);
   /* Cada válvula se certifica con su propio ensayo, tenga hermanas o
      no: la que está lista se entrega y no espera a la que aún no ha
      llegado al taller. Los certificados de una misma orden se sacan
@@ -9896,19 +9910,41 @@ function pintarPSVPie(){
          mismo papel y se retoma donde se dejó. Llamarlo borrador hacía
          dudar de si lo escrito quedaba o no. */''}
     <button class="btn sec" onclick="guardarPSV(false)">Guardar</button>
-    <button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
-      title="${listo?'Cierra el mantenimiento y numera el certificado':esc('Falta '+queFalta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`;
+    ${soloTaller
+      ? `<button class="btn${listo?'':' sec'}" onclick="${listo?'salidaDesdeElEnsayo()':'avisarFaltaPSV()'}"
+           title="${listo?'Guarda y lleva la válvula a la prueba de salida'
+                        :esc('Falta '+queFalta)}">${listo?'Pasar a prueba de salida':'¿Qué falta?'}</button>`
+      : `<button class="btn${listo?'':' sec'}" onclick="${listo?'confirmarEmitir()':'avisarFaltaPSV()'}"
+           title="${listo?'Cierra el mantenimiento y numera el certificado'
+                        :esc('Falta '+queFalta)}">${listo?'Emitir certificado':'¿Qué falta?'}</button>`}`;
+}
+/* Del formulario a la prueba de salida, sin dar la vuelta por el
+   tablero: se guarda lo escrito y se entra por el camino de siempre,
+   que es el que comprueba que el trabajo del taller esté entero y
+   pregunta quién dispara. */
+function salidaDesdeElEnsayo(){
+  const t=PSV_TMP; if(!t)return;
+  /* La orden de este ensayo, la busque quien la busque: ordenAbiertaDe
+     sólo mira las de tipo «calibración», y un preventivo o un
+     correctivo también pasan por prueba de salida. */
+  const o=(ORDEN_ACTIVA&&ORDENES.find(x=>x.id===ORDEN_ACTIVA))||ordenDelEnsayo(t);
+  guardarPSV(false,true);                 // guarda y se queda
+  if(!o){toast('Esta válvula no tiene orden abierta');return}
+  closeModal();
+  setTimeout(()=>{ try{ avanzarGrupo(grupoDe(o),o.et) }catch(e){} },200);
 }
 /* Emitir es cerrar: el certificado se numera, la válvula renueva su
    vigencia y la orden se da por terminada. Se pregunta una vez. */
 /* Enseña en naranja lo que falta y lo dice con nombre y apellido. */
 function avisarFaltaPSV(){
-  const f=psvSenalarFaltas();
+  const soloTaller=pieDeTaller(PSV_TMP);
+  const f=psvSenalarFaltas(soloTaller);
   if(!f)return;
   if(!f.length){pintarPSVPie();return}
   const pie=$('#mFoot'); if(!pie)return;
   pie.innerHTML=`<div class="pie-confirma">
-      <b>Falta${f.length===1?'':'n'} ${f.length===1?'una casilla':f.length+' casillas'} para poder emitir</b>
+      <b>Falta${f.length===1?'':'n'} ${f.length===1?'una casilla':f.length+' casillas'} ${
+        soloTaller?'para terminar el mantenimiento':'para poder emitir'}</b>
       <span>${f.map(x=>esc(x.que)).join(' · ')} — ${f.length===1?'está':'están'} en naranja en el formulario.</span>
     </div>
     <button class="btn sec" onclick="pintarPSVPie()">Entendido</button>`;
@@ -17087,11 +17123,25 @@ function leerArchivo(file){
     else{const r=new FileReader();r.onload=ev=>pintar(ev.target.result);r.readAsDataURL(file)}
     return;
   }
+  /* Un CSV es texto: no necesita para nada la librería de Excel, y en
+     planta —sin señal, con el portal recién instalado en la tablet—
+     esa librería puede no estar todavía. El aviso de abajo decía que
+     un CSV sí se podía y el código lo negaba igual: se quedaba sin
+     importar nada. Ahora se puede de verdad, y con el mismo lector de
+     CSV que ya usa el almacén, que sabe de comillas y de pulgadas. */
+  if((file.type||'').includes('csv')||/\.csv$/.test(nom)){
+    const rc=new FileReader();
+    rc.onload=ev=>{ try{ detectar(leerCSV(ev.target.result), file.name) }
+                    catch(err){ toast('No se pudo leer el archivo: '+err.message) } };
+    rc.onerror=()=>toast('No se pudo leer el archivo');
+    rc.readAsText(file,'utf-8');
+    return;
+  }
   if(typeof XLSX==='undefined'){
     toast('Para leer un Excel hace falta abrir el portal una vez con internet · un CSV sí se puede ahora');
     return;
   }
-  const r=new FileReader();               // Excel / CSV
+  const r=new FileReader();               // Excel
   r.onload=ev=>{try{
     const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
     let best=[],hoja='';
