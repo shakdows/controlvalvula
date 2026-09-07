@@ -2784,7 +2784,7 @@ button.hs-h.ok:focus-visible{outline:2px solid var(--sel);outline-offset:2px;bor
   .pd-g{grid-template-columns:1fr 1fr}
 }
 
-/* ── PSV · formato AXAD-088 ──────────────────────────────────
+/* ── PSV · formato AXAD-SER-003 ──────────────────────────────
    Un formato de 47 campos en un celular es un infierno si se
    pone todo junto. Va en secciones plegables: se abre la que
    toca y las demás no estorban. */
@@ -6511,7 +6511,7 @@ function fxBloque(titulo,extra,cuerpo){
 }
 /* La última calibración de la válvula, sea del formato que sea.
    Antes se ordenaba por 'fin' y se pintaban 'af', 'al' y 'devAl', que
-   son campos de la calibración clásica: un ensayo AXAD-088 no tiene
+   son campos de la calibración clásica: un ensayo AXAD-SER-003 no tiene
    ninguno, así que después de llenarlo el bloque seguía diciendo que
    no había nada —o peor, pintaba "undefined"—. Ahora se leen los dos
    formatos y sale también CUÁNDO toca la siguiente, que es lo que se
@@ -6782,7 +6782,7 @@ function paneCal(){
            tiene tres disparos y un promedio. Se muestra como lo que es. */
         if(c.tipo==='psv'){const v=psvVeredicto(c), sinTerminar=v.estado==='incompleto';
           return `<tr style="cursor:default"><td class="mono">${esc(fPE(c.fecha))}</td>
-          <td class="mono muted">AXAD-088${c.os?' · '+esc(c.os):''}</td>
+          <td class="mono muted">${CERT_COD}${c.os?' · '+esc(c.os):''}</td>
           <td class="num">${esc(c.setEsp||'')} ${esc(c.und||'')}</td><td class="num">${esc(c.asFound||'—')}</td>
           <td class="num">${sinTerminar?'—':n2(v.prom)}</td>
           <td><span class="tag ${v.estado==='aprobado'?'ok':sinTerminar?'due':'late'}"><span class="dot"></span>${
@@ -7490,7 +7490,7 @@ function histEstado(c){
   const ok=Math.abs(c.devAl)<=(c.tol||3);
   return ok?{t:'Conforme',c:'ok',listo:true}:{t:'No conforme',c:'late',listo:true};
 }
-const histDoc=c=>c.tipo==='psv'?('AXAD-088'+(c.os?' · '+c.os:'')):(c.cert||'—');
+const histDoc=c=>c.tipo==='psv'?(CERT_COD+(c.os?' · '+c.os:'')):(c.cert||'—');
 const histResp=c=>c.tipo==='psv'?(c.respNombre||''):(c.tec||'');
 
 function histBuscar(v){ S.histQ=v; renderHistorial() }
@@ -7548,7 +7548,7 @@ function rielServicio(c,ord){
       placaLista(c)?'Los datos para grabar la placa · en papel o en Excel'
                    :'Se activa con los tres disparos y sus fotos'),
     paso('Certificado', est.listo, `abrirPapel('cert','${c.id}','${oid}')`,
-      est.listo?'El certificado AXAD-088 firmado · en PDF o Word':'Falta '+faltaParaEmitir(c))
+      est.listo?`El certificado ${CERT_COD} firmado · en PDF o Word`:'Falta '+faltaParaEmitir(c))
   ].filter(Boolean).join('')}</div>`;
 }
 function histLinea(a){
@@ -8089,7 +8089,7 @@ function valvulario(cliId){
 }
 
 /* ============================================================
-   PSV · FORMATO AXAD-088 V.2
+   PSV · FORMATO AXAD-SER-003 v.02
    El formato de la empresa, tal cual, pero repartido como se
    trabaja de verdad: lo que identifica a la válvula vive en la
    válvula (se escribe una vez y sirve para siempre), y lo que es
@@ -8597,7 +8597,7 @@ function psvVeredicto(c){
   const set=num(c.setEsp), u=c.und||'psi';
   const t=valoresDisparo(c);
   const tol=tolPSV(set,u,tolDelEnsayo(c));
-  /* Los TRES disparos, no uno. El formato AXAD-088 tiene TEST 1, 2 y
+  /* Los TRES disparos, no uno. El formato AXAD-SER-003 tiene TEST 1, 2 y
      3 y el veredicto sale del promedio: con un solo dato no hay
      promedio que valga, y dar "APROBADO" sobre una sola lectura es
      certificar lo que no se midió.
@@ -10674,11 +10674,11 @@ function guardarPSV(emitir,seguir){
        resumen dice lo que de verdad se hizo. */
     const resumen = v.estado==='incompleto'
       ? `Mantenimiento${t.os?' · O.S. '+t.os:''}. ${t.coment||'Trabajo realizado en taller.'}`.trim()
-      : `Ensayo AXAD-088${t.os?' · O.S. '+t.os:''}. Promedio ${n2(v.prom)} ${t.und} sobre ${n2(v.set)} ${t.und} (${v.desv>0?'+':''}${n2(v.desv)} %). Resultado: ${v.estado}.`;
+      : `Ensayo ${CERT_COD}${t.os?' · O.S. '+t.os:''}. Promedio ${n2(v.prom)} ${t.und} sobre ${n2(v.set)} ${t.und} (${v.desv>0?'+':''}${n2(v.desv)} %). Resultado: ${v.estado}.`;
     const quien=((t.firmas||[]).find(f=>f.rol==='ejec')||{}).n||'';
     orden=cerrarOrdenConEnsayo(a.id,t.id,fec,quien,resumen);
     if(!DOCS.some(d=>d.calib===t.id))
-      DOCS.unshift({a:a.id,t:'CERT',n:`Certificado AXAD-088 · ${a.tag||a.ser||''} · ${fPE(fec)}.pdf`,f:fec,w:'420 KB',calib:t.id});
+      DOCS.unshift({a:a.id,t:'CERT',n:`Certificado ${CERT_COD} · ${a.tag||a.ser||''} · ${fPE(fec)}.pdf`,f:fec,w:'420 KB',calib:t.id});
   }
 
   registrar('Ensayo PSV', !cierra
@@ -11789,7 +11789,7 @@ function verPSV(id){
   }
 }
 
-/* ── El certificado impreso · AXAD-088 V.2 ───────────────────
+/* ── El certificado impreso · AXAD-SER-003 v.02 ──────────────
    Mismo orden, mismos títulos y mismo pie que el formato de la
    empresa: es lo que el auditor y el cliente esperan ver. */
 /* La barra de acciones que va dentro de cada documento que se abre en
@@ -12179,10 +12179,28 @@ const INFORME_VER_TXT='1 (15.07.2024)';
 const NOTA_SIG='El usuario del documento debe asegurarse de que este sea vigente antes de usarlo. '+
   'Puede consultarlo con el responsable del SIG';
 /* La prueba de salida es el registro «as left» del mismo ensayo que
-   cierra el certificado AXAD-088, y por eso lleva su código. Si la
+   cierra el certificado AXAD-SER-003. Si la
    casa le tiene uno propio, se cambia aquí y en ningún sitio más. */
+/* El certificado que se entrega al cliente, con el código y la
+   versión que lleva impresos en el formato de la casa. La versión es
+   la del formato —la fecha en que se aprobó—, no la del día en que se
+   imprime. */
+const CERT_COD='AXAD-SER-003', CERT_VER_TXT='02 (15/01/2025)';
+/* Los tres pasos del ensayo, tal como están escritos en el formato.
+   Salen siempre y no dependen de lo que se haya hecho: es el
+   procedimiento de la casa, no el parte de este trabajo. */
+const CERT_PROCEDIMIENTO=[
+ 'Presión de disparo (seteo) inicial · AS FOUND, para verificar el punto de disparo actual de la válvula.',
+ 'Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.',
+ 'Verificación final del punto de disparo. Se toma el promedio de tres disparos, y ese promedio debe quedar dentro de la tolerancia permitida.'
+];
+/* Lo que el formato dice siempre en el apartado de comentarios. */
+const CERT_NOTA='Se realizaron pruebas de SETEO de acuerdo con los parámetros y procedimientos que establece la norma ASME, acorde a los estándares API 527 y 576.';
+const CERT_ASME=['ASME Sección VIII:',
+ 'Si la presión de ajuste de la válvula es menor o igual a 70 psig (4,83 barg): ± 2 psig (± 0,14 barg).',
+ 'Si la presión de ajuste de la válvula es de 71 psig (4,90 barg) o mayor: ± 3 % de la presión de ajuste.'];
 const SALIDA_COD='AXAD-088', SALIDA_VER='2';
-/* La versión del AXAD-088 tal como se imprime en su casilla. Cuando
+/* La versión de la prueba de salida tal como se imprime. Cuando
    gerencia diga en qué fecha se aprobó el formato, se pone aquí
    —`'2 (dd.mm.aaaa)'`— y cambia en el certificado y en la prueba de
    salida a la vez. Mientras tanto sale la versión sola: una fecha
@@ -12972,7 +12990,7 @@ function psvDocumento(id){
      de cálculo. Va como SVG, así que imprime nítido a cualquier tamaño. */
   const marca=LOGO.replace('<svg ','<svg width="26" height="32" ');
     return {titulo:`Certificado ${a.tag||a.ser||''}`, html:`<!doctype html><html lang="es"><head><meta charset="utf-8">
-  <title>AXAD-088 ${esc(a.tag||'')}</title><style>
+  <title>${CERT_COD} ${esc(a.tag||'')}</title><style>
   /* El certificado con el aire de la aplicación: tarjetas con su
      borde, cabeceras suaves y aire entre bloques, en vez de una
      retícula apretada que parece una hoja de cálculo impresa.
@@ -13082,6 +13100,16 @@ function psvDocumento(id){
   p.proc b{color:#3a424c}
   /* El cuadro del equipo patrón: casillas con reja, el rótulo pequeño
      encima y el dato debajo, para leerlo de un vistazo. */
+  /* Los tres pasos del procedimiento, numerados como en el formato. */
+  ol.proc{margin:3px 0 0;padding-left:16px}
+  /* Los comentarios: lo de la casa, la nota de la norma y, debajo, lo
+     que se escribió de este trabajo. */
+  .obs{border:1px solid #e4e7ea;border-radius:7px;padding:6px 9px;margin-top:3px}
+  .obs p{margin:0 0 4px}
+  .obs p:last-child{margin-bottom:0}
+  .obs .asme{color:#5b6470}
+  .obs .propia{font-weight:600}
+  ol.proc li{margin-bottom:2px}
   table.pat{border:1px solid #cfd4d9;border-collapse:collapse;margin:2px 0 0;table-layout:fixed}
   table.pat td{border:1px solid #e4e7ea;padding:3px 7px 4px;vertical-align:top;width:25%}
   table.pat .pk{display:block;font-size:7.6px;letter-spacing:.06em;text-transform:uppercase;
@@ -13174,14 +13202,21 @@ function psvDocumento(id){
   @page{size:A4;margin:7mm}
   </style></head><body>
   <section class="pliego">
-  ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN Y CALIBRACIÓN DE<br>VÁLVULA DE SEGURIDAD Y ALIVIO',
-     cod:SALIDA_COD, verTxt:SALIDA_VER_TXT, psv:psvDeLaHoja(c)})}
-  <div class="ident">
-    <span>Cliente<b>${esc(e.n||'')}</b></span>
+  ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN, CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO',
+     cod:CERT_COD, verTxt:CERT_VER_TXT, pagina:1, total:1})}
+  ${/* Los cuatro datos de cabecera del formato: la fecha, el número
+       del certificado —que es el correlativo de la línea, PSV-412-001—
+       y el contrato, que es la orden de compra del cliente. Es por
+       donde el cliente busca el papel en su sistema. */''}
+${(()=>{const o=ordenDelEnsayo(c), quien=atencionDe(o,e);
+    return `<div class="ident">
+    <span>Empresa<b>${esc(e.n||'')}</b></span>
+    ${quien?`<span>Contacto<b>${esc(quien)}</b></span>`:''}
+    <span>Certificado n.º<b>${esc(c.os||psvDeLaHoja(c)||'')}</b></span>
+    ${o&&String(o.oc||'').trim()?`<span>Contrato<b>${esc(o.oc)}</b></span>`:''}
     <span>TAG<b>${esc(a.tag||'')}</b></span>
-    <span>Fecha del ensayo<b>${fPE(c.fecha)}</b></span>
-    ${c.os?`<span>Orden de servicio<b>${esc(c.os)}</b></span>`:''}
-  </div>
+    <span>Fecha<b>${fPE(c.fecha)}</b></span>
+  </div>`})()}
 
   ${/* Empresa, TAG y fecha ya están arriba en la barra de identificación:
        repetirlos aquí gastaba tres renglones de la hoja. Y las dos
@@ -13198,6 +13233,12 @@ function psvDocumento(id){
       ${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA DE PRUEBA',a.norma)}</table></div>
   </div>
 
+  ${/* El procedimiento va ANTES de los resultados, como en el
+       formato: primero lo que se hizo y en qué orden, después lo que
+       salió. Es texto de la casa y sale siempre. */''}
+  <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
+  <ol class="proc">${CERT_PROCEDIMIENTO.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
+
   <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
   ${/* El instrumento contra el que se mide la válvula: es lo primero
        que busca quien audita el certificado. Antes iba de corrido en
@@ -13213,11 +13254,6 @@ function psvDocumento(id){
       <tr>${cel('Certificado del patrón',c.patCert,4)}</tr>
     </table>`;
   })()}
-
-  <p class="proc">
-    <b>Procedimiento ·</b> <b>1.</b> Presión de disparo (seteo) inicial —<i>as found</i>—, para verificar el punto de disparo actual.
-    <b>2.</b> Ajuste de la presión de disparo (set press), apretando o soltando el perno de regulación.
-    <b>3.</b> Verificación final: se toma el promedio de tres disparos, que debe estar dentro de la tolerancia permitida.</p>
 
   <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
   ${/* Tira horizontal: los tres datos de cabecera en un renglón. Y el
@@ -13290,8 +13326,17 @@ function psvDocumento(id){
     <h4>Los disparos frente a la banda admisible</h4>${
     psvGrafica(v,560,320)}</div>`:''}
 
-  ${(()=>{const cl=conclusionDe(c); return cl
-    ? `<h2>CONCLUSIONES</h2><table><tr><td>${esc(cl)}</td></tr></table>`:''})()}
+  ${/* Comentarios y observaciones, como en el formato: primero lo que
+       la casa dice siempre —la norma con la que se ensayó y las dos
+       reglas de tolerancia de ASME Secc. VIII— y debajo lo que se
+       escribió de ESTE trabajo. Faltaba entero: el papel salía sin
+       decir contra qué norma se había medido. */''}
+  <h2>COMENTARIOS U OBSERVACIONES</h2>
+  <div class="obs">
+    <p>${esc(CERT_NOTA)}</p>
+    <p class="asme">${CERT_ASME.map(x=>esc(x)).join('<br>')}</p>
+    ${(()=>{const cl=conclusionDe(c); return cl?`<p class="propia">${esc(cl)}</p>`:''})()}
+  </div>
   ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
   <div class="quien">
     <div><span>Encargado del mantenimiento</span><b>${esc(c.respNombre||'—')}</b></div>
@@ -13360,7 +13405,7 @@ function psvDocumento(id){
       <div class="pliego-n">Anexo ${i+1} de ${anexos.length}</div></section>`).join('');
   })()}
 
-  <div class="pie"><span>AXAD-088 · Versión 2</span>
+  <div class="pie"><span>${CERT_COD} · Versión ${CERT_VER_TXT}</span>
     <span>Adolphus S.A. · Control de fluidos · Lima</span>
     <span>Emitido el ${fPE(HOY.toISOString().slice(0,10))}</span></div>
   ${BARRA_IMPRIMIR}
@@ -13476,7 +13521,7 @@ ${d!=null?`<div class="av ${d<0?'al':'ok'}">${d<0
 ${ensayos.length?`<h2>HISTORIAL DE ENSAYOS</h2>
 <table class="lst"><tr><th>Fecha</th><th>Tipo</th><th>Resultado</th></tr>
 ${ensayos.slice(0,8).map(c=>`<tr><td>${fPE(fechaCalib(c))}</td>
-  <td>${c.tipo==='psv'?'Ensayo AXAD-088':'Calibración'}</td>
+  <td>${c.tipo==='psv'?'Ensayo '+CERT_COD:'Calibración'}</td>
   <td>${esc(resEnsayo(c))}</td></tr>`).join('')}</table>`:''}
 
 ${ords.length?`<h2>INTERVENCIONES</h2>
@@ -13601,6 +13646,30 @@ function imprimirCertificadosOrden(idOrden,modo){
   toast(`${docs.length} certificados en un solo documento`);
 }
 
+/* El certificado de una orden. Con una válvula sale directo; con
+   varias se pregunta cuál, que cada una tiene el suyo y no se
+   entregan juntos. */
+function certificadoDeOrden(idOrden){
+  const o=ORDENES.find(x=>x.id===idOrden); if(!o){toast('No encuentro esa orden');return}
+  const ls=lineasDe(o);
+  const con=ls.map(x=>({l:x, c:ensayoDeLinea(x)})).filter(x=>x.c);
+  if(!con.length){toast('Todavía no hay ensayo que certificar');return}
+  if(con.length===1)return imprimirPSV(con[0].c.id);
+  $('#mTitle').textContent=`Certificado técnico · ${o.mat||o.n}`;
+  $('#mBody').innerHTML=`<div class="callout"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+    <div>Cada válvula tiene su certificado y se entrega por separado. Elige de cuál lo sacas.</div></div>
+   <div class="py-lista">${con.map(({l,c})=>{
+     const a=ACTIVOS.find(x=>x.id===l.act)||{};
+     const v=psvVeredicto(c);
+     return `<div class="py-it col"><div class="py-it-t">
+       <span class="py-tag mono">${esc(a.tag||a.ser||'')}</span>
+       <span class="py-sub">${esc(codigoLinea(l))}${v.estado&&v.estado!=='incompleto'?` · ${esc(v.estado)}`:' · sin cerrar'}</span>
+       <span class="spacer" style="flex:1"></span>
+       <button class="btn sec xs" onclick="closeModal();imprimirPSV('${c.id}')">Sacarlo</button>
+     </div></div>`}).join('')}</div>`;
+  $('#mFoot').innerHTML=`<button class="btn sec" onclick="closeModal()">Cerrar</button>`;
+  $('#modal').classList.add('on');
+}
 function imprimirPSV(id){
   const d=psvDocumento(id); if(!d)return false;
   abrirDoc(d.html,d.titulo);
@@ -13761,7 +13830,7 @@ const PAPELES={
          doc:(c,o)=>documentoSalida(c.id)},
   placa:{n:'Placa de la válvula', cod:'para grabar',
          doc:(c,o)=>{const d=datosPlaca(c); return d?documentoPlaca([d],(ACTIVOS.find(x=>x.id===c.act)||{}).tag||''):null}},
-  cert: {n:'Certificado',       cod:'AXAD-088',
+  cert: {n:'Certificado',       cod:CERT_COD,
          doc:(c,o)=>psvDocumento(c.id)}
 };
 let PAPEL_ACT=null;
@@ -15335,7 +15404,7 @@ function filasInforme(id){
          distinguirse de un vistazo. */
       extras:extrasDe(o),
       trabajo:['Calibración'].concat(extrasDe(o).map(nombreExtra)).join(' + '),
-      cert:c?(c.cert||'AXAD-088'):'—',
+      cert:c?(c.cert||CERT_COD):'—',
       obs:c&&c.coment?c.coment:(o.hall||'')};
   });
 }
@@ -16125,6 +16194,21 @@ function renderWO(){
               <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg>Generar placa${
                 con>1?`s · ${con}`:''}</button>`;
           })()}
+          ${/* El certificado, a un toque. Estaba sólo dentro de
+               «Revisar y firmar»: para sacar el papel de una válvula ya
+               firmada había que entrar a la ventana de firmar y salir
+               sin tocar nada. Es lo que se entrega al cliente; se saca
+               desde fuera, como el informe y la placa. */''}
+          ${(()=>{
+            if((G.et!=='cert'&&G.et!=='final')||S.rol==='cliente')return '';
+            const con=ls.filter(x=>ensayoDeLinea(x)).length;
+            if(!con)return '';
+            return `<button class="btn quiet xs" style="width:100%;margin-top:6px;justify-content:center"
+              onclick="event.stopPropagation();certificadoDeOrden('${o.id}')"
+              title="El certificado AXAD-SER-003 · listo para imprimir o guardar en PDF">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6v20h12V8z"/><path d="M14 2v6h6"/><circle cx="12" cy="15" r="2.4"/><path d="M10.4 17.2 9.6 21l2.4-1.3 2.4 1.3-.8-3.8"/></svg>Certificado técnico${
+                con>1?`s · ${con}`:''}</button>`;
+          })()}
           ${/* En «Finalizado» manda el jefe: entra, corrige si hace
                falta y pone la última firma. El taller lo ve, no lo
                toca. */''}
@@ -16358,7 +16442,7 @@ function advanceWO(id){
   renderAll();
 }
 /* Lanza el formulario que corresponde según la válvula: el formato
-   AXAD-088 de la empresa si es de seguridad, la calibración normal si
+   AXAD-SER-003 de la empresa si es de seguridad, la calibración normal si
    no. En los dos casos la orden queda apuntada para cerrarla al
    guardar. */
 /* Abrir lo que llenó el taller, con todo desplegado y la vista puesta
@@ -19602,7 +19686,7 @@ function ultimoServicioDe(actId){
   CALIBS.filter(c=>c.act===actId).forEach(c=>{
     if(c.veredicto==='incompleto')return;              // un borrador no es un servicio
     const f=(c.fecha||c.fin||c.ini||'').slice(0,10);
-    if(f)hitos.push({f,que:c.tipo==='psv'?'Ensayo AXAD-088':'Calibración',
+    if(f)hitos.push({f,que:c.tipo==='psv'?'Ensayo '+CERT_COD:'Calibración',
       ref:c.cert||'', id:c.id, cal:true,
       ok:/^(aprobado|conforme)/i.test(c.veredicto||c.verdict||'')&&!/^no conforme/i.test(c.verdict||'')});
   });
@@ -19776,7 +19860,7 @@ function quitarFotoActivo(id){
 function accionDeCierre(a,ordenAbierta,borrador){
   if(S.rol==='cliente')return '';
   if(S.rol==='tec'){
-    return `<button class="btn" onclick="openPSV('${a.id}')" title="Formato AXAD-088 de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el mantenimiento':'Hacer el mantenimiento'}</button>`;
+    return `<button class="btn" onclick="openPSV('${a.id}')" title="Formato ${CERT_COD} de la empresa"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>${borrador?'Seguir el mantenimiento':'Hacer el mantenimiento'}</button>`;
   }
   if(S.rol==='com')return '';
   // gerencia
@@ -20126,7 +20210,7 @@ function calibChart(rec){
 }
 function showCalibReport(rec){
   if(!rec)return;
-  /* Un ensayo PSV lleva el formato AXAD-088 de la empresa, que no tiene
+  /* Un ensayo PSV lleva el formato AXAD-SER-003 de la empresa, que no tiene
      as-found/as-left sino tres disparos: este certificado no sabe
      leerlo y el botón llevaba a una pantalla vacía. Se deriva al suyo
      desde aquí, y no en cada uno de los siete botones que lo llaman. */

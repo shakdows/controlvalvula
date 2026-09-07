@@ -40,6 +40,7 @@ Las demás miran una cosa cada una:
 | `orden2.cjs` | Una orden con varias válvulas |
 | `pruebafinal.cjs` | La prueba de salida: que no se pierda el trabajo, sus dos cuadros y la tolerancia |
 | `nosepierde.cjs` | Que una llamada o cerrar la aplicación no se lleve lo último escrito |
+| `certificado.cjs` | El certificado AXAD-SER-003 y su botón en la tarjeta |
 | `numeroorden.cjs` | El número de orden a mano, con su recomendación y sus topes, y el nombre del cliente |
 
 Y dos que no juzgan nada, sólo enseñan cómo quedó:
