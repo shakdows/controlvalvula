@@ -13153,7 +13153,7 @@ function psvDocumento(id){
   .fpar-f td{text-align:center}
   .fpar-f .fc-sin{height:60px;border:1px dashed #cfd4d9;border-radius:2px;display:flex;
     align-items:center;justify-content:center;font-size:8.5px;color:#9aa2ab}
-  .pie{margin-top:10px;padding-top:6px;border-top:1px solid #e4e7ea;display:flex;
+  .pie{margin-top:7px;padding-top:5px;border-top:1px solid #e4e7ea;display:flex;
     justify-content:space-between;font-size:8px;color:#9aa2ab;letter-spacing:.03em}
   /* la gráfica es una ilustración, no la página: se le pone techo o
      se estira hasta comerse un folio entero */
@@ -13199,179 +13199,200 @@ function psvDocumento(id){
   .par-i img{max-height:95mm}
   .anexo-p{page-break-inside:avoid;break-inside:avoid;margin-bottom:10px}
   .anexo-p h3{font-size:10px;margin:8px 0 0;color:#101418}
+  /* ── LA REJILLA DEL FORMATO ──────────────────────────────
+     El certificado se lee comparándolo con el Word de la casa, así
+     que se dibuja igual: rejilla cerrada, rótulo y valor, y cada
+     apartado en su banda. */
+  table.g{width:100%;border-collapse:collapse;border:1.2px solid #101418;table-layout:fixed}
+  table.g th,table.g td{border:.8px solid #101418;padding:3px 6px;vertical-align:middle;
+    font-size:9px;line-height:1.3}
+  table.g th{text-align:left;font-weight:700;background:#fff;width:23%;color:#101418}
+  table.g td{text-align:center;font-weight:400;width:27%}
+  table.g td.tx{text-align:left}
+  table.g th.n{width:7%;text-align:center}
+  table.g th.n+td{width:auto}
+  table.g tr.bn td{background:#ededed;text-align:center;font-weight:700;letter-spacing:.02em;
+    font-size:9.2px;padding:3px}
+  table.g th.tit{text-align:center;font-size:9.4px}
+  table.g td.sub{font-weight:600;border-bottom:1.2px solid #101418}
+  table.g td.und{text-align:left;font-weight:700;width:14%}
+  /* Los números a la izquierda, el dibujo a la derecha. */
+  table.g td.lienzo{padding:7px 6px}
+  .dosc{display:flex;gap:9px;align-items:flex-start}
+  .dosc .izq{flex:0 0 47%}
+  .dosc .der{flex:1;min-width:0}
+  /* Las tablas de dentro heredaban el aire de tarjeta del resto del
+     papel —esquinas redondas, bordes claros, overflow oculto— y sus
+     cabeceras se rompían una debajo de otra. Dentro de la rejilla
+     mandan las reglas de la rejilla. */
+  table.g table{border-collapse:collapse;border-radius:0;overflow:visible;
+    border:1.2px solid #101418;background:#fff}
+  table.g table th,table.g table td{border:.8px solid #101418;padding:2px 5px;
+    vertical-align:middle;color:#101418}
+  table.g table.res{table-layout:auto}
+  table.g table.res th.rot{background:#fff;font-size:8px;text-align:center;font-weight:700;
+    width:auto;white-space:normal;display:table-cell}
+  table.g table.res th{width:auto;font-size:8.6px;text-align:center;white-space:nowrap}
+  table.g table.res td{width:auto;font-size:8.8px}
+  table.g table.res td.dato{background:#fffbcc;font-weight:700}
+  table.g table.res tr.prom th,table.g table.res tr.prom td{background:#ededed;font-weight:700}
+  table.g table.chica{margin-top:7px;table-layout:auto}
+  table.g table.chica th{width:64%;font-size:8.4px;white-space:normal}
+  table.g table.chica td{font-size:8.8px}
+  table.g td.vdc{padding:5px 25%}
+  table.g td.vdc .vd{background:#ffe600;border:.8px solid #101418;border-radius:0;text-align:center;
+    font-weight:700;letter-spacing:.06em;padding:3px;font-size:10px;color:#101418}
+  table.g td.vdc .vd.rechazado{background:#f3b6b0}
+  table.g td.obs{text-align:left;padding:6px 9px}
+  table.g td.obs p{margin:0 0 5px}
+  table.g td.obs p:last-child{margin-bottom:0}
+  table.g td.obs .queda{font-weight:700}
+  table.g td.obs .propia{font-weight:600}
+  table.g th.ejec{vertical-align:top}
+  table.g td.firmas-c{text-align:left;padding:5px 9px}
+  table.g td.firmas-c .casa{font-weight:700;margin-bottom:4px}
+  .fgrid{display:flex;gap:22px;flex-wrap:wrap}
+  .fgrid .fb{flex:1;min-width:150px}
+  .fgrid .fl{display:flex;gap:8px;font-size:8.8px;margin-bottom:1px}
+  .fgrid .fl span{flex:0 0 42px;color:#101418}
+  .fgrid .fl b{font-weight:600}
+  .fgrid .rub{margin-top:3px;border:.8px solid #cfd4d9;padding:2px 4px;display:flex;
+    align-items:center;gap:6px;min-height:34px}
+  .fgrid .rub span{font-size:7px;color:#8a929c;flex:0 0 auto}
+  .fgrid .rub img{max-height:30px;max-width:100%;object-fit:contain}
+  table.g .grafc{border:.8px solid #101418;border-radius:0;margin:0;padding:3px 4px 1px}
+  table.g .grafc h4{text-align:center;font-size:8.4px;color:#101418;text-transform:none;
+    letter-spacing:0;font-weight:700;margin-bottom:2px}
   @page{size:A4;margin:7mm}
   </style></head><body>
   <section class="pliego">
   ${membreteCasa({titulo:'CERTIFICADO DE VERIFICACIÓN, CALIBRACIÓN<br>DE VÁLVULA DE SEGURIDAD Y ALIVIO',
      cod:CERT_COD, verTxt:CERT_VER_TXT, pagina:1, total:1})}
-  ${/* Los cuatro datos de cabecera del formato: la fecha, el número
-       del certificado —que es el correlativo de la línea, PSV-412-001—
-       y el contrato, que es la orden de compra del cliente. Es por
-       donde el cliente busca el papel en su sistema. */''}
-${(()=>{const o=ordenDelEnsayo(c), quien=atencionDe(o,e);
-    return `<div class="ident">
-    <span>Empresa<b>${esc(e.n||'')}</b></span>
-    ${quien?`<span>Contacto<b>${esc(quien)}</b></span>`:''}
-    <span>Certificado n.º<b>${esc(c.os||psvDeLaHoja(c)||'')}</b></span>
-    ${o&&String(o.oc||'').trim()?`<span>Contrato<b>${esc(o.oc)}</b></span>`:''}
-    <span>TAG<b>${esc(a.tag||'')}</b></span>
-    <span>Fecha<b>${fPE(c.fecha)}</b></span>
-  </div>`})()}
-
-  ${/* Empresa, TAG y fecha ya están arriba en la barra de identificación:
-       repetirlos aquí gastaba tres renglones de la hoja. Y las dos
-       columnas van parejas —seis y seis— en vez de tres y nueve, que
-       dejaba media columna en blanco y estiraba el bloque. */''}
-  <div class="par">
-    <div><h2>DATOS DEL SERVICIO</h2><table>
-      ${c.contacto?fila('CONTACTO',c.contacto):''}
-      ${fila('UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}${fila('FLUIDO DE OPERACIÓN',a.fluido)}
-      ${fila('MARCA',m.m)}${fila('MODELO',a.mod)}${fila('N° SERIE',a.ser)}</table></div>
-    <div><h2>INFORMACIÓN DE LA VÁLVULA</h2><table>
-      ${fila('ORIFICIO / LIFT',a.orif)}${fila('SET PRESS REQUERIDO',(c.setEsp?c.setEsp+' '+u:''))}
-      ${fila('Ø ENT × Ø SALIDA',a.medida)}${fila('CAPACIDAD',a.capac)}
-      ${fila('CERTIFICACIÓN',a.cert)}${fila('NORMA DE PRUEBA',a.norma)}</table></div>
-  </div>
-
-  ${/* El procedimiento va ANTES de los resultados, como en el
-       formato: primero lo que se hizo y en qué orden, después lo que
-       salió. Es texto de la casa y sale siempre. */''}
-  <h2>PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN</h2>
-  <ol class="proc">${CERT_PROCEDIMIENTO.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>
-
-  <h2>EQUIPOS PATRONES DE CALIBRACIÓN</h2>
-  ${/* El instrumento contra el que se mide la válvula: es lo primero
-       que busca quien audita el certificado. Antes iba de corrido en
-       un renglón para ahorrar hoja, y no se leía ninguno de los ocho
-       datos. Cada uno en su casilla, con el rótulo encima. */''}
+  ${/* De aquí abajo, el papel es la rejilla del formato de la casa:
+       rótulo y valor, rótulo y valor, con todas las celdas cerradas y
+       los apartados en su banda. No es un capricho de dibujo — el que
+       audita el certificado lo lee comparándolo con el Word, y lo que
+       no está en el mismo sitio parece que falta. */''}
   ${(()=>{
-    const cel=(k,val,ancho)=>`<td${ancho?` colspan="${ancho}"`:''}>
-      <span class="pk">${k}</span>
-      <b>${val==null||String(val).trim()===''?'':esc(String(val))}</b></td>`;
-    return `<table class="pat">
-      <tr>${cel('Descripción',c.patDesc,2)}${cel('Marca',c.patMarca)}${cel('Modelo',c.patModelo)}</tr>
-      <tr>${cel('N.º de serie',c.patSerie)}${cel('Escala',c.patEscala)}${cel('Clase de exactitud',c.patExact)}${cel('Calibrado el',c.patFecha?fPE(c.patFecha):'')}</tr>
-      <tr>${cel('Certificado del patrón',c.patCert,4)}</tr>
+    const o=ordenDelEnsayo(c), quien=atencionDe(o,e);
+    const V=x=>x==null||String(x).trim()===''?'':esc(String(x));
+    /* Una fila de dos parejas: rótulo, valor, rótulo, valor. */
+    const dos=(k1,v1,k2,v2)=>`<tr><th>${k1}</th><td>${V(v1)}</td><th>${k2}</th><td>${V(v2)}</td></tr>`;
+    /* Una fila de una sola pareja, con el valor de lado a lado. */
+    const una=(k,val)=>`<tr><th>${k}</th><td colspan="3">${V(val)}</td></tr>`;
+    /* La banda de un apartado. */
+    const banda=t=>`<tr class="bn"><td colspan="4">${t}</td></tr>`;
+    return `<table class="g">
+      ${/* La fecha, el número del certificado y el contrato: por ahí
+           busca el cliente este papel en su sistema. */''}
+      <tr><th rowspan="2">FECHA</th><td rowspan="2">${V(fPE(c.fecha))}</td>
+        <th>CERTIFICADO N.º</th><td>${V(c.os||psvDeLaHoja(c))}</td></tr>
+      <tr><th>CONTRATO</th><td>${V(o&&o.oc)}</td></tr>
+
+      ${dos('EMPRESA',e.n,'FECHA',fPE(c.fecha))}
+      ${dos('CONTACTO',quien,'FLUIDO OPERACIÓN',a.fluido)}
+      ${dos('TAG N.º',a.tag,'UBICACIÓN',a.ubic||(e.areas||{})[a.ar])}
+
+      ${banda('INFORMACIÓN DE LA VÁLVULA')}
+      ${dos('MARCA',m.m,'SET PRESS REQUERIDO',c.setEsp?c.setEsp+' '+u:'')}
+      ${dos('MODELO',a.mod,'DIÁM. ENT. × DIÁM. SALIDA',a.medida)}
+      ${dos('N.º SERIE',a.ser,'CAPACIDAD',a.capac)}
+      ${dos('ORIFICIO / LIFT',a.orif,'NORMA PRUEBA (código)',a.norma)}
+
+      ${banda('EQUIPOS PATRONES DE CALIBRACIÓN')}
+      ${una('DESCRIPCIÓN',c.patDesc)}
+      ${una('MODELO',c.patModelo)}
+      ${dos('MARCA',c.patMarca,'ESCALA',c.patEscala)}
+      ${dos('NÚM. SERIE',c.patSerie,'CLASE DE EXACTITUD',c.patExact)}
+      ${dos('FECHA DE CALIBRACIÓN',c.patFecha?fPE(c.patFecha):'','CERTIF. NÚM',c.patCert)}
+
+      ${banda('PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN')}
+      ${CERT_PROCEDIMIENTO.map((x,i)=>`<tr><th class="n">${i+1}.</th>
+        <td colspan="3" class="tx">${esc(x)}</td></tr>`).join('')}
+
+      ${banda('RESULTADOS DE LAS PRUEBAS DISPARO')}
+      <tr><th colspan="2" class="tit">PRESIÓN DE DISPARO INICIAL (AS FOUND)</th>
+        <td class="c sub">${V(c.asFound)}</td><td class="und">${esc(u)}</td></tr>
+      <tr><th colspan="2" class="tit">SET PRESS ESPERADO</th>
+        <td class="c sub">${V(c.setEsp)}</td><td class="und">${esc(u)}</td></tr>
+      <tr><th colspan="2" class="tit">FLUIDO DE PRUEBA</th>
+        <td class="c sub" colspan="2">${V(c.fluidoP)}</td></tr>
+
+      ${/* Los números a la izquierda y el dibujo a la derecha, como en
+           el formato; el veredicto, debajo de los dos. */''}
+      <tr><td colspan="4" class="lienzo"><div class="dosc">
+        <div class="izq">${(()=>{
+          const l=disparosDe(c);
+          const lim=v.estado!=='incompleto'?v.limite:null;
+          const fila=(t,i)=>{
+            const val=num(t.v), hay=isFinite(val)&&val>0;
+            const dentro=hay&&lim!=null?Math.abs(val-v.set)<=lim+1e-9:null;
+            const dv=hay&&v.set?((val-v.set)/v.set*100):null;
+            return `<tr class="${dentro===null?'':dentro?'ok':'no'}">
+              <th>TEST ${i+1}</th>
+              <td class="c dato">${hay?n2(val):''}</td>
+              <td class="c">${c.setEsp?n2(num(c.setEsp)):''}</td>
+              <td class="c">${dv==null?'':`${n2(Math.abs(dv))} %`}</td></tr>`;
+          };
+          return `<table class="g res">
+            <tr><th class="rot">AS LEFT según API 527</th>
+              <th class="rot c">Set press<br>pruebas finales</th>
+              <th class="rot c">Máx. press<br>(${esc(u)})</th>
+              <th class="rot c">Desviación<br>(±%)</th></tr>
+            ${l.map(fila).join('')}
+            ${v.estado!=='incompleto'?`<tr class="prom">
+              <th>PROMEDIO</th><td class="c"><b>${n2(v.prom)}</b></td>
+              <td class="c">${c.setEsp?n2(num(c.setEsp)):''}</td>
+              <td class="c"><b>${n2(Math.abs(v.desv))} %</b></td></tr>`:''}
+          </table>
+          ${v.estado!=='incompleto'?`<table class="g chica">
+            <tr><th>Tolerancia según API (±%)</th><td class="c">${esc(v.tol.txt)}</td></tr>
+            <tr><th>Blowdown según API (%)</th><td class="c">${b?n2(b.pct)+' %':''}</td></tr>
+            <tr class="prom"><th>Promedio SET PRESS</th><td class="c"><b>${n2(v.prom)}</b></td></tr>
+          </table>`:''}`;
+        })()}</div>
+        <div class="der">${v.estado!=='incompleto'
+          ? `<div class="grafc"><h4>Gráfico de diferencia en cada punto</h4>${psvGrafica(v,560,300)}</div>`
+          : ''}</div>
+      </div></td></tr>
+      ${v.estado!=='incompleto'?`<tr><td colspan="4" class="vdc">
+        <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}</div></td></tr>`:''}
+      ${v.fuera&&v.fuera.length?`<tr><th>MOTIVO DEL RECHAZO</th>
+        <td colspan="3" class="tx">${esc(v.motivo)}.</td></tr>`:''}
+
+      ${banda('COMENTARIOS U OBSERVACIONES')}
+      <tr><td colspan="4" class="obs">
+        <p>${esc(CERT_NOTA)}</p>
+        <p class="asme">${CERT_ASME.map(x=>esc(x)).join('<br>')}</p>
+        ${v.estado!=='incompleto'?`<p class="queda">${v.estado==='aprobado'
+          ?'QUEDA OPERATIVA LA VÁLVULA.':'NO QUEDA OPERATIVA LA VÁLVULA.'}</p>`:''}
+        ${(()=>{const cl=conclusionDe(c); return cl?`<p class="propia">${esc(cl)}</p>`:''})()}
+      </td></tr>
+
+      ${/* Quién lo hizo y quién lo revisó, con su rúbrica. Sólo las
+           casillas FIRMADAS: en un papel que ya va firmado, un hueco
+           en blanco hace dudar de si falta algo. */''}
+      <tr><th class="ejec">EJECUTADO POR</th><td colspan="3" class="firmas-c">
+        <div class="casa">ADOLPHUS S.A.</div>
+        ${(()=>{
+          const hay=FIRMA_ROLES.map(([rol,lbl])=>({rol,lbl,f:firmaDe(rol)})).filter(x=>x.f&&x.f.img);
+          if(!hay.length){
+            const q=c.respNombre||'', cg=c.respArea||'';
+            return `<div class="fgrid"><div class="fb">
+              <div class="fl"><span>Nombre</span><b>${esc(q)}</b></div>
+              <div class="fl"><span>Cargo</span><b>${esc(cg)}</b></div>
+              <div class="fl"><span>Fecha</span><b>${esc(fPE(c.fecha))}</b></div></div></div>`;
+          }
+          return `<div class="fgrid">${hay.map(({f})=>`<div class="fb">
+            <div class="fl"><span>Nombre</span><b>${esc(f.n)}</b></div>
+            <div class="fl"><span>Cargo</span><b>${esc(f.cargo||'')}</b></div>
+            <div class="fl"><span>Fecha</span><b>${esc(fPE(f.f))}</b></div>
+            <div class="rub"><span>firma electrónica</span><img src="${f.img}" alt="Firma de ${esc(f.n)}"></div>
+          </div>`).join('')}</div>`;
+        })()}
+      </td></tr>
     </table>`;
   })()}
-
-  <h2>RESULTADOS DE LAS PRUEBAS DE DISPARO</h2>
-  ${/* Tira horizontal: los tres datos de cabecera en un renglón. Y el
-       «cómo llegó» no se repite aquí —está entero en el anexo 1, con
-       sus fotos—, que era lo que empujaba las firmas a la segunda
-       hoja. */''}
-  <div class="quien">
-    <div><span>Disparo inicial · as found</span><b>${c.asFound?esc(c.asFound+' '+u):'—'}</b></div>
-    <div><span>Set press esperado</span><b>${c.setEsp?esc(c.setEsp+' '+u):'—'}</b></div>
-    <div><span>Fluido de prueba</span><b>${esc(c.fluidoP||'—')}</b></div>
-  </div>
-  ${(()=>{
-    /* La tabla del formato de la casa: un renglón por disparo con el
-       set requerido, lo que disparó, a qué presión cerró, su
-       desviación y la banda admisible; y el promedio al pie, que es
-       el número con el que se aprueba o se rechaza. Las fotos de cada
-       disparo van en el anexo. */
-    const l=disparosDe(c);
-    const lim=v.estado!=='incompleto'?v.limite:null;
-    const banda=v.estado!=='incompleto'?`${n2(v.min)} – ${n2(v.max)}`:'—';
-    const fila=(t,i)=>{
-      const val=num(t.v), hay=isFinite(val)&&val>0;
-      const dentro=hay&&lim!=null?Math.abs(val-v.set)<=lim+1e-9:null;
-      const dv=hay&&v.set?((val-v.set)/v.set*100):null;
-      const nf=(Array.isArray(t.fotos)&&t.fotos.length?t.fotos.length:(t.foto?1:0));
-      return `<tr class="${dentro===null?'':dentro?'ok':'no'}">
-        <th>TEST ${i+1}${nf?` <small>${nf} foto${nf===1?'':'s'} en el anexo</small>`:''}</th>
-        <td class="c">${c.setEsp?n2(num(c.setEsp)):'—'}</td>
-        <td class="c"><b>${hay?n2(val):'—'}</b></td>
-        <td class="c">${t.pc?n2(num(t.pc)):'—'}</td>
-        <td class="c">${dv==null?'—':`${dv>0?'+':''}${n2(dv)} %`}</td>
-        <td class="c">${banda}</td></tr>`;
-    };
-    return `<table class="res dsp">
-      <tr><th>AS LEFT según API 527</th><th class="c">Set press</th><th class="c">Disparo</th>
-        <th class="c">Cierre</th><th class="c">Desviación (±%)</th><th class="c">Rango admisible ${esc(u)}</th></tr>
-      ${l.map(fila).join('')}
-      ${v.estado!=='incompleto'?`<tr class="prom"><th>PROMEDIO DE ${v.disparos.length} DISPARO${v.disparos.length===1?'':'S'}</th>
-        <td class="c">${c.setEsp?n2(num(c.setEsp)):'—'}</td>
-        <td class="c"><b>${n2(v.prom)}</b></td>
-        <td class="c">${b?n2(b.prom):'—'}</td>
-        <td class="c"><b>${v.desv>0?'+':''}${n2(v.desv)} %</b></td>
-        <td class="c">${banda}</td></tr>`:''}
-    </table>`;
-  })()}
-  ${v.estado!=='incompleto'?`
-  <div class="quien" style="margin-top:4px">
-    <div><span>Tolerancia aplicada</span><b>${esc(v.tol.txt)} · ${esc(v.tol.regla)}</b></div>
-    <div><span>Rango admisible</span><b>${n2(v.min)} – ${n2(v.max)} ${esc(u)}</b></div>
-    <div><span>Blowdown según API</span><b>${b?n2(b.pct)+' % (se espera ≤ '+n2(b.lim)+' %)'
-            :(cierreEsAutomatico(c)?'no se midió el recierre':'—')}</b></div>
-  </div>
-  ${v.fuera&&v.fuera.length?`<table class="res" style="margin-top:4px">${fila('MOTIVO DEL RECHAZO',
-      esc(v.motivo)+'.')}</table>`:''}
-  <div class="vd ${v.estado}">${v.estado==='aprobado'?'APROBADO':'RECHAZADO'}
-    <small>${v.estado==='aprobado'?'QUEDA OPERATIVA LA VÁLVULA':'NO QUEDA OPERATIVA'}
-      · ${esc(v.tol.txt)} admisible · rango ${n2(v.min)} – ${n2(v.max)} ${esc(u)}</small></div>
-  ${/* El ancho lo pide el dibujo, no la hoja: tres disparos estirados
-       de margen a margen dejaban los puntos a un palmo unos de otros
-       y el gráfico parecía decir mucho más de lo que dice. Se le da
-       lo que necesita —unos 26 mm por disparo, entre 95 y 170 mm— y se
-       centra. Con más disparos crece; con tres, no. */''}
-  ${/* Ni una tira apaisada de lado a lado ni un cartel: un cuadro
-       centrado, más alto que ancho de lo que era, donde los tres
-       puntos se separan de verdad y la banda admisible se ve como una
-       franja y no como una raya. El dibujo ya tenía preparada la
-       versión alta —la que se usa cuando el lienzo pasa de 190 de
-       alto—, y es la que va aquí. */''}
-  <div class="grafc" style="max-width:${Math.min(142,Math.max(82,17*v.disparos.length+45))}mm">
-    <h4>Los disparos frente a la banda admisible</h4>${
-    psvGrafica(v,560,320)}</div>`:''}
-
-  ${/* Comentarios y observaciones, como en el formato: primero lo que
-       la casa dice siempre —la norma con la que se ensayó y las dos
-       reglas de tolerancia de ASME Secc. VIII— y debajo lo que se
-       escribió de ESTE trabajo. Faltaba entero: el papel salía sin
-       decir contra qué norma se había medido. */''}
-  <h2>COMENTARIOS U OBSERVACIONES</h2>
-  <div class="obs">
-    <p>${esc(CERT_NOTA)}</p>
-    <p class="asme">${CERT_ASME.map(x=>esc(x)).join('<br>')}</p>
-    ${(()=>{const cl=conclusionDe(c); return cl?`<p class="propia">${esc(cl)}</p>`:''})()}
-  </div>
-  ${(c.respNombre||c.respArea)?`<h2>RESPONSABLE DEL TRABAJO</h2>
-  <div class="quien">
-    <div><span>Encargado del mantenimiento</span><b>${esc(c.respNombre||'—')}</b></div>
-    <div><span>Área</span><b>${esc(c.respArea||'—')}</b></div>
-    <div><span>Fecha</span><b>${fPE(c.fecha)}</b></div>
-  </div>
-  ${(c.equipo||[]).filter(x=>String(x.n||'').trim()).length?`<table style="margin-top:5px">
-    <tr><th style="width:38%">TAMBIÉN TRABAJARON</th><td>${
-      (c.equipo||[]).filter(x=>String(x.n||'').trim())
-        .map(x=>esc(x.n)+(x.area?` · ${esc(x.area)}`:'')).join('<br>')}</td></tr></table>`:''}`:''}
-
-  ${/* Sólo las casillas FIRMADAS. Las demás salían con «Nombre y
-       cargo» y «Fecha» en blanco, para rellenar a mano: en un papel
-       que ya va firmado, un hueco vacío hace dudar de si falta algo.
-       Si todavía no firmó nadie queda una sola, la del que ejecutó,
-       con su nombre sobre la raya. */''}
-  ${(()=>{
-    const hay=FIRMA_ROLES.map(([rol,lbl])=>({rol,lbl,f:firmaDe(rol)})).filter(x=>x.f&&x.f.img);
-    if(!hay.length){
-      const q=c.respNombre||'', cg=c.respArea||'';
-      return `<div class="firmas una"><div class="fb"><span class="rol">${esc(FIRMA_ROLES[0][1])}</span>
-        <span style="flex:1"></span>
-        <div class="ln"><b>${esc(q)||'&nbsp;'}</b><span class="cg">${esc(cg)}</span></div></div></div>`;
-    }
-    return `<div class="firmas${hay.length===1?' una':''}">${hay.map(({lbl,f})=>
-      `<div class="fb"><span class="rol">${esc(lbl)}</span>
-        <img src="${f.img}" alt="Firma de ${esc(f.n)}">
-        <div class="ln"><b>${esc(f.n)}</b>
-          <span class="cg">${esc(f.cargo||'')}</span><br>
-          <span class="cg">${esc(fPE(f.f))}${conHora(f)}</span></div></div>`).join('')}</div>`;
-  })()}
-  ${/* Las dos casillas del visto bueno del cliente salían siempre en
-       blanco, con sus renglones para rellenar a mano. En estos papeles
-       sale lo que se escribió en el portal y nada más. */''}
-  <div class="pliego-n">Certificado · hoja 1</div>
   </section>
 
   ${(()=>{

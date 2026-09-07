@@ -44,17 +44,32 @@ const limpio=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
  chk(/CERTIFICADO DE VERIFICACIÓN, CALIBRACIÓN/.test(h),'con el título del formato');
  chk(/Página <b>1<\/b> de 1/.test(h),'y «Página 1 de 1» en su casilla');
 
- /* La cabecera: empresa, contacto, certificado y contrato */
- chk(/Empresa<b>Kimberly Clark<\/b>/.test(h),'la empresa');
- chk(/Contacto<b>Luis Zafra<\/b>/.test(h),'su contacto, el mismo del informe');
- chk(/Certificado n\.º<b>PSV-412-001<\/b>/.test(h),'el número del certificado');
- chk(/Contrato<b>4504763849<\/b>/.test(h),'y el contrato: la orden de compra del cliente');
+ /* La cabecera, en la rejilla del formato: rótulo y valor en celdas */
+ const celda=(rot,val)=>new RegExp('<th[^>]*>'+rot+'</th>\\s*<td[^>]*>'+val+'</td>').test(h);
+ chk(celda('EMPRESA','Kimberly Clark'),'la empresa');
+ chk(celda('CONTACTO','Luis Zafra'),'su contacto, el mismo del informe');
+ chk(celda('CERTIFICADO N\\.º','PSV-412-001'),'el número del certificado');
+ chk(celda('CONTRATO','4504763849'),'y el contrato: la orden de compra del cliente');
+ chk(celda('TAG N\\.º','31-TSV-0007'),'y el TAG');
+ chk(/class="bn"><td colspan="4">INFORMACIÓN DE LA VÁLVULA/.test(h),
+     'cada apartado en su banda, como en el Excel');
+ chk(celda('NORMA PRUEBA \\(código\\)','ASME VIII'),'la norma, en su celda');
+ chk(celda('CERTIF\\. NÚM','MT-09245-2026'),'y el certificado del patrón, en la suya');
 
  /* El procedimiento, una sola vez */
  chk(/PROCEDIMIENTO DE VERIFICACIÓN Y CALIBRACIÓN/.test(h),'el procedimiento está');
  chk((h.match(/Ajuste de la presión de disparo/g)||[]).length===1,
      'y una sola vez: antes salía dos · '+(h.match(/Ajuste de la presión de disparo/g)||[]).length);
- chk(/<ol class="proc">/.test(h),'numerado, como en el formato');
+ chk(/<th class="n">1\.<\/th>/.test(h)&&/<th class="n">3\.<\/th>/.test(h),
+     'numerado en su columna, como en el formato');
+ /* Y detrás de los equipos patrones, no delante */
+ chk(h.indexOf('EQUIPOS PATRONES')<h.indexOf('PROCEDIMIENTO DE VERIFICACIÓN'),
+     'los datos arriba y el texto abajo');
+ /* El sello, debajo del gráfico */
+ chk(h.indexOf('Gráfico de diferencia')<h.indexOf('class="vd '),
+     'y APROBADO debajo del gráfico');
+ /* Y ya no está «Responsable del trabajo» */
+ chk(!/RESPONSABLE DEL TRABAJO/.test(h),'sin el cuadro de responsable, que el formato no lleva');
 
  /* Los comentarios de la casa */
  chk(/COMENTARIOS U OBSERVACIONES/.test(h),'el apartado de comentarios');
