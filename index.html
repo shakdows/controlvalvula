@@ -8693,6 +8693,23 @@ function contactoCliente(c){
   const q=f.find(x=>x.rol==='vbResp')||f.find(x=>x.rol==='vbInsp');
   return q?q.n:'';
 }
+/* El cargo de esa persona, si se apuntó. */
+function cargoDelContacto(c){
+  const f=(c&&c.firmantes||[]).filter(x=>x&&String(x.n||'').trim());
+  const q=f.find(x=>x.rol==='vbResp')||f.find(x=>x.rol==='vbInsp');
+  return q?(q.cargo||''):'';
+}
+/* Apuntar quién es la persona del cliente. Se guarda donde ya vivía —
+   entre los firmantes de la empresa, con el papel de responsable del
+   contrato—, así que el informe la lee sin cambiar nada más. */
+function contactoDelCliente(id,campo,v){
+  const c=cli(id); if(!c)return;
+  if(!Array.isArray(c.firmantes))c.firmantes=[];
+  let q=c.firmantes.find(x=>x&&x.rol==='vbResp');
+  if(!q){ q={rol:'vbResp',n:'',cargo:'Gestor de contrato'}; c.firmantes.push(q) }
+  q[campo]=String(v||'').trim();
+  guardarLuego('contacto:'+id,600);
+}
 const firmantesDe=cliId=>{
   const c=cli(cliId);
   return Array.isArray(c.firmantes)?c.firmantes:[];
@@ -14690,15 +14707,18 @@ function campoNumOS(ids,cliDado){
          la ficha de la empresa a arreglarlo es donde se deja para
          luego. Sólo gerencia: el nombre de un cliente no lo cambia
          quien pasa por el taller. */''}
-    ${c&&S.rol!=='cliente'?`<div class="fld"><label for="ocCliNom">Nombre del cliente
-        <span class="opc">tal como sale en el informe y en el certificado</span></label>
-      <div class="set-fila">
-        <input class="inp cli-campo bloq" id="ocCliNom" value="${esc(c.n||'')}" readonly autocomplete="off"
-               oninput="renombrarCliente('${esc(c.id)}',this.value)">
-        <button class="btn quiet xs cli-lock-btn" onclick="cliDesbloquear(this)"
-                title="El nombre del cliente sale en todos sus papeles">Desbloquear</button>
-      </div>
-      <span class="hint">Se cambia en todos sus papeles, también en los ya emitidos.</span></div>`:''}`;
+    ${c&&S.rol!=='cliente'?`<div class="two">
+      <div class="fld"><label for="ocCliPers">Nombre del cliente
+          <span class="opc">la persona, no la empresa</span></label>
+        <input class="inp" id="ocCliPers" value="${esc(contactoCliente(c))}" autocomplete="off"
+               placeholder="A quién se le entrega el trabajo"
+               oninput="contactoDelCliente('${esc(c.id)}','n',this.value)">
+        <span class="hint">Sale en el informe, en <b>Atención</b>.</span></div>
+      <div class="fld"><label for="ocCliCargo">Su cargo <span class="opc">opcional</span></label>
+        <input class="inp" id="ocCliCargo" value="${esc(cargoDelContacto(c))}" autocomplete="off"
+               placeholder="Gestor de contrato, jefe de mantenimiento…"
+               oninput="contactoDelCliente('${esc(c.id)}','cargo',this.value)"></div>
+    </div>`:''}`;
 }
 /* Mientras se teclea: se dice qué número toca y si ése ya está usado.
    No se corrige por detrás —quien escribe un número lo escribe por
@@ -14725,39 +14745,8 @@ function usarNumOS(n){
   const e=$('#ocNumCifras'); if(!e)return;
   e.value=String(n); revisarNumOS(); e.focus();
 }
-/* El nombre de una empresa sale en todos sus papeles, también en los
-   ya firmados, así que no se toca de un resbalón: se pide la clave,
-   igual que para la presión de seteo o para dar de baja. */
-function cliDesbloquear(btn){
-  const caja=btn.parentNode; if(!caja)return;
-  btn.outerHTML=`<span class="set-clave"><input class="inp" type="password" id="cliClave"
-      placeholder="Clave" style="max-width:150px" autocomplete="off">
-    <button class="btn sec xs" onclick="cliProbarClave()">Abrir</button></span>`;
-  const i=document.getElementById('cliClave');
-  if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();cliProbarClave()} } }
-}
-function cliProbarClave(){
-  const i=document.getElementById('cliClave'); if(!i)return;
-  if(i.value.trim()!==CLAVE_BAJA){
-    toast('Clave incorrecta · el nombre del cliente no se tocó'); i.value=''; i.focus(); return;
-  }
-  document.querySelectorAll('.cli-campo').forEach(x=>{ x.readOnly=false; x.classList.remove('bloq') });
-  document.querySelectorAll('.cli-lock-btn,.set-clave').forEach(x=>x.remove());
-  const e=document.getElementById('ocCliNom'); if(e)e.focus();
-  toast('Nombre del cliente abierto · se cambia en todos sus papeles');
-}
-/* Cambiar el nombre de una empresa desde aquí. Es el mismo nombre que
-   ya sale en sus papeles: no se duplica en ningún sitio, así que
-   cambiarlo aquí lo cambia en todos a la vez. */
-function renombrarCliente(id,v){
-  const c=cli(id); if(!c)return;
-  const nom=String(v||'').trim();
-  if(!nom)return;                        // vacío no: dejaría papeles sin cliente
-  if(c.n===nom)return;
-  c.n=nom;
-  guardarLuego('cliente:'+id,600);
-  try{ if(typeof renderClients==='function')renderClients() }catch(e){}
-}
+/* La razón social de la empresa se corrige en su ficha, que es su
+   sitio: aquí lo que hace falta es la persona. */
 function leerNumOS(ids){
   /* Lo que se ve manda sobre la casilla oculta: si alguien escribió un
      número y no llegó a salir del campo, es ése el que quiere. */

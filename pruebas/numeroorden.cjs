@@ -88,70 +88,52 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
  chk(noEnvenena.bajo.num===109,
      'ni un número por debajo de los de la casa · quedó '+noEnvenena.bajo.cod);
 
- /* El nombre del cliente, desde ahí mismo · pero bajo llave */
- const cerrado=await p.evaluate(()=>{
-   const e=document.querySelector('#ocCliNom');
+ /* El nombre del cliente: la PERSONA a la que se le entrega el
+    trabajo, no la razón social. Es la que sale en «Atención». */
+ const pers=await p.evaluate(()=>{
+   const e=document.querySelector('#ocCliPers');
    if(!e)return null;
-   return {trae:e.value, bloqueado:e.readOnly,
-           hayBoton:!!document.querySelector('.cli-lock-btn')};
+   e.value='Marta Salas'; e.dispatchEvent(new Event('input'));
+   const g=document.querySelector('#ocCliCargo');
+   g.value='Jefa de mantenimiento'; g.dispatchEvent(new Event('input'));
+   return {vacia:!e.defaultValue, contacto:contactoCliente(cli('cliT')),
+           cargo:cargoDelContacto(cli('cliT')),
+           empresa:(CLIENTES.find(c=>c.id==='cliT')||{}).n};
  });
- chk(cerrado&&cerrado.trae==='SAPE','la casilla trae el nombre que tiene · '+(cerrado&&cerrado.trae));
- chk(cerrado&&cerrado.bloqueado,'el nombre viene cerrado con candado');
- chk(cerrado&&cerrado.hayBoton,'y con su botón de desbloquear');
+ chk(pers&&pers.vacia,'la casilla empieza vacía: no hay contacto apuntado todavía');
+ chk(pers&&pers.contacto==='Marta Salas','se escribe la persona · '+(pers&&pers.contacto));
+ chk(pers&&pers.cargo==='Jefa de mantenimiento','y su cargo · '+(pers&&pers.cargo));
+ chk(pers&&pers.empresa==='SAPE','y la razón social NO se toca · '+(pers&&pers.empresa));
 
- /* Con la clave mal, no se abre */
- await p.click('.cli-lock-btn');
- await p.waitForTimeout(150);
- const malaClave=await p.evaluate(()=>{
-   const i=document.querySelector('#cliClave'); i.value='0000';
-   cliProbarClave();
-   return {sigueCerrado:document.querySelector('#ocCliNom').readOnly};
+ /* Y es la que sale en el informe, bajo «Atención» */
+ const enPapel=await p.evaluate(()=>{
+   const hoy=HOY.toISOString().slice(0,10);
+   ORDENES.push({id:'oI',act:'aT',mat:'PSV-200',n:'PSV-200',num:200,et:'mant',f:hoy,
+     ing:'Jose Rojas',pasos:['mant'],hist:{mant:hoy},calib:'cI'});
+   CALIBS.push({id:'cI',act:'aT',ord:'oI',tipo:'psv',os:'PSV-200',und:'psi',
+     setEsp:150,fecha:hoy,respNombre:'Jose Rojas'});
+   const d=documentoInforme('oI',['oI']); const h=String((d&&(d.html||d))||'');
+   const m=h.match(/<span>Atención<\/span><i>:<\/i><b>([\s\S]{0,60}?)<\/b>/);
+   return m?m[1]:'';
  });
- chk(malaClave.sigueCerrado,'con la clave equivocada sigue cerrado');
+ chk(/Marta Salas/.test(enPapel),'y sale en el informe, en Atención · '+enPapel);
 
- /* Con la clave buena, se abre y se cambia */
- const nombre=await p.evaluate(()=>{
-   const i=document.querySelector('#cliClave'); i.value='1234';
-   cliProbarClave();
-   const e=document.querySelector('#ocCliNom');
-   const abierto=!e.readOnly;
-   e.value='SAPE INDUSTRIAL S.A.C.'; e.dispatchEvent(new Event('input'));
-   return {abierto, ahora:(CLIENTES.find(c=>c.id==='cliT')||{}).n};
- });
- chk(nombre&&nombre.abierto,'con la clave 1234 se abre');
- chk(nombre&&nombre.ahora==='SAPE INDUSTRIAL S.A.C.',
-     'y al cambiarlo cambia la empresa · '+(nombre&&nombre.ahora));
- /* Vacío no: dejaría papeles sin cliente */
- const vacio=await p.evaluate(()=>{
-   const e=document.querySelector('#ocCliNom');
-   e.value='   '; e.dispatchEvent(new Event('input'));
-   return (CLIENTES.find(c=>c.id==='cliT')||{}).n;
- });
- chk(vacio==='SAPE INDUSTRIAL S.A.C.','vacío no se acepta: un papel sin cliente no vale · '+vacio);
-
- /* Al técnico se le enseña, cerrado: si tiene la clave del jefe, la
-    corrige; si no, al menos ve con qué nombre va a salir el papel. */
- await p.evaluate(()=>{closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='tec'),false)});
- await p.waitForTimeout(600);
- await p.evaluate(()=>mandarAMantenimiento('aT'));
+ /* Al volver a abrir la ventana, la persona ya está puesta */
+ await p.evaluate(()=>{closeModal(); mandarAMantenimiento('aT')});
  await p.waitForTimeout(500);
- const tec=await p.evaluate(()=>{const e=document.querySelector('#ocCliNom');
-   return {hay:!!e, cerrado:e&&e.readOnly}});
- chk(tec.hay&&tec.cerrado,'al técnico se le enseña, pero cerrado');
+ chk(await p.evaluate(()=>(document.querySelector('#ocCliPers')||{}).value)==='Marta Salas',
+     'y la próxima vez ya viene puesta');
 
- /* Al cliente, ni eso: ni siquiera le abre la ventana. */
+ /* Al cliente no se le abre esa ventana */
  const alCliente=await p.evaluate(()=>{
    closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='cliente'),false);
    document.querySelector('#mBody').innerHTML='';
    try{mandarAMantenimiento('aT')}catch(e){}
-   return {campo:!!document.querySelector('#ocCliNom'),
-           html:document.querySelector('#mBody').innerHTML.length};
+   return document.querySelector('#mBody').innerHTML.length;
  });
- chk(!alCliente.campo&&alCliente.html===0,
-     'y al cliente ni se le abre esa ventana');
+ chk(alCliente===0,'al cliente ni se le abre esa ventana');
 
- /* Y en «Nueva OC», donde todavía no hay ninguna válvula marcada, la
-    casilla sale igual: el cliente lo dice el desplegable de arriba. */
+ /* Y en «Nueva OC», sin ninguna válvula marcada, las casillas salen */
  await p.evaluate(()=>{closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='admin'),false)});
  await p.waitForTimeout(600);
  await p.evaluate(()=>openProyecto());
@@ -159,12 +141,12 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
  const enOC=await p.evaluate(()=>{
    const sel=document.querySelector('#pyCli');
    if(sel){ sel.value='cliT'; pintarPryValvulas() }
-   const e=document.querySelector('#ocCliNom');
-   return {hay:!!e, trae:e&&e.value, cifras:!!document.querySelector('#ocNumCifras')};
+   return {cifras:!!document.querySelector('#ocNumCifras'),
+           pers:(document.querySelector('#ocCliPers')||{}).value};
  });
  chk(enOC.cifras,'en «Nueva OC» está la casilla del número');
- chk(enOC.hay,'y la del nombre del cliente, aunque no haya ninguna válvula marcada');
- chk(enOC.trae==='SAPE INDUSTRIAL S.A.C.','con el nombre de la empresa elegida · '+enOC.trae);
+ chk(enOC.pers==='Marta Salas',
+     'y la de la persona, aunque no haya ninguna válvula marcada · '+enOC.pers);
 
  console.log(ok.map(t=>'  ✓ '+t).join('\n'));
  if(mal.length)console.log(mal.map(t=>'  ✗ '+t).join('\n'));
