@@ -5126,6 +5126,7 @@ function confirmarOrdenesLote(){
     if(ORDENES.some(o=>o.act===id&&o.et!=='final'))return;   // ya tiene trabajo abierto
     const pasos=pasosDeFila(id);
     ORDENES.unshift({id:'o'+sello+'-'+i,act:id,mat,n:mat,num,grupo,pasos,extras:extrasDeFila(id),
+      aten:contactoCliente(cli(a.cli)),
       et:'oc',tipo,f:fec,tec:'Por asignar',hall:mot,partes:[]});
     hechas.push(a.tag||a.ser||'');
   });
@@ -8685,6 +8686,14 @@ const FIRMA_ROLES=[
     acepta o se devuelve. */
  ['recep', 'Firma del mecánico que hizo la prueba', 'Adolphus']
 ];
+/* A quién va dirigido el papel de ESTA orden. El nombre se copia en
+   la orden el día que se abre y ahí se queda: cambiar el contacto de
+   la empresa no puede reescribir un informe ya entregado. Las órdenes
+   de antes, que no llevan copia, siguen leyendo el de la empresa. */
+function atencionDe(o,c){
+  const suyo=o&&String(o.aten||'').trim();
+  return suyo||contactoCliente(c);
+}
 /* La persona del CLIENTE a quien se le entrega el papel. Son sus
    firmantes, no los de la casa: el gestor de contrato primero —es
    quien recibe el informe— y, si no lo hay, el inspector. */
@@ -8692,12 +8701,6 @@ function contactoCliente(c){
   const f=(c&&c.firmantes||[]).filter(x=>x&&String(x.n||'').trim());
   const q=f.find(x=>x.rol==='vbResp')||f.find(x=>x.rol==='vbInsp');
   return q?q.n:'';
-}
-/* El cargo de esa persona, si se apuntó. */
-function cargoDelContacto(c){
-  const f=(c&&c.firmantes||[]).filter(x=>x&&String(x.n||'').trim());
-  const q=f.find(x=>x.rol==='vbResp')||f.find(x=>x.rol==='vbInsp');
-  return q?(q.cargo||''):'';
 }
 /* Apuntar quién es la persona del cliente. Se guarda donde ya vivía —
    entre los firmantes de la empresa, con el papel de responsable del
@@ -9004,7 +9007,12 @@ function recepAuto(t,a){
   const m=MODELOS[a.mod]||{}, c=cli(a.cli)||{};
   const o=ORDENES.find(x=>x.act===a.id&&x.et!=='final')||ORDENES.find(x=>x.act===a.id)||{};
   const set=a.setPress?`${a.setPress} ${a.setUnd||'psi'}`:'';
-  const firm=(c.firmantes||[]).find(f=>f.rol==='vbInsp'||f.rol==='vbResp');
+  /* El mismo contacto que el informe, y el que quedó sellado en la
+     orden si la orden lo lleva: dos papeles del mismo trabajo no
+     pueden ir dirigidos a dos personas distintas. */
+  const quien=atencionDe(o,c);
+  const firm=(c.firmantes||[]).find(f=>String(f.n||'').trim()===quien)
+    ||(quien?{n:quien,cargo:''}:null);
   return [
    ['TAG',                       a.tag],
    ['Marca',                     m.m],
@@ -12633,7 +12641,7 @@ ${/* La nota del SIG la pone el pie de la hoja, como en todas las
        que hizo el trabajo: ése ya firma abajo. Sale de los firmantes
        de la empresa (Ajustes · Cliente); si no se ha puesto ninguno,
        queda la raya para escribirlo a mano. */''}
-  <span>Atención</span><i>:</i><b>${raya(contactoCliente(c))}</b>
+  <span>Atención</span><i>:</i><b>${raya(atencionDe(o,c))}</b>
   <span>Asunto</span><i>:</i><b>Calibración de válvulas de seguridad</b>
   <span>Fecha</span><i>:</i><b>${f.getDate()} de ${esc(MES_LARGO[f.getMonth()])} del ${f.getFullYear()}</b>
   <span>Avance</span><i>:</i><b>${Math.round(conE.length*100/Math.max(1,items.length))}%</b>
@@ -14707,18 +14715,14 @@ function campoNumOS(ids,cliDado){
          la ficha de la empresa a arreglarlo es donde se deja para
          luego. Sólo gerencia: el nombre de un cliente no lo cambia
          quien pasa por el taller. */''}
-    ${c&&S.rol!=='cliente'?`<div class="two">
-      <div class="fld"><label for="ocCliPers">Nombre del cliente
-          <span class="opc">la persona, no la empresa</span></label>
-        <input class="inp" id="ocCliPers" value="${esc(contactoCliente(c))}" autocomplete="off"
-               placeholder="A quién se le entrega el trabajo"
-               oninput="contactoDelCliente('${esc(c.id)}','n',this.value)">
-        <span class="hint">Sale en el informe, en <b>Atención</b>.</span></div>
-      <div class="fld"><label for="ocCliCargo">Su cargo <span class="opc">opcional</span></label>
-        <input class="inp" id="ocCliCargo" value="${esc(cargoDelContacto(c))}" autocomplete="off"
-               placeholder="Gestor de contrato, jefe de mantenimiento…"
-               oninput="contactoDelCliente('${esc(c.id)}','cargo',this.value)"></div>
-    </div>`:''}`;
+    ${c&&S.rol!=='cliente'?`<div class="fld"><label for="ocCliPers">Nombre del cliente
+        <span class="opc">la persona, no la empresa</span></label>
+      <input class="inp" id="ocCliPers" value="${esc(contactoCliente(c))}" autocomplete="off"
+             placeholder="A quién se le entrega el trabajo"
+             oninput="contactoDelCliente('${esc(c.id)}','n',this.value)">
+      <span class="hint">Sale en el informe, en <b>Atención</b>. Queda puesto para esta empresa
+        hasta que se cambie, y el cambio vale de los trabajos nuevos en adelante:
+        los ya abiertos siguen con el nombre que llevaban.</span></div>`:''}`;
 }
 /* Mientras se teclea: se dice qué número toca y si ése ya está usado.
    No se corrige por detrás —quien escribe un número lo escribe por
@@ -14991,6 +14995,7 @@ function guardarProyecto(){
   sel.forEach(actId=>{
     ORDENES.unshift({id:'o'+Date.now()+Math.random().toString(36).slice(2,6),
       act:actId, pry:id, oc, mat, num, grupo, pasos:pasosDeFila(actId), extras:extrasDeFila(actId),
+      aten:contactoCliente(cli(cliId)),
       n:mat, et:'oc', tipo, f:fec, tec:'Por asignar',
       hall:$('#pyDesc').value.trim()||'Sin observaciones.', partes:[]});
   });
@@ -19857,7 +19862,8 @@ function confirmarMandar(id){
      enseña una tarjeta, pero cada válvula conserva su ensayo y su
      certificado, que es lo que no se puede compartir. */
   ids.forEach((x,i)=>ORDENES.unshift({id:'o'+Date.now()+'-'+i, act:x, mat, n:mat, num, grupo,
-    pasos:pasosDeFila(x), extras:extrasDeFila(x), et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
+    pasos:pasosDeFila(x), extras:extrasDeFila(x), aten:contactoCliente(cli(cliDeAct(x))),
+    et:'oc', tipo, f, tec:'Por asignar', hall:mot, partes:[]}));
   MM_PRINCIPAL=null;
   closeModal(); renderAll(); go('wo');
   const nom=ids.map(x=>{const v=ACTIVOS.find(y=>y.id===x);return v?(v.tag||v.ser||''):''}).filter(Boolean);

@@ -94,29 +94,72 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
    const e=document.querySelector('#ocCliPers');
    if(!e)return null;
    e.value='Marta Salas'; e.dispatchEvent(new Event('input'));
-   const g=document.querySelector('#ocCliCargo');
-   g.value='Jefa de mantenimiento'; g.dispatchEvent(new Event('input'));
    return {vacia:!e.defaultValue, contacto:contactoCliente(cli('cliT')),
-           cargo:cargoDelContacto(cli('cliT')),
+           cargo:!!document.querySelector('#ocCliCargo'),
            empresa:(CLIENTES.find(c=>c.id==='cliT')||{}).n};
  });
  chk(pers&&pers.vacia,'la casilla empieza vacía: no hay contacto apuntado todavía');
  chk(pers&&pers.contacto==='Marta Salas','se escribe la persona · '+(pers&&pers.contacto));
- chk(pers&&pers.cargo==='Jefa de mantenimiento','y su cargo · '+(pers&&pers.cargo));
+ chk(pers&&!pers.cargo,'y sólo el nombre: nada de cargo');
  chk(pers&&pers.empresa==='SAPE','y la razón social NO se toca · '+(pers&&pers.empresa));
 
  /* Y es la que sale en el informe, bajo «Atención» */
- const enPapel=await p.evaluate(()=>{
+ const aten=()=>p.evaluate(()=>{
+   const d=documentoInforme('oI',['oI']); const h=String((d&&(d.html||d))||'');
+   const m=h.match(/<span>Atención<\/span><i>:<\/i><b>([\s\S]{0,60}?)<\/b>/);
+   return m?m[1].replace(/<[^>]+>/g,'').trim():'';
+ });
+ await p.evaluate(()=>{
    const hoy=HOY.toISOString().slice(0,10);
    ORDENES.push({id:'oI',act:'aT',mat:'PSV-200',n:'PSV-200',num:200,et:'mant',f:hoy,
+     aten:contactoCliente(cli('cliT')),          // como al abrirla
      ing:'Jose Rojas',pasos:['mant'],hist:{mant:hoy},calib:'cI'});
    CALIBS.push({id:'cI',act:'aT',ord:'oI',tipo:'psv',os:'PSV-200',und:'psi',
      setEsp:150,fecha:hoy,respNombre:'Jose Rojas'});
+ });
+ chk(/Marta Salas/.test(await aten()),'y sale en el informe, en Atención');
+
+ /* Se cambia el contacto: el trabajo YA ABIERTO no se reescribe. */
+ await p.evaluate(()=>contactoDelCliente('cliT','n','Pedro Quispe'));
+ chk(/Marta Salas/.test(await aten()),
+     'al cambiarlo, el informe ya abierto sigue con el suyo · '+(await aten()));
+ /* Y el trabajo nuevo ya sale con el nuevo. */
+ const nuevo=await p.evaluate(()=>{
+   const hoy=HOY.toISOString().slice(0,10);
+   ORDENES.push({id:'oN',act:'aT',mat:'PSV-201',n:'PSV-201',num:201,et:'mant',f:hoy,
+     aten:contactoCliente(cli('cliT')),
+     ing:'Jose Rojas',pasos:['mant'],hist:{mant:hoy},calib:'cN'});
+   CALIBS.push({id:'cN',act:'aT',ord:'oN',tipo:'psv',os:'PSV-201',und:'psi',
+     setEsp:150,fecha:hoy,respNombre:'Jose Rojas'});
+   const d=documentoInforme('oN',['oN']); const h=String((d&&(d.html||d))||'');
+   const m=h.match(/<span>Atención<\/span><i>:<\/i><b>([\s\S]{0,60}?)<\/b>/);
+   return m?m[1].replace(/<[^>]+>/g,'').trim():'';
+ });
+ chk(/Pedro Quispe/.test(nuevo),'y el trabajo nuevo sale con el nuevo · '+nuevo);
+ /* Un trabajo viejo, de antes de que se guardara la copia, lee el de
+    la empresa: no se queda sin nombre. */
+ const viejo=await p.evaluate(()=>{
+   const o=ORDENES.find(x=>x.id==='oI'); delete o.aten;
    const d=documentoInforme('oI',['oI']); const h=String((d&&(d.html||d))||'');
    const m=h.match(/<span>Atención<\/span><i>:<\/i><b>([\s\S]{0,60}?)<\/b>/);
-   return m?m[1]:'';
+   return m?m[1].replace(/<[^>]+>/g,'').trim():'';
  });
- chk(/Marta Salas/.test(enPapel),'y sale en el informe, en Atención · '+enPapel);
+ chk(/Pedro Quispe/.test(viejo),'y un trabajo de antes lee el de la empresa · '+viejo);
+ await p.evaluate(()=>contactoDelCliente('cliT','n','Marta Salas'));
+
+ /* Y el mismo nombre en el certificado: dos papeles del mismo trabajo
+    no pueden ir dirigidos a dos personas distintas. */
+ const enCert=await p.evaluate(()=>{
+   const o=ORDENES.find(x=>x.id==='oI'); o.aten='Marta Salas';
+   /* Con el inspector también apuntado, que antes ganaba él. */
+   const c=cli('cliT');
+   c.firmantes.push({rol:'vbInsp',n:'Otro Distinto',cargo:'Inspector'});
+   const fila=recepAuto(CALIBS.find(x=>x.id==='cI'),ACTIVOS.find(x=>x.id==='aT'))
+     .find(x=>x[0]==='Contacto del cliente');
+   return fila?String(fila[1]||''):'(no se encontró la fila)';
+ }).catch(e=>'(error) '+e.message);
+ chk(/Marta Salas/.test(enCert),'el certificado lleva el mismo contacto · '+enCert);
+ chk(!/Otro Distinto/.test(enCert),'y no otro que estuviera apuntado');
 
  /* Al volver a abrir la ventana, la persona ya está puesta */
  await p.evaluate(()=>{closeModal(); mandarAMantenimiento('aT')});
