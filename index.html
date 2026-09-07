@@ -14658,12 +14658,17 @@ const codigoOS=(num,psv)=>`PSV-${num}`;
    cuenta: dos trabajos con el mismo número es un certificado que no
    se sabe de cuál de los dos es. */
 const numsOSUsados=()=>new Set(ORDENES.map(numOS).filter(n=>n>0));
-function campoNumOS(ids){
+function campoNumOS(ids,cliDado){
   const sig=siguienteNumOS();
   /* El PSV- no se teclea: es de la casa y va delante siempre. Lo que
      se escribe son las cifras, y sólo cifras — un número de orden con
      letras dentro no se puede ordenar ni buscar. */
-  const cliId=(ACTIVOS.find(x=>ids.includes(x.id))||{}).cli;
+  /* De qué empresa hablamos. En la ventana de una válvula sale de
+     ella; en la de una OC nueva, del desplegable de arriba — ahí
+     todavía no hay ninguna válvula marcada, y sacarlo sólo de las
+     marcadas dejaba la casilla sin aparecer nunca. */
+  const cliId=cliDado||(ACTIVOS.find(x=>ids.includes(x.id))||{}).cli
+    ||(($('#pyCli')||{}).value||'');
   const c=cliId?cli(cliId):null;
   return `<div class="fld"><label for="ocNumCifras">N.º de orden de servicio de Adolphus
       <span class="opc">el <b>PSV-</b> lo pone la casa; las cifras las eliges tú</span></label>
@@ -14685,10 +14690,14 @@ function campoNumOS(ids){
          la ficha de la empresa a arreglarlo es donde se deja para
          luego. Sólo gerencia: el nombre de un cliente no lo cambia
          quien pasa por el taller. */''}
-    ${c&&S.rol==='admin'?`<div class="fld"><label for="ocCliNom">Nombre del cliente
+    ${c&&S.rol!=='cliente'?`<div class="fld"><label for="ocCliNom">Nombre del cliente
         <span class="opc">tal como sale en el informe y en el certificado</span></label>
-      <input class="inp" id="ocCliNom" value="${esc(c.n||'')}" autocomplete="off"
-             oninput="renombrarCliente('${esc(c.id)}',this.value)">
+      <div class="set-fila">
+        <input class="inp cli-campo bloq" id="ocCliNom" value="${esc(c.n||'')}" readonly autocomplete="off"
+               oninput="renombrarCliente('${esc(c.id)}',this.value)">
+        <button class="btn quiet xs cli-lock-btn" onclick="cliDesbloquear(this)"
+                title="El nombre del cliente sale en todos sus papeles">Desbloquear</button>
+      </div>
       <span class="hint">Se cambia en todos sus papeles, también en los ya emitidos.</span></div>`:''}`;
 }
 /* Mientras se teclea: se dice qué número toca y si ése ya está usado.
@@ -14715,6 +14724,27 @@ function revisarNumOS(){
 function usarNumOS(n){
   const e=$('#ocNumCifras'); if(!e)return;
   e.value=String(n); revisarNumOS(); e.focus();
+}
+/* El nombre de una empresa sale en todos sus papeles, también en los
+   ya firmados, así que no se toca de un resbalón: se pide la clave,
+   igual que para la presión de seteo o para dar de baja. */
+function cliDesbloquear(btn){
+  const caja=btn.parentNode; if(!caja)return;
+  btn.outerHTML=`<span class="set-clave"><input class="inp" type="password" id="cliClave"
+      placeholder="Clave" style="max-width:150px" autocomplete="off">
+    <button class="btn sec xs" onclick="cliProbarClave()">Abrir</button></span>`;
+  const i=document.getElementById('cliClave');
+  if(i){ i.focus(); i.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();cliProbarClave()} } }
+}
+function cliProbarClave(){
+  const i=document.getElementById('cliClave'); if(!i)return;
+  if(i.value.trim()!==CLAVE_BAJA){
+    toast('Clave incorrecta · el nombre del cliente no se tocó'); i.value=''; i.focus(); return;
+  }
+  document.querySelectorAll('.cli-campo').forEach(x=>{ x.readOnly=false; x.classList.remove('bloq') });
+  document.querySelectorAll('.cli-lock-btn,.set-clave').forEach(x=>x.remove());
+  const e=document.getElementById('ocCliNom'); if(e)e.focus();
+  toast('Nombre del cliente abierto · se cambia en todos sus papeles');
 }
 /* Cambiar el nombre de una empresa desde aquí. Es el mismo nombre que
    ya sale en sus papeles: no se duplica en ningún sitio, así que
@@ -14953,7 +14983,7 @@ function pryCuenta(){
   /* El número lo pone la casa y se rehace con lo marcado: si todas
      son de seguridad, lleva PSV delante. */
   const caja=$('#pyNum'); if(!caja)return;
-  caja.innerHTML=campoNumOS(sel);
+  caja.innerHTML=campoNumOS(sel,($('#pyCli')||{}).value||'');
 }
 function guardarProyecto(){
   const cliId=$('#pyCli').value;

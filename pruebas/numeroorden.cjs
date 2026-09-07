@@ -88,15 +88,37 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
  chk(noEnvenena.bajo.num===109,
      'ni un número por debajo de los de la casa · quedó '+noEnvenena.bajo.cod);
 
- /* El nombre del cliente, desde ahí mismo */
- const nombre=await p.evaluate(()=>{
+ /* El nombre del cliente, desde ahí mismo · pero bajo llave */
+ const cerrado=await p.evaluate(()=>{
    const e=document.querySelector('#ocCliNom');
    if(!e)return null;
-   const antes=e.value;
-   e.value='SAPE INDUSTRIAL S.A.C.'; e.dispatchEvent(new Event('input'));
-   return {antes, ahora:(CLIENTES.find(c=>c.id==='cliT')||{}).n};
+   return {trae:e.value, bloqueado:e.readOnly,
+           hayBoton:!!document.querySelector('.cli-lock-btn')};
  });
- chk(nombre&&nombre.antes==='SAPE','la casilla trae el nombre que tiene · '+(nombre&&nombre.antes));
+ chk(cerrado&&cerrado.trae==='SAPE','la casilla trae el nombre que tiene · '+(cerrado&&cerrado.trae));
+ chk(cerrado&&cerrado.bloqueado,'el nombre viene cerrado con candado');
+ chk(cerrado&&cerrado.hayBoton,'y con su botón de desbloquear');
+
+ /* Con la clave mal, no se abre */
+ await p.click('.cli-lock-btn');
+ await p.waitForTimeout(150);
+ const malaClave=await p.evaluate(()=>{
+   const i=document.querySelector('#cliClave'); i.value='0000';
+   cliProbarClave();
+   return {sigueCerrado:document.querySelector('#ocCliNom').readOnly};
+ });
+ chk(malaClave.sigueCerrado,'con la clave equivocada sigue cerrado');
+
+ /* Con la clave buena, se abre y se cambia */
+ const nombre=await p.evaluate(()=>{
+   const i=document.querySelector('#cliClave'); i.value='1234';
+   cliProbarClave();
+   const e=document.querySelector('#ocCliNom');
+   const abierto=!e.readOnly;
+   e.value='SAPE INDUSTRIAL S.A.C.'; e.dispatchEvent(new Event('input'));
+   return {abierto, ahora:(CLIENTES.find(c=>c.id==='cliT')||{}).n};
+ });
+ chk(nombre&&nombre.abierto,'con la clave 1234 se abre');
  chk(nombre&&nombre.ahora==='SAPE INDUSTRIAL S.A.C.',
      'y al cambiarlo cambia la empresa · '+(nombre&&nombre.ahora));
  /* Vacío no: dejaría papeles sin cliente */
@@ -107,15 +129,42 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
  });
  chk(vacio==='SAPE INDUSTRIAL S.A.C.','vacío no se acepta: un papel sin cliente no vale · '+vacio);
 
- /* Y al técnico no se le deja renombrar empresas */
+ /* Al técnico se le enseña, cerrado: si tiene la clave del jefe, la
+    corrige; si no, al menos ve con qué nombre va a salir el papel. */
  await p.evaluate(()=>{closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='tec'),false)});
  await p.waitForTimeout(600);
- const tec=await p.evaluate(()=>{ mandarAMantenimiento('aT'); return true });
+ await p.evaluate(()=>mandarAMantenimiento('aT'));
  await p.waitForTimeout(500);
- const puedeTec=await p.evaluate(()=>({
-   nombre:!!document.querySelector('#ocCliNom'),
-   cifras:!!document.querySelector('#ocNumCifras')}));
- chk(tec&&!puedeTec.nombre,'el técnico no renombra empresas');
+ const tec=await p.evaluate(()=>{const e=document.querySelector('#ocCliNom');
+   return {hay:!!e, cerrado:e&&e.readOnly}});
+ chk(tec.hay&&tec.cerrado,'al técnico se le enseña, pero cerrado');
+
+ /* Al cliente, ni eso: ni siquiera le abre la ventana. */
+ const alCliente=await p.evaluate(()=>{
+   closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='cliente'),false);
+   document.querySelector('#mBody').innerHTML='';
+   try{mandarAMantenimiento('aT')}catch(e){}
+   return {campo:!!document.querySelector('#ocCliNom'),
+           html:document.querySelector('#mBody').innerHTML.length};
+ });
+ chk(!alCliente.campo&&alCliente.html===0,
+     'y al cliente ni se le abre esa ventana');
+
+ /* Y en «Nueva OC», donde todavía no hay ninguna válvula marcada, la
+    casilla sale igual: el cliente lo dice el desplegable de arriba. */
+ await p.evaluate(()=>{closeModal(); abrirSesion(CUENTAS.find(x=>x.perfil==='admin'),false)});
+ await p.waitForTimeout(600);
+ await p.evaluate(()=>openProyecto());
+ await p.waitForTimeout(600);
+ const enOC=await p.evaluate(()=>{
+   const sel=document.querySelector('#pyCli');
+   if(sel){ sel.value='cliT'; pintarPryValvulas() }
+   const e=document.querySelector('#ocCliNom');
+   return {hay:!!e, trae:e&&e.value, cifras:!!document.querySelector('#ocNumCifras')};
+ });
+ chk(enOC.cifras,'en «Nueva OC» está la casilla del número');
+ chk(enOC.hay,'y la del nombre del cliente, aunque no haya ninguna válvula marcada');
+ chk(enOC.trae==='SAPE INDUSTRIAL S.A.C.','con el nombre de la empresa elegida · '+enOC.trae);
 
  console.log(ok.map(t=>'  ✓ '+t).join('\n'));
  if(mal.length)console.log(mal.map(t=>'  ✗ '+t).join('\n'));
