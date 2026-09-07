@@ -188,6 +188,30 @@ const ok=[],mal=[]; const chk=(c,t)=>(c?ok:mal).push(t);
            pers:(document.querySelector('#ocCliPers')||{}).value};
  });
  chk(enOC.cifras,'en «Nueva OC» está la casilla del número');
+
+ /* EL CASO DE VERDAD: se escribe el número A MANO y DESPUÉS se marca
+    la válvula. El cuadro se repintaba entero al marcarla y volvía el
+    número de la casa; quien escribía el 107 acababa con el 106
+    impreso en la etiqueta sin haberlo tocado. */
+ const aMano2=await p.evaluate(()=>{
+   const e=document.querySelector('#ocNumCifras');
+   e.value='107'; e.dispatchEvent(new Event('input'));
+   /* y ahora se marca la válvula, como se hace de verdad */
+   const ch=document.querySelector('.pyChk');
+   ch.checked=true; ch.dispatchEvent(new Event('change'));
+   return (document.querySelector('#ocNumCifras')||{}).value;
+ });
+ chk(aMano2==='107','el número escrito a mano sobrevive a marcar la válvula · '+aMano2);
+
+ /* Y es el que acaba en la orden y en la etiqueta */
+ const enOrden=await p.evaluate(()=>{
+   document.querySelector('#pyOC').value='OC-4500231889';
+   guardarProyecto();
+   const o=ORDENES.find(x=>x.act==='aT'&&x.et==='oc');
+   return o?{mat:o.mat,num:o.num}:null;
+ });
+ chk(enOrden&&enOrden.mat==='PSV-107','y la orden se abre con él · '+(enOrden&&enOrden.mat));
+ chk(enOrden&&enOrden.num===107,'con su número por dentro · '+(enOrden&&enOrden.num));
  chk(enOC.pers==='Marta Salas',
      'y la de la persona, aunque no haya ninguna válvula marcada · '+enOC.pers);
 

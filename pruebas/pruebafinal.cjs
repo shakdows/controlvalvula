@@ -93,6 +93,33 @@ const PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA
  });
  await p.waitForTimeout(400);
 
+ /* ── 1ter · una ORDEN NUEVA empieza en blanco ──
+    No se arrastra el ensayo del trabajo anterior: el técnico se
+    encontraría el papel de otra orden delante, con sus fotos y sus
+    medidas, y acabaría escribiendo lo de hoy encima de lo de ayer. */
+ const nueva=await p.evaluate(()=>{
+   const hoy=HOY.toISOString().slice(0,10);
+   ORDENES.find(x=>x.id==='oT').et='final';        // el trabajo de antes, cerrado
+   ORDENES.unshift({id:'oNueva',act:'aT',mat:'PSV-200',n:'PSV-200',num:200,
+     et:'ent',f:hoy,tipo:'Preventivo',grupo:'gNueva',
+     pasos:['ent','mant','cert'],hist:{ent:hoy}});
+   PSV_TMP=null; openPSV('aT');
+   return {id:PSV_TMP.id, asFound:PSV_TMP.asFound,
+           piezas:(PSV_TMP.pares||[]).length,
+           disparos:disparosDe(PSV_TMP).filter(x=>num(x.v)>0).length};
+ });
+ await p.waitForTimeout(300);
+ chk(!nueva.id,'una orden nueva empieza con su propio papel · '+(nueva.id||'sin id, en blanco'));
+ chk(!nueva.asFound,'sin el disparo de entrada del trabajo anterior · «'+(nueva.asFound||'')+'»');
+ chk(nueva.piezas===0,'sin sus fotos');
+ chk(nueva.disparos===0,'y sin sus disparos');
+ await p.evaluate(()=>{
+   const i=ORDENES.findIndex(x=>x.id==='oNueva'); if(i>=0)ORDENES.splice(i,1);
+   ORDENES.find(x=>x.id==='oT').et='cert';
+   PSV_TMP=null; openPSV('aT');
+ });
+ await p.waitForTimeout(400);
+
  /* ── 3 · en la prueba de salida, disparos y firma. Nada más ── */
  const cuadros=await p.evaluate(()=>
    [...document.querySelectorAll('#mBody details.psv-sec')]

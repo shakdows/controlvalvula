@@ -8885,11 +8885,13 @@ function openPSV(actId,edit,seccion){
     if(conTrabajo.length>1&&c)setTimeout(()=>toast(
       `Ojo: esta válvula tiene ${conTrabajo.length} papeles de la misma orden. `+
       `Se abrió el más completo; los otros siguen guardados en el historial de la válvula`,7000),900);
-    /* Y si aun así no hay nada de esta orden, el de la válvula que más
-       lleve escrito antes que un formulario en blanco. */
-    if(!c)c=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv')
-      .sort((p,q)=>(pesoDelEnsayo(q)-pesoDelEnsayo(p))
-                 ||String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;
+    /* Y aquí se para. Antes había una última red —«el ensayo de esta
+       válvula que más lleve escrito, sea de la orden que sea»— y esa
+       red pescaba de más: al abrir una orden NUEVA sobre una válvula
+       ya trabajada, arrastraba el ensayo del trabajo anterior y el
+       técnico se encontraba el papel de otra orden delante, con sus
+       fotos y sus medidas. Un trabajo nuevo empieza en blanco: eso no
+       es perder nada, es no mezclar dos trabajos. */
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
@@ -14976,7 +14978,18 @@ function pryCuenta(){
   /* El número lo pone la casa y se rehace con lo marcado: si todas
      son de seguridad, lleva PSV delante. */
   const caja=$('#pyNum'); if(!caja)return;
+  /* Lo que se estuviera escribiendo se rescata ANTES de repintar. El
+     cuadro del número se rehacía entero cada vez que se marcaba una
+     válvula, y con él volvía el número de la casa: quien escribía el
+     107 y después marcaba su válvula acababa con el 106 puesto sin
+     haberlo tocado. Un número escrito a mano no lo puede borrar un
+     clic en otro sitio. */
+  const escrito=($('#ocNumCifras')||{}).value;
   caja.innerHTML=campoNumOS(sel,($('#pyCli')||{}).value||'');
+  if(escrito){
+    const e=$('#ocNumCifras');
+    if(e){ e.value=escrito; try{ revisarNumOS() }catch(x){} }
+  }
 }
 function guardarProyecto(){
   const cliId=$('#pyCli').value;
