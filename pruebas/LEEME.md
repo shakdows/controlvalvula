@@ -38,6 +38,8 @@ Las demás miran una cosa cada una:
 | `importar.cjs` | Subir el listado de válvulas de un cliente desde un Excel o un CSV |
 | `trasactualizar.cjs` · `buscarver.cjs` · `actualizar.cjs` | Actualizar el portal y volver a entrar |
 | `orden2.cjs` | Una orden con varias válvulas |
+| `pruebafinal.cjs` | La prueba de salida: que no se pierda el trabajo, sus dos cuadros y la tolerancia |
+| `nosepierde.cjs` | Que una llamada o cerrar la aplicación no se lleve lo último escrito |
 
 Y dos que no juzgan nada, sólo enseñan cómo quedó:
 

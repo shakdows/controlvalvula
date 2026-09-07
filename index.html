@@ -8830,11 +8830,15 @@ function openPSV(actId,edit,seccion){
       if(z&&z.calib)c=CALIBS.find(x=>x.id===z.calib);
     }
     /* Y si aun así no aparece —una orden vieja que se quedó sin el
-       hilo puesto—, el último ensayo de esta válvula antes que un
-       formulario en blanco. Empezar de cero encima de un trabajo
-       hecho es la única equivocación que no tiene arreglo. */
+       hilo puesto—, el ensayo de esta válvula que TENGA TRABAJO
+       DENTRO, antes que un formulario en blanco. Empezar de cero
+       encima de un trabajo hecho es la única equivocación que no tiene
+       arreglo. Y no vale «el más reciente»: el fallo del hilo suelto
+       dejó válvulas con dos ensayos, el bueno y uno vacío fabricado
+       encima, y el vacío es siempre el último. */
     if(!c)c=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv')
-      .sort((p,q)=>String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;
+      .sort((p,q)=>(pesoDelEnsayo(q)-pesoDelEnsayo(p))
+                 ||String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;
   }
   const a=ACTIVOS.find(x=>x.id===(c?c.act:actId)); if(!a){toast('No encuentro la válvula');return}
   if(S.rol==='cliente'){toast('El ensayo lo registra el mantenimiento');return}
@@ -8999,8 +9003,9 @@ function conclusionDe(c){
 function ordenTexto(id,k,v){
   const o=ORDENES.find(x=>x.id===id); if(!o)return;
   lineasDe(o).forEach(x=>{x[k]=v});
-  clearTimeout(ordenTexto._t);
-  ordenTexto._t=setTimeout(()=>guardarLocal(),800);
+  /* Se apunta en la lista de esperas para que, si la pantalla se va
+     antes de los 800 ms, se grabe igual. */
+  guardarLuego('ordenTexto',800);
 }
 function psvCampoValvula(k,v){
   if(!PSV_TMP)return;
@@ -9537,6 +9542,20 @@ function pintarPSV(){
         <div class="fld"><label>Disparó a · AS FOUND</label>
           <input class="inp bloq" value="${t.asFound?esc(t.asFound)+' '+esc(t.und||'psi'):'—'}" readonly
             title="Se toma en el paso 2, la prueba de entrada"></div>
+        ${/* La altura del perno: la que traía y la que se le deja. La
+             primera se apuntó en la recepción y aquí sólo se lee —es
+             el número al que hay que volver—; la segunda se escribe
+             AQUÍ, que es donde se está regulando. Pedirla en el cuadro
+             de la recepción, al terminar, es donde se quedaba en
+             blanco: para entonces esa pantalla ya se cerró. */''}
+        <div class="fld"><label>H perno · inicial${
+          ayuda('Cuánto sobresalía el perno de regulación al llegar, antes de tocarlo. Se apuntó en la prueba de entrada.')}</label>
+          <input class="inp bloq" value="${t.rcPernoIni?esc(t.rcPernoIni)+' mm':'—'}" readonly
+            title="Se toma en el paso 2, la prueba de entrada"></div>
+        <div class="fld"><label for="pv-rcPernoFin">H perno · final (mm)${
+          ayuda('A qué altura queda el perno de regulación al terminar la calibración. Es lo que permite volver a dejarla igual la próxima vez.')}</label>
+          <input class="inp" id="pv-rcPernoFin" value="${esc(t.rcPernoFin==null?'':t.rcPernoFin)}"
+            oninput="psvCampo('rcPernoFin',this.value)"></div>
       </div>
       <h4 class="snc-sec">Prueba de salida · AS LEFT
         <span class="opc">cada disparo con su foto, tomada en ese momento</span></h4>
@@ -16045,6 +16064,19 @@ function ordenAbiertaDe(actId){
    preventivo y un correctivo pasan por el taller igual que una
    calibración, y mirar sólo el tipo «calibración» dejaba su trabajo
    sin atar a ninguna orden. */
+/* Cuánto trabajo lleva escrito un ensayo. No es una nota: sirve para
+   desempatar cuál de dos papeles de la misma válvula es el bueno. */
+function pesoDelEnsayo(c){
+  if(!c)return -1;
+  let n=0;
+  if(String(c.asFound||'').trim())n++;
+  if(String(c.rcPernoIni||'').trim())n++;
+  if(String(c.coment||'').trim())n++;
+  n+=(c.pares||[]).filter(x=>x&&(x.a||x.d)).length;
+  n+=(c.firmas||[]).filter(x=>x&&x.img).length;
+  try{ n+=disparosDe(c).filter(x=>num(x.v)>0).length }catch(e){}
+  return n;
+}
 function ordenDeEsteEnsayo(actId,calibId){
   return (calibId&&ORDENES.find(o=>o.calib===calibId))
       || ordenViva(actId)
@@ -21678,6 +21710,30 @@ function tirarBorradorAuto(t){
   guardarLocal();
   return true;
 }
+/* Los guardados que esperan un rato antes de escribir. Se apuntan
+   aquí para poder vaciarlos de golpe cuando la pantalla se va: un
+   temporizador de 800 ms no llega a dispararse si el sistema congela
+   la pestaña en el segundo cero. */
+const ESPERANDO=new Map();
+function guardarLuego(clave,ms){
+  clearTimeout(ESPERANDO.get(clave));
+  ESPERANDO.set(clave,setTimeout(()=>{
+    ESPERANDO.delete(clave);
+    try{ guardarLocal() }catch(e){}
+  },ms||800));
+}
+/* TODO lo escrito, al archivo, ya. Sin esperas y sin depender de que
+   haya un ensayo abierto: puede estarse corrigiendo un cliente, una
+   OC o los datos de placa. */
+function guardarTodoYa(){
+  /* Primero lo que estaba esperando su turno. */
+  ESPERANDO.forEach(t=>{ try{ clearTimeout(t) }catch(e){} });
+  ESPERANDO.clear();
+  /* Y por si quedara alguno de antes, apuntado a su manera. */
+  try{ clearTimeout(ordenTexto._t) }catch(e){}
+  try{ if(typeof PSV_TMP!=='undefined'&&PSV_TMP)guardarEnCurso(true) }catch(e){}
+  try{ guardarLocal() }catch(e){}
+}
 function guardarEnCurso(forzar){
   if(typeof PSV_TMP==='undefined'||!PSV_TMP)return;
   let j; try{ j=JSON.stringify(PSV_TMP) }catch(e){ return }
@@ -21709,9 +21765,15 @@ let CURSO_ARMADO=false;
 function armarGuardadoSolo(){
   if(CURSO_ARMADO)return; CURSO_ARMADO=true;
   setInterval(()=>{ try{ guardarEnCurso() }catch(e){} }, 4000);
-  document.addEventListener('visibilitychange',()=>{ if(document.hidden)guardarEnCurso(true) });
-  window.addEventListener('pagehide',()=>guardarEnCurso(true));
-  window.addEventListener('beforeunload',()=>guardarEnCurso(true));
+  /* Los cuatro avisos de que la pantalla se va. En un celular no todos
+     llegan —«beforeunload» casi nunca, y «freeze» sólo en Chrome—, así
+     que se escuchan los cuatro y se graba en el primero que suene.
+     Grabar dos veces no cuesta nada; no grabar, sí. */
+  const irse=()=>{ try{ guardarTodoYa() }catch(e){} };
+  document.addEventListener('visibilitychange',()=>{ if(document.hidden)irse() });
+  window.addEventListener('pagehide',irse);
+  window.addEventListener('beforeunload',irse);
+  document.addEventListener('freeze',irse);
 }
 /* ── QUE EL SISTEMA NO SE LLEVE LO GUARDADO ──────────────────
    Un celular borra los datos de las páginas cuando necesita sitio,
