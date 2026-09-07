@@ -4431,10 +4431,12 @@ document.addEventListener('focusin',e=>{
 const reponerTip=()=>{if(tipActual)tipActual.isConnected?mostrarTip(tipActual):ocultarTip()};
 ['scroll','resize'].forEach(ev=>window.addEventListener(ev,reponerTip,true));
 
-function toast(msg){
+function toast(msg,ms){
   const el=document.createElement('div');el.className='toast';
   el.innerHTML='<span class="dot"></span>'+esc(msg);
-  $('#toasts').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},2600);
+  /* Un aviso largo necesita tiempo para leerse. Los de siempre siguen
+     durando lo de siempre: se pide más sólo cuando hay más que leer. */
+  $('#toasts').appendChild(el);setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(8px)';setTimeout(()=>el.remove(),220)},ms||2600);
 }
 /* Lo que se está mirando: si hay una empresa abierta —porque se entró
    a ella o porque quien mira es esa empresa—, sólo sus válvulas. El
@@ -8829,13 +8831,33 @@ function openPSV(actId,edit,seccion){
       const z=o||ORDENES.find(x=>x.act===actId&&x.calib);
       if(z&&z.calib)c=CALIBS.find(x=>x.id===z.calib);
     }
-    /* Y si aun así no aparece —una orden vieja que se quedó sin el
-       hilo puesto—, el ensayo de esta válvula que TENGA TRABAJO
-       DENTRO, antes que un formulario en blanco. Empezar de cero
-       encima de un trabajo hecho es la única equivocación que no tiene
-       arreglo. Y no vale «el más reciente»: el fallo del hilo suelto
-       dejó válvulas con dos ensayos, el bueno y uno vacío fabricado
-       encima, y el vacío es siempre el último. */
+    /* Y ahora la comprobación que lo cierra todo: entre los ensayos de
+       esta válvula, el que TENGA MÁS TRABAJO DENTRO manda. No basta
+       con buscarlo cuando no hay ninguno: el fallo del hilo suelto
+       dejó válvulas con dos papeles —el bueno y uno vacío fabricado
+       encima— y llegó a dejar la orden apuntando AL VACÍO. Seguir ese
+       hilo a ciegas es abrir el papel en blanco teniendo el bueno al
+       lado, que es exactamente lo que hay que evitar.
+       Empezar de cero encima de un trabajo hecho es la única
+       equivocación que no tiene arreglo, así que aquí se gasta una
+       vuelta más para no cometerla. */
+    const mejor=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv'&&psvDeEstaOrden(x,o))
+      .sort((p,q)=>(pesoDelEnsayo(q)-pesoDelEnsayo(p))
+                 ||String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;
+    if(mejor&&(!c||pesoDelEnsayo(mejor)>pesoDelEnsayo(c)))c=mejor;
+    /* Y si hay DOS papeles de la misma orden con trabajo escrito en
+       los dos, no se elige a espaldas de nadie: se abre el más
+       completo y se dice que el otro existe. Juntarlos por nuestra
+       cuenta sería inventar —si uno dice que disparó a 110 y el otro a
+       120, ésa es una medición, no un detalle de formato, y la sabe
+       quien estuvo delante del banco—. */
+    const conTrabajo=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv'
+      &&psvDeEstaOrden(x,o)&&pesoDelEnsayo(x)>0);
+    if(conTrabajo.length>1&&c)setTimeout(()=>toast(
+      `Ojo: esta válvula tiene ${conTrabajo.length} papeles de la misma orden. `+
+      `Se abrió el más completo; los otros siguen guardados en el historial de la válvula`,7000),900);
+    /* Y si aun así no hay nada de esta orden, el de la válvula que más
+       lleve escrito antes que un formulario en blanco. */
     if(!c)c=CALIBS.filter(x=>x.act===actId&&x.tipo==='psv')
       .sort((p,q)=>(pesoDelEnsayo(q)-pesoDelEnsayo(p))
                  ||String(q.fecha||'').localeCompare(String(p.fecha||'')))[0]||null;

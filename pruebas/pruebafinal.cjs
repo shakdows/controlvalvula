@@ -70,6 +70,29 @@ const PX='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA
  chk(reabierto.disparos===3,'y con los tres disparos de salida');
  chk(reabierto.cuantos===1,'y sigue habiendo un solo ensayo');
 
+ /* ── 1bis · con la orden apuntando al papel VACÍO, gana el bueno ──
+    Así quedaron las órdenes que sufrieron el fallo: con dos ensayos y
+    el hilo atado al que no tiene nada. */
+ const gana=await p.evaluate(()=>{
+   const hoy=HOY.toISOString().slice(0,10);
+   CALIBS.push({id:'cVacio',act:'aT',ord:'oT',tipo:'psv',und:'psi',
+     setEsp:150,fecha:hoy,veredicto:'aprobado',pares:[],firmas:[]});
+   ORDENES.find(x=>x.id==='oT').calib='cVacio';   // el hilo, al vacío
+   PSV_TMP=null; openPSV('aT');
+   return {abrio:PSV_TMP.id, asFound:PSV_TMP.asFound,
+           piezas:(PSV_TMP.pares||[]).length};
+ });
+ await p.waitForTimeout(300);
+ chk(gana.abrio==='cT','con la orden apuntando al vacío, abre el bueno · '+gana.abrio);
+ chk(gana.asFound==='152','con su disparo de entrada · '+gana.asFound);
+ chk(gana.piezas===1,'y sus fotos');
+ await p.evaluate(()=>{
+   const i=CALIBS.findIndex(x=>x.id==='cVacio'); if(i>=0)CALIBS.splice(i,1);
+   ORDENES.find(x=>x.id==='oT').calib='cT';
+   PSV_TMP=null; openPSV('aT');
+ });
+ await p.waitForTimeout(400);
+
  /* ── 3 · en la prueba de salida, disparos y firma. Nada más ── */
  const cuadros=await p.evaluate(()=>
    [...document.querySelectorAll('#mBody details.psv-sec')]
