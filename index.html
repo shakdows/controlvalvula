@@ -3709,9 +3709,18 @@ table.grid tbody tr.open,table.grid tbody tr.picked{box-shadow:inset 3px 0 0 var
           <div class="stp on" data-s="1"><i>1</i>Archivo</div><div class="stp" data-s="2"><i>2</i>Mapeo</div>
           <div class="stp" data-s="3"><i>3</i>Validación</div><div class="stp" data-s="4"><i>4</i>Consolidación</div></div>
         <div id="imp1">
+          <!-- El recuadro entero se puede pulsar, pero un recuadro no
+               parece un botón: quien entra a subir su Excel se queda
+               mirando a ver dónde está el botón. Ahora lo lleva puesto,
+               con su nombre. -->
           <div class="drop" id="drop" onclick="document.getElementById('file').click()">
             <svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-            <b>Suelta aquí la foto, el PDF o el Excel</b><span>o haz clic para elegirlo — acepta .jpg .png .pdf .xls .xlsx .csv</span>
+            <b>Suelta aquí el Excel, la foto o el PDF</b>
+            <span>acepta .xlsx .xls .csv .jpg .png .pdf</span>
+            <button class="btn" type="button" style="margin-top:12px"
+                    onclick="event.stopPropagation();document.getElementById('file').click()">
+              <svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+              Elegir el archivo</button>
           </div>
           <input type="file" id="file" accept="image/*,.pdf,.xls,.xlsx,.csv" style="display:none">
           <div class="callout" style="margin-top:16px">
@@ -13203,7 +13212,10 @@ function psvDocumento(id){
      El certificado se lee comparándolo con el Word de la casa, así
      que se dibuja igual: rejilla cerrada, rótulo y valor, y cada
      apartado en su banda. */
-  table.g{width:100%;border-collapse:collapse;border:1.2px solid #101418;table-layout:fixed}
+  table.g{width:100%;border-collapse:collapse;border:1.2px solid #101418;table-layout:fixed;
+    border-radius:0;overflow:visible}
+  /* Y pegada al membrete: el papel es UN cuadro, no dos sueltos. */
+  .pliego .mem{margin-bottom:0;border-bottom:0}
   table.g th,table.g td{border:.8px solid #101418;padding:3px 6px;vertical-align:middle;
     font-size:9px;line-height:1.3}
   table.g th{text-align:left;font-weight:700;background:#fff;width:23%;color:#101418}
@@ -17635,8 +17647,17 @@ function leerArchivo(file){
   const r=new FileReader();               // Excel
   r.onload=ev=>{try{
     const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-    let best=[],hoja='';
-    wb.SheetNames.forEach(n=>{const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});if(a.length>best.length){best=a;hoja=n}});
+    let best=[],hoja='',esListado=false;
+    wb.SheetNames.forEach(n=>{
+      const a=XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''});
+      const listado=filaListadoPSV(a)>=0;
+      /* La hoja del listado manda sobre la más larga: en el archivo de
+         la casa, la hoja del certificado tiene mil renglones de
+         fórmulas vacías y le ganaba a las ocho válvulas de al lado. */
+      if((listado&&!esListado)||((listado===esListado)&&a.length>best.length)){
+        best=a; hoja=n; esListado=listado;
+      }
+    });
     detectar(best,hoja);
   }catch(err){toast('No se pudo leer el archivo: '+err.message)}};
   r.readAsArrayBuffer(file);
@@ -17849,6 +17870,298 @@ function descargarPlantillaCalib(){
   }catch(e){toast('No se pudo generar la plantilla')}
 }
 /* ¿Es una plantilla de calibraciones? Se reconoce por sus encabezados. */
+/* ── EL LISTADO DE VÁLVULAS DE LA CASA ───────────────────────
+   El Excel con el que se levantan las válvulas de un cliente: una
+   línea por válvula, con su identificación Y su ensayo entero —el
+   disparo de entrada, los tres de salida, las presiones de cierre, las
+   medidas del resorte, del disco y de la tobera—.
+   Se reconoce por sus rótulos, no por contar celdas llenas. El
+   detector de siempre buscaba «la fila con más casillas escritas» y en
+   este archivo esa fila es la PRIMERA VÁLVULA: se comía una válvula
+   entera creyendo que era el encabezado y no reconocía ni una columna.
+   Tiene dos filas de cabecera —la de arriba agrupa, la de abajo
+   desdobla TEST 1, 2 y 3— y la primera columna vacía.
+   ════════════════════════════════════════════════════════════ */
+const LISTADO_FIRMA=[/n\s*[°ºo]?\s*de\s*psv/i, /^tag$/i, /^serie$/i];
+function filaListadoPSV(arr){
+  for(let i=0;i<Math.min(arr.length,12);i++){
+    const t=(arr[i]||[]).map(x=>String(x==null?'':x).trim());
+    if(LISTADO_FIRMA.every(rx=>t.some(c=>rx.test(c))))return i;
+  }
+  return -1;
+}
+/* Los nombres de columna, juntando las dos filas de cabecera. El
+   rótulo de arriba se arrastra por las celdas que abarca —en el Excel
+   está combinado y sólo aparece en la primera—, así que «TEST SALIDA»
+   y «TEST 2» acaban siendo una sola columna con nombre entero. */
+function nombresListado(arr,i){
+  const cab=arr[i]||[], sub=arr[i+1]||[];
+  const hayDos=(sub||[]).some(c=>/test\s*1|set\s*inicial/i.test(String(c==null?'':c)));
+  let ult='';
+  const nom=cab.map((c,j)=>{
+    const a=String(c==null?'':c).trim(); if(a)ult=a;
+    const b=hayDos?String(sub[j]==null?'':sub[j]).trim():'';
+    return b?(ult?ult+' · '+b:b):ult;
+  });
+  return {nombres:nom, primera:i+(hayDos?2:1)};
+}
+/* Qué columna es cada cosa. Se busca por el nombre, no por su sitio:
+   así el día que se añada una columna en medio no se rompe nada. */
+const LISTADO_COLS={
+  osLinea:/n\s*[°ºo]?\s*de\s*psv/i, oc:/^o\.?\s*s\.?$/i,
+  contacto:/contacto/i, empresa:/empresa/i, ubic:/ubicaci/i,
+  cert:/certificaci/i, tag:/^tag$/i, marca:/^marca$/i, mod:/^modelo$/i,
+  orif:/orificio/i, ser:/^serie$/i, fluido:/^fluido$/i,
+  setPress:/presi[oó]n?\s*de\s*ajuste/i, setUnd:/und\.?\s*medida|unidad/i,
+  medida:/^medida$/i, clase:/^clase$/i, capac:/capacidad/i,
+  fecha:/fecha\s*mantenimiento/i, norma:/norma/i,
+  asFound:/set\s*inicial/i,
+  t1:/test\s*1/i, t2:/test\s*2/i, t3:/test\s*3/i,
+  pc1:/cierre\s*1/i, pc2:/cierre\s*2/i, pc3:/cierre\s*3/i,
+  bb1:/burb[^\d]*1/i, bb2:/burb[^\d]*2/i, bb3:/burb[^\d]*3/i,
+  pernoIni:/perno[^·]*inicial/i, pernoFin:/perno[^·]*final/i,
+  muescaSup:/muescas?\s*anillo\s*superior/i, muescaInf:/muescas?\s*anillo\s*inferior/i,
+  /* «Alt. Rsorte» está escrito así en el archivo de la casa, sin la
+     e. Se busca por el final de la palabra para que dé igual. */
+  altRes:/alt[^·]*sorte/i, diamEsp:/di[aá]metro\s*espiras/i, numEsp:/n[uú]mero\s*espiras/i,
+  discoE:/disco.*ext/i, discoI:/disco.*int/i, discoH:/disco\s*·\s*h$/i,
+  tobE:/tobera.*ext/i, tobI:/tobera.*int/i, tobH:/tobera\s*·\s*h$/i,
+  paraD:/paralelismo.*externo/i, paraA:/paralelismo.*[aá]ngulo/i,
+  coment:/comentario/i, cdtp:/cdtp/i
+};
+/* En este Excel una casilla sin dato lleva un guion, no se deja en
+   blanco. Un guion no es un valor: es la manera de decir que ahí no
+   había nada que apuntar. */
+const valListado=v=>{
+  const t=String(v==null?'':v).trim();
+  return (t==='-'||t==='—'||t==='N/A'||t==='NA'||/^n\/?a$/i.test(t))?'':t;
+};
+const numListado=v=>{
+  const t=valListado(v).replace(',','.');
+  const x=parseFloat(t);
+  return isFinite(x)?x:null;
+};
+/* La fecha, venga como venga: del Excel llega «2026-03-19 00:00:00»,
+   escrita a mano puede llegar «19/03/2026». */
+function fechaListado(v){
+  const t=valListado(v);
+  if(!t)return '';
+  let m=/^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+  m=/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/.exec(t);
+  if(m){
+    const a=m[3].length===2?'20'+m[3]:m[3];
+    return `${a}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  }
+  return '';
+}
+/* El número de la casa que lleva la línea: de «PSV-403-001» salen la
+   orden PSV-403 y la línea 001. Si trae una orden de compra en esa
+   casilla —pasa— no se toma por correlativo: hay tope. */
+function partirCodigoLinea(txt){
+  const t=String(txt||'').trim().toUpperCase().replace(/\s+/g,'');
+  const m=/^(?:PSV-)?(\d{3,})(?:-(\d{1,3}))?$/.exec(t);
+  if(!m)return null;
+  const num=+m[1];
+  if(num>TOPE_OS)return null;
+  return {base:'PSV-'+num, num, linea:m[2]||'', cod:t.startsWith('PSV-')?t:('PSV-'+t)};
+}
+
+let LST_PREVIEW=null;
+/* Lee el listado y ENSEÑA lo que va a pasar. No toca nada hasta que se
+   confirma: son válvulas, órdenes y ensayos de golpe, y eso no se hace
+   a espaldas de nadie. */
+function procesarListadoPSV(arr,iCab,hoja){
+  const {nombres,primera}=nombresListado(arr,iCab);
+  const idx={};
+  Object.entries(LISTADO_COLS).forEach(([k,rx])=>{
+    const i=nombres.findIndex(h=>rx.test(String(h||'')));
+    if(i>=0)idx[k]=i;
+  });
+  const filas=arr.slice(primera).filter(r=>r&&r.some(c=>String(c==null?'':c).trim()));
+  const g=(r,k)=>idx[k]===undefined?'':valListado(r[idx[k]]);
+  const gn=(r,k)=>idx[k]===undefined?null:numListado(r[idx[k]]);
+  const foco=S.inCli||S.cli||(CLIENTES[0]||{}).id;
+
+  const items=filas.map(r=>{
+    const ser=g(r,'ser'), tag=g(r,'tag');
+    const codigo=partirCodigoLinea(g(r,'osLinea'));
+    /* ¿Es una válvula que esta empresa ya tiene? Se busca por serie y,
+       si no, por TAG: son los dos nombres con los que se la llama. */
+    const ya=ACTIVOS.find(x=>x.cli===foco&&(
+      (ser&&x.ser&&x.ser.toLowerCase()===ser.toLowerCase())||
+      (tag&&x.tag&&x.tag.toLowerCase()===tag.toLowerCase())));
+    const tests=[1,2,3].map(i=>({v:g(r,'t'+i), pc:g(r,'pc'+i), bb:g(r,'bb'+i)}))
+      .filter(t=>t.v!=='');
+    return {
+      ser, tag, ya:ya?ya.id:null,
+      osLinea:g(r,'osLinea'), codigo, oc:g(r,'oc'),
+      contacto:g(r,'contacto'), empresa:g(r,'empresa'), ubic:g(r,'ubic'),
+      cert:g(r,'cert'), marca:g(r,'marca'), mod:g(r,'mod'), orif:g(r,'orif'),
+      fluido:g(r,'fluido'), setPress:g(r,'setPress'), setUnd:g(r,'setUnd')||'psi',
+      medida:g(r,'medida'), clase:g(r,'clase'), capac:g(r,'capac'),
+      fecha:fechaListado(idx.fecha===undefined?'':r[idx.fecha]),
+      norma:g(r,'norma'), asFound:g(r,'asFound'), tests,
+      pernoIni:g(r,'pernoIni'), pernoFin:g(r,'pernoFin'),
+      resorte:{muescaSup:g(r,'muescaSup'), muescaInf:g(r,'muescaInf'),
+        alt:g(r,'altRes'), diamEsp:g(r,'diamEsp'), numEsp:g(r,'numEsp'),
+        paraD:g(r,'paraD'), paraA:g(r,'paraA')},
+      disco:{ext:g(r,'discoE'), int:g(r,'discoI'), h:g(r,'discoH')},
+      tobera:{ext:g(r,'tobE'), int:g(r,'tobI'), h:g(r,'tobH')},
+      coment:g(r,'coment'), cdtp:g(r,'cdtp'),
+      falta:[]
+    };
+  });
+  items.forEach(x=>{
+    if(!x.tag&&!x.ser)x.falta.push('tag y serie');
+    if(!x.setPress)x.falta.push('presión de ajuste');
+  });
+  LST_PREVIEW={items, idx, nombres, cli:foco};
+  pintarListadoPSV(hoja);
+}
+function pintarListadoPSV(hoja){
+  const L=LST_PREVIEW; if(!L)return;
+  const it=L.items;
+  const nuevas=it.filter(x=>!x.ya).length, conocidas=it.length-nuevas;
+  const conEnsayo=it.filter(x=>x.tests.length).length;
+  const ocs=Array.from(new Set(it.map(x=>x.oc).filter(Boolean)));
+  const sinCol=Object.entries(LISTADO_COLS).filter(([k])=>L.idx[k]===undefined).length;
+  $('#imp1').style.display='none'; $('#imp2').style.display='none';
+  $('#imp3').style.display='';
+  $$('.stp').forEach(s=>{const i=+s.dataset.s;s.classList.toggle('on',i===3);s.classList.toggle('done',i<3)});
+  $('#imp3').innerHTML=`
+   <div class="callout"><svg viewBox="0 0 24 24"><path d="M9 11l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+     <div><b>Es el listado de válvulas de la casa</b> — hoja «${esc(hoja||'')}».
+       Se reconocieron ${Object.keys(LISTADO_COLS).length-sinCol} de ${Object.keys(LISTADO_COLS).length} columnas.
+       Cada línea entra como una válvula con su ensayo, y las órdenes van
+       <b>directas al historial</b>: son trabajos ya hechos, no se meten en el tablero del taller.</div></div>
+   <div class="stats">
+     <div class="stat" style="cursor:default"><span class="v">${it.length}</span><span class="k">Líneas del archivo</span></div>
+     <div class="stat" style="cursor:default"><span class="v"><span class="dot" style="color:var(--ok)"></span>${nuevas}</span><span class="k">Válvulas nuevas</span></div>
+     <div class="stat" style="cursor:default"><span class="v">${conocidas}</span><span class="k">Ya estaban · se les añade el ensayo</span></div>
+     <div class="stat" style="cursor:default"><span class="v">${conEnsayo}</span><span class="k">Con disparos para certificar</span></div>
+     <div class="stat" style="cursor:default"><span class="v">${ocs.length}</span><span class="k">Órdenes de compra</span></div>
+   </div>
+   <div class="panel"><div class="panel-h"><h3>Lo que va a entrar</h3>
+     <span class="count">${esc(cli(L.cli).n)}</span></div>
+    <div class="grid-scroll" style="max-height:340px"><table class="grid">
+     <thead><tr><th>N.º de PSV</th><th>TAG</th><th>Serie</th><th>Marca / modelo</th>
+       <th>Set</th><th>Disparos</th><th>Estado</th></tr></thead>
+     <tbody>${it.map(x=>`<tr class="${x.falta.length?'bad':''}" style="cursor:default">
+       <td class="mono">${esc(x.osLinea)||'—'}</td><td>${esc(x.tag)||'—'}</td>
+       <td class="mono">${esc(x.ser)||'—'}</td>
+       <td>${esc(x.marca)} ${esc(x.mod)}</td>
+       <td class="mono">${esc(x.setPress)} ${esc(x.setUnd)}</td>
+       <td class="mono">${x.tests.map(t=>esc(t.v)).join(' · ')||'—'}</td>
+       <td>${x.falta.length?`<span class="tag due">falta ${esc(x.falta.join(', '))}</span>`
+          :x.ya?'<span class="tag">ya existe · se le añade</span>'
+               :'<span class="tag ok"><span class="dot"></span>nueva</span>'}</td></tr>`).join('')}</tbody></table></div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;padding:var(--sp-3) var(--sp-4);border-top:1px solid var(--line-2)">
+      <button class="btn sec" onclick="paso(1)">Cancelar</button>
+      <button class="btn" onclick="consolidarListadoPSV()">Cargar ${it.length} válvula${it.length===1?'':'s'} en ${esc(cli(L.cli).n)}</button>
+    </div></div>`;
+}
+/* Y aquí sí se escribe: la válvula, su orden y su ensayo. */
+function consolidarListadoPSV(){
+  const L=LST_PREVIEW; if(!L)return;
+  const c=L.cli, cl_=cli(c); if(!cl_){toast('Elige la empresa primero');return}
+  const sello=Date.now();
+  let vNuevas=0, vYa=0, ordenes=0, ensayos=0;
+  /* Las líneas de una misma orden de compra y un mismo PSV-4xx son UNA
+     orden con varias líneas, igual que cuando se abre a mano. */
+  const grupos=new Map();
+  L.items.forEach((x,i)=>{
+    const base=x.codigo?x.codigo.base:('PSV-'+(x.oc||i));
+    const k=(x.oc||'')+'|'+base;
+    if(!grupos.has(k))grupos.set(k,{base, num:x.codigo?x.codigo.num:0, oc:x.oc,
+      aten:x.contacto, grupo:'g'+sello+'-'+grupos.size, filas:[]});
+    grupos.get(k).filas.push(x);
+  });
+  grupos.forEach(G=>{
+    G.filas.forEach((x,j)=>{
+      /* 1 · la válvula */
+      let a=x.ya?ACTIVOS.find(y=>y.id===x.ya):null;
+      if(a){
+        vYa++;
+        /* Lo que venga en el archivo completa lo que falte; lo que ya
+           estaba escrito no se pisa: aquí la ficha de la casa manda
+           sobre una columna de un Excel. */
+        const poner=(k,v)=>{ if(v&&!String(a[k]||'').trim())a[k]=v };
+        poner('marca',x.marca); poner('mod',x.mod); poner('orif',x.orif);
+        poner('fluido',x.fluido); poner('medida',x.medida); poner('clase',x.clase);
+        poner('capac',x.capac); poner('cert',x.cert); poner('norma',x.norma);
+        poner('ubic',x.ubic); poner('setPress',x.setPress); poner('setUnd',x.setUnd);
+      }else{
+        vNuevas++;
+        a={id:'lst'+sello+'-'+vNuevas, cli:c, ar:Object.keys(cl_.areas||{})[0]||'ar1',
+           cl:'seguridad', tag:x.tag||tagProvisional(), ser:x.ser,
+           marca:x.marca, mod:x.mod, orif:x.orif, fluido:x.fluido,
+           medida:x.medida, sz:x.medida, clase:x.clase, rt:x.clase, capac:x.capac,
+           cert:x.cert, norma:x.norma, ubic:x.ubic,
+           setPress:x.setPress, setUnd:x.setUnd, rng:x.setPress?x.setPress+' '+x.setUnd:'',
+           cr:'Media', ult:'', prox:'',
+           sinId:(!x.tag&&!x.ser)||undefined};
+        ACTIVOS.push(a);
+      }
+      /* 2 · el ensayo, con lo que trae la línea */
+      const fecha=x.fecha||HOY.toISOString().slice(0,10);
+      const cal={
+        id:'lstc'+sello+'-'+(ensayos+1), act:a.id, cli:c, tipo:'psv',
+        os:x.osLinea||G.base, fecha,
+        setEsp:x.setPress, und:x.setUnd, asFound:x.asFound,
+        fluidoP:'Nitrógeno', ...PATRON,
+        rcPernoIni:x.pernoIni, rcPernoFin:x.pernoFin,
+        rcFecha:fecha, rcVeredicto:'', rcMotivo:'', rcComent:'',
+        coment:x.coment, pares:[], fotos:[], fotosLlego:[], firmas:[],
+        tests:x.tests.map(t=>({v:t.v, pc:t.pc, fotos:[], nota:t.bb?('burbujas por minuto: '+t.bb):''})),
+        /* Las medidas del desarme que trae el archivo. Se guardan tal
+           cual: son del papel de la casa y no las inventa el portal. */
+        medidas:{...x.resorte, disco:x.disco, tobera:x.tobera, cdtp:x.cdtp},
+        deListado:true
+      };
+      const v=psvVeredicto(cal);
+      cal.veredicto=v.estado==='incompleto'?'incompleto':v.estado;
+      if(v.estado!=='incompleto'){ cal.prom=v.prom; cal.desv=v.desv }
+      CALIBS.push(cal); ensayos++;
+      /* 3 · su orden, ya cerrada y en el historial */
+      ORDENES.push({
+        id:'lsto'+sello+'-'+ordenes, act:a.id, grupo:G.grupo,
+        mat:G.base, n:G.base, num:G.num||undefined,
+        oc:G.oc, aten:G.aten, tipo:'Calibración',
+        pasos:['ent','mant','cert'], et:'final', arch:true,
+        f:fecha, hist:{ent:fecha, mant:fecha, cert:fecha, final:fecha},
+        calib:cal.id, tec:'', hall:x.coment||'',
+        deListado:true
+      });
+      ordenes++;
+      /* Y la válvula queda con su fecha: el ensayo aprobado renueva un
+         año, como cualquier otro trabajo. */
+      a.ult=fecha;
+      if(cal.veredicto==='aprobado'){
+        const d=new Date(fecha+'T00:00:00'); d.setFullYear(d.getFullYear()+1);
+        a.prox=d.toISOString().slice(0,10);
+      }
+    });
+  });
+  /* El contacto del cliente, si el archivo lo trae y la empresa no lo
+     tenía: es el mismo que sale en «Atención» de los informes. */
+  const cont=(L.items.find(x=>x.contacto)||{}).contacto;
+  if(cont&&!contactoCliente(cl_))contactoDelCliente(c,'n',cont);
+
+  guardarLocal();
+  registrar('Importar',`${L.items.length} válvulas de ${cl_.n} desde el listado`);
+  renderAll();
+  paso(4);
+  $('#imp3').innerHTML=`<div class="panel"><div class="empty">
+    <svg viewBox="0 0 24 24" style="stroke:var(--ok);opacity:1"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+    <b>${L.items.length} válvulas cargadas en ${esc(cl_.n)}</b>
+    ${vNuevas} nuevas y ${vYa} que ya estaban · ${ensayos} ensayos · ${ordenes} órdenes al historial.
+    Cada válvula tiene ya su certificado: se saca desde su ficha o desde el historial.</div>
+    <div style="display:flex;justify-content:center;gap:8px;padding:0 var(--sp-4) var(--sp-4)">
+      <button class="btn" onclick="go('assets')">Ver las válvulas</button>
+      <button class="btn sec" onclick="paso(1)">Cargar otro archivo</button></div></div>`;
+  LST_PREVIEW=null;
+}
 function esPlantillaCalib(h){
   const t=h.join(' ').toLowerCase();
   return /as[\s-]?found/.test(t)&&/as[\s-]?left/.test(t);
@@ -17977,6 +18290,11 @@ function confirmarCalibraciones(){
   toast(`${ok} calibraciones certificadas${altas?` · ${altas} válvulas creadas`:''}`);
 }
 function detectar(arr,hoja){
+  /* ¿Es el listado de válvulas de la casa? Se pregunta primero y por
+     los rótulos: contar celdas llenas en ese archivo elige la primera
+     válvula como encabezado y se la come. */
+  const iL=filaListadoPSV(arr);
+  if(iL>=0){ procesarListadoPSV(arr,iL,hoja); return }
   let hi=0,best=0;
   arr.slice(0,20).forEach((row,i)=>{const n=row.filter(c=>String(c).trim()).length;if(n>best){best=n;hi=i}});
   headers=arr[hi].map((h,i)=>String(h).trim()||('Columna '+(i+1)));

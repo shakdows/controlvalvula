@@ -41,6 +41,7 @@ Las demás miran una cosa cada una:
 | `pruebafinal.cjs` | La prueba de salida: que no se pierda el trabajo, sus dos cuadros y la tolerancia |
 | `nosepierde.cjs` | Que una llamada o cerrar la aplicación no se lleve lo último escrito |
 | `certificado.cjs` | El certificado AXAD-SER-003 y su botón en la tarjeta |
+| `listado.cjs` | Subir el listado de válvulas de la casa: una línea, una válvula con su ensayo |
 | `numeroorden.cjs` | El número de orden a mano, con su recomendación y sus topes, y el nombre del cliente |
 
 Y dos que no juzgan nada, sólo enseñan cómo quedó:
